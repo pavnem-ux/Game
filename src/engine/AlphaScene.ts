@@ -96,7 +96,10 @@ export class AlphaScene extends Phaser.Scene {
     this.publish();
   }
   private start(options: GameplayOptions) {
-    const next = new GameplayWorld(options); // Validate before replacing a running session.
+    const next = new GameplayWorld({
+      ...options,
+      viewport: { width: this.scale.width, height: this.scale.height },
+    }); // Validate before replacing a running session.
     this.world = next;
     this.runId++;
     this.lastEvent = 0;
@@ -162,6 +165,7 @@ export class AlphaScene extends Phaser.Scene {
         dx = this.stick.dx;
         dy = this.stick.dy;
       }
+      this.world.setViewport(this.scale.width, this.scale.height);
       this.world.setMovement(dx, dy);
       this.world.update(dt);
       this.draw(this.world.getSnapshot());
@@ -202,6 +206,14 @@ export class AlphaScene extends Phaser.Scene {
       }
     }
     this.fx = this.fx.filter((f) => f.until > s.time).slice(-64);
+    for (const crystal of s.crystals) {
+      const { x, y } = crystal;
+      g.fillStyle(0xb4f1aa, 0.13).fillCircle(x, y, 12);
+      g.fillStyle(0xa7eaa7)
+        .fillTriangle(x, y - 5, x - 4, y, x + 4, y)
+        .fillTriangle(x - 4, y, x + 4, y, x, y + 6);
+      g.lineStyle(1, 0xe4ffe1, 0.7).lineBetween(x, y - 4, x - 2, y);
+    }
     let label = 0,
       damageLabel = 0;
     for (const enemy of s.enemies) {

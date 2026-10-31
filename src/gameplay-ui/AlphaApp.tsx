@@ -66,7 +66,7 @@ export function AlphaApp() {
               <p className="alpha-note">
                 Тестовая арена · предварительный баланс
                 <br />
-                XP и улучшения прежнего прототипа пока не подключены.
+                Собирайте XP-кристаллы · новые группы врагов приходят постоянно.
               </p>
             </div>
             <div className="alpha-selection">
@@ -95,9 +95,9 @@ export function AlphaApp() {
                 Начать забег · {CLASS_LABELS[selected]} →
               </button>
               <p className="alpha-note">
-                Постоянный уровень {level} · 8 melee + 4 ranged врага
+                Постоянный уровень {level} · melee + ranged волны
                 <br />
-                После зачистки можно начать новый забег{debug ? ' или добавить врагов в DEV' : ''}.
+                Уровень забега растёт от XP; постоянные характеристики сохраняются.
               </p>
               {debug && (
                 <label className="alpha-level">
@@ -125,7 +125,7 @@ export function AlphaApp() {
                 <div className="health-details">
                   <div className="health-label">
                     <strong>
-                      {CLASS_LABELS[s.character.characterClass]} · ур. {s.character.permanentLevel}
+                      {CLASS_LABELS[s.character.characterClass]} · забег {s.progression.level}
                     </strong>
                     <span>
                       {s.player.currentHp.toFixed(s.player.currentHp % 1 ? 1 : 0)} /{' '}
@@ -141,6 +141,24 @@ export function AlphaApp() {
                     aria-valuenow={s.player.currentHp}
                   >
                     <div style={{ width: `${(s.player.currentHp / s.player.maxHp) * 100}%` }} />
+                  </div>
+                  <div className="alpha-run-xp">
+                    <span>
+                      Пост. ур. {s.character.permanentLevel} · XP {s.progression.xp} /{' '}
+                      {s.progression.nextXp}
+                    </span>
+                    <div
+                      className="alpha-xp-track"
+                      role="progressbar"
+                      aria-label="Опыт забега"
+                      aria-valuemin={0}
+                      aria-valuemax={s.progression.nextXp}
+                      aria-valuenow={s.progression.xp}
+                    >
+                      <div
+                        style={{ width: `${(s.progression.xp / s.progression.nextXp) * 100}%` }}
+                      />
+                    </div>
                   </div>
                   <div className="level-label">
                     <span>
@@ -196,7 +214,7 @@ export function AlphaApp() {
                 </div>
               </div>
               <span className="arena-caption">
-                ЗАБЫТАЯ РОЩА <i /> <small>ТЕСТОВАЯ АРЕНА</small>
+                ЗАБЫТАЯ РОЩА <i /> <small>ВОЛНА {s.spawning.waves + 1}</small>
               </span>
               <span className="pause-hint">
                 <kbd>P</kbd> ПАУЗА

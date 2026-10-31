@@ -83,6 +83,7 @@ try {
   await page.getByRole('button', { name: 'Маг Посох', exact: false }).click();
   await page.getByRole('button', { name: 'Начать забег' }).click();
   await page.getByRole('progressbar', { name: 'Здоровье' }).waitFor();
+  await page.getByRole('progressbar', { name: 'Опыт забега' }).waitFor();
   await page.getByRole('button', { name: 'Пауза', exact: true }).click();
   await page.getByRole('button', { name: 'Продолжить' }).waitFor();
   await page.getByRole('button', { name: 'Продолжить' }).click();

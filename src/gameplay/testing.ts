@@ -26,6 +26,15 @@ export function createTestingController(
       case 'clear-enemies':
         w.clearEnemies();
         break;
+      case 'grant-xp':
+        w.grantTestXp(a.amount as number);
+        break;
+      case 'xp-crystal':
+        w.dropTestCrystal(a.value as number, a.distance as number);
+        break;
+      case 'spawning':
+        w.setSpawning(a.settings as Parameters<GameplayWorld['setSpawning']>[0]);
+        break;
       case 'heal':
         w.healPlayer();
         break;

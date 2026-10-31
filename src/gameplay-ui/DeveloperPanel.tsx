@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { CHARACTER_CLASSES } from '../character-stats';
 import type { CharacterClass } from '../character-stats';
-import { CLASS_LABELS } from '../gameplay';
+import { CLASS_LABELS, DEFAULT_SPAWNING } from '../gameplay';
 import { alphaBridge } from './store';
 import type { AlphaState } from './store';
 export default function DeveloperPanel({ state }: { state: AlphaState }) {
@@ -20,6 +20,16 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
     [chance, setChance] = useState(100);
   const [hp, setHp] = useState(50),
     [protectedTest, setProtection] = useState(false);
+  const [xpAmount, setXpAmount] = useState(20);
+  const [spawnInterval, setSpawnInterval] = useState(
+    w?.spawning.settings.interval ?? DEFAULT_SPAWNING.interval,
+  );
+  const [spawnCount, setSpawnCount] = useState(
+    w?.spawning.settings.count ?? DEFAULT_SPAWNING.count,
+  );
+  const [spawnCap, setSpawnCap] = useState(
+    w?.spawning.settings.maxActive ?? DEFAULT_SPAWNING.maxActive,
+  );
   const send = (action: unknown) => alphaBridge.send({ type: 'testing', action });
   const restart = () => {
     setProtection(false);
@@ -30,6 +40,13 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
         level,
         enemyCount: count,
         spawnDistance: distance,
+        spawning: {
+          interval: spawnInterval,
+          minimumInterval: Math.min(1.5, spawnInterval),
+          count: spawnCount,
+          maximumCount: Math.max(8, spawnCount),
+          maxActive: spawnCap,
+        },
         onHit: [
           { effectType: effect, rawDamagePerTick: damage, duration, probabilityPercent: chance },
         ],
@@ -108,7 +125,9 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
       {w && (
         <>
           <fieldset>
-            <legend>Враги · живых {enemies.length} / 120</legend>
+            <legend>
+              Враги · живых {enemies.length} / {w.spawning.settings.maxActive}
+            </legend>
             <label>
               Дистанция
               <input
@@ -141,6 +160,97 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
               Добавить группу
             </button>
             <button onClick={() => send({ type: 'clear-enemies' })}>Убрать врагов</button>
+          </fieldset>
+          <fieldset>
+            <legend>XP и волны</legend>
+            <p>
+              Забег: уровень {w.progression.level} · {w.progression.xp}/{w.progression.nextXp} XP ·
+              всего {w.progression.totalXp}. Постоянный уровень не меняется.
+            </p>
+            <label>
+              XP
+              <input
+                aria-label="DEV XP"
+                type="number"
+                min="0"
+                max="1000000"
+                value={xpAmount}
+                onChange={(e) => setXpAmount(Number(e.target.value))}
+              />
+            </label>
+            <button onClick={() => send({ type: 'grant-xp', amount: xpAmount })}>Выдать XP</button>
+            <button onClick={() => send({ type: 'xp-crystal', value: xpAmount, distance: 90 })}>
+              Кристалл справа
+            </button>
+            <p>
+              Кристаллов: {w.crystals.length}. Следующая волна через{' '}
+              {Math.max(0, w.spawning.nextSpawnAt - w.time).toFixed(2)} с · волн {w.spawning.waves}.
+            </p>
+            <label>
+              <input
+                aria-label="Непрерывный спавн"
+                type="checkbox"
+                checked={w.spawning.settings.enabled}
+                onChange={(e) =>
+                  send({ type: 'spawning', settings: { enabled: e.target.checked } })
+                }
+              />{' '}
+              Непрерывный спавн
+            </label>
+            <label>
+              Интервал, с
+              <input
+                aria-label="Интервал волн"
+                type="number"
+                min="0.25"
+                max="60"
+                step="0.25"
+                value={spawnInterval}
+                onChange={(e) => setSpawnInterval(Number(e.target.value))}
+              />
+            </label>
+            <label>
+              Врагов / волна
+              <input
+                aria-label="Врагов в волне"
+                type="number"
+                min="1"
+                max="24"
+                value={spawnCount}
+                onChange={(e) => setSpawnCount(Number(e.target.value))}
+              />
+            </label>
+            <label>
+              Максимум живых
+              <input
+                aria-label="Лимит врагов"
+                type="number"
+                min="1"
+                max="120"
+                value={spawnCap}
+                onChange={(e) => setSpawnCap(Number(e.target.value))}
+              />
+            </label>
+            <button
+              onClick={() =>
+                send({
+                  type: 'spawning',
+                  settings: {
+                    interval: spawnInterval,
+                    minimumInterval: Math.min(1.5, spawnInterval),
+                    count: spawnCount,
+                    maximumCount: Math.max(8, spawnCount),
+                    maxActive: spawnCap,
+                  },
+                })
+              }
+            >
+              Применить волны
+            </button>
+            <p>
+              Применение параметров начинает новый интервал от текущего времени. Пауза/Revive
+              сохраняют расписание.
+            </p>
           </fieldset>
           <fieldset>
             <legend>Poison / Burn / Bleed</legend>
@@ -272,7 +382,13 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
               <summary>Последние боевые события (до 20)</summary>
               <div className="dev-events">
                 {state.events
-                  .filter((e) => e.channel === 'combat' || e.channel === 'survival')
+                  .filter(
+                    (e) =>
+                      e.channel === 'combat' ||
+                      e.channel === 'survival' ||
+                      e.channel === 'progression' ||
+                      e.channel === 'spawning',
+                  )
                   .slice(-20)
                   .reverse()
                   .map((e) => (

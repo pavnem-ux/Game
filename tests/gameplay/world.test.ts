@@ -3,7 +3,7 @@ import { GameplayWorld, ALPHA_ENEMIES, ALPHA_WEAPONS } from '../../src/gameplay'
 import { CHARACTER_CLASSES } from '../../src/character-stats';
 import type { GameplayWorld as World } from '../../src/gameplay';
 const world = (characterClass: (typeof CHARACTER_CLASSES)[number] = 'warrior') =>
-  new GameplayWorld({ characterClass, initialEnemies: false });
+  new GameplayWorld({ characterClass, initialEnemies: false, spawning: { enabled: false } });
 const combat = (w: World) =>
   w
     .getEvents()

@@ -56,7 +56,10 @@ export function segmentCircleIntersection(
     fy = start.y - center.y;
   const a = dx * dx + dy * dy,
     c = fx * fx + fy * fy - radius * radius;
-  if (c <= EPS) return 0;
+  // EPS is a distance in world units, consistent with melee/contact eligibility.
+  // Testing squared distance against a linear EPS can predict a rounded-to-now hit
+  // for a long sweep that disappears when the same boundary is resolved at dt=0.
+  if (Math.hypot(fx, fy) <= radius + EPS) return 0;
   if (a === 0) return null;
   const b = fx * dx + fy * dy,
     discriminant = b * b - a * c;

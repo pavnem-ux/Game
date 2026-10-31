@@ -111,7 +111,11 @@ describe('additive event-boundary APIs reuse authoritative module resolvers', ()
 });
 describe('world integration edge cases and developer authority', () => {
   it('records periodic player death before a contact attack due at the same time', () => {
-    const w = new GameplayWorld({ characterClass: 'mage', initialEnemies: false });
+    const w = new GameplayWorld({
+      characterClass: 'mage',
+      initialEnemies: false,
+      spawning: { enabled: false },
+    });
     const id = w.spawnEnemy('melee', 127, 0, { ...ALPHA_ENEMIES.melee, movementSpeed: 100 });
     w.applyEffect({
       sourceId: id,
@@ -127,7 +131,11 @@ describe('world integration edge cases and developer authority', () => {
     expect(w.getSnapshot().survival.runState).toBe('awaiting-revival-choice');
   });
   it('keeps a hostile projectile after its source dies, and its eventual impact checks protection', () => {
-    const w = new GameplayWorld({ characterClass: 'mage', initialEnemies: false });
+    const w = new GameplayWorld({
+      characterClass: 'mage',
+      initialEnemies: false,
+      spawning: { enabled: false },
+    });
     const id = w.spawnEnemy('ranged', 320, 0, { ...ALPHA_ENEMIES.ranged, movementSpeed: 0 });
     w.update(0);
     expect(w.getSnapshot().enemyProjectiles).toHaveLength(1);
@@ -145,7 +153,12 @@ describe('world integration edge cases and developer authority', () => {
     ).toBe(true);
   });
   it('applies no on-hit effect to a killing blow and does not duplicate the kill after later updates', () => {
-    const w = new GameplayWorld({ characterClass: 'warrior', level: 50, initialEnemies: false });
+    const w = new GameplayWorld({
+      characterClass: 'warrior',
+      level: 50,
+      initialEnemies: false,
+      spawning: { enabled: false },
+    });
     const id = w.spawnEnemy('melee', 60, 0, { ...ALPHA_ENEMIES.melee, movementSpeed: 0 });
     w.update(0);
     expect(w.core.getEntity(id).alive).toBe(false);
@@ -156,7 +169,11 @@ describe('world integration edge cases and developer authority', () => {
     expect(w.getSnapshot().enemies).toHaveLength(0);
   });
   it('processes normal-protection DoT and new negative effects without refreshing protection', () => {
-    const w = new GameplayWorld({ characterClass: 'mage', initialEnemies: false });
+    const w = new GameplayWorld({
+      characterClass: 'mage',
+      initialEnemies: false,
+      spawning: { enabled: false },
+    });
     const id = w.spawnEnemy('melee', 0, 0, {
       ...ALPHA_ENEMIES.melee,
       movementSpeed: 0,
@@ -189,7 +206,11 @@ describe('world integration edge cases and developer authority', () => {
     expect(w.survival.getState().directInvulnerableUntil).toBeCloseTo(1.2);
   });
   it('rejects invalid developer commands without replacing a valid session or injecting HP', () => {
-    let w = new GameplayWorld({ characterClass: 'rogue', initialEnemies: false });
+    let w = new GameplayWorld({
+      characterClass: 'rogue',
+      initialEnemies: false,
+      spawning: { enabled: false },
+    });
     const old = w;
     const test = createTestingController(
       () => w,
@@ -220,7 +241,15 @@ describe('world integration edge cases and developer authority', () => {
     test({ type: 'death' });
     expect(w.survival.getState().runState).toBe('awaiting-revival-choice');
     expect(() => test({ type: 'hp', value: 50 })).toThrow(/Dead/);
-    test({ type: 'restart', options: { characterClass: 'mage', level: 2, initialEnemies: false } });
+    test({
+      type: 'restart',
+      options: {
+        characterClass: 'mage',
+        level: 2,
+        initialEnemies: false,
+        spawning: { enabled: false },
+      },
+    });
     expect(w).not.toBe(old);
     expect(w.core).not.toBe(old.core);
     expect(w.character.characterClass).toBe('mage');
@@ -228,7 +257,11 @@ describe('world integration edge cases and developer authority', () => {
     expect(() => test({ type: 'unknown' })).toThrow();
   });
   it('keeps bounded event history and has no reward duplication during repeated cleanup', () => {
-    const w = new GameplayWorld({ characterClass: 'warrior', initialEnemies: false });
+    const w = new GameplayWorld({
+      characterClass: 'warrior',
+      initialEnemies: false,
+      spawning: { enabled: false },
+    });
     for (let i = 0; i < 30; i++) {
       w.spawnGroup(4);
       w.clearEnemies();
@@ -245,8 +278,16 @@ describe('world integration edge cases and developer authority', () => {
 
 describe('movement, cancellation and numerical time contracts', () => {
   it('normalizes diagonal input, uses Character Stats speed, clamps arena bounds and never blocks on enemies', () => {
-    const straight = new GameplayWorld({ characterClass: 'warrior', initialEnemies: false });
-    const diagonal = new GameplayWorld({ characterClass: 'warrior', initialEnemies: false });
+    const straight = new GameplayWorld({
+      characterClass: 'warrior',
+      initialEnemies: false,
+      spawning: { enabled: false },
+    });
+    const diagonal = new GameplayWorld({
+      characterClass: 'warrior',
+      initialEnemies: false,
+      spawning: { enabled: false },
+    });
     straight.setMovement(1, 0);
     diagonal.setMovement(1, 1);
     straight.update(1);
@@ -259,7 +300,11 @@ describe('movement, cancellation and numerical time contracts', () => {
     expect(straight.getSnapshot().playerBody.x).toBe(3600 - 13);
   });
   it('cancels a pending second dagger strike at direct death and never resurrects that pending attack', () => {
-    const w = new GameplayWorld({ characterClass: 'rogue', initialEnemies: false });
+    const w = new GameplayWorld({
+      characterClass: 'rogue',
+      initialEnemies: false,
+      spawning: { enabled: false },
+    });
     w.spawnEnemy('melee', 0, 0, {
       ...ALPHA_ENEMIES.melee,
       movementSpeed: 0,
@@ -276,14 +321,23 @@ describe('movement, cancellation and numerical time contracts', () => {
     expect(w.getEvents().filter((e) => e.event.type === 'attack-started')).toHaveLength(1);
   });
   it('does not allow a newly killed contact enemy to initiate its same-time attack', () => {
-    const w = new GameplayWorld({ characterClass: 'warrior', level: 50, initialEnemies: false });
+    const w = new GameplayWorld({
+      characterClass: 'warrior',
+      level: 50,
+      initialEnemies: false,
+      spawning: { enabled: false },
+    });
     w.spawnEnemy('melee', 0, 0, { ...ALPHA_ENEMIES.melee, movementSpeed: 0 });
     w.update(0);
     expect(w.getSnapshot().kills).toBe(1);
     expect(w.getEvents().filter((e) => e.event.type === 'contact-attempt')).toHaveLength(0);
   });
   it('keeps DoT active when its enemy source dies', () => {
-    const w = new GameplayWorld({ characterClass: 'warrior', initialEnemies: false });
+    const w = new GameplayWorld({
+      characterClass: 'warrior',
+      initialEnemies: false,
+      spawning: { enabled: false },
+    });
     const id = w.spawnEnemy('melee', 300, 0);
     w.applyEffect({
       sourceId: id,
@@ -300,7 +354,11 @@ describe('movement, cancellation and numerical time contracts', () => {
     expect(w.statuses.getGroup('player', 'poison')?.stacks[0].sourceId).toBe(id);
   });
   it('allows repeated zero-delta updates after accumulated floating point correction', () => {
-    const w = new GameplayWorld({ characterClass: 'warrior', initialEnemies: false });
+    const w = new GameplayWorld({
+      characterClass: 'warrior',
+      initialEnemies: false,
+      spawning: { enabled: false },
+    });
     for (let i = 0; i < 3; i++) w.update(0.1);
     const before = w.getSnapshot();
     w.update(0);

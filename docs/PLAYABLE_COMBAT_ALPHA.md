@@ -23,7 +23,7 @@ npm run dev
 
 HUD показывает класс, уровень, HP/Max HP, время, число убийств, оружие, доступность revival и статусы игрока. Над врагами видны HP и `PO/BU/BL × stacks`; melee и ranged различаются формой/цветом. Меч/кинжалы показывают реальные attack sectors, снаряды — реальные snapshots, damage/Dodge/crit feedback берётся из Core events.
 
-Стартовая арена содержит 8 melee и 4 ranged врага. Новых волн нет: после зачистки начните новый забег либо добавьте врагов через DEV. Существующие XP pickup и mid-run upgrades из первого прототипа оставлены отдельно по адресу **`/?prototype`**. Их старые формулы не участвуют в альфе. Постоянный уровень в альфе задаётся тестовым контролем; постоянная прокачка/награды не реализованы. Прежнее optional localStorage-сохранение рекорда времени/убийств используется один раз при окончательном завершении забега, а не на экране revival; уровни классов оно не сохраняет.
+Стартовая арена содержит 8 melee и 4 ranged врага. Task 06.1 добавил непрерывные off-screen подкрепления и рост давления; теперь после зачистки приходят новые группы. Существующие XP pickup и mid-run upgrades из первого прототипа оставлены отдельно по адресу **`/?prototype`**. Их старые формулы не участвуют в альфе. Постоянный уровень задаётся тестовым контролем; XP и уровень текущего забега теперь ведутся отдельно без автоматических stat gains. Постоянное сохранение XP не реализовано. Прежнее optional localStorage-сохранение рекорда времени/убийств используется один раз при окончательном завершении забега, а не на экране revival; уровни классов оно не сохраняет.
 
 ## Developer Testing Mode
 
@@ -126,7 +126,7 @@ Phaser ограничивает один визуальный dt до 50 ms, ч�
 
 Существующий attackSpeed масштабирует interval. Circular Area Size не применяется самовольно к sector range или projectile travel: circular abilities здесь отсутствуют. Ни class growth, ни caps не изменены.
 
-Арена 3600×3600, player radius 13, base movement speed 185 × Character Stats movement multiplier. Soft separation: cell 64, padding 8, strength 0.8, AI movement step 1/30 s. Active enemy cap 120; initial group radius 260/305.
+Арена 3600×3600, player radius 13, base movement speed 185 × Character Stats movement multiplier. Soft separation: cell 64, padding 8, strength 0.8, AI movement step 1/30 s. Active enemy cap 120; manual test group radius 260/305; normal Task 06.1 starts use off-screen placement.
 
 Enemy stats: Max HP 90, physical 18, magical 22, Resistance 5, Crit Chance 8%, Critical Damage 200%, Dodge 0. Melee: speed 100, radius 14, physical coefficient 1, interval 0.9 s. Ranged: speed 82, radius 15, magical coefficient 1, interval 1.7 s, range 360, retreat 150, hysteresis 18, projectile speed 240/radius 6/max travel 700.
 
@@ -176,4 +176,8 @@ Enemy separation использует прежний spatial grid. Активн�
 
 Оставшиеся источники нагрузки: boundary selection сканирует активные entities/flights, player projectile targeting/collision проверяет подходящих enemies; scene строит snapshots и status labels. Глобальный broadphase для player projectiles не добавлен. Предельно плотная separation группа всё ещё содержит много реальных соседей. Большие delta стоят пропорционально событиям. Core хранит уникальные ID умерших до конца run ради attribution; бесконечное ручное создание/удаление врагов растит эту сессионную таблицу, хотя active world/history ограничены.
 
-Нет волн/победы, XP/upgrades в новой альфе, rewards/инвентаря, permanent progression, accounts, public hosting, финального баланса/арта. При полной зачистке новые враги не появляются сами. Input sampling дискретный, visuals простые, clocks/RNG детерминированы для одинакового input, а не для любых fps/input samples. Прежнее предупреждение Vite о большом Phaser bundle сохраняется. Task 07 не начат.
+Победа, skills/upgrades, currency/inventory, permanent progression, accounts и финальный баланс/арт отсутствуют. Task 06.1 добавил run XP и подкрепления; Cloudflare Pages deployment подготовлен отдельно. Непрерывные подкрепления Task 06.1 приходят автоматически по общему расписанию. Input sampling дискретный, visuals простые, clocks/RNG детерминированы для одинакового input, а не для любых fps/input samples. Прежнее предупреждение Vite о большом Phaser bundle сохраняется. Task 07 не начат.
+
+### Task 06.1 update
+
+[Experience & Enemy Waves](EXPERIENCE_WAVES.md) описывает текущие defaults, collectible crystals, provisional XP curve, отдельные run/permanent levels, off-screen placement, schedule/pressure/caps и новые DEV controls. Порядок общей timeline сохранён, spawn стоит после combat events на равном timestamp. Приведённые выше результаты 576 тестов и параметры стартового сценария относятся к завершённому Task 06; актуальные проверки Task 06.1 описаны в новом документе.

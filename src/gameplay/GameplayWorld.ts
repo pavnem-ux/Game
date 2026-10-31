@@ -18,6 +18,9 @@ import { sameInstant } from '../simulation-boundary';
 import { ALPHA, ALPHA_ENEMIES, ALPHA_ENEMY_STATS, ALPHA_WEAPONS, defaultOnHit } from './config';
 import type { GameplayOptions, GameplaySnapshot, WorldEvent } from './types';
 
+import { RunExperience, XP_RULES } from './experience';
+import { spawningSettings, wavePressure, offscreenPosition, viewportSize } from './spawning';
+import type { SpawnSettings, ViewportSize } from './spawning';
 /** The sole world scheduler. All damage is resolved by existing modules, one boundary at a time. */
 export class GameplayWorld {
   readonly core: CombatCore;
@@ -35,7 +38,14 @@ export class GameplayWorld {
   private manualPause = false;
   private enemySequence = 0;
   private eventSequence = 0;
-  private readonly deaths = new Set<string>();
+  private kills = 0;
+  private readonly experience = new RunExperience();
+  private spawnSettings: SpawnSettings;
+  private nextSpawnAt: number;
+  private waveSequence = 0;
+  private autoSpawnSequence = 0;
+  private viewport: ViewportSize;
+  private readonly spawnRandom: () => number;
   private readonly history: WorldEvent[] = [];
   private readonly enemyIds = new Set<string>();
   private adapter: WeaponStatusAdapter;
@@ -49,6 +59,14 @@ export class GameplayWorld {
       seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
       return seed / 4294967296;
     };
+    let spawnSeed = (options.seed ?? 1337) ^ 0x9e3779b9;
+    this.spawnRandom = () => {
+      spawnSeed = (Math.imul(spawnSeed, 1664525) + 1013904223) >>> 0;
+      return spawnSeed / 4294967296;
+    };
+    this.spawnSettings = spawningSettings(options.spawning);
+    this.viewport = viewportSize(options.viewport ?? { width: 1280, height: 720 });
+    this.nextSpawnAt = this.spawnSettings.interval;
     this.core = new CombatCore(this.random);
     this.core.addEntity({
       id: this.playerId,
@@ -88,8 +106,14 @@ export class GameplayWorld {
       fallbackDirection: { x: 1, y: 0 },
     });
     this.adapter = this.makeAdapter(options.onHit ?? defaultOnHit(options.characterClass));
-    if (options.initialEnemies !== false)
-      this.spawnGroup(options.enemyCount ?? 12, options.spawnDistance ?? 260);
+    if (options.initialEnemies !== false) {
+      const count = options.enemyCount ?? 12;
+      if (!Number.isInteger(count) || count < 1 || count > 24)
+        throw new RangeError('Initial enemy count must be 1–24.');
+      if (options.spawnDistance !== undefined)
+        this.spawnGroup(Math.min(count, this.spawnSettings.maxActive), options.spawnDistance);
+      else this.spawnOffscreen(Math.min(count, this.spawnSettings.maxActive), 0);
+    }
     this.prepare();
   }
   get time() {
@@ -123,7 +147,15 @@ export class GameplayWorld {
       playerBody: this.body,
       character: this.character,
       survival: this.survival.getState(),
-      kills: this.deaths.size,
+      kills: this.kills,
+      progression: this.experience.getState(),
+      crystals: this.experience.getCrystals(),
+      spawning: Object.freeze({
+        settings: this.spawnSettings,
+        nextSpawnAt: this.nextSpawnAt,
+        waves: this.waveSequence,
+        viewport: this.viewport,
+      }),
       enemies: Object.freeze(
         this.enemies
           .getEnemies()
@@ -160,7 +192,8 @@ export class GameplayWorld {
       if (next.kind === 'control') this.movePlayer();
       else if (next.kind === 'weapon') this.consumeWeapons(this.weapons.resolveBoundary());
       else if (next.kind === 'status') this.consumeStatuses(this.statuses.resolveBoundary());
-      else this.consumeEnemies(this.enemies.resolveBoundary());
+      else if (next.kind === 'enemy') this.consumeEnemies(this.enemies.resolveBoundary());
+      else if (next.kind === 'spawn') this.spawnWave();
       if (this.survival.getState().requiresWorldPause && pauseAt === null) {
         pauseAt = this.clock;
         this.timeCompensation = 0;
@@ -190,22 +223,29 @@ export class GameplayWorld {
       (angle !== undefined && !Number.isFinite(angle))
     )
       throw new RangeError('Invalid spawn geometry.');
-    if (this.enemies.getEnemies().filter((e) => e.alive).length >= ALPHA.enemyCap)
+    if (this.enemies.getEnemies().filter((e) => e.alive).length >= this.spawnSettings.maxActive)
       throw new RangeError('Alpha enemy cap reached.');
     // Validate the optional test profile before changing RNG, IDs or authoritative entities.
     const profile = enemyConfig(config ?? ALPHA_ENEMIES[kind]);
     if (profile.behavior !== kind) throw new TypeError('Enemy kind/profile mismatch.');
-    const a = angle ?? this.random() * Math.PI * 2;
-    const id = `enemy-${++this.enemySequence}`;
-    this.core.addEntity({ id, affiliation: 'enemy', stats: ALPHA_ENEMY_STATS });
-    this.enemies.registerEnemy({
-      entityId: id,
-      config: profile,
-      position: {
+    const a = angle ?? this.spawnRandom() * Math.PI * 2;
+    return this.registerEnemy(
+      kind,
+      {
         x: this.clamp(this.body.x + Math.cos(a) * distance, 20),
         y: this.clamp(this.body.y + Math.sin(a) * distance, 20),
       },
-    });
+      profile,
+    );
+  }
+  private registerEnemy(
+    kind: 'melee' | 'ranged',
+    position: Point,
+    profile: EnemyConfig = ALPHA_ENEMIES[kind],
+  ): string {
+    const id = `enemy-${++this.enemySequence}`;
+    this.core.addEntity({ id, affiliation: 'enemy', stats: ALPHA_ENEMY_STATS });
+    this.enemies.registerEnemy({ entityId: id, config: profile, position });
     this.enemyIds.add(id);
     this.prepare();
     return id;
@@ -213,7 +253,10 @@ export class GameplayWorld {
   spawnGroup(count = 8, distance = 260): void {
     if (!Number.isInteger(count) || count < 1 || count > 24)
       throw new RangeError('Group count must be 1–24.');
-    if (this.enemies.getEnemies().filter((e) => e.alive).length + count > ALPHA.enemyCap)
+    if (
+      this.enemies.getEnemies().filter((e) => e.alive).length + count >
+      this.spawnSettings.maxActive
+    )
       throw new RangeError('Group exceeds alpha enemy cap.');
     if (!Number.isFinite(distance) || distance < 0 || distance + (count > 1 ? 45 : 0) > 1500)
       throw new RangeError('Invalid group distance including the 45-unit ring offset.');
@@ -223,6 +266,79 @@ export class GameplayWorld {
         distance + (i % 2) * 45,
         (i * Math.PI * 2) / count,
       );
+  }
+  setViewport(width: number, height: number): void {
+    this.viewport = viewportSize({ width, height });
+  }
+  setSpawning(input: Partial<SpawnSettings>): void {
+    if (!input || typeof input !== 'object' || Array.isArray(input))
+      throw new TypeError('Invalid spawning settings.');
+    const next = spawningSettings({ ...this.spawnSettings, ...input });
+    if (next.maxActive < this.enemyIds.size)
+      throw new RangeError(
+        'Clear enemies before lowering the active cap below the current population.',
+      );
+    const nextAt = this.clock + wavePressure(this.clock, next).interval;
+    if (!Number.isFinite(nextAt) || sameInstant(nextAt, this.clock))
+      throw new RangeError('Spawn schedule is not representable.');
+    this.spawnSettings = next;
+    this.nextSpawnAt = nextAt;
+  }
+  grantTestXp(amount: number): void {
+    if (!this.survival.getState().canPlayerAct)
+      throw new Error('XP testing requires a living active player.');
+    if (!Number.isSafeInteger(amount) || amount < 0 || amount > 1_000_000)
+      throw new RangeError('Test XP must be 0–1000000.');
+    this.record('progression', this.experience.grantForTesting(amount));
+  }
+  dropTestCrystal(value: number, distance = 60): void {
+    if (
+      !Number.isSafeInteger(value) ||
+      value < 1 ||
+      value > 1_000_000 ||
+      !Number.isFinite(distance) ||
+      distance < 0 ||
+      distance > 1500
+    )
+      throw new RangeError('Invalid test crystal.');
+    this.experience.drop(
+      { x: this.clamp(this.body.x + distance, XP_RULES.crystalRadius), y: this.body.y },
+      value,
+    );
+  }
+  private spawnOffscreen(count: number, stage: number) {
+    const enemyIds: string[] = [],
+      positions: Point[] = [];
+    for (let i = 0; i < count && this.enemyIds.size < this.spawnSettings.maxActive; i++) {
+      const kind = this.autoSpawnSequence % 3 === 0 ? 'ranged' : 'melee';
+      const position = offscreenPosition(
+        this.body,
+        this.viewport,
+        ALPHA_ENEMIES[kind].radius,
+        this.spawnSettings,
+        this.spawnRandom,
+      );
+      if (!position) break;
+      this.autoSpawnSequence++;
+      enemyIds.push(this.registerEnemy(kind, position));
+      positions.push(position);
+    }
+    this.record('spawning', [
+      Object.freeze({
+        type: 'wave-spawned',
+        wave: this.waveSequence,
+        stage,
+        enemyIds: Object.freeze(enemyIds),
+        positions: Object.freeze(positions),
+        nextSpawnAt: this.nextSpawnAt,
+      }),
+    ]);
+  }
+  private spawnWave() {
+    const pressure = wavePressure(this.clock, this.spawnSettings);
+    this.nextSpawnAt = this.clock + pressure.interval;
+    this.waveSequence++;
+    this.spawnOffscreen(pressure.count, pressure.stage);
   }
   setOnHit(definitions: readonly EffectDefinition[]): void {
     this.adapter = this.makeAdapter(definitions);
@@ -321,6 +437,7 @@ export class GameplayWorld {
       y: this.clamp(this.body.y + this.input.y * speed * ALPHA.controlStep, this.body.radius),
     });
     this.controlIndex++;
+    this.record('progression', this.experience.collect(this.body, this.body.radius));
   }
   private prepare() {
     this.record('enemy', this.enemies.prepareBoundary(this.body));
@@ -333,28 +450,40 @@ export class GameplayWorld {
       );
   }
   private nextBoundary(end: number) {
-    const candidates: {
-      time: number;
-      rank: number;
-      kind: 'control' | 'weapon' | 'status' | 'enemy';
-    }[] = [];
-    const add = (time: number, rank: number, kind: (typeof candidates)[number]['kind']) => {
-      if (time < end || sameInstant(time, end))
-        candidates.push({ time: Math.max(this.clock, Math.min(time, end)), rank, kind });
-    };
-    if (this.survival.getState().canPlayerAct)
-      add(this.controlIndex * ALPHA.controlStep, 0, 'control');
-    const w = this.weapons.peekBoundary(end),
-      s = this.statuses.peekBoundary(end),
-      e = this.enemies.peekBoundary(end);
-    if (w) add(w.time, w.priority <= 1 ? 2 : 5, 'weapon');
-    if (s) add(s.time, s.priority === 0 ? 3 : 8, 'status');
-    if (e) add(e.time, e.priority <= 1 ? 1 : e.priority < 4 ? 4 : 6, 'enemy');
-    return (
-      candidates.sort((a, b) =>
+    let horizon = end;
+    for (;;) {
+      const candidates: {
+        time: number;
+        rank: number;
+        kind: 'control' | 'weapon' | 'status' | 'enemy' | 'spawn' | 'advance';
+      }[] = [];
+      const add = (time: number, rank: number, kind: (typeof candidates)[number]['kind']) => {
+        if (time < horizon || sameInstant(time, horizon))
+          candidates.push({ time: Math.max(this.clock, Math.min(time, horizon)), rank, kind });
+      };
+      if (this.survival.getState().canPlayerAct)
+        add(this.controlIndex * ALPHA.controlStep, 0, 'control');
+      const w = this.weapons.peekBoundary(horizon),
+        s = this.statuses.peekBoundary(horizon),
+        e = this.enemies.peekBoundary(horizon);
+      if (this.spawnSettings.enabled && this.survival.getState().canPlayerAct)
+        add(this.nextSpawnAt, 9, 'spawn');
+      if (w) add(w.time, w.priority <= 1 ? 2 : 5, 'weapon');
+      if (s) add(s.time, s.priority === 0 ? 3 : 8, 'status');
+      if (e) add(e.time, e.priority <= 1 ? 1 : e.priority < 4 ? 4 : 6, 'enemy');
+      const next = candidates.sort((a, b) =>
         sameInstant(a.time, b.time) ? a.rank - b.rank : a.time - b.time,
-      )[0] ?? null
-    );
+      )[0];
+      if (!next)
+        return horizon < end ? { time: horizon, rank: -1, kind: 'advance' as const } : null;
+      // Geometry roots can move a few ULPs when a peek horizon is shortened. Revalidate
+      // every module against the actual chosen horizon before advancing any clocks/HP.
+      if (next.time < horizon && !sameInstant(next.time, horizon)) {
+        horizon = next.time;
+        continue;
+      }
+      return next;
+    }
   }
   private advanceAll(time: number) {
     if (time === this.clock) return;
@@ -409,12 +538,41 @@ export class GameplayWorld {
   private forwardCombat(events: readonly CombatEvent[]) {
     this.record('combat', events);
     for (const event of events)
-      if (event.type === 'death' && event.entityId !== this.playerId) {
-        this.deaths.add(event.entityId);
-        if (this.enemyIds.delete(event.entityId)) {
-          this.enemies.unregisterEnemy(event.entityId);
-          this.weapons.removeBody(event.entityId);
+      if (
+        event.type === 'death' &&
+        event.entityId !== this.playerId &&
+        this.enemyIds.has(event.entityId)
+      ) {
+        const enemy = this.enemies.getEnemy(event.entityId);
+        const contributors = Object.freeze([
+          ...new Set(
+            event.periodic?.sources
+              .filter((source) => source.rawDamage > 0)
+              .map((source) => source.sourceId) ?? [event.sourceId],
+          ),
+        ]);
+        if (contributors.includes(this.playerId)) {
+          this.kills++;
+          const xp =
+            enemy.config.behavior === 'melee' ? XP_RULES.meleeReward : XP_RULES.rangedReward;
+          const crystal = this.experience.drop(enemy.position, xp);
+          this.record('progression', [
+            Object.freeze({
+              type: 'enemy-rewarded',
+              enemyId: event.entityId,
+              sourceId: event.sourceId,
+              contributors,
+              cause: event.periodic ? 'periodic' : 'direct',
+              ...(event.periodic ? { effectId: event.periodic.effectId } : {}),
+              xp,
+              crystalId: crystal.id,
+              position: enemy.position,
+            }),
+          ]);
         }
+        this.enemyIds.delete(event.entityId);
+        this.enemies.unregisterEnemy(event.entityId);
+        this.weapons.removeBody(event.entityId);
       }
     this.record('status', this.statuses.consumeCombatEvents(events));
     this.record('enemy', this.enemies.consumeCombatEvents(events));

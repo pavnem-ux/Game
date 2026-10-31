@@ -328,3 +328,27 @@
     top: 150px;
   }
 }
+
+.alpha-run-xp {
+  font-size: 10px;
+  color: #bad2b2;
+  margin-top: 6px;
+}
+.alpha-xp-track {
+  height: 3px;
+  background: #16291c;
+  margin-top: 4px;
+}
+.alpha-xp-track > div {
+  height: 100%;
+  background: #a5d9a0;
+  transition: width 0.12s linear;
+}
+@media (max-width: 760px) {
+  .alpha-effects {
+    top: 175px;
+  }
+  .alpha-mobile-summary {
+    top: 148px;
+  }
+}

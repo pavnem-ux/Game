@@ -74,7 +74,7 @@ try {
   s = await state();
   assert.equal(s.world.statuses.find((g) => g.targetId === 'player').stacks.length, 10);
   const runId = s.runId,
-    positions = s.world.enemies.map((e) => e.position),
+    positions = s.world.enemies.map((e) => ({ id: e.entityId, position: e.position })),
     projectiles = s.world.enemyProjectiles;
   await command({ type: 'death' });
   await page.getByRole('button', { name: 'Воскреснуть · Revive' }).waitFor();
@@ -90,10 +90,18 @@ try {
   assert.ok(s.world.player.currentHp <= s.world.player.maxHp / 2);
   assert.ok(s.world.player.currentHp > 0);
   assert.ok(s.world.survival.fullyProtected);
-  assert.deepEqual(
-    s.world.enemies.map((e) => e.position),
-    positions,
-  );
+  for (const previous of positions) {
+    const current = s.world.enemies.find((e) => e.entityId === previous.id);
+    if (current)
+      assert.ok(
+        Math.hypot(
+          current.position.x - previous.position.x,
+          current.position.y - previous.position.y,
+        ) <=
+          101 * (s.world.time - dead.world.time) + 1e-7,
+        'revival preserves positions before ordinary resumed movement',
+      );
+  }
   assert.ok(s.world.statuses.every((g) => g.targetId !== 'player'));
   await page.screenshot({ path: 'artifacts/alpha-05-revival.png' });
   await command({ type: 'death' });
@@ -120,6 +128,81 @@ try {
         'both dagger strikes',
       );
   }
+  // Real enemy deaths drop persistent crystals; collect them by moving, without granting XP.
+  await command({
+    type: 'restart',
+    options: {
+      characterClass: 'warrior',
+      level: 50,
+      initialEnemies: false,
+      spawning: { enabled: false },
+    },
+  });
+  await page.getByRole('button', { name: 'Пауза', exact: true }).click();
+  await command({ type: 'group', count: 2, distance: 80 });
+  await page.getByRole('button', { name: 'Продолжить' }).click();
+  await page.evaluate(() => window.__alpha.advance(1));
+  s = await state();
+  assert.ok(s.world.crystals.length > 0, 'real death crystals remain in the world');
+  const permanent = s.world.character.permanentLevel,
+    maxHp = s.world.player.maxHp;
+  // Walk to real crystals with simulated input, exercising the same pickup API as normal play.
+  for (let i = 0; i < 100; i++) {
+    s = await state();
+    if (s.world.progression.totalXp >= 20) break;
+    const crystal = s.world.crystals[0];
+    if (!crystal) {
+      await page.evaluate(() => window.__alpha.advance(0.1));
+      continue;
+    }
+    const dx = crystal.x - s.world.playerBody.x,
+      dy = crystal.y - s.world.playerBody.y;
+    const keys = [];
+    if (Math.abs(dx) > 8) keys.push(dx > 0 ? 'd' : 'a');
+    if (Math.abs(dy) > 8) keys.push(dy > 0 ? 's' : 'w');
+    for (const key of keys) await page.keyboard.down(key);
+    await page.evaluate(() => window.__alpha.advance(0.1));
+    for (const key of keys) await page.keyboard.up(key);
+  }
+  s = await state();
+  assert.ok(s.world.progression.level >= 2, 'collectible XP raises only run level');
+  assert.equal(s.world.character.permanentLevel, permanent);
+  assert.equal(s.world.player.maxHp, maxHp);
+  await page.getByRole('progressbar', { name: 'Опыт забега' }).waitFor();
+  await page.screenshot({ path: 'artifacts/alpha-10-xp.png' });
+  await page.getByRole('button', { name: 'DEV · Тестирование' }).click();
+  await page.getByLabel('DEV XP').fill('20');
+  const totalBefore = (await state()).world.progression.totalXp;
+  await page.getByRole('button', { name: 'Выдать XP', exact: true }).click();
+  assert.ok(
+    (await state()).world.progression.totalXp >= totalBefore + 20,
+    'interactive DEV XP control',
+  );
+  await page.getByRole('button', { name: 'DEV · Закрыть' }).click();
+  await command({
+    type: 'restart',
+    options: {
+      characterClass: 'mage',
+      initialEnemies: false,
+      spawning: { interval: 1, minimumInterval: 1, count: 3, maximumCount: 3, maxActive: 6 },
+    },
+  });
+  await command({ type: 'protection', enabled: true });
+  await page.evaluate(() => window.__alpha.advance(1));
+  s = await state();
+  assert.equal(s.world.enemies.length, 3);
+  const view = s.world.spawning.viewport;
+  for (const e of s.world.enemies)
+    assert.ok(
+      Math.abs(e.position.x - s.world.playerBody.x) >= view.width / 2 ||
+        Math.abs(e.position.y - s.world.playerBody.y) >= view.height / 2,
+      'new wave spawns off screen',
+    );
+  await page.evaluate(() => window.__alpha.advance(2));
+  s = await state();
+  assert.equal(s.world.spawning.waves, 3);
+  assert.ok(s.world.enemies.length <= 6);
+  await page.screenshot({ path: 'artifacts/alpha-11-waves.png' });
   await command({ type: 'restart', options: { characterClass: 'mage', initialEnemies: false } });
   await command({ type: 'protection', enabled: true });
   for (let i = 0; i < 5; i++) await command({ type: 'group', count: 24, distance: 550 });
@@ -171,7 +254,7 @@ try {
   await mobile.screenshot({ path: 'artifacts/alpha-08-mobile.png' });
   assert.deepEqual(errors, []);
   console.log(
-    'PASS alpha: class selection, all four weapons, both enemies, actual damage, WASD/joystick, interactive DEV, status cap, pause, same-world revival, second death, bounded enemy group; no browser exceptions.',
+    'PASS alpha: class selection, all four weapons, both enemies, actual damage, WASD/joystick, interactive DEV, status cap, pause, same-world revival, second death, bounded enemy group, collectible death XP/run levels, DEV XP and continuous off-screen waves; no browser exceptions.',
   );
 } finally {
   await browser.close();

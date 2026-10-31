@@ -1,6 +1,6 @@
 # Deploy the combat alpha to Cloudflare Pages
 
-This is deployment preparation for the existing Task 06 alpha, not Task 07. Gameplay, class progression, formulas, visuals and provisional balancing are unchanged. The site is a static Vite/React/Phaser build; it needs no backend, Pages Functions or server process after deployment.
+These deployment settings also build the Task 06.1 XP/waves extension; see [Experience & Enemy Waves](EXPERIENCE_WAVES.md). Task 07 is not included. These hosting settings do not override gameplay rules or provisional balance. The site is a static Vite/React/Phaser build; it needs no backend, Pages Functions or server process after deployment.
 
 ## What is prepared
 
@@ -70,13 +70,13 @@ The Pages build command is only `npm run build`; unit/browser tests are verified
 
 The local SPA test uses Vite preview's fallback. Cloudflare's matching fallback is based on its documented no-404 behavior; actual edge routing is verified only after deployment with a real Pages URL.
 
-## Preparation verification results
+## Original deployment-preparation verification results (commit d4e31dc)
 
 - Clean `npm ci` succeeded with Node.js 24.19.0 and npm 11.9.0.
 - `npm test`: all 576 Vitest tests and 6 Node tests passed; no skips.
 - `npm run build`: both TypeScript checks and production build passed. Output: index.html (0.65 kB), hashed CSS (19.16 kB) and JS (1,532.83 kB). The existing Phaser chunk-size advisory remains.
 - `npm run test:production`: static artifact checks and Chromium gameplay/pause, nested path and production debug-exclusion checks passed.
-- No files under `src/`, gameplay configuration, dependency declarations or the lockfile were changed. Only the Node version pin, deployment documentation/README and deployment regression were changed. Generated output and secrets are not committed.
+- The deployment-preparation commit changed no files under `src/`, gameplay configuration, dependency declarations or the lockfile. Subsequent Task 06.1 gameplay changes are documented separately. Only the Node version pin, deployment documentation/README and deployment regression were changed. Generated output and secrets are not committed.
 - Repository visibility could not be read through the metadata API (`Forbidden`); it was not changed. Cloudflare login, GitHub App authorization and the first live deployment/URL verification remain manual steps above.
 
 ## Authentication and troubleshooting
