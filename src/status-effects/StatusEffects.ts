@@ -43,7 +43,7 @@ export class StatusEffects {
   ) {
     if (!options || typeof options !== 'object')
       throw new TypeError('Status options must be an object.');
-    for (const key of ['random', 'canApply', 'canDamage'] as const)
+    for (const key of ['random', 'canApply', 'canDamage', 'onPeriodicDamageResolved'] as const)
       if (options[key] !== undefined && typeof options[key] !== 'function')
         throw new TypeError(`${key} must be a function.`);
     this.random = options.random ?? Math.random;
@@ -52,6 +52,24 @@ export class StatusEffects {
   get time() {
     return this.clock;
   }
+  usesCombatCore(core: CombatCore): boolean {
+    return this.core === core;
+  }
+
+  clearNegativeEffects(targetId: string): readonly StatusRemovedEvent[] {
+    id(targetId, 'targetId');
+    this.core.getEntity(targetId);
+    const owned = this.groups.get(targetId);
+    return Object.freeze(
+      owned
+        ? EFFECT_TYPES.flatMap((type) => {
+            const group = owned.get(type);
+            return group ? [this.removeGroup(group, 'cleansed')] : [];
+          })
+        : [],
+    );
+  }
+
   isAlive(entityId: string): boolean {
     return this.core.getEntity(entityId).alive;
   }
@@ -199,9 +217,15 @@ export class StatusEffects {
       if (
         !event ||
         typeof event !== 'object' ||
-        !['damage', 'dodge', 'death', 'healing', 'max-hp-changed', 'periodic-damage'].includes(
-          event.type,
-        )
+        ![
+          'damage',
+          'dodge',
+          'death',
+          'healing',
+          'max-hp-changed',
+          'periodic-damage',
+          'revived',
+        ].includes(event.type)
       )
         throw new TypeError('Invalid CombatEvent.');
       if (event.type === 'death') {
@@ -227,15 +251,22 @@ export class StatusEffects {
       (options.paused !== undefined && typeof options.paused !== 'boolean')
     )
       throw new TypeError('paused must be boolean.');
-    const end = options.paused ? this.clock : this.clock + deltaSeconds;
+    if (options.shouldPause !== undefined && typeof options.shouldPause !== 'function')
+      throw new TypeError('shouldPause must be a function.');
+    const pausedNow = () =>
+      options.shouldPause ? booleanResult(options.shouldPause(), 'shouldPause') : false;
+    const initiallyPaused = options.paused || pausedNow();
+    const end = initiallyPaused ? this.clock : this.clock + deltaSeconds;
     finite(end, 'simulation time');
     const output: StatusEvent[] = [];
     this.pruneDead(output);
-    if (options.paused) return Object.freeze(output);
+    if (initiallyPaused) return Object.freeze(output);
+    let pauseAt: number | null = null;
     for (;;) {
-      const event = this.nextEvent(end);
+      const limit = pauseAt ?? end;
+      const event = this.nextEvent(limit);
       if (!event) {
-        this.clock = end;
+        this.clock = limit;
         break;
       }
       const group = event.group;
@@ -247,6 +278,7 @@ export class StatusEffects {
       if (event.kind === 'expire') {
         this.clock = event.at;
         output.push(this.removeGroup(group, 'expired'));
+        if (pauseAt === null && pausedNow()) pauseAt = this.clock;
         continue;
       }
       const rawDamage = group.stacks.reduce((sum, stack) => sum + stack.rawDamagePerTick, 0);
@@ -273,7 +305,14 @@ export class StatusEffects {
           result,
         }),
       );
-      if (result) output.push(...this.consumeCombatEvents(result.events));
+      if (result) {
+        output.push(...this.consumeCombatEvents(result.events));
+        this.options.onPeriodicDamageResolved?.(
+          Object.freeze({ group: view, rawDamage, time: this.clock }),
+          result,
+        );
+      }
+      if (pauseAt === null && pausedNow()) pauseAt = this.clock;
     }
     return Object.freeze(output);
   }

@@ -39,7 +39,7 @@ export interface StatusRemovedEvent {
   readonly type: 'status-removed';
   readonly time: number;
   readonly group: StatusGroupSnapshot;
-  readonly reason: 'expired' | 'target-dead';
+  readonly reason: 'expired' | 'target-dead' | 'cleansed';
 }
 export interface StatusTickEvent {
   readonly type: 'status-tick';
@@ -69,9 +69,15 @@ export interface StatusEffectsOptions {
   readonly random?: RandomSource;
   readonly canApply?: (context: ApplicationEligibility) => boolean;
   readonly canDamage?: (context: DamageEligibility) => boolean;
+  readonly onPeriodicDamageResolved?: (
+    context: DamageEligibility,
+    result: PeriodicDamageResult,
+  ) => void;
 }
 export interface StatusUpdateOptions {
   readonly paused?: boolean;
+  /** Finish already-due local events at this timestamp, then stop before later time. */
+  readonly shouldPause?: () => boolean;
 }
 export type OnHitEffectMapping = Readonly<Record<string, readonly EffectDefinition[]>>;
 export interface HitApplicationResult {

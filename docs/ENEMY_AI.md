@@ -35,7 +35,7 @@ function createEnemySimulation(
 | API                                           | Поведение                                                                                                                                                                                   |
 | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `registerEnemy({entityId, position, config})` | Подключает существующую enemy-affiliated сущность. ID уникален в AI. Конфигурация, позиция и вложенный projectile config копируются.                                                        |
-| `update(deltaSeconds, playerBody, {paused?})` | Продвигает внутренние симуляционные часы и возвращает readonly EnemyEvent[]. Позиция игрока предоставлена caller, не меняется AI.                                                           |
+| `update(deltaSeconds, playerBody, {paused?,shouldPause?})` | Продвигает внутренние симуляционные часы и возвращает readonly EnemyEvent[]. Позиция игрока предоставлена caller, не меняется AI.                                                           |
 | `getEnemy(id)`, `getEnemies()`                | Immutable EnemySnapshot: entityId, config, position, velocity, state, alive, nextAttackAt. Alive выводится из Core; HP не дублируются. Мёртвые немедленно отображаются с нулевой скоростью. |
 | `getProjectiles()`                            | Immutable снимки выпущенных вражеских снарядов.                                                                                                                                             |
 | `getSeparationStats()`                        | Последний steering pass: livingEnemies, occupied cells, число local queries и фактических проверок соседей. Не FPS-бенчмарк.                                                                |
@@ -91,8 +91,8 @@ Influence убывает от максимума при совпадающих �
 1. Повторно проверить актуальный Core alive, overlap и cooldown.
 2. Спросить optional direct-damage policy.
 3. Если policy разрешает, создать один Core snapshot и вызвать `resolveAttack` против playerId.
-4. Вернуть `contact-attempt` с реальным result/Core events.
-5. Установить `nextAttackAt = attemptTime + attackInterval`.
+4. Установить `nextAttackAt = attemptTime + attackInterval`.
+5. С Task 05 немедленно уведомить optional onDirectDamageResolved, затем вернуть `contact-attempt` с реальным result/Core events.
 
 Dodge расходует cooldown. Blocked attempt тоже расходует cooldown, но у него `attack:null`, `result:null`, `blocked:true`: нет RNG Core, поддельного Dodge или damage/death events. Глобального contact cooldown нет — все враги имеют отдельный nextAttackAt. После смерти игрока последующие attempts исключаются сразу, а AI переходит в idle с нулевой скоростью.
 
@@ -152,7 +152,7 @@ Readonly EnemyEvent union:
 
 Для будущего on-hit выбирайте не заблокированные результаты с `status === 'hit' && appliedDamage > 0` и живой целью. Контекст содержит исходный enemy ID, attack ID, тип/коэффициент через snapshot, projectile ID и time. Никаких effect probabilities, affixes или status formulas внутри AI нет.
 
-`canResolveDirectDamage({time,sourceId,targetId,kind,attack})` предоставляет boundary будущему Player Survival. Для contact snapshot=null до решения policy; для projectile передаётся существующий snapshot. Callback должен вернуть boolean и быть чистым относительно текущей AI/Core симуляции. Он не является таймером: 0.3-секундная защита после попадания и 3-секундная после revival **не реализованы**.
+`canResolveDirectDamage({time,sourceId,targetId,kind,attack})` предоставляет boundary будущему Player Survival. Для contact snapshot=null до решения policy; для projectile передаётся существующий snapshot. Callback должен вернуть boolean и быть чистым относительно текущей AI/Core симуляции. Он не является таймером: 0.3-секундную защиту после попадания и 3-секундную после revival хранит отдельный Player Survival из Task 05.
 
 ## Status Effects и критическая граница Task 06
 
@@ -162,7 +162,7 @@ Poison/Burn/Bleed не мешают AI сами по себе: источник 
 
 **Здесь нет общей Weapon + Status + Enemy timeline.** Нельзя сначала выполнить AI.update(10), изменить HP будущими impacts, затем задним числом подавать его events модулю StatusEffects. Точно так же нельзя сначала продвинуть periodic damage в будущее, затем симулировать AI по старым HP. Это меняло бы боевые результаты.
 
-Текущий пакетный API возвращает resolved events после update. Для точной межсистемной интеграции Task 06 должен предоставить общий event-order/interruption boundary и передавать результаты на их времени. В частности, future post-hit protection должна узнать о первом успешном direct hit **до** следующего одновременного attempt; одно ретроактивное чтение большого event batch этого не обеспечивает. Policy callback позволяет блокировать по уже известному состоянию, но не подменяет доставку предшествующих результатов. Такой оркестратор/новые invulnerability mechanics сейчас не добавлялись.
+Текущий пакетный API возвращает resolved events после update. Для точной межсистемной интеграции Task 06 должен предоставить общий event-order/interruption boundary и передавать результаты на их времени. В частности, future post-hit protection должна узнать о первом успешном direct hit **до** следующего одновременного attempt; одно ретроактивное чтение большого event batch этого не обеспечивает. Policy callback позволяет блокировать по уже известному состоянию, но не подменяет доставку предшествующих результатов. Общий оркестратор не добавлялся. В Task 05 появился синхронный post-resolution observer и локальная точка остановки (см. ниже); они обеспечивают немедленную активацию защиты внутри AI, но не объединяют timeline всех модулей.
 
 Тесты интеграции используют явно согласованные временные границы без скрытого вызова StatusEffects из AI. Новое поведение не включено в Phaser-прототип.
 
@@ -178,8 +178,16 @@ npm run test:e2e  # прежний прототип, нужен dev server
 
 Тестируются нормальное/быстрое преследование, нулевая и близкая к нулю дистанция, pause/large delta, плотные группы/перестановка ID, local spatial queries, контактная геометрия, независимые cooldown, Core crit/Dodge/Resistance/HP/death, blocked attempts, ranged thresholds/hysteresis, прямолинейные swept projectiles, движения/смерти игрока и источника, unregister/dispose, periodic death compatibility, immutable результаты и invalid input.
 
-Никаких новых зависимостей, Character Stats формул, статусов, wave/spawn механик, pathfinding, revival, loot/XP, skills, sprites/VFX или UI. Геометрия player motion внутри update остаётся static-sample: sweep не интерполирует неприсланную траекторию игрока. Spatial hashing ускоряет разреженные сцены; в предельно плотной группе фактических соседей всё ещё может быть много. Значения всех профилей — временная тестовая конфигурация. Task 05 и Task 06 не начинались.
+Task 04 не добавлял зависимости, Character Stats формулы, статусы, wave/spawn механики, pathfinding, revival, loot/XP, skills, sprites/VFX или UI. Геометрия player motion внутри update остаётся static-sample: sweep не интерполирует неприсланную траекторию игрока. Spatial hashing ускоряет разреженные сцены; в предельно плотной группе фактических соседей всё ещё может быть много. Значения всех профилей — временная тестовая конфигурация. Task 05 описан ниже; Task 06 не начинался.
 
 ### Результаты проверки Task 04
 
 88 новых тестов Enemy AI прошли. Общий Vitest-набор: 483 теста (88 новых + 395 прежних), также прошли 6 Node-тестов. Пропусков нет. `npm run typecheck`, `npm run build` и браузерный сценарий `npm run test:e2e` успешны: старые movement/combat/XP/upgrades/death/restart/mobile проверки и нагрузочная проверка пула 240 врагов без JS exceptions. Старое информационное предупреждение Vite о размере bundle осталось; новый AI не включён в Phaser-сцену.
+
+### Player Survival Task 05
+
+Optional `onDirectDamageResolved(context, result)` вызывается синхронно после каждого Core direct result и до следующего same-time попадания. Для контакта cooldown уже зафиксирован; для projectile flight уже удалён. Dodge/нулевой урон тоже уведомляют, blocked result=null — нет. EnemyProjectiles принимает observer четвёртым аргументом после pre-policy. Callback может обновлять Survival, но не должен менять текущий AI/Core, reenter update или выбрасывать исключения.
+
+Optional `shouldPause()` в EnemyAI.update проверяется на входе и после каждого локального события. При true в T scheduler завершает уже доступные локальные события на T, затем не продвигается дальше. Остаток delta не накапливается. На паузе сохраняются позиции/cooldown/flights; после authoritative Core revival AI пересчитывает steering и возобновляет поведение без сброса мира. consumeCombatEvents принимает новый Core event `revived`.
+
+`createEnemySurvivalPolicies` связывает pre-policy и observer с PlayerSurvival, `createSurvivalPausePolicy` предоставляет локальный shouldPause. Этого достаточно для синхронной защиты от последовательных/одновременных AI hits. Глобальный владелец мира всё равно обязан согласовать время остальных модулей и остановить их на смерти: [API, протокол времени и граница Task 06](PLAYER_SURVIVAL.md).

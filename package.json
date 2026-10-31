@@ -14,7 +14,8 @@
     "test:combat": "vitest run tests/combat-core",
     "test:weapons": "vitest run tests/weapon-attacks",
     "test:status": "vitest run tests/status-effects",
-    "test:enemies": "vitest run tests/enemy-ai"
+    "test:enemies": "vitest run tests/enemy-ai",
+    "test:survival": "vitest run tests/player-survival"
   },
   "dependencies": {
     "phaser": "3.90.0",

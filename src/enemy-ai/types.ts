@@ -37,11 +37,13 @@ export interface EnemyDamageContext {
   readonly attack: AttackSnapshot | null;
 }
 export type DirectDamagePolicy = (context: EnemyDamageContext) => boolean;
+export type DirectDamageObserver = (context: EnemyDamageContext, result: DamageResult) => void;
 export interface EnemyAIOptions {
   readonly playerId: string;
   readonly movementStep: number;
   readonly separation: SeparationConfig;
   readonly canResolveDirectDamage?: DirectDamagePolicy;
+  readonly onDirectDamageResolved?: DirectDamageObserver;
 }
 export interface EnemySnapshot {
   readonly entityId: string;
@@ -104,6 +106,7 @@ export type EnemyProjectileEvent =
 export type EnemyEvent = EnemyStateEvent | ContactAttackEvent | EnemyProjectileEvent;
 export interface EnemyUpdateOptions {
   readonly paused?: boolean;
+  readonly shouldPause?: () => boolean;
 }
 export interface SeparationStats {
   readonly livingEnemies: number;

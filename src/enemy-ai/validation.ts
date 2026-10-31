@@ -77,8 +77,7 @@ export function separationConfig(value: SeparationConfig): SeparationConfig {
 export function sameTime(a: number, b: number) {
   return Math.abs(a - b) <= Number.EPSILON * 8 * Math.max(1, Math.abs(a), Math.abs(b));
 }
-export function policyResult(value: unknown): boolean {
-  if (typeof value !== 'boolean')
-    throw new TypeError('canResolveDirectDamage must return boolean.');
+export function policyResult(value: unknown, name = 'canResolveDirectDamage'): boolean {
+  if (typeof value !== 'boolean') throw new TypeError(`${name} must return boolean.`);
   return value;
 }

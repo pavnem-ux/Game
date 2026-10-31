@@ -15,6 +15,8 @@
     "src/status-effects",
     "tests/status-effects",
     "src/enemy-ai",
-    "tests/enemy-ai"
+    "tests/enemy-ai",
+    "src/player-survival",
+    "tests/player-survival"
   ]
 }

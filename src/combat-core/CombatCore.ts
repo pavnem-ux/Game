@@ -14,6 +14,7 @@ import type {
   PeriodicDamageResult,
   PeriodicDamageEvent,
   DeathEvent,
+  RevivalResult,
 } from './types';
 import { validatePeriodicRequest } from './periodic';
 import { createAttackSnapshot, calculateSuccessfulDamage, validateAttackSnapshot } from './attack';
@@ -178,6 +179,24 @@ export class CombatCore {
       appliedDamage,
       currentHp,
       events: events(emitted),
+    });
+  }
+
+  /** Explicit dead-to-alive operation. Run revival limits are owned by Player Survival. */
+  reviveEntity(entityId: string, restoredHp: number): RevivalResult {
+    nonNegative(restoredHp, 'restoredHp');
+    if (restoredHp === 0) throw new RangeError('restoredHp must be positive.');
+    const entity = this.getEntity(entityId);
+    if (entity.alive) throw new Error('Cannot revive a living entity.');
+    if (restoredHp > entity.maxHp)
+      throw new RangeError('restoredHp must not exceed current Max HP.');
+    const next = this.store({ ...entity, currentHp: restoredHp, alive: true });
+    return Object.freeze({
+      entity: next,
+      restoredHp,
+      events: events([
+        { type: 'revived', entityId, previousHp: 0, currentHp: restoredHp, maxHp: entity.maxHp },
+      ]),
     });
   }
 

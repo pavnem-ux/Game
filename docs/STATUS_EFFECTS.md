@@ -34,7 +34,7 @@ statuses.update(10, { paused: true }); // Симуляционное время 
 | `StatusEffects(core, options?)`          | Использует авторитетные сущности Core; RNG относится только к вероятности приложения.                                                                    |
 | `apply(EffectApplication)`               | Валидирует, проверяет liveness/hook/вероятность, добавляет или заменяет стак, возвращает immutable `ApplicationResult`.                                  |
 | `applyBatch(applications)`               | Применяет список последовательно; при ошибке откатывает всю статусную часть пакета и счётчики ID.                                                        |
-| `update(delta, { paused? })`             | Обрабатывает все тики/истечения до конца delta. Ноль не повторяет уже выполненные тики.                                                                  |
+| `update(delta, { paused?, shouldPause? })`             | Обрабатывает все тики/истечения до конца delta. Ноль не повторяет уже выполненные тики.                                                                  |
 | `advanceTo(time, options?)`              | Альтернативный абсолютный **симуляционный** timestamp; назад двигаться нельзя. Это не wall-clock время.                                                  |
 | `getGroup(targetId, effectType)`         | Immutable snapshot или null.                                                                                                                             |
 | `getGroups(targetId?)`                   | Immutable snapshots в стабильном порядке целей и типов.                                                                                                  |
@@ -120,7 +120,7 @@ statuses.update(10, { paused: true }); // Симуляционное время 
 
 - `status-applied`: time, immutable group/stack, optional replacedStackId.
 - `status-tick`: time, group snapshot, aggregate rawDamage, outcome `resolved|blocked`, `result: PeriodicDamageResult | null`.
-- `status-removed`: time, group snapshot, reason `expired|target-dead`.
+- `status-removed`: time, group snapshot, reason `expired|target-dead|cleansed` (cleansed добавлен в Task 05).
 
 Core damage/death events находятся в `tick.result.events`, остаются авторитетными и не генерируются второй раз модулем. История событий не хранится бесконечно внутри симуляции; результаты принадлежат вызывающему коду. Сохранённая в событии копия удалённой группы нужна для аудита и не является активным состоянием.
 
@@ -169,7 +169,7 @@ Optional `canApply({application,time})` и `canDamage({group,rawDamage,time})` �
 - canApply=false: стака/refresh нет, probability RNG не расходуется.
 - canDamage=false: данный тик отмечается blocked, Core HP operation не вызывается; next tick и expiration идут дальше, пропущенный урон не превращается в поздний burst.
 
-Этого достаточно, чтобы будущий модуль полной неуязвимости после revival подавлял новые отрицательные эффекты и их урон. Здесь **нет** revival, трёхсекундного таймера, shield, cleanse, immunity store или новых состояний Combat Core. Входящий прямой урон должен защищать будущий Survival слой отдельно.
+В Task 05 эти hooks подключает отдельный Player Survival; он владеет таймерами, direct protection и решением revival. StatusEffects не хранит собственную копию immunity. Ниже описаны дополнительные cleanse/notification API; shield не добавлялся.
 
 ## Валидация, ограничения и вопросы
 
@@ -178,7 +178,7 @@ Optional `canApply({application,time})` и `canDamage({group,rawDamage,time})` �
 - Очень большие catch-up периоды могут быть дорогими: все due ticks обязаны выполниться. Нельзя решать это молчаливым пропуском времени; caller может разбивать виртуальное время на чанки.
 - Snapshot raw вклада задаёт caller; формулы навыков/affix generation и мгновенный выбор характеристик источника не изобретаются.
 - Kill/reward attribution смешанных источников и общий межсистемный порядок direct vs periodic событий требуют будущего оркестратора/дизайна. Этот модуль фиксирует только детерминированный порядок своих событий.
-- Нет новых weapons, AI, волн, loot/XP, player revive, UI, VFX или Phaser integration. Все значения эффектов вне лимита 10 и интервала 1 секунду поступают извне.
+- Сам StatusEffects не реализует weapons, AI, волны, loot/XP, player revival lifecycle, UI, VFX или Phaser integration. Все значения эффектов вне лимита 10 и интервала 1 секунду поступают извне.
 
 ## Проверки
 
@@ -197,3 +197,11 @@ npm run test:e2e # при работающем dev-сервере; провер�
 ### Enemy AI Task 04
 
 Enemy AI читает authoritative Core alive и может принять те же death events через consumeCombatEvents. Timestamped direct results идут из EnemyEvent. Общий Status/Weapon/Enemy orchestrator не реализован; backward replay resolved batches запрещён прежним контрактом. [Ограничения и ответственность Task 06](ENEMY_AI.md).
+
+### Player Survival Task 05
+
+Добавлен `clearNegativeEffects(targetId): readonly StatusRemovedEvent[]`: удаляет только Poison/Burn/Bleed указанной зарегистрированной цели, возвращая immutable events с reason `cleansed` и текущим временем StatusEffects. Не продвигает часы, не сбрасывает сессию, не меняет другие группы. После прежней death cleanup возвращает пустой массив. Consumers с exhaustive reason-switch должны принять новый вариант. `usesCombatCore(core)` позволяет проверить принадлежность сессии до revival.
+
+Optional `onPeriodicDamageResolved(context, result)` вызывается синхронно после каждого разрешённого тика и его death cleanup, до следующего тика. Blocked ticks его не вызывают. Optional `shouldPause()` в update проверяется на входе/после событий: при true завершает уже доступные локальные события на текущем timestamp, останавливает время до последующих событий и не накапливает остаток delta. Это сохраняет одновременно допустимые player/enemy deaths. Без этих options прежнее поведение сохраняется.
+
+`createStatusSurvivalPolicies` соединяет canApply/canDamage с полной защитой и немедленно передаёт periodic death в Survival; обычная 0.3-секундная защита DoT не блокирует. Observers не должны reenter/mutate StatusEffects/Core или выбрасывать исключения. Модуль принимает новый Core event `revived`. Общая timeline по-прежнему не реализована: [контракт паузы, event delivery и граница Task 06](PLAYER_SURVIVAL.md).

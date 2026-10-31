@@ -107,6 +107,19 @@ export interface PeriodicDamageResult {
   readonly events: readonly (PeriodicDamageEvent | DeathEvent)[];
 }
 
+export interface RevivalEvent {
+  readonly type: 'revived';
+  readonly entityId: string;
+  readonly previousHp: 0;
+  readonly currentHp: number;
+  readonly maxHp: number;
+}
+export interface RevivalResult {
+  readonly entity: CombatEntity;
+  readonly restoredHp: number;
+  readonly events: readonly RevivalEvent[];
+}
+
 export interface HealingEvent {
   readonly type: 'healing';
   readonly entityId: string;
@@ -128,7 +141,8 @@ export type CombatEvent =
   | DeathEvent
   | HealingEvent
   | MaxHpChangedEvent
-  | PeriodicDamageEvent;
+  | PeriodicDamageEvent
+  | RevivalEvent;
 
 export interface DamageResult {
   readonly attackId: string;

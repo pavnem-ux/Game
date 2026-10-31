@@ -17,6 +17,8 @@ export type {
   MaxHpChangedEvent,
   DamageResult,
   HealingResult,
+  RevivalEvent,
+  RevivalResult,
   EntityChangeResult,
   PeriodicDamageSource,
   PeriodicDamageMetadata,

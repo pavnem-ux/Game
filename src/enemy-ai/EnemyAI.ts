@@ -69,9 +69,19 @@ export class EnemyAI {
       typeof input.canResolveDirectDamage !== 'function'
     )
       throw new TypeError('Damage policy must be a function.');
+    if (
+      input.onDirectDamageResolved !== undefined &&
+      typeof input.onDirectDamageResolved !== 'function'
+    )
+      throw new TypeError('Direct damage observer must be a function.');
     this.options = Object.freeze({ ...input, separation: separationConfig(input.separation) });
     this.grid = new SpatialGrid(this.options.separation.cellSize);
-    this.flights = new EnemyProjectiles(core, input.playerId, input.canResolveDirectDamage);
+    this.flights = new EnemyProjectiles(
+      core,
+      input.playerId,
+      input.canResolveDirectDamage,
+      input.onDirectDamageResolved,
+    );
   }
   get time() {
     return this.clock;
@@ -156,9 +166,15 @@ export class EnemyAI {
       if (
         !e ||
         typeof e !== 'object' ||
-        !['damage', 'dodge', 'death', 'healing', 'max-hp-changed', 'periodic-damage'].includes(
-          e.type,
-        )
+        ![
+          'damage',
+          'dodge',
+          'death',
+          'healing',
+          'max-hp-changed',
+          'periodic-damage',
+          'revived',
+        ].includes(e.type)
       )
         throw new TypeError('Invalid CombatEvent.');
       if (e.type === 'death' && this.core.getEntity(e.entityId).alive)
@@ -182,7 +198,12 @@ export class EnemyAI {
       (options.paused !== undefined && typeof options.paused !== 'boolean')
     )
       throw new TypeError('paused must be boolean.');
-    const end = options.paused ? this.clock : this.clock + deltaSeconds;
+    if (options.shouldPause !== undefined && typeof options.shouldPause !== 'function')
+      throw new TypeError('shouldPause must be a function.');
+    const pausedNow = () =>
+      options.shouldPause ? policyResult(options.shouldPause(), 'shouldPause') : false;
+    const initiallyPaused = options.paused || pausedNow();
+    const end = initiallyPaused ? this.clock : this.clock + deltaSeconds;
     finite(end, 'simulation time');
     if (
       !this.player ||
@@ -194,13 +215,15 @@ export class EnemyAI {
     this.player = player;
     const output: EnemyEvent[] = [];
     this.synchronize(output);
-    if (options.paused) return Object.freeze(output);
+    if (initiallyPaused) return Object.freeze(output);
     if (this.dirty) this.steer(output);
+    let pauseAt: number | null = null;
     for (;;) {
-      const event = this.nextEvent(end);
+      const limit = pauseAt ?? end;
+      const event = this.nextEvent(limit);
       if (!event) {
-        this.advance(end - this.clock);
-        this.clock = end;
+        this.advance(limit - this.clock);
+        this.clock = limit;
         break;
       }
       this.advance(event.at - this.clock);
@@ -212,6 +235,7 @@ export class EnemyAI {
         this.dirty = true;
       }
       this.synchronize(output);
+      if (pauseAt === null && pausedNow()) pauseAt = this.clock;
       if (this.dirty) this.steer(output);
     }
     return Object.freeze(output);
@@ -245,6 +269,12 @@ export class EnemyAI {
           this.dirty = true;
         }
         actor.vx = actor.vy = 0;
+      } else if (playerAlive && (actor.state === 'idle' || actor.state === 'dead')) {
+        this.dirty = true;
+        this.steeringIndex = Math.max(
+          this.steeringIndex,
+          Math.floor(this.clock / this.options.movementStep) + 1,
+        );
       } else if (!playerAlive) {
         if (actor.state !== 'idle') {
           this.state(actor, 'idle', output);
@@ -441,6 +471,17 @@ export class EnemyAI {
         });
     const result = attack ? this.core.resolveAttack(attack, this.options.playerId) : null;
     actor.nextAttackAt = next;
+    if (result)
+      this.options.onDirectDamageResolved?.(
+        Object.freeze({
+          time: this.clock,
+          sourceId: actor.id,
+          targetId: this.options.playerId,
+          kind: 'contact',
+          attack,
+        }),
+        result,
+      );
     output.push(
       Object.freeze({
         type: 'contact-attempt',

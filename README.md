@@ -15,7 +15,7 @@ npm run dev
 
 ```bash
 npm run typecheck  # строгая проверка TypeScript
-npm test           # тесты прототипа + Vitest Character Stats, Combat Core, Weapons и Status Effects
+npm test           # тесты прототипа + Vitest Stats, Combat, Weapons, Status, Enemy AI и Survival
 npm run build      # TypeScript + production-сборка в dist/
 npm run preview    # проверить собранную игру
 ```
@@ -72,8 +72,12 @@ Vite предупреждает о крупном bundle из-за Phaser; эт�
 
 ## Status Effects — Task 03
 
-`src/status-effects/` реализует Poison/Burn/Bleed: до 10 стаков на цель/тип, общую длительность, секундные тики, замену старейшего стака и детерминированную очистку. Combat Core расширен методом `applyPeriodicDamage` без crit/Dodge. Для weapon impacts есть отдельный адаптер с явной синхронизацией симуляционного времени. Тесты: `npm run test:status`. [API, контракты времени, события и ограничения](docs/STATUS_EFFECTS.md). Phaser-интеграция и revival не добавлялись.
+`src/status-effects/` реализует Poison/Burn/Bleed: до 10 стаков на цель/тип, общую длительность, секундные тики, замену старейшего стака и детерминированную очистку. Combat Core расширен методом `applyPeriodicDamage` без crit/Dodge. Для weapon impacts есть отдельный адаптер с явной синхронизацией симуляционного времени. Тесты: `npm run test:status`. [API, контракты времени, события и ограничения](docs/STATUS_EFFECTS.md). Phaser-интеграция не добавлялась; revival реализован отдельно в Task 05.
 
 ## Enemy AI — Task 04
 
 `src/enemy-ai/` добавляет framework-independent melee pursuit/contact attacks, ranged approach/attack/retreat, soft separation через spatial grid и собственные вражеские снаряды. Core остаётся владельцем HP. `npm run test:enemies` запускает новый набор. [API, sampling игрока, timing и граница будущего Task 06](docs/ENEMY_AI.md). Старый Phaser-прототип не заменён.
+
+## Player Survival & Revival — Task 05
+
+`src/player-survival/` добавляет 0.3 секунды защиты от прямых попаданий, состояние смерти/решения, одно ручное воскрешение с 50% текущего Max HP, очистку отрицательных эффектов игрока и 3 секунды полной защиты. Есть синхронные policies/notifications для Enemy AI и Status Effects и контракт паузы мира. `npm run test:survival` запускает 65 новых тестов. [API, lifecycle, совместимые расширения и обязательный порядок событий](docs/PLAYER_SURVIVAL.md). Полного игрового цикла и Phaser/UI-интеграции нет; единая timeline остаётся для Task 06.

@@ -10,6 +10,7 @@ export type {
   SeparationConfig,
   EnemyDamageContext,
   DirectDamagePolicy,
+  DirectDamageObserver,
   EnemyAIOptions,
   EnemySnapshot,
   EnemyStateEvent,

@@ -3,6 +3,7 @@ import { aimDirection, segmentCircleIntersection } from '../weapon-attacks';
 import type { CombatBody } from '../weapon-attacks';
 import type {
   DirectDamagePolicy,
+  DirectDamageObserver,
   EnemyProjectileDue,
   EnemyProjectileEvent,
   EnemyProjectileLaunch,
@@ -24,11 +25,14 @@ export class EnemyProjectiles {
     private readonly core: CombatCore,
     readonly playerId: string,
     private readonly canResolveDirectDamage?: DirectDamagePolicy,
+    private readonly onDirectDamageResolved?: DirectDamageObserver,
   ) {
     if (core.getEntity(playerId).affiliation !== 'player')
       throw new Error('Projectile target must be the player.');
     if (canResolveDirectDamage !== undefined && typeof canResolveDirectDamage !== 'function')
       throw new TypeError('Direct damage policy must be a function.');
+    if (onDirectDamageResolved !== undefined && typeof onDirectDamageResolved !== 'function')
+      throw new TypeError('Direct damage observer must be a function.');
   }
   launch(time: number, input: EnemyProjectileLaunch): EnemyProjectileLaunchEvent {
     nonNegative(time, 'launch time');
@@ -148,6 +152,17 @@ export class EnemyProjectiles {
       : false;
     const result = blocked ? null : this.core.resolveAttack(f.view.attack, this.playerId);
     this.flights.delete(event.id);
+    if (result)
+      this.onDirectDamageResolved?.(
+        Object.freeze({
+          time,
+          sourceId: f.view.sourceId,
+          targetId: this.playerId,
+          kind: 'projectile',
+          attack: f.view.attack,
+        }),
+        result,
+      );
     return Object.freeze({
       type: 'enemy-projectile-impact',
       time,
