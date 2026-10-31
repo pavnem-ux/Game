@@ -176,3 +176,7 @@ npm run build
 ```
 
 Vitest/TypeScript включают новый модуль и тесты; проверка чистых систем не требует DOM-типов. Выполнено 107 новых тестов Weapon Attacks; общий Vitest-набор: 283 (107 + 86 Combat Core + 90 Character Stats), плюс 6 прежних Node-тестов. Все прошли, пропущенных нет. Typecheck и build прошли. Информационное предупреждение Vite о размере старого игрового bundle осталось; этот модуль не подключён к нему.
+
+### On-hit контракт Task 03
+
+WeaponStatusAdapter принимает отдельные успешные WeaponImpactEvent без изменения WeaponConfig или поведения WeaponAttacks. Каждый удар кинжалов/цель меча проверяет probability отдельно. Требуется хронологическая передача на совпадающем StatusEffects.time; replay больших уже завершённых weapon batches задним числом не поддерживается. Общий timeline orchestrator не добавлен. [Подробности](STATUS_EFFECTS.md).

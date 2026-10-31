@@ -11,6 +11,8 @@
     "src/combat-core",
     "tests/combat-core",
     "src/weapon-attacks",
-    "tests/weapon-attacks"
+    "tests/weapon-attacks",
+    "src/status-effects",
+    "tests/status-effects"
   ]
 }

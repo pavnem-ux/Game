@@ -18,4 +18,9 @@ export type {
   DamageResult,
   HealingResult,
   EntityChangeResult,
+  PeriodicDamageSource,
+  PeriodicDamageMetadata,
+  PeriodicDamageRequest,
+  PeriodicDamageEvent,
+  PeriodicDamageResult,
 } from './types';

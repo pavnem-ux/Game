@@ -68,6 +68,43 @@ export interface DeathEvent {
   readonly entityId: string;
   readonly sourceId: string;
   readonly attackId: string;
+  /** Present only for periodic damage; preserves all contributing sources. */
+  readonly periodic?: PeriodicDamageMetadata;
+}
+
+export interface PeriodicDamageSource {
+  readonly applicationId: string;
+  readonly sourceId: string;
+  readonly originId?: string;
+  readonly rawDamage: number;
+}
+export interface PeriodicDamageMetadata {
+  readonly effectId: string;
+  readonly sources: readonly PeriodicDamageSource[];
+}
+export interface PeriodicDamageRequest extends PeriodicDamageMetadata {
+  readonly operationId: string;
+  readonly targetId: string;
+  readonly rawDamage: number;
+}
+export interface PeriodicDamageEvent {
+  readonly type: 'periodic-damage';
+  readonly operationId: string;
+  readonly sourceId: string;
+  readonly targetId: string;
+  readonly damage: number;
+  readonly appliedDamage: number;
+  readonly periodic: PeriodicDamageMetadata;
+}
+export interface PeriodicDamageResult {
+  readonly operationId: string;
+  readonly targetId: string;
+  readonly status: 'hit' | 'inactive';
+  readonly damage: number;
+  readonly appliedDamage: number;
+  readonly previousHp: number;
+  readonly currentHp: number;
+  readonly events: readonly (PeriodicDamageEvent | DeathEvent)[];
 }
 
 export interface HealingEvent {
@@ -85,7 +122,13 @@ export interface MaxHpChangedEvent {
   readonly currentHp: number;
 }
 
-export type CombatEvent = DamageEvent | DodgeEvent | DeathEvent | HealingEvent | MaxHpChangedEvent;
+export type CombatEvent =
+  | DamageEvent
+  | DodgeEvent
+  | DeathEvent
+  | HealingEvent
+  | MaxHpChangedEvent
+  | PeriodicDamageEvent;
 
 export interface DamageResult {
   readonly attackId: string;

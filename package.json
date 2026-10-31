@@ -12,7 +12,8 @@
     "test:e2e": "node tests/browser.mjs",
     "test:stats": "vitest run tests/character-stats",
     "test:combat": "vitest run tests/combat-core",
-    "test:weapons": "vitest run tests/weapon-attacks"
+    "test:weapons": "vitest run tests/weapon-attacks",
+    "test:status": "vitest run tests/status-effects"
   },
   "dependencies": {
     "phaser": "3.90.0",

@@ -10,7 +10,12 @@ import type {
   HealingResult,
   MaxHpChangedEvent,
   RandomSource,
+  PeriodicDamageRequest,
+  PeriodicDamageResult,
+  PeriodicDamageEvent,
+  DeathEvent,
 } from './types';
+import { validatePeriodicRequest } from './periodic';
 import { createAttackSnapshot, calculateSuccessfulDamage, validateAttackSnapshot } from './attack';
 import {
   finiteNumber,
@@ -98,9 +103,7 @@ export class CombatCore {
       });
     }
     const damage = calculateSuccessfulDamage(attack.rawDamage, target.resistance);
-    const currentHp = Math.max(0, target.currentHp - damage);
-    const appliedDamage = target.currentHp - currentHp;
-    const next = this.store({ ...target, currentHp, alive: currentHp > 0 });
+    const { currentHp, appliedDamage, next } = this.reduceHp(target, damage);
     const emitted: CombatEvent[] = [];
     if (appliedDamage > 0)
       emitted.push({
@@ -119,6 +122,54 @@ export class CombatCore {
         entityId: targetId,
         sourceId: attack.attackerId,
         attackId: attack.id,
+      });
+    return Object.freeze({
+      ...unchanged,
+      status: 'hit',
+      damage,
+      appliedDamage,
+      currentHp,
+      events: events(emitted),
+    });
+  }
+
+  /** Non-critical and non-dodgeable; this operation never draws RNG. */
+  applyPeriodicDamage(input: PeriodicDamageRequest): PeriodicDamageResult {
+    const request = validatePeriodicRequest(input, (id) => this.getEntity(id));
+    const target = this.getEntity(request.targetId);
+    const unchanged = {
+      operationId: request.operationId,
+      targetId: target.id,
+      damage: 0,
+      appliedDamage: 0,
+      previousHp: target.currentHp,
+      currentHp: target.currentHp,
+    };
+    if (!target.alive)
+      return Object.freeze({ ...unchanged, status: 'inactive', events: events([]) });
+    const damage = calculateSuccessfulDamage(request.rawDamage, target.resistance);
+    const { currentHp, appliedDamage, next } = this.reduceHp(target, damage);
+    const periodic = Object.freeze({ effectId: request.effectId, sources: request.sources });
+    // Representative legacy source field, not a kill/reward policy. All sources remain attached.
+    const sourceId = request.sources[0].sourceId;
+    const emitted: (PeriodicDamageEvent | DeathEvent)[] = [];
+    if (appliedDamage > 0)
+      emitted.push({
+        type: 'periodic-damage',
+        operationId: request.operationId,
+        sourceId,
+        targetId: target.id,
+        damage,
+        appliedDamage,
+        periodic,
+      });
+    if (!next.alive)
+      emitted.push({
+        type: 'death',
+        entityId: target.id,
+        sourceId,
+        attackId: request.operationId,
+        periodic,
       });
     return Object.freeze({
       ...unchanged,
@@ -174,6 +225,13 @@ export class CombatCore {
             },
           ];
     return Object.freeze({ entity: next, events: events(changed) });
+  }
+
+  private reduceHp(target: CombatEntity, damage: number) {
+    const currentHp = Math.max(0, target.currentHp - damage);
+    const appliedDamage = target.currentHp - currentHp;
+    const next = this.store({ ...target, currentHp, alive: currentHp > 0 });
+    return { currentHp, appliedDamage, next };
   }
 
   private store(entity: CombatEntity): CombatEntity {

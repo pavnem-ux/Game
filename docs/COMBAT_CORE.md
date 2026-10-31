@@ -138,3 +138,7 @@ Vitest работает в Node. Тесты покрывают оба типа �
 ### Интеграция Task 02
 
 Weapon Attacks использует существующие API без изменения Core: фильтрует affiliation, разрешает максимум одно попадание attack/target, сохраняет выпущенные снаряды после смерти источника и отменяет ещё не начатые strikes. Эти правила принадлежат оружейному слою; `resolveAttack` остаётся универсальным. [Подробнее](WEAPON_ATTACKS.md).
+
+### Совместимое расширение Task 03
+
+Добавлены `applyPeriodicDamage(PeriodicDamageRequest)`, периодические metadata/results и вариант CombatEvent `periodic-damage`. DeathEvent сохраняет прежние обязательные поля и получает optional periodic attribution. Прямые атаки и прежние тесты не менялись; HP переход используется общий. [Полный контракт, атрибуция и новый event variant](STATUS_EFFECTS.md).

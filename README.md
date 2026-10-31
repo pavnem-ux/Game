@@ -15,7 +15,7 @@ npm run dev
 
 ```bash
 npm run typecheck  # строгая проверка TypeScript
-npm test           # тесты прототипа + Vitest Character Stats, Combat Core и Weapon Attacks
+npm test           # тесты прототипа + Vitest Character Stats, Combat Core, Weapons и Status Effects
 npm run build      # TypeScript + production-сборка в dist/
 npm run preview    # проверить собранную игру
 ```
@@ -69,3 +69,7 @@ Vite предупреждает о крупном bundle из-за Phaser; эт�
 ## Weapon Attacks — Task 02
 
 `src/weapon-attacks/` добавляет независимые от Phaser выбор целей, циклы sword/staff/bow/dual daggers, секторное melee и swept-коллизии прямолинейных снарядов. Урон делегируется существующему Combat Core. `npm run test:weapons` запускает 107 тестов. [API и модель времени](docs/WEAPON_ATTACKS.md). Числа оружия хранятся только в тестовых fixtures; игровой каталог и интеграция со сценой не создавались.
+
+## Status Effects — Task 03
+
+`src/status-effects/` реализует Poison/Burn/Bleed: до 10 стаков на цель/тип, общую длительность, секундные тики, замену старейшего стака и детерминированную очистку. Combat Core расширен методом `applyPeriodicDamage` без crit/Dodge. Для weapon impacts есть отдельный адаптер с явной синхронизацией симуляционного времени. Тесты: `npm run test:status`. [API, контракты времени, события и ограничения](docs/STATUS_EFFECTS.md). Phaser-интеграция и revival не добавлялись.

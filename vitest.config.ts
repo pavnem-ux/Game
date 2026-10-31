@@ -7,6 +7,7 @@ export default defineConfig({
       'tests/character-stats/**/*.test.ts',
       'tests/combat-core/**/*.test.ts',
       'tests/weapon-attacks/**/*.test.ts',
+      'tests/status-effects/**/*.test.ts',
     ],
   },
 });
