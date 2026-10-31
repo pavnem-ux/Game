@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": [],
+    "lib": ["ES2022"]
+  },
+  "include": [
+    "src/character-stats",
+    "tests/character-stats",
+    "vitest.config.ts",
+    "src/combat-core",
+    "tests/combat-core",
+    "src/weapon-attacks",
+    "tests/weapon-attacks"
+  ]
+}

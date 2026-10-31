@@ -1,0 +1,50 @@
+import type { WeaponConfig } from '../../src/weapon-attacks';
+// Temporary examples from Task 02. These are TEST CONFIGURATION, never an approved catalog.
+// Temporary travel distances: staff 450 (> 300 acquisition), bow 500 (> 350 acquisition).
+export const TEST_WEAPONS = {
+  sword: {
+    id: 'test-sword',
+    category: 'sword',
+    allowedClass: 'warrior',
+    damageType: 'physical',
+    pattern: 'melee_arc',
+    damageCoefficient: 1.2,
+    baseAttackInterval: 1,
+    attackRange: 90,
+    arcDegrees: 100,
+  },
+  staff: {
+    id: 'test-staff',
+    category: 'staff',
+    allowedClass: 'mage',
+    damageType: 'magical',
+    pattern: 'projectile',
+    damageCoefficient: 1,
+    baseAttackInterval: 1.5,
+    attackRange: 300,
+    projectile: { speed: 400, radius: 9, maxTravelDistance: 450 },
+  },
+  bow: {
+    id: 'test-bow',
+    category: 'bow',
+    allowedClass: 'archer',
+    damageType: 'physical',
+    pattern: 'projectile',
+    damageCoefficient: 1,
+    baseAttackInterval: 1.2,
+    attackRange: 350,
+    projectile: { speed: 600, radius: 5, maxTravelDistance: 500 },
+  },
+  daggers: {
+    id: 'test-daggers',
+    category: 'dual_daggers',
+    allowedClass: 'rogue',
+    damageType: 'physical',
+    pattern: 'dual_melee',
+    damageCoefficient: 0.45,
+    baseAttackInterval: 0.9,
+    attackRange: 65,
+    arcDegrees: 70,
+    secondStrikeFraction: 0.35,
+  },
+} as const satisfies Record<string, WeaponConfig>;

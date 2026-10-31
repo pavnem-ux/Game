@@ -1,0 +1,31 @@
+{
+  "name": "fantasy-survivors",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "npm run typecheck && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.stats.json",
+    "test": "node --experimental-strip-types tests/model.test.ts && vitest run",
+    "test:e2e": "node tests/browser.mjs",
+    "test:stats": "vitest run tests/character-stats",
+    "test:combat": "vitest run tests/combat-core",
+    "test:weapons": "vitest run tests/weapon-attacks"
+  },
+  "dependencies": {
+    "phaser": "3.90.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "playwright-core": "1.64.1",
+    "prettier": "3.6.2",
+    "typescript": "7.0.2",
+    "vite": "8.3.5",
+    "vitest": "5.0.5"
+  }
+}
