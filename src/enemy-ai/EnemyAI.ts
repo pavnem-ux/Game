@@ -1,3 +1,5 @@
+import { validateAdvance } from '../simulation-boundary';
+import type { SimulationBoundary } from '../simulation-boundary';
 import type { CombatCore, CombatEvent } from '../combat-core';
 import { edgeDistance, segmentCircleIntersection } from '../weapon-attacks';
 import type { CombatBody } from '../weapon-attacks';
@@ -39,6 +41,7 @@ type Scheduled =
   | { at: number; priority: number; key: string; kind: 'flight'; flight: EnemyProjectileDue };
 const ZERO = Object.freeze({ x: 0, y: 0 });
 export class EnemyAI {
+  private readonly positionErrors = new Map<string, { x: number; y: number }>();
   private readonly actors = new Map<string, EnemyActor>();
   private readonly grid: SpatialGrid;
   private readonly flights: EnemyProjectiles;
@@ -105,6 +108,7 @@ export class EnemyAI {
       sameTime(this.clock + config.attackInterval, this.clock)
     )
       throw new RangeError('Enemy timing is not representable at the current clock precision.');
+    this.positionErrors.set(entity.id, { x: 0, y: 0 });
     this.actors.set(entity.id, {
       id: entity.id,
       config,
@@ -122,6 +126,7 @@ export class EnemyAI {
   unregisterEnemy(id: string): void {
     this.active();
     if (!this.actors.delete(id)) throw new Error(`Unknown enemy AI: ${id}.`);
+    this.positionErrors.delete(id);
     this.dirty = true;
   }
   getEnemy(id: string): EnemySnapshot {
@@ -154,6 +159,7 @@ export class EnemyAI {
   }
   dispose() {
     this.actors.clear();
+    this.positionErrors.clear();
     this.flights.clear();
     this.grid.clear();
     this.disposed = true;
@@ -228,17 +234,55 @@ export class EnemyAI {
       }
       this.advance(event.at - this.clock);
       this.clock = event.at;
-      if (event.kind === 'flight') output.push(this.flights.resolve(event.flight, this.clock));
-      else if (event.kind === 'attempt') this.attempt(event.enemy!, output);
-      else {
-        if (event.kind === 'steer') this.steeringIndex++;
-        this.dirty = true;
-      }
-      this.synchronize(output);
+      this.resolveScheduled(event, output);
       if (pauseAt === null && pausedNow()) pauseAt = this.clock;
-      if (this.dirty) this.steer(output);
     }
     return Object.freeze(output);
+  }
+  /** Sample player geometry, synchronize Core liveness and prepare piecewise-linear velocities. */
+  prepareBoundary(playerInput: CombatBody): readonly EnemyEvent[] {
+    this.active();
+    const player = body(playerInput);
+    if (
+      !this.player ||
+      this.player.x !== player.x ||
+      this.player.y !== player.y ||
+      this.player.radius !== player.radius
+    )
+      this.dirty = true;
+    this.player = player;
+    const output: EnemyEvent[] = [];
+    this.synchronize(output);
+    if (this.dirty) this.steer(output);
+    return Object.freeze(output);
+  }
+  peekBoundary(end: number): SimulationBoundary | null {
+    this.active();
+    validateAdvance(this.clock, end, null);
+    if (!this.player) throw new Error('Call prepareBoundary before stepping EnemyAI.');
+    const event = this.nextEvent(end);
+    return event ? Object.freeze({ time: event.at, priority: event.priority }) : null;
+  }
+  advanceToBoundary(time: number): void {
+    validateAdvance(this.clock, time, this.peekBoundary(time)?.time ?? null);
+    this.advance(time - this.clock);
+    this.clock = time;
+  }
+  resolveBoundary(): readonly EnemyEvent[] {
+    const output: EnemyEvent[] = [];
+    const event = this.nextEvent(this.clock);
+    if (event) this.resolveScheduled(event, output);
+    return Object.freeze(output);
+  }
+  private resolveScheduled(event: Scheduled, output: EnemyEvent[]) {
+    if (event.kind === 'flight') output.push(this.flights.resolve(event.flight, this.clock));
+    else if (event.kind === 'attempt') this.attempt(event.enemy!, output);
+    else {
+      if (event.kind === 'steer') this.steeringIndex++;
+      this.dirty = true;
+    }
+    this.synchronize(output);
+    if (this.dirty) this.steer(output);
   }
   private active() {
     if (this.disposed) throw new Error('EnemyAI has been disposed.');
@@ -407,17 +451,24 @@ export class EnemyAI {
     return next;
   }
   private advance(dt: number) {
-    const positions: { actor: EnemyActor; x: number; y: number }[] = [];
+    const positions: { actor: EnemyActor; x: number; y: number; ex: number; ey: number }[] = [];
     for (const actor of this.actors.values())
       if (this.core.getEntity(actor.id).alive) {
-        const x = actor.x + actor.vx * dt,
-          y = actor.y + actor.vy * dt;
+        // Compensated sums prevent frame partitioning from moving a geometric tie in time.
+        const error = this.positionErrors.get(actor.id)!;
+        const dx = actor.vx * dt - error.x,
+          dy = actor.vy * dt - error.y;
+        const x = actor.x + dx,
+          y = actor.y + dy;
+        const ex = x - actor.x - dx,
+          ey = y - actor.y - dy;
         finite(x, 'enemy position.x');
         finite(y, 'enemy position.y');
-        positions.push({ actor, x, y });
+        positions.push({ actor, x, y, ex, ey });
       }
     this.flights.advance(dt);
-    for (const { actor, x, y } of positions) {
+    for (const { actor, x, y, ex, ey } of positions) {
+      this.positionErrors.set(actor.id, { x: ex, y: ey });
       actor.x = x;
       actor.y = y;
     }

@@ -184,3 +184,7 @@ WeaponStatusAdapter принимает отдельные успешные Weapo
 ### Геометрия для Task 04
 
 Уже существующая функция `aimDirection` дополнительно экспортирована через публичный index вместе с `segmentCircleIntersection`/`edgeDistance`. Enemy AI использует эти чистые helpers, не экипируя player-class weapons и не меняя WeaponAttacks scheduler. [Enemy AI](ENEMY_AI.md).
+
+### Интеграция Task 06
+
+Добавлены `peekBoundary(end)`, `advanceToBoundary(time)`, `resolveBoundary()` для одного общего scheduler; они вызывают те же расчёты/strike/flight resolvers, что прежний update. `setBody` принимает optional velocity для swept relative-motion collision при интеграции, `removeBody` убирает target geometry, не отменяя старые flights. При ненулевой velocity caller обязан обновлять тела на границах через stepping API; standalone fixed-body update не управляет внешним движением. Новая альфа использует отдельный provisional catalog, Character Stats и существующий WeaponStatusAdapter. [Полный контракт общей хронологии](PLAYABLE_COMBAT_ALPHA.md).

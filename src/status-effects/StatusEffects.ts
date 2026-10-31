@@ -1,3 +1,5 @@
+import { validateAdvance } from '../simulation-boundary';
+import type { SimulationBoundary } from '../simulation-boundary';
 import { calculateSuccessfulDamage } from '../combat-core';
 import type { CombatCore, CombatEvent, PeriodicDamageRequest, RandomSource } from '../combat-core';
 import { EFFECT_TYPES, STATUS_RULES } from './config';
@@ -269,49 +271,7 @@ export class StatusEffects {
         this.clock = limit;
         break;
       }
-      const group = event.group;
-      // Recheck authoritative liveness even if nobody forwarded a direct death event.
-      if (!this.core.getEntity(group.targetId).alive) {
-        output.push(...this.removeTarget(group.targetId));
-        continue;
-      }
-      if (event.kind === 'expire') {
-        this.clock = event.at;
-        output.push(this.removeGroup(group, 'expired'));
-        if (pauseAt === null && pausedNow()) pauseAt = this.clock;
-        continue;
-      }
-      const rawDamage = group.stacks.reduce((sum, stack) => sum + stack.rawDamagePerTick, 0);
-      const view = snapshot(group);
-      const allowed = this.options.canDamage
-        ? booleanResult(
-            this.options.canDamage(Object.freeze({ group: view, rawDamage, time: event.at })),
-            'canDamage',
-          )
-        : true;
-      const request = this.periodicRequest(group, rawDamage);
-      // Core validates/calculates before HP mutation; do not advance our schedule on failure.
-      const result = allowed ? this.core.applyPeriodicDamage(request) : null;
-      this.clock = event.at;
-      group.tickIndex++;
-      group.nextTickAt = group.createdAt + group.tickIndex * STATUS_RULES.tickInterval;
-      output.push(
-        Object.freeze({
-          type: 'status-tick',
-          time: this.clock,
-          group: view,
-          rawDamage,
-          outcome: allowed ? 'resolved' : 'blocked',
-          result,
-        }),
-      );
-      if (result) {
-        output.push(...this.consumeCombatEvents(result.events));
-        this.options.onPeriodicDamageResolved?.(
-          Object.freeze({ group: view, rawDamage, time: this.clock }),
-          result,
-        );
-      }
+      this.resolveScheduled(event, output);
       if (pauseAt === null && pausedNow()) pauseAt = this.clock;
     }
     return Object.freeze(output);
@@ -321,6 +281,68 @@ export class StatusEffects {
     if (time < this.clock && !sameTime(time, this.clock))
       throw new RangeError('Cannot move simulation time backwards.');
     return this.update(Math.max(0, time - this.clock), options);
+  }
+  peekBoundary(end: number): SimulationBoundary | null {
+    validateAdvance(this.clock, end, null);
+    const event = this.nextEvent(end);
+    return event
+      ? Object.freeze({ time: event.at, priority: event.kind === 'tick' ? 0 : 1 })
+      : null;
+  }
+  advanceToBoundary(time: number): void {
+    validateAdvance(this.clock, time, this.peekBoundary(time)?.time ?? null);
+    this.clock = time;
+  }
+  resolveBoundary(): readonly StatusEvent[] {
+    const output: StatusEvent[] = [];
+    this.pruneDead(output);
+    const event = this.nextEvent(this.clock);
+    if (event) this.resolveScheduled(event, output);
+    return Object.freeze(output);
+  }
+  private resolveScheduled(event: DueEvent, output: StatusEvent[]) {
+    const group = event.group;
+    // Recheck authoritative liveness even if nobody forwarded a direct death event.
+    if (!this.core.getEntity(group.targetId).alive) {
+      output.push(...this.removeTarget(group.targetId));
+      return;
+    }
+    if (event.kind === 'expire') {
+      this.clock = event.at;
+      output.push(this.removeGroup(group, 'expired'));
+      return;
+    }
+    const rawDamage = group.stacks.reduce((sum, stack) => sum + stack.rawDamagePerTick, 0);
+    const view = snapshot(group);
+    const allowed = this.options.canDamage
+      ? booleanResult(
+          this.options.canDamage(Object.freeze({ group: view, rawDamage, time: event.at })),
+          'canDamage',
+        )
+      : true;
+    const request = this.periodicRequest(group, rawDamage);
+    // Core validates/calculates before HP mutation; do not advance our schedule on failure.
+    const result = allowed ? this.core.applyPeriodicDamage(request) : null;
+    this.clock = event.at;
+    group.tickIndex++;
+    group.nextTickAt = group.createdAt + group.tickIndex * STATUS_RULES.tickInterval;
+    output.push(
+      Object.freeze({
+        type: 'status-tick',
+        time: this.clock,
+        group: view,
+        rawDamage,
+        outcome: allowed ? 'resolved' : 'blocked',
+        result,
+      }),
+    );
+    if (result) {
+      output.push(...this.consumeCombatEvents(result.events));
+      this.options.onPeriodicDamageResolved?.(
+        Object.freeze({ group: view, rawDamage, time: this.clock }),
+        result,
+      );
+    }
   }
   private periodicRequest(group: StatusGroup, rawDamage: number): PeriodicDamageRequest {
     return {

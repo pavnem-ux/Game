@@ -1,0 +1,330 @@
+.alpha-shell {
+  min-height: 540px;
+}
+.alpha-arena {
+  position: relative;
+  overflow: hidden;
+}
+.alpha-menu {
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  gap: 6%;
+  padding: 6%;
+  align-items: center;
+  background: linear-gradient(100deg, rgba(10, 22, 18, 0.95), rgba(16, 32, 26, 0.7));
+  overflow: auto;
+}
+.alpha-intro h1 {
+  font-size: clamp(44px, 5vw, 80px);
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: -3px;
+  margin: 20px 0;
+}
+.alpha-intro h1 em {
+  color: #c3e3b6;
+  font-family: Georgia, serif;
+}
+.alpha-intro p {
+  color: #b4c5b7;
+  line-height: 1.7;
+}
+.alpha-help {
+  margin-top: 28px;
+  font-size: 13px;
+}
+.alpha-note {
+  color: #90a28f !important;
+  font-size: 12px;
+  line-height: 1.6 !important;
+  margin-top: 20px;
+}
+.alpha-selection > .button {
+  margin-top: 24px;
+  width: 100%;
+}
+.class-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.class-choice {
+  background: #1a2a23d9;
+  color: #b6c4b5;
+  text-align: left;
+  border: 1px solid #425443;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  border-radius: 6px;
+}
+.class-choice.selected {
+  border-color: #c3e3b6;
+  background: #304536;
+  box-shadow: inset 0 0 0 1px #c3e3b6;
+}
+.class-choice strong {
+  font-size: 20px;
+  color: #f1eddb;
+}
+.class-choice small,
+.class-choice > span:last-child {
+  font-size: 11px;
+}
+.class-symbol {
+  font-size: 29px;
+  margin-bottom: 5px;
+}
+.class-warrior {
+  color: #e8b16c;
+}
+.class-mage {
+  color: #91d7e7;
+}
+.class-archer {
+  color: #b2d58a;
+}
+.class-rogue {
+  color: #c6a2ef;
+}
+.alpha-level {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  font-size: 12px;
+}
+.alpha-level input {
+  width: 65px;
+}
+.alpha-hud .health-panel {
+  min-width: 260px;
+}
+.alpha-hud .health-label {
+  gap: 16px;
+}
+.alpha-hud .health-label span {
+  font-size: 12px;
+}
+.alpha-effects {
+  position: absolute;
+  top: 115px;
+  left: 28px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  pointer-events: none;
+}
+.alpha-effects span {
+  font-size: 11px;
+  border: 1px solid #6c8364;
+  padding: 7px 10px;
+  background: #15251cdd;
+  border-radius: 3px;
+}
+.alpha-effects .full-protection {
+  color: #ffe2a5;
+  border-color: #d4b86f;
+}
+.effect-poison {
+  color: #b7e887;
+}
+.effect-burn {
+  color: #ffc29a;
+}
+.effect-bleed {
+  color: #fda5b8;
+}
+.alpha-error {
+  position: absolute;
+  left: 50%;
+  bottom: 85px;
+  transform: translateX(-50%);
+  background: #482d26;
+  border: 1px solid #eeab8e;
+  color: #ffe0d0;
+  padding: 12px;
+  max-width: 90%;
+  z-index: 55;
+  font-size: 12px;
+}
+.developer-toggle {
+  position: absolute;
+  right: 18px;
+  bottom: 84px;
+  z-index: 70;
+  background: #273931;
+  border: 1px solid #91b59c;
+  color: #daeedb;
+  padding: 8px 12px;
+  font: 12px monospace;
+  border-radius: 4px;
+}
+.developer-panel {
+  position: absolute;
+  z-index: 65;
+  right: 12px;
+  top: 10px;
+  bottom: 126px;
+  width: 340px;
+  max-width: calc(100% - 24px);
+  overflow: auto;
+  padding: 18px;
+  background: #0f1b17f5;
+  border: 1px solid #75937b;
+  box-shadow: 0 8px 40px #0008;
+  color: #dcead8;
+  font-size: 12px;
+  scrollbar-width: thin;
+}
+.developer-panel h2 {
+  font-size: 17px;
+  margin-bottom: 8px;
+}
+.developer-panel p {
+  font-size: 11px;
+  line-height: 1.6;
+  color: #9fb39f;
+  margin: 7px 0;
+}
+.developer-panel fieldset {
+  border: 1px solid #3d5546;
+  margin: 15px 0 0;
+  padding: 12px;
+}
+.developer-panel legend {
+  color: #d5eabb;
+  padding: 0 5px;
+}
+.developer-panel label {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  margin: 8px 0;
+}
+.developer-panel input:not([type='checkbox']),
+.developer-panel select,
+.alpha-level input {
+  background: #1d2f26;
+  color: #f1eddb;
+  border: 1px solid #627962;
+  padding: 5px;
+  max-width: 155px;
+}
+.developer-panel input[type='number'] {
+  width: 80px;
+}
+.developer-panel button {
+  background: #2c4234;
+  color: #e8efdf;
+  border: 1px solid #71836b;
+  padding: 7px 9px;
+  margin: 3px;
+  font-size: 11px;
+  border-radius: 3px;
+}
+.developer-panel pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 10px;
+}
+.developer-panel details {
+  margin-top: 10px;
+}
+.dev-events {
+  max-height: 230px;
+  overflow: auto;
+}
+.dev-events pre {
+  margin: 7px 0;
+  border-bottom: 1px solid #344b3a;
+  padding-bottom: 6px;
+}
+@media (max-width: 760px) {
+  .alpha-menu {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding: 24px;
+    align-content: start;
+  }
+  .alpha-intro h1 {
+    font-size: 43px;
+    margin: 10px 0;
+  }
+  .alpha-intro h1 br {
+    display: none;
+  }
+  .alpha-intro .alpha-help {
+    margin-top: 10px;
+  }
+  .alpha-intro .alpha-note {
+    display: none;
+  }
+  .alpha-selection .class-choice {
+    padding: 11px;
+  }
+  .class-symbol {
+    font-size: 23px;
+  }
+  .class-choice strong {
+    font-size: 16px;
+  }
+  .alpha-selection > .button {
+    margin-top: 14px;
+  }
+  .alpha-selection .alpha-note {
+    margin-top: 10px;
+  }
+  .alpha-hud .health-panel {
+    min-width: 180px;
+  }
+  .alpha-hud .health-label {
+    display: block;
+  }
+  .alpha-hud .health-label strong {
+    font-size: 12px;
+  }
+  .alpha-hud .health-label span {
+    display: block;
+    margin-top: 3px;
+  }
+  .alpha-hud .timer {
+    display: none;
+  }
+  .alpha-effects {
+    top: 100px;
+    left: 14px;
+    right: 14px;
+  }
+  .developer-toggle {
+    right: 10px;
+    bottom: 72px;
+    font-size: 10px;
+  }
+  .developer-panel {
+    bottom: 110px;
+  }
+  .alpha-level {
+    margin-top: 8px;
+  }
+}
+
+.alpha-mobile-summary {
+  display: none;
+}
+@media (max-width: 760px) {
+  .alpha-mobile-summary {
+    display: block;
+    position: absolute;
+    right: 14px;
+    top: 125px;
+    font-size: 10px;
+    color: #c8d6bd;
+    pointer-events: none;
+  }
+  .alpha-effects {
+    top: 150px;
+  }
+}

@@ -205,3 +205,7 @@ Enemy AI читает authoritative Core alive и может принять те
 Optional `onPeriodicDamageResolved(context, result)` вызывается синхронно после каждого разрешённого тика и его death cleanup, до следующего тика. Blocked ticks его не вызывают. Optional `shouldPause()` в update проверяется на входе/после событий: при true завершает уже доступные локальные события на текущем timestamp, останавливает время до последующих событий и не накапливает остаток delta. Это сохраняет одновременно допустимые player/enemy deaths. Без этих options прежнее поведение сохраняется.
 
 `createStatusSurvivalPolicies` соединяет canApply/canDamage с полной защитой и немедленно передаёт periodic death в Survival; обычная 0.3-секундная защита DoT не блокирует. Observers не должны reenter/mutate StatusEffects/Core или выбрасывать исключения. Модуль принимает новый Core event `revived`. Общая timeline по-прежнему не реализована: [контракт паузы, event delivery и граница Task 06](PLAYER_SURVIVAL.md).
+
+### Интеграция Task 06
+
+Общий GameplayWorld использует additive `peekBoundary(end)`, `advanceToBoundary(time)`, `resolveBoundary()` вместо последовательного большого update нескольких модулей. Эти методы разделяют прежний scheduler/resolver; на каждой операции все clocks уже согласованы. WeaponStatusAdapter получает actual impact на том же Status time, periodic deaths доставляются Survival немедленно. Сам StatusEffects не стал глобальным оркестратором. [Порядок событий, pause/revival и playable alpha](PLAYABLE_COMBAT_ALPHA.md).

@@ -12,7 +12,7 @@ const errors = [];
 try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 960 } });
   page.on('pageerror', (e) => errors.push(e.message));
-  await page.goto(base + '/?debug');
+  await page.goto(base + '/?prototype&debug');
   await page.waitForFunction(() => !!window.__survivors);
   await page.screenshot({ path: 'artifacts/01-menu.png' });
   await page.getByRole('button', { name: 'Войти в руины' }).click();
@@ -93,7 +93,7 @@ try {
     hasTouch: true,
   });
   mobile.on('pageerror', (e) => errors.push(e.message));
-  await mobile.goto(base + '/?debug');
+  await mobile.goto(base + '/?prototype&debug');
   await mobile.waitForFunction(() => !!window.__survivors);
   await mobile.screenshot({ path: 'artifacts/05-mobile-menu.png' });
   assert.equal(

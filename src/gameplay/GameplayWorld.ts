@@ -1,0 +1,431 @@
+import { calculateCharacterStats, scaleMovementSpeed } from '../character-stats';
+import { CombatCore, calculateSuccessfulDamage } from '../combat-core';
+import type { CombatEvent } from '../combat-core';
+import { WeaponAttacks } from '../weapon-attacks';
+import type { WeaponEvent, CombatBody, Point } from '../weapon-attacks';
+import { StatusEffects, WeaponStatusAdapter } from '../status-effects';
+import type { EffectApplication, EffectDefinition, StatusEvent } from '../status-effects';
+import { EnemyAI } from '../enemy-ai';
+import { enemyConfig } from '../enemy-ai/validation';
+import type { EnemyConfig, EnemyEvent } from '../enemy-ai';
+import {
+  PlayerSurvival,
+  createEnemySurvivalPolicies,
+  createStatusSurvivalPolicies,
+} from '../player-survival';
+import type { RevivalDecision, SurvivalEvent } from '../player-survival';
+import { sameInstant } from '../simulation-boundary';
+import { ALPHA, ALPHA_ENEMIES, ALPHA_ENEMY_STATS, ALPHA_WEAPONS, defaultOnHit } from './config';
+import type { GameplayOptions, GameplaySnapshot, WorldEvent } from './types';
+
+/** The sole world scheduler. All damage is resolved by existing modules, one boundary at a time. */
+export class GameplayWorld {
+  readonly core: CombatCore;
+  readonly weapons: WeaponAttacks;
+  readonly statuses: StatusEffects;
+  readonly enemies: EnemyAI;
+  readonly survival: PlayerSurvival;
+  readonly character;
+  readonly playerId = 'player';
+  private clock = 0;
+  private timeCompensation = 0;
+  private controlIndex = 1;
+  private body: CombatBody = Object.freeze({ x: 1800, y: 1800, radius: ALPHA.playerRadius });
+  private input: Point = Object.freeze({ x: 0, y: 0 });
+  private manualPause = false;
+  private enemySequence = 0;
+  private eventSequence = 0;
+  private readonly deaths = new Set<string>();
+  private readonly history: WorldEvent[] = [];
+  private readonly enemyIds = new Set<string>();
+  private adapter: WeaponStatusAdapter;
+  private testingProtection = false;
+  private readonly random: () => number;
+  constructor(readonly options: GameplayOptions) {
+    this.character = calculateCharacterStats(options.characterClass, options.level ?? 1);
+    let seed = options.seed ?? 1337;
+    if (!Number.isSafeInteger(seed) || seed < 0) throw new RangeError('Invalid random seed.');
+    this.random = () => {
+      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+      return seed / 4294967296;
+    };
+    this.core = new CombatCore(this.random);
+    this.core.addEntity({
+      id: this.playerId,
+      affiliation: 'player',
+      stats: this.character.combatAttributes,
+    });
+    this.survival = new PlayerSurvival(this.core, this.playerId);
+    const emit = (events: readonly SurvivalEvent[]) => this.record('survival', events);
+    const statusPolicies = createStatusSurvivalPolicies(this.survival, emit);
+    this.statuses = new StatusEffects(this.core, {
+      random: this.random,
+      ...statusPolicies,
+      canDamage: (ctx) =>
+        !(this.testingProtection && ctx.group.targetId === this.playerId) &&
+        statusPolicies.canDamage!(ctx),
+      canApply: (ctx) =>
+        !(this.testingProtection && ctx.application.targetId === this.playerId) &&
+        statusPolicies.canApply!(ctx),
+    });
+    const enemyPolicies = createEnemySurvivalPolicies(this.survival, emit);
+    this.enemies = new EnemyAI(this.core, {
+      playerId: this.playerId,
+      movementStep: 1 / 30,
+      separation: { cellSize: 64, padding: 8, strength: 0.8 },
+      ...enemyPolicies,
+      canResolveDirectDamage: (ctx) =>
+        !this.testingProtection && enemyPolicies.canResolveDirectDamage!(ctx),
+    });
+    this.weapons = new WeaponAttacks(this.core);
+    this.weapons.setBody(this.playerId, this.body);
+    const weapon = ALPHA_WEAPONS[options.characterClass];
+    this.weapons.equipWeapon({
+      entityId: this.playerId,
+      characterClass: options.characterClass,
+      weapon,
+      attackSpeedPercent: this.character.combatAttributes.attackSpeed,
+      fallbackDirection: { x: 1, y: 0 },
+    });
+    this.adapter = this.makeAdapter(options.onHit ?? defaultOnHit(options.characterClass));
+    if (options.initialEnemies !== false)
+      this.spawnGroup(options.enemyCount ?? 12, options.spawnDistance ?? 260);
+    this.prepare();
+  }
+  get time() {
+    return this.clock;
+  }
+  get paused() {
+    return this.manualPause || this.survival.getState().requiresWorldPause;
+  }
+  getEvents(afterSequence = 0): readonly WorldEvent[] {
+    return Object.freeze(this.history.filter((e) => e.sequence > afterSequence));
+  }
+  setMovement(x: number, y: number): void {
+    if (![x, y].every(Number.isFinite)) throw new RangeError('Movement must be finite.');
+    const length = Math.hypot(x, y);
+    this.input = Object.freeze(
+      length > 0 ? { x: x / Math.max(1, length), y: y / Math.max(1, length) } : { x: 0, y: 0 },
+    );
+    if (Math.hypot(this.input.x, this.input.y) > 0 && this.survival.getState().canPlayerAct)
+      this.weapons.setFallbackDirection(this.playerId, this.input);
+  }
+  setPaused(paused: boolean): void {
+    if (typeof paused !== 'boolean') throw new TypeError('paused must be boolean.');
+    this.manualPause = paused;
+    this.setMovement(0, 0);
+  }
+  getSnapshot(): GameplaySnapshot {
+    return Object.freeze({
+      time: this.clock,
+      paused: this.paused,
+      player: this.core.getEntity(this.playerId),
+      playerBody: this.body,
+      character: this.character,
+      survival: this.survival.getState(),
+      kills: this.deaths.size,
+      enemies: Object.freeze(
+        this.enemies
+          .getEnemies()
+          .map((e) => Object.freeze({ ...e, entity: this.core.getEntity(e.entityId) })),
+      ),
+      playerProjectiles: this.weapons.getProjectiles(),
+      enemyProjectiles: this.enemies.getProjectiles(),
+      statuses: this.statuses.getGroups(),
+      weapon: this.weapons.getWeaponState(this.playerId),
+      movement: this.input,
+    });
+  }
+  /** Never carry unconsumed frame time across death or manual pause. */
+  update(delta: number): void {
+    if (!Number.isFinite(delta) || delta < 0 || !Number.isFinite(this.clock + delta))
+      throw new RangeError('delta must be finite and non-negative.');
+    if (this.paused) return;
+    let end = this.clock;
+    if (delta > 0) {
+      const correctedDelta = delta - this.timeCompensation;
+      end = Math.max(this.clock, this.clock + correctedDelta);
+      this.timeCompensation = end - this.clock - correctedDelta;
+    }
+    let pauseAt: number | null = null;
+    for (;;) {
+      this.prepare();
+      const limit = pauseAt ?? end;
+      const next = this.nextBoundary(limit);
+      if (!next) {
+        this.advanceAll(limit);
+        break;
+      }
+      this.advanceAll(next.time);
+      if (next.kind === 'control') this.movePlayer();
+      else if (next.kind === 'weapon') this.consumeWeapons(this.weapons.resolveBoundary());
+      else if (next.kind === 'status') this.consumeStatuses(this.statuses.resolveBoundary());
+      else this.consumeEnemies(this.enemies.resolveBoundary());
+      if (this.survival.getState().requiresWorldPause && pauseAt === null) {
+        pauseAt = this.clock;
+        this.timeCompensation = 0;
+        this.input = Object.freeze({ x: 0, y: 0 });
+      }
+    }
+  }
+  decide(decision: RevivalDecision): void {
+    const result = this.survival.decide(decision, this.statuses);
+    this.record('survival', result.events);
+    if (result.revival) this.forwardCombat(result.revival.events);
+    if (result.removedEffects) this.record('status', result.removedEffects);
+    this.manualPause = false;
+    this.prepare();
+  }
+  spawnEnemy(
+    kind: 'melee' | 'ranged',
+    distance = 240,
+    angle?: number,
+    config?: EnemyConfig,
+  ): string {
+    if (kind !== 'melee' && kind !== 'ranged') throw new TypeError('Invalid enemy kind.');
+    if (
+      !Number.isFinite(distance) ||
+      distance < 0 ||
+      distance > 1500 ||
+      (angle !== undefined && !Number.isFinite(angle))
+    )
+      throw new RangeError('Invalid spawn geometry.');
+    if (this.enemies.getEnemies().filter((e) => e.alive).length >= ALPHA.enemyCap)
+      throw new RangeError('Alpha enemy cap reached.');
+    // Validate the optional test profile before changing RNG, IDs or authoritative entities.
+    const profile = enemyConfig(config ?? ALPHA_ENEMIES[kind]);
+    if (profile.behavior !== kind) throw new TypeError('Enemy kind/profile mismatch.');
+    const a = angle ?? this.random() * Math.PI * 2;
+    const id = `enemy-${++this.enemySequence}`;
+    this.core.addEntity({ id, affiliation: 'enemy', stats: ALPHA_ENEMY_STATS });
+    this.enemies.registerEnemy({
+      entityId: id,
+      config: profile,
+      position: {
+        x: this.clamp(this.body.x + Math.cos(a) * distance, 20),
+        y: this.clamp(this.body.y + Math.sin(a) * distance, 20),
+      },
+    });
+    this.enemyIds.add(id);
+    this.prepare();
+    return id;
+  }
+  spawnGroup(count = 8, distance = 260): void {
+    if (!Number.isInteger(count) || count < 1 || count > 24)
+      throw new RangeError('Group count must be 1–24.');
+    if (this.enemies.getEnemies().filter((e) => e.alive).length + count > ALPHA.enemyCap)
+      throw new RangeError('Group exceeds alpha enemy cap.');
+    if (!Number.isFinite(distance) || distance < 0 || distance + (count > 1 ? 45 : 0) > 1500)
+      throw new RangeError('Invalid group distance including the 45-unit ring offset.');
+    for (let i = 0; i < count; i++)
+      this.spawnEnemy(
+        i % 3 === 0 ? 'ranged' : 'melee',
+        distance + (i % 2) * 45,
+        (i * Math.PI * 2) / count,
+      );
+  }
+  setOnHit(definitions: readonly EffectDefinition[]): void {
+    this.adapter = this.makeAdapter(definitions);
+  }
+  applyEffect(input: EffectApplication, stacks = 1): void {
+    if (!Number.isInteger(stacks) || stacks < 1 || stacks > 20)
+      throw new RangeError('Stacks must be 1–20.');
+    for (const result of this.statuses.applyBatch(Array.from({ length: stacks }, () => input)))
+      this.record('status', result.events);
+  }
+  cleanse(targetId: string): void {
+    this.record('status', this.statuses.clearNegativeEffects(targetId));
+  }
+  healPlayer(): void {
+    this.forwardCombat(
+      this.core.heal(this.playerId, this.core.getEntity(this.playerId).maxHp).events,
+    );
+  }
+  /** Controlled test HP decrease still delegates HP loss to Core; never writes entity internals. */
+  setPlayerHp(hp: number): void {
+    const player = this.core.getEntity(this.playerId);
+    if (!Number.isFinite(hp) || hp < 0 || hp > player.maxHp)
+      throw new RangeError('HP outside current maximum.');
+    if (!player.alive) throw new Error('Dead character requires revival or a new session.');
+    if (hp >= player.currentHp)
+      this.forwardCombat(this.core.heal(this.playerId, hp - player.currentHp).events);
+    else {
+      // Core has no arbitrary HP setter. A controlled periodic loss keeps Core as HP authority,
+      // avoiding direct immunity/RNG while exercising the normal death event path.
+      const loss = player.currentHp - hp;
+      if (hp !== 0 && !Number.isInteger(loss))
+        throw new Error('A test damage decrease must be whole HP; healing preserves fractions.');
+      // Find a raw input using the existing calculator; no second damage/resistance formula.
+      let low = 0,
+        high = Number.MAX_SAFE_INTEGER,
+        raw = high;
+      if (hp !== 0)
+        for (let i = 0; i < 100; i++) {
+          raw = (low + high) / 2;
+          const damage = calculateSuccessfulDamage(raw, player.resistance);
+          if (damage === loss) break;
+          if (damage < loss) low = raw;
+          else high = raw;
+          if (i === 99) throw new RangeError('Requested test HP is not representable.');
+        }
+      const result = this.core.applyPeriodicDamage({
+        operationId: `test-death-${this.eventSequence + 1}`,
+        targetId: this.playerId,
+        rawDamage: raw,
+        effectId: 'test',
+        sources: [{ applicationId: 'test', sourceId: this.playerId, rawDamage: raw }],
+      });
+      this.record('survival', this.survival.consumeCombatEvents(this.clock, result.events).events);
+      this.forwardCombat(result.events);
+    }
+  }
+  setTestProtection(enabled: boolean): void {
+    if (typeof enabled !== 'boolean') throw new TypeError('Protection must be boolean.');
+    this.testingProtection = enabled;
+  }
+  clearEnemies(): void {
+    for (const id of this.enemyIds) {
+      if (this.core.getEntity(id).alive) {
+        const raw = Number.MAX_SAFE_INTEGER;
+        const result = this.core.applyPeriodicDamage({
+          operationId: `clear-${id}`,
+          targetId: id,
+          effectId: 'test-clear',
+          rawDamage: raw,
+          sources: [{ applicationId: 'test-clear', sourceId: this.playerId, rawDamage: raw }],
+        });
+        this.forwardCombat(result.events);
+      }
+    }
+    this.prepare();
+  }
+  private clamp(value: number, radius: number) {
+    return Math.max(radius, Math.min(ALPHA.arenaSize - radius, value));
+  }
+  private makeAdapter(definitions: readonly EffectDefinition[]) {
+    return new WeaponStatusAdapter(this.statuses, {
+      [ALPHA_WEAPONS[this.character.characterClass].id]: definitions,
+      'alpha-enemy': [
+        { effectType: 'poison', probabilityPercent: 25, duration: 4, rawDamagePerTick: 2 },
+      ],
+    });
+  }
+  private movePlayer() {
+    const speed = scaleMovementSpeed(
+      ALPHA.baseMovementSpeed,
+      this.character.combatAttributes.movementSpeed,
+    );
+    this.body = Object.freeze({
+      ...this.body,
+      x: this.clamp(this.body.x + this.input.x * speed * ALPHA.controlStep, this.body.radius),
+      y: this.clamp(this.body.y + this.input.y * speed * ALPHA.controlStep, this.body.radius),
+    });
+    this.controlIndex++;
+  }
+  private prepare() {
+    this.record('enemy', this.enemies.prepareBoundary(this.body));
+    this.weapons.setBody(this.playerId, this.body);
+    for (const enemy of this.enemies.getEnemies())
+      this.weapons.setBody(
+        enemy.entityId,
+        { ...enemy.position, radius: enemy.config.radius },
+        enemy.velocity,
+      );
+  }
+  private nextBoundary(end: number) {
+    const candidates: {
+      time: number;
+      rank: number;
+      kind: 'control' | 'weapon' | 'status' | 'enemy';
+    }[] = [];
+    const add = (time: number, rank: number, kind: (typeof candidates)[number]['kind']) => {
+      if (time < end || sameInstant(time, end))
+        candidates.push({ time: Math.max(this.clock, Math.min(time, end)), rank, kind });
+    };
+    if (this.survival.getState().canPlayerAct)
+      add(this.controlIndex * ALPHA.controlStep, 0, 'control');
+    const w = this.weapons.peekBoundary(end),
+      s = this.statuses.peekBoundary(end),
+      e = this.enemies.peekBoundary(end);
+    if (w) add(w.time, w.priority <= 1 ? 2 : 5, 'weapon');
+    if (s) add(s.time, s.priority === 0 ? 3 : 8, 'status');
+    if (e) add(e.time, e.priority <= 1 ? 1 : e.priority < 4 ? 4 : 6, 'enemy');
+    return (
+      candidates.sort((a, b) =>
+        sameInstant(a.time, b.time) ? a.rank - b.rank : a.time - b.time,
+      )[0] ?? null
+    );
+  }
+  private advanceAll(time: number) {
+    if (time === this.clock) return;
+    this.survival.advanceTo(time);
+    this.weapons.advanceToBoundary(time);
+    this.statuses.advanceToBoundary(time);
+    this.enemies.advanceToBoundary(time);
+    this.clock = time;
+    // Moving enemy hitboxes must be sampled at the boundary, before collision resolution.
+    for (const enemy of this.enemies.getEnemies())
+      this.weapons.setBody(
+        enemy.entityId,
+        { ...enemy.position, radius: enemy.config.radius },
+        enemy.velocity,
+      );
+  }
+  private consumeWeapons(events: readonly WeaponEvent[]) {
+    this.record('weapon', events);
+    for (const event of events)
+      if (event.type === 'impact') {
+        this.record('status', this.adapter.consumeImpact(event).events);
+        this.forwardCombat(event.result.events);
+      }
+  }
+  private consumeEnemies(events: readonly EnemyEvent[]) {
+    this.record('enemy', events);
+    for (const event of events)
+      if (
+        (event.type === 'contact-attempt' || event.type === 'enemy-projectile-impact') &&
+        event.result
+      ) {
+        const attack = event.type === 'contact-attempt' ? event.attack! : event.projectile.attack;
+        this.record(
+          'status',
+          this.adapter.consumeImpact({
+            type: 'impact',
+            time: this.clock,
+            weaponId: 'alpha-enemy',
+            attack,
+            targetId: this.playerId,
+            result: event.result,
+          }).events,
+        );
+        this.forwardCombat(event.result.events);
+      }
+  }
+  private consumeStatuses(events: readonly StatusEvent[]) {
+    this.record('status', events);
+    for (const event of events)
+      if (event.type === 'status-tick' && event.result) this.forwardCombat(event.result.events);
+  }
+  private forwardCombat(events: readonly CombatEvent[]) {
+    this.record('combat', events);
+    for (const event of events)
+      if (event.type === 'death' && event.entityId !== this.playerId) {
+        this.deaths.add(event.entityId);
+        if (this.enemyIds.delete(event.entityId)) {
+          this.enemies.unregisterEnemy(event.entityId);
+          this.weapons.removeBody(event.entityId);
+        }
+      }
+    this.record('status', this.statuses.consumeCombatEvents(events));
+    this.record('enemy', this.enemies.consumeCombatEvents(events));
+    this.record('weapon', this.weapons.update(0, { paused: true }));
+  }
+  private record(channel: WorldEvent['channel'], events: readonly WorldEvent['event'][]) {
+    for (const event of events)
+      this.history.push(
+        Object.freeze({ sequence: ++this.eventSequence, time: this.clock, channel, event }),
+      );
+    if (this.history.length > ALPHA.eventHistoryLimit)
+      this.history.splice(0, this.history.length - ALPHA.eventHistoryLimit);
+  }
+}

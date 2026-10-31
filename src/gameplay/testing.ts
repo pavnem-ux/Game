@@ -1,0 +1,71 @@
+import type { GameplayWorld, GameplayOptions } from './index';
+/** Imported only inside import.meta.env.DEV branches; no testing controller in production. */
+export function createTestingController(
+  getWorld: () => GameplayWorld | null,
+  restart: (options: GameplayOptions) => void,
+) {
+  return (input: unknown) => {
+    if (!input || typeof input !== 'object' || !('type' in input))
+      throw new TypeError('Invalid test action.');
+    const a = input as Record<string, unknown>;
+    const w = getWorld();
+    if (a.type === 'restart') {
+      const options = a.options as GameplayOptions;
+      // Construct/validate before replacing the current world; restart callback does that atomically.
+      restart(options);
+      return;
+    }
+    if (!w) throw new Error('Start a run first.');
+    switch (a.type) {
+      case 'spawn':
+        w.spawnEnemy(a.kind as 'melee' | 'ranged', a.distance as number);
+        break;
+      case 'group':
+        w.spawnGroup(a.count as number, a.distance as number);
+        break;
+      case 'clear-enemies':
+        w.clearEnemies();
+        break;
+      case 'heal':
+        w.healPlayer();
+        break;
+      case 'hp':
+        w.setPlayerHp(a.value as number);
+        break;
+      case 'death':
+        w.setPlayerHp(0);
+        break;
+      case 'protection':
+        w.setTestProtection(a.enabled as boolean);
+        break;
+      case 'cleanse':
+        w.cleanse(a.targetId as string);
+        break;
+      case 'effect':
+        w.applyEffect(
+          {
+            sourceId: w.playerId,
+            targetId: a.targetId as string,
+            effectType: a.effectType as 'poison' | 'burn' | 'bleed',
+            rawDamagePerTick: a.damage as number,
+            duration: a.duration as number,
+            probabilityPercent: 100,
+          },
+          a.stacks as number,
+        );
+        break;
+      case 'on-hit':
+        w.setOnHit([
+          {
+            effectType: a.effectType as 'poison' | 'burn' | 'bleed',
+            rawDamagePerTick: a.damage as number,
+            duration: a.duration as number,
+            probabilityPercent: a.chance as number,
+          },
+        ]);
+        break;
+      default:
+        throw new Error('Unknown test action.');
+    }
+  };
+}

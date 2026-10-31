@@ -17,6 +17,8 @@
     "src/enemy-ai",
     "tests/enemy-ai",
     "src/player-survival",
-    "tests/player-survival"
+    "tests/player-survival",
+    "src/gameplay",
+    "tests/gameplay"
   ]
 }

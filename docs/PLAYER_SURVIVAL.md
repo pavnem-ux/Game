@@ -133,3 +133,7 @@ npm run test:e2e  # существующий прототип при работ�
 Результат Task 05: 548 Vitest-тестов (65 новых + 483 прежних) и 6 Node-тестов прошли без пропусков; test:survival, строгий typecheck и production build успешны. Browser regression прошёл: desktop/mobile movement, combat, real XP pickup, pause/upgrades, death/restart, сохранённый рекорд и pool 240 enemies без JavaScript exceptions. Прежнее предупреждение Vite о размере Phaser bundle сохраняется; оно не связано с новым модулем.
 
 Phaser-интеграция, UI, глобальный scheduler, new run persistence, дополнительные charges, новые классы/враги/эффекты, loot и rewards не добавлены. Следующий шаг — отдельно запрошенный Task 06: единая хронология, pause/resume, доставка событий и затем подключение к сцене/UI.
+
+### Интеграция Task 06
+
+В `src/gameplay/GameplayWorld.ts` реализована общая хронология, а Phaser/React подключают настоящий бой, pause и ручное revival UI. Survival по-прежнему не владеет другими clocks; World продвигает их вместе до одной границы, немедленно потребляет результаты и останавливается на death timestamp. Самостоятельные APIs Task 05 не менялись. [Управление, общая timeline, tie-order и DEV](PLAYABLE_COMBAT_ALPHA.md).

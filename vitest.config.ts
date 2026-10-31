@@ -10,6 +10,7 @@ export default defineConfig({
       'tests/status-effects/**/*.test.ts',
       'tests/enemy-ai/**/*.test.ts',
       'tests/player-survival/**/*.test.ts',
+      'tests/gameplay/**/*.test.ts',
     ],
   },
 });

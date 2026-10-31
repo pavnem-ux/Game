@@ -178,7 +178,7 @@ npm run test:e2e  # прежний прототип, нужен dev server
 
 Тестируются нормальное/быстрое преследование, нулевая и близкая к нулю дистанция, pause/large delta, плотные группы/перестановка ID, local spatial queries, контактная геометрия, независимые cooldown, Core crit/Dodge/Resistance/HP/death, blocked attempts, ranged thresholds/hysteresis, прямолинейные swept projectiles, движения/смерти игрока и источника, unregister/dispose, periodic death compatibility, immutable результаты и invalid input.
 
-Task 04 не добавлял зависимости, Character Stats формулы, статусы, wave/spawn механики, pathfinding, revival, loot/XP, skills, sprites/VFX или UI. Геометрия player motion внутри update остаётся static-sample: sweep не интерполирует неприсланную траекторию игрока. Spatial hashing ускоряет разреженные сцены; в предельно плотной группе фактических соседей всё ещё может быть много. Значения всех профилей — временная тестовая конфигурация. Task 05 описан ниже; Task 06 не начинался.
+Task 04 не добавлял зависимости, Character Stats формулы, статусы, wave/spawn механики, pathfinding, revival, loot/XP, skills, sprites/VFX или UI. Геометрия player motion внутри update остаётся static-sample: sweep не интерполирует неприсланную траекторию игрока. Spatial hashing ускоряет разреженные сцены; в предельно плотной группе фактических соседей всё ещё может быть много. Значения всех профилей — временная тестовая конфигурация. Task 05 описан ниже; Общая интеграция Task 06 описана ниже.
 
 ### Результаты проверки Task 04
 
@@ -191,3 +191,7 @@ Optional `onDirectDamageResolved(context, result)` вызывается синх
 Optional `shouldPause()` в EnemyAI.update проверяется на входе и после каждого локального события. При true в T scheduler завершает уже доступные локальные события на T, затем не продвигается дальше. Остаток delta не накапливается. На паузе сохраняются позиции/cooldown/flights; после authoritative Core revival AI пересчитывает steering и возобновляет поведение без сброса мира. consumeCombatEvents принимает новый Core event `revived`.
 
 `createEnemySurvivalPolicies` связывает pre-policy и observer с PlayerSurvival, `createSurvivalPausePolicy` предоставляет локальный shouldPause. Этого достаточно для синхронной защиты от последовательных/одновременных AI hits. Глобальный владелец мира всё равно обязан согласовать время остальных модулей и остановить их на смерти: [API, протокол времени и граница Task 06](PLAYER_SURVIVAL.md).
+
+### Интеграция Task 06
+
+Добавлены `prepareBoundary(playerBody)`, `peekBoundary(end)`, `advanceToBoundary(time)`, `resolveBoundary()`; прежний update использует тот же single-event resolver. Новый GameplayWorld выбирает глобальную boundary и синхронизирует все часы перед damage, поэтому AI больше не вызывается отдельным большим future batch в playable alpha. Compensated displacement уменьшает накопление погрешности позиции при разбиении updates. После смерти active enemy удаляется из AI, Core attribution и запущенные flights сохраняются. [Приоритеты, player movement sampling и ограничения](PLAYABLE_COMBAT_ALPHA.md).

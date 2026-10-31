@@ -1,3 +1,5 @@
+import { validateAdvance } from '../simulation-boundary';
+import type { SimulationBoundary } from '../simulation-boundary';
 import { scaleAttackFrequency } from '../character-stats';
 import type { CombatCore } from '../combat-core';
 import { aimDirection, circleIntersectsSector, edgeDistance } from './geometry';
@@ -50,6 +52,7 @@ function earlier(a: ScheduledEvent, b: ScheduledEvent): boolean {
 
 export class WeaponAttacks {
   private readonly bodies = new Map<string, CombatBody>();
+  private readonly velocities = new Map<string, Point>();
   private readonly equipped = new Map<string, Equipped>();
   private readonly weaponIds = new Set<string>();
   private readonly projectiles = new Map<string, ProjectileState>();
@@ -60,11 +63,20 @@ export class WeaponAttacks {
     return this.clock;
   }
 
-  setBody(entityId: string, body: CombatBody): void {
+  setBody(entityId: string, body: CombatBody, velocity: Point = { x: 0, y: 0 }): void {
     this.core.getEntity(entityId);
     validatePoint(body, 'body');
+    validatePoint(velocity, 'velocity');
     nonNegative(body.radius, 'body.radius');
+    this.velocities.set(entityId, Object.freeze({ ...velocity }));
     this.bodies.set(entityId, Object.freeze({ x: body.x, y: body.y, radius: body.radius }));
+  }
+
+  /** Remove presentation/target geometry; existing snapshots and flights remain valid. */
+  removeBody(entityId: string): void {
+    this.core.getEntity(entityId);
+    this.bodies.delete(entityId);
+    this.velocities.delete(entityId);
   }
 
   equipWeapon(input: EquipWeaponInput): WeaponState {
@@ -118,6 +130,30 @@ export class WeaponAttacks {
     return Object.freeze([...this.projectiles.values()].map(projectileSnapshot));
   }
 
+  /** Integration stepping uses the same scheduler/resolvers as update, without resolving future HP. */
+  peekBoundary(end: number): SimulationBoundary | null {
+    validateAdvance(this.clock, end, null);
+    const event = this.nextEvent(end);
+    return event ? Object.freeze({ time: event.at, priority: event.priority }) : null;
+  }
+  advanceToBoundary(time: number): void {
+    validateAdvance(this.clock, time, this.peekBoundary(time)?.time ?? null);
+    this.advance(time - this.clock);
+    this.clock = time;
+  }
+  resolveBoundary(): readonly WeaponEvent[] {
+    const output: WeaponEvent[] = [];
+    this.cancelDeadPending(output);
+    const next = this.nextEvent(this.clock);
+    if (next) this.resolveScheduled(next, output);
+    return Object.freeze(output.map((event) => Object.freeze(event)));
+  }
+  private resolveScheduled(next: ScheduledEvent, output: WeaponEvent[]) {
+    if ('projectile' in next) this.finishFlight(next, output);
+    else this.strikeEvent(next, output);
+    this.cancelDeadPending(output);
+  }
+
   /** Event-driven catch-up: consume all elapsed scheduled events without dropped cycles. */
   update(deltaSeconds: number, options: UpdateOptions = {}): readonly WeaponEvent[] {
     nonNegative(deltaSeconds, 'deltaSeconds');
@@ -137,9 +173,7 @@ export class WeaponAttacks {
       }
       this.advance(next.at - this.clock);
       this.clock = next.at;
-      if ('projectile' in next) this.finishFlight(next, output);
-      else this.strikeEvent(next, output);
-      this.cancelDeadPending(output);
+      this.resolveScheduled(next, output);
     }
     return Object.freeze(output.map((event) => Object.freeze(event)));
   }
@@ -171,7 +205,7 @@ export class WeaponAttacks {
       if (!next || earlier(event, next)) next = event;
     };
     for (const p of this.projectiles.values())
-      consider(nextFlightEvent(p, this.clock, this.core, this.bodies));
+      consider(nextFlightEvent(p, this.clock, this.core, this.bodies, this.velocities));
     for (const w of this.equipped.values()) {
       if (!this.core.getEntity(w.entityId).alive) continue;
       if (w.pending)

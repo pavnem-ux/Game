@@ -24,6 +24,7 @@ export function nextFlightEvent(
   now: number,
   core: CombatCore,
   bodies: ReadonlyMap<string, CombatBody>,
+  velocities?: ReadonlyMap<string, Point>,
 ): FlightEvent {
   const remaining = Math.max(0, p.data.maxTravelDistance - p.distanceTraveled);
   const end = { x: p.x + p.data.direction.x * remaining, y: p.y + p.data.direction.y * remaining };
@@ -31,7 +32,10 @@ export function nextFlightEvent(
     targetId: string | undefined;
   for (const [id, body] of bodies) {
     if (!validTarget(core, p.data.sourceId, p.affiliation, id)) continue;
-    const t = segmentCircleIntersection(p, end, body, p.data.radius + body.radius);
+    const velocity = velocities?.get(id) ?? { x: 0, y: 0 };
+    const duration = remaining / p.data.speed;
+    const relativeEnd = { x: end.x - velocity.x * duration, y: end.y - velocity.y * duration };
+    const t = segmentCircleIntersection(p, relativeEnd, body, p.data.radius + body.radius);
     if (
       t !== null &&
       (t < fraction || (t === fraction && (targetId === undefined || compareIds(id, targetId) < 0)))

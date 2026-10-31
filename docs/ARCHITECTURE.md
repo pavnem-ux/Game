@@ -1,4 +1,6 @@
-# Fantasy Survivors: архитектура и план
+# Fantasy Survivors: архитектура и план первого прототипа
+
+Текущая Combat Alpha по умолчанию описана в [PLAYABLE_COMBAT_ALPHA.md](PLAYABLE_COMBAT_ALPHA.md). Ниже сохранена архитектура первого прототипа, доступного по `/?prototype`; его XP/upgrades не смешиваются с новым Character Stats combat world.
 
 ## Требования и границы
 
