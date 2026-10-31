@@ -20,6 +20,12 @@ npm run build      # TypeScript + production-сборка в dist/
 npm run preview    # проверить собранную игру
 ```
 
+## Публикация в Cloudflare Pages
+
+Проект подготовлен для статического хостинга из **приватного** `pavnem-ux/Game`: production branch `main`, build command `npm run build`, output `dist`, root directory — корень репозитория. Node.js закреплён в `.node-version` (`24.19.0`). Pages предоставляет SPA fallback без дополнительных rewrites. Developer Testing Mode исключён из production, включая `?debug`.
+
+[Точные шаги подключения GitHub, авторизации и публикации](docs/DEPLOY_CLOUDFLARE_PAGES.md). Потребуется войти в свой Cloudflare и разрешить GitHub App доступ только к Game. Публичный URL появится после успешного deployment; до проверки реального URL сайт не считается опубликованным и проверенным. Игровая логика и баланс не менялись; Task 07 не начат.
+
 ## Как играть
 
 - Выберите Воина, Мага, Лучника или Разбойника и нажмите «Начать забег».

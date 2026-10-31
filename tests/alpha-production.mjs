@@ -1,7 +1,41 @@
 import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { readFile, readdir } from 'node:fs/promises';
+import { readFile, readdir, stat } from 'node:fs/promises';
+import { join } from 'node:path';
+// Cloudflare Pages uploads only dist/. Its native SPA fallback requires no root 404.html.
+async function listFiles(directory, prefix = '') {
+  const files = [];
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const relative = prefix + entry.name;
+    if (entry.isDirectory())
+      files.push(...(await listFiles(join(directory, entry.name), relative + '/')));
+    else files.push(relative);
+  }
+  return files;
+}
+const files = await listFiles('dist');
+assert.ok(files.includes('index.html'), 'static entry point exists');
+assert.ok(!files.includes('404.html'), 'Pages native SPA fallback remains enabled');
+assert.ok(
+  !files.some((file) => /(^|\/)(?:\.env(?:\.[^/]*)?|\.git|node_modules|src)(?:\/|$)/.test(file)),
+  'source, dependencies and environment files are not deployed',
+);
+assert.ok(!files.some((file) => file.endsWith('.map')), 'production source maps are not published');
+for (const file of files)
+  assert.ok(
+    (await stat(join('dist', file))).size <= 25 * 1024 * 1024,
+    `${file} fits the Pages per-file limit`,
+  );
+const html = await readFile('dist/index.html', 'utf8');
+assert.ok(!html.includes('/src/'), 'entry point references compiled assets');
+const assets = [...html.matchAll(/(?:src|href)="(\/assets\/[^"]+)"/g)].map((match) => match[1]);
+assert.ok(assets.length >= 2, 'compiled JS and CSS are linked');
+for (const asset of assets)
+  assert.ok(files.includes(asset.slice(1)), `${asset} is present in dist`);
+console.log(
+  `PASS static artifact: ${files.length} files, compiled asset references, no source maps or root 404.html.`,
+);
 const server = spawn(
   process.execPath,
   [
@@ -70,9 +104,18 @@ try {
         'legacy debug bridge eliminated from production JS',
       );
     }
+  // Pages serves index.html for unknown non-asset paths; Vite preview models that fallback locally.
+  const nested = await page.goto('http://127.0.0.1:4179/alpha/routing-check?debug');
+  assert.equal(nested.status(), 200);
+  await page.getByRole('button', { name: 'Начать забег' }).waitFor();
+  assert.equal(await page.getByRole('button', { name: /DEV ·/ }).count(), 0);
+  assert.equal(await page.evaluate(() => typeof window.__alpha), 'undefined');
+  await page.goto('http://127.0.0.1:4179/?prototype&debug');
+  await page.getByRole('button', { name: 'Войти в руины' }).waitFor();
+  assert.equal(await page.evaluate(() => typeof window.__survivors), 'undefined');
   assert.deepEqual(errors, []);
   console.log(
-    'PASS production: playable Mage, pause/resume; ?debug exposes no testing controls, globals or testing controller code.',
+    'PASS production: playable Mage, pause/resume, nested SPA URL; alpha and legacy ?debug routes expose no testing controls/globals; testing controller code is absent.',
   );
 } finally {
   await browser?.close();
