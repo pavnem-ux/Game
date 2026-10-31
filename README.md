@@ -73,3 +73,7 @@ Vite предупреждает о крупном bundle из-за Phaser; эт�
 ## Status Effects — Task 03
 
 `src/status-effects/` реализует Poison/Burn/Bleed: до 10 стаков на цель/тип, общую длительность, секундные тики, замену старейшего стака и детерминированную очистку. Combat Core расширен методом `applyPeriodicDamage` без crit/Dodge. Для weapon impacts есть отдельный адаптер с явной синхронизацией симуляционного времени. Тесты: `npm run test:status`. [API, контракты времени, события и ограничения](docs/STATUS_EFFECTS.md). Phaser-интеграция и revival не добавлялись.
+
+## Enemy AI — Task 04
+
+`src/enemy-ai/` добавляет framework-independent melee pursuit/contact attacks, ranged approach/attack/retreat, soft separation через spatial grid и собственные вражеские снаряды. Core остаётся владельцем HP. `npm run test:enemies` запускает новый набор. [API, sampling игрока, timing и граница будущего Task 06](docs/ENEMY_AI.md). Старый Phaser-прототип не заменён.

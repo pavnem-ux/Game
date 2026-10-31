@@ -1,6 +1,11 @@
 export { WeaponAttacks } from './WeaponAttacks';
 export { validateWeaponConfig } from './validation';
-export { circleIntersectsSector, segmentCircleIntersection, edgeDistance } from './geometry';
+export {
+  circleIntersectsSector,
+  segmentCircleIntersection,
+  edgeDistance,
+  aimDirection,
+} from './geometry';
 export type {
   Point,
   CombatBody,

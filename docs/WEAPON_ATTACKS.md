@@ -180,3 +180,7 @@ Vitest/TypeScript включают новый модуль и тесты; про
 ### On-hit контракт Task 03
 
 WeaponStatusAdapter принимает отдельные успешные WeaponImpactEvent без изменения WeaponConfig или поведения WeaponAttacks. Каждый удар кинжалов/цель меча проверяет probability отдельно. Требуется хронологическая передача на совпадающем StatusEffects.time; replay больших уже завершённых weapon batches задним числом не поддерживается. Общий timeline orchestrator не добавлен. [Подробности](STATUS_EFFECTS.md).
+
+### Геометрия для Task 04
+
+Уже существующая функция `aimDirection` дополнительно экспортирована через публичный index вместе с `segmentCircleIntersection`/`edgeDistance`. Enemy AI использует эти чистые helpers, не экипируя player-class weapons и не меняя WeaponAttacks scheduler. [Enemy AI](ENEMY_AI.md).

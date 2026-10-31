@@ -8,6 +8,7 @@ export default defineConfig({
       'tests/combat-core/**/*.test.ts',
       'tests/weapon-attacks/**/*.test.ts',
       'tests/status-effects/**/*.test.ts',
+      'tests/enemy-ai/**/*.test.ts',
     ],
   },
 });

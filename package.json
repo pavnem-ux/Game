@@ -13,7 +13,8 @@
     "test:stats": "vitest run tests/character-stats",
     "test:combat": "vitest run tests/combat-core",
     "test:weapons": "vitest run tests/weapon-attacks",
-    "test:status": "vitest run tests/status-effects"
+    "test:status": "vitest run tests/status-effects",
+    "test:enemies": "vitest run tests/enemy-ai"
   },
   "dependencies": {
     "phaser": "3.90.0",

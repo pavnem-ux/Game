@@ -193,3 +193,7 @@ npm run test:e2e # при работающем dev-сервере; провер�
 Добавлены 112 Vitest-тестов: новая periodic Core операция, стакование/замены, duration/tick boundaries, сопротивление и округление, отсутствие crit/dodge, смерти/события, hooks, probability, валидация/rollback и adapter с настоящими weapon impacts. Общий набор — 395 Vitest-тестов плюс 6 прежних Node-тестов. Строгая проверка типов охватывает независимые модули/тесты без DOM. Сборка проходит; старое информационное предупреждение Phaser bundle size не связано с Task 03.
 
 Браузерная регрессия прежнего прототипа также прошла: движение, бой, подбор опыта, выбор улучшений, смерть/рестарт, локальный рекорд, мобильный джойстик и проверка пула 240 врагов; ошибок JavaScript нет. Status Effects в игровую сцену не подключались.
+
+### Enemy AI Task 04
+
+Enemy AI читает authoritative Core alive и может принять те же death events через consumeCombatEvents. Timestamped direct results идут из EnemyEvent. Общий Status/Weapon/Enemy orchestrator не реализован; backward replay resolved batches запрещён прежним контрактом. [Ограничения и ответственность Task 06](ENEMY_AI.md).
