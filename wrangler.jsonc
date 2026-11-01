@@ -1,0 +1,14 @@
+// Cloudflare Workers Builds configuration for the static game build.
+// Production: `npx wrangler deploy` from `main`. PR branches: `npx wrangler preview`.
+// Only the Vite output in dist/ is uploaded; there is no Worker script.
+{
+  "name": "game",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    // Unknown non-asset paths serve index.html (same SPA fallback test:production checks).
+    "not_found_handling": "single-page-application",
+  },
+  // Required by `wrangler preview` (Cloudflare Previews, open beta); may stay empty.
+  "previews": {},
+}

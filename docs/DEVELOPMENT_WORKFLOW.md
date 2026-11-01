@@ -80,23 +80,26 @@ Node.js берётся из `.node-version` (24.19.0), зависимости �
 
 ## Тестирование в Cloudflare Preview
 
-> **Статус на момент PR #1: не проверено.** Репозиторий подключён к Cloudflare через GitHub App
-> как проект **Workers Builds `game`** (check `Workers Builds: game` и комментарий
-> `cloudflare-workers-and-pages[bot]` в PR), а не как Pages-проект из
-> [DEPLOY_CLOUDFLARE_PAGES.md](DEPLOY_CLOUDFLARE_PAGES.md). Preview-сборка ветки PR #1 завершилась
-> ошибкой; её лог доступен только в дашборде Cloudflare. Состояние production-деплоя `main` из
-> репозитория проверить нельзя. Пока владелец не исправит конфигурацию по логу сборки, Preview
-> недоступен, и проверка выполняется локально (`npm run build && npm run preview`).
+Репозиторий подключён к Cloudflare через GitHub App как проект **Workers Builds `game`**
+(статическая сборка, без Worker-скрипта). Настройки проекта (Settings → Builds):
+
+| Сборка                                 | Build command   | Deploy / Preview command | Root directory |
+| -------------------------------------- | --------------- | ------------------------ | -------------- |
+| Production (ветка `main`)              | `npm run build` | `npx wrangler deploy`    | пусто (`/`)    |
+| Previews Base (все остальные ветки/PR) | `npm run build` | `npx wrangler preview`   | `/`            |
+
+Что выкладывать, задаёт [`wrangler.jsonc`](../wrangler.jsonc) в корне репозитория: имя `game`,
+статические файлы из `dist`, SPA fallback (`not_found_handling: single-page-application`) и
+пустой блок `previews`, без которого `wrangler preview` (Cloudflare Previews, open beta)
+завершается ошибкой. Изменения этого файла влияют и на production и согласуются с владельцем.
 
 Как устроен процесс после настройки:
 
 1. После push в ветку PR Cloudflare собирает production-версию (`npm run build`, каталог `dist`).
-   Статус появляется в PR как check `Workers Builds: game` (или `Cloudflare Pages`, если проект
-   будет переведён на Pages), а ссылка — в комментарии бота Cloudflare («Preview Deployments by
+   Статус появляется в PR как check `Workers Builds: game`, а ссылка — в комментарии бота Cloudflare («Preview Deployments by
    commit»). Тот же статус и логи — в **Workers & Pages → game → Deployments / Builds**.
-2. Адрес preview берётся **только из комментария/дашборда Cloudflare**, не угадывается. Для Pages
-   это `https://<hash>.<project>.pages.dev` и alias ветки; для Workers — preview URL версии на
-   `workers.dev` (если в проекте включены Preview URLs).
+2. Адрес preview берётся **только из комментария/дашборда Cloudflare**, не угадывается
+   (`wrangler preview` по умолчанию называет Preview по имени git-ветки).
 3. Preview — это **production-сборка**: DEV-панели, `/?debug` и `window.__alpha` там нет, так и
    задумано. Механики, требующие DEV-инструментов, проверяются локально (`npm run dev`, `/?debug`)
    и через `npm run test:e2e`.
@@ -117,11 +120,8 @@ Node.js берётся из `.node-version` (24.19.0), зависимости �
 2. **Codex code review** — включить для `pavnem-ux/Game` в настройках Codex и создать для
    репозитория environment в Codex Cloud (Settings → Environments): бот `chatgpt-codex-connector`
    сообщил в PR #1, что без него `@codex review` не выполняется.
-3. **Cloudflare** — открыть лог упавшей сборки `Workers Builds: game` (ссылка «View logs» в PR) и
-   исправить конфигурацию; проверить, что production branch проекта — `main`, build command —
-   `npm run build`, а статические файлы берутся из `dist`. Либо создать Pages-проект по
-   [DEPLOY_CLOUDFLARE_PAGES.md](DEPLOY_CLOUDFLARE_PAGES.md). В настройках сборки включить
-   preview для не-production веток. Изменения конфигурации деплоя в репозитории (например,
-   `wrangler.jsonc`) делаются отдельным PR после согласования.
+3. **Cloudflare** — проверено владельцем 01.11.2026: production branch `main`, настройки сборки как
+   в таблице выше, «Builds for Preview branches» включены. Если Cloudflare сменит команды по
+   умолчанию, сверить их с таблицей; ошибки сборки смотреть по ссылке «View logs» в PR.
 4. **GitHub Actions** — разрешены для репозитория (Settings → Actions → General). Workflow не
    использует секреты.
