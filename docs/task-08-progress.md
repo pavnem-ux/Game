@@ -1,13 +1,13 @@
 # Task 08 progress
 
-Branch: task-08-campaign | PR: (draft, opened in step 0.3)
-Current: Phase 0, step 0.3
+Branch: task-08-campaign | PR: https://github.com/pavnem-ux/Game/pull/4 (draft)
+Current: Phase 1, step 1.1 (Phase 0 done; waiting for "continue")
 
 ## Steps
 
 - [x] 0.1 Confirm latest branch contains Task 07.2; create branch `task-08-campaign`
 - [x] 0.2 Create this progress file; fill the Code map
-- [ ] 0.3 Commit, push, open draft PR "Task 08: Campaign Alpha"
+- [x] 0.3 Commit, push, open draft PR "Task 08: Campaign Alpha"
 - [ ] 1.1 Central campaign/balance config (10 maps, difficulty, stages, elites, boss refs)
 - [ ] 1.2 Run timer on simulation time + stages + wave scaling via existing spawner
 - [ ] 1.3 Event scheduler: elites every 2:00, boss at 10:00, exactly-once
