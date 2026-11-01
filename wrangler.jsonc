@@ -1,0 +1,18 @@
+// Cloudflare Workers Builds configuration for the static-assets Worker `game`.
+// Production (`main`): `npx wrangler deploy`. Preview branches: `npx wrangler preview`.
+// Reproduces the settings Wrangler previously auto-generated for production; see
+// docs/DEPLOY_CLOUDFLARE_WORKERS.md. Changes affect production and need owner approval.
+{
+  "name": "game",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    // Unknown non-asset paths serve index.html (SPA fallback, checked by test:production).
+    "not_found_handling": "single-page-application",
+  },
+  "observability": {
+    "enabled": true,
+  },
+  // Required by `wrangler preview` (Cloudflare Worker Previews); may stay empty.
+  "previews": {},
+}

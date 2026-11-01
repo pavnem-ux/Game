@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { readFile, readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
-// Cloudflare Pages uploads only dist/. Its native SPA fallback requires no root 404.html.
+// Cloudflare Workers Builds uploads only dist/ (wrangler.jsonc assets.directory). SPA fallback
+// comes from assets.not_found_handling; a root 404.html is still kept out of the artifact.
 async function listFiles(directory, prefix = '') {
   const files = [];
   for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -16,7 +17,7 @@ async function listFiles(directory, prefix = '') {
 }
 const files = await listFiles('dist');
 assert.ok(files.includes('index.html'), 'static entry point exists');
-assert.ok(!files.includes('404.html'), 'Pages native SPA fallback remains enabled');
+assert.ok(!files.includes('404.html'), 'no root 404.html in the deployed artifact');
 assert.ok(
   !files.some((file) => /(^|\/)(?:\.env(?:\.[^/]*)?|\.git|node_modules|src)(?:\/|$)/.test(file)),
   'source, dependencies and environment files are not deployed',
@@ -25,7 +26,7 @@ assert.ok(!files.some((file) => file.endsWith('.map')), 'production source maps 
 for (const file of files)
   assert.ok(
     (await stat(join('dist', file))).size <= 25 * 1024 * 1024,
-    `${file} fits the Pages per-file limit`,
+    `${file} fits the Cloudflare static-asset per-file limit`,
   );
 const html = await readFile('dist/index.html', 'utf8');
 assert.ok(!html.includes('/src/'), 'entry point references compiled assets');
@@ -105,7 +106,8 @@ try {
         'legacy debug bridge eliminated from production JS',
       );
     }
-  // Pages serves index.html for unknown non-asset paths; Vite preview models that fallback locally.
+  // The Worker serves index.html for unknown non-asset paths (SPA not_found_handling); Vite preview
+  // models that fallback locally.
   const nested = await page.goto('http://127.0.0.1:4179/alpha/routing-check?debug');
   assert.equal(nested.status(), 200);
   await page.getByRole('button', { name: 'Начать забег' }).waitFor();

@@ -176,7 +176,7 @@ Enemy separation использует прежний spatial grid. Активн�
 
 Оставшиеся источники нагрузки: boundary selection сканирует активные entities/flights, player projectile targeting/collision проверяет подходящих enemies; scene строит snapshots и status labels. Глобальный broadphase для player projectiles не добавлен. Предельно плотная separation группа всё ещё содержит много реальных соседей. Большие delta стоят пропорционально событиям. Core хранит уникальные ID умерших до конца run ради attribution; бесконечное ручное создание/удаление врагов растит эту сессионную таблицу, хотя active world/history ограничены.
 
-Победа, skills/upgrades, currency/inventory, permanent progression, accounts и финальный баланс/арт отсутствуют. Task 06.1 добавил run XP и подкрепления; Cloudflare Pages deployment подготовлен отдельно. Непрерывные подкрепления Task 06.1 приходят автоматически по общему расписанию. Input sampling дискретный, visuals простые, clocks/RNG детерминированы для одинакового input, а не для любых fps/input samples. Прежнее предупреждение Vite о большом Phaser bundle сохраняется. Task 07 не начат.
+Победа, skills/upgrades, currency/inventory, permanent progression, accounts и финальный баланс/арт отсутствуют. Task 06.1 добавил run XP и подкрепления; Cloudflare deployment (Workers Builds) настроен отдельно. Непрерывные подкрепления Task 06.1 приходят автоматически по общему расписанию. Input sampling дискретный, visuals простые, clocks/RNG детерминированы для одинакового input, а не для любых fps/input samples. Прежнее предупреждение Vite о большом Phaser bundle сохраняется. Task 07 не начат.
 
 ### Task 06.1 update
 
