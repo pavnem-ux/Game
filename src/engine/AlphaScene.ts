@@ -35,7 +35,11 @@ export class AlphaScene extends Phaser.Scene {
     this.input.keyboard!.clearCaptures();
     const toggle = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement)?.matches('input,select,textarea')) return;
-      if (this.world && !this.world.survival.getState().requiresWorldPause) {
+      if (
+        this.world &&
+        !this.world.survival.getState().requiresWorldPause &&
+        this.world.run.pendingChoices === 0
+      ) {
         this.world.setPaused(!this.world.paused);
         this.clearInput();
         this.publish();
@@ -136,6 +140,13 @@ export class AlphaScene extends Phaser.Scene {
         case 'finish':
           this.world?.decide('finish-run');
           break;
+        case 'choose-skill':
+          this.world?.chooseSkill(command.card);
+          this.clearInput();
+          break;
+        case 'reroll':
+          this.world?.rerollSkillOffer();
+          break;
         case 'testing':
           if (import.meta.env.DEV) this.testing?.(command.action);
           break;
@@ -185,6 +196,16 @@ export class AlphaScene extends Phaser.Scene {
       const e = event.event;
       if (event.channel === 'weapon' && e.type === 'attack-started' && !e.projectileId)
         this.fx.push({ event, until: event.time + 0.18, x: e.origin.x, y: e.origin.y });
+      if (event.channel === 'skill' && e.type === 'skill-area')
+        this.fx.push({ event, until: event.time + 0.25, x: e.center.x, y: e.center.y });
+      if (event.channel === 'skill' && e.type === 'synergy-triggered')
+        this.fx.push({
+          event,
+          until: event.time + 0.8,
+          x: e.position.x,
+          y: e.position.y - 18,
+          text: SYNERGY_LABELS[e.synergyId] ?? e.synergyId,
+        });
       if (
         event.channel === 'combat' &&
         (e.type === 'damage' || e.type === 'periodic-damage' || e.type === 'dodge')
@@ -206,6 +227,12 @@ export class AlphaScene extends Phaser.Scene {
       }
     }
     this.fx = this.fx.filter((f) => f.until > s.time).slice(-64);
+    for (const z of s.skillCombat.zones) {
+      const c = skillColor(z.sourceKey);
+      const armed = z.armedAt === undefined || z.armedAt <= s.time;
+      g.fillStyle(c, armed ? 0.12 : 0.05).fillCircle(z.center.x, z.center.y, z.radius);
+      g.lineStyle(1, c, armed ? 0.55 : 0.3).strokeCircle(z.center.x, z.center.y, z.radius);
+    }
     for (const crystal of s.crystals) {
       const { x, y } = crystal;
       g.fillStyle(0xb4f1aa, 0.13).fillCircle(x, y, 12);
@@ -235,6 +262,15 @@ export class AlphaScene extends Phaser.Scene {
         (34 * enemy.entity.currentHp) / enemy.entity.maxHp,
         3,
       );
+      const mark = s.skillCombat.marks.find((m) => m.targetId === enemy.entityId);
+      if (mark)
+        g.lineStyle(2, mark.kind === 'hunter' ? 0xffd27a : 0xd690ff, 0.9)
+          .strokeCircle(x, y, 22)
+          .lineBetween(x - 26, y, x - 18, y)
+          .lineBetween(x + 18, y, x + 26, y);
+      if (enemy.control?.stunned) g.fillStyle(0xfff2a8, 0.9).fillCircle(x, y - 30, 4);
+      else if (enemy.control && enemy.control.movementMultiplier < 1)
+        g.lineStyle(2, 0x9fdcff, 0.7).strokeEllipse(x, y + 14, 34, 10);
       const effects = s.statuses.filter((v) => v.targetId === enemy.entityId);
       if (effects.length) {
         const text = this.label(this.labels, label++);
@@ -283,14 +319,16 @@ export class AlphaScene extends Phaser.Scene {
         s.survival.fullyProtected ? 0xffe4a6 : 0xd5fff2,
         0.8,
       ).strokeCircle(x, y, 26);
+    if (s.skillCombat.barrier > 0) g.lineStyle(2, 0xbfe4ff, 0.75).strokeCircle(x, y, 30);
     for (const p of s.playerProjectiles) {
-      g.lineStyle(weapon === 'archer' ? 3 : 5, color, 0.4).lineBetween(
+      const pc = p.weaponId.startsWith('skill:') ? skillColor(p.weaponId.slice(6)) : color;
+      g.lineStyle(weapon === 'archer' ? 3 : 5, pc, 0.4).lineBetween(
         p.x,
         p.y,
         p.x - p.direction.x * 18,
         p.y - p.direction.y * 18,
       );
-      g.fillStyle(color).fillCircle(p.x, p.y, p.radius);
+      g.fillStyle(pc).fillCircle(p.x, p.y, p.radius);
     }
     for (const p of s.enemyProjectiles) {
       g.lineStyle(3, 0xf3968c, 0.3).lineBetween(
@@ -320,11 +358,29 @@ export class AlphaScene extends Phaser.Scene {
             .strokePath();
         }
       }
+      if (e.type === 'skill-area') {
+        const c = skillColor(e.sourceKey),
+          alpha = Math.max(0, (f.until - s.time) / 0.25);
+        if (e.shape === 'cone' && e.direction) {
+          const a = Math.atan2(e.direction.y, e.direction.x),
+            half = ((e.arcDegrees ?? 90) * Math.PI) / 360;
+          g.fillStyle(c, 0.18 * alpha)
+            .beginPath()
+            .moveTo(f.x, f.y)
+            .arc(f.x, f.y, e.radius, a - half, a + half)
+            .closePath()
+            .fillPath();
+        } else {
+          g.fillStyle(c, 0.16 * alpha).fillCircle(f.x, f.y, e.radius);
+          g.lineStyle(2, c, 0.6 * alpha).strokeCircle(f.x, f.y, e.radius);
+          if (e.shape === 'ring' && e.innerRadius) g.strokeCircle(f.x, f.y, e.innerRadius);
+        }
+      }
       if (f.text)
         this.label(this.damageLabels, damageLabel++)
           .setPosition(f.x, f.y - 40 - (0.6 - (f.until - s.time)) * 20)
           .setText(f.text)
-          .setColor('#ffe4ba')
+          .setColor(f.event.channel === 'skill' ? '#bfe9ff' : '#ffe4ba')
           .setVisible(true);
     }
     this.labels.slice(label).forEach((t) => t.setVisible(false));
@@ -364,9 +420,11 @@ export class AlphaScene extends Phaser.Scene {
         ? 'revival'
         : run === 'ended'
           ? 'ended'
-          : world.paused
-            ? 'paused'
-            : 'playing';
+          : world.skills.offer
+            ? 'level-up'
+            : world.paused
+              ? 'paused'
+              : 'playing';
     if (screen === 'ended' && this.recordedRun !== this.runId) {
       this.record = saveRun(world!.time, world!.kills).bestSeconds;
       this.recordedRun = this.runId;
@@ -381,6 +439,46 @@ export class AlphaScene extends Phaser.Scene {
     });
   }
 }
+const SKILL_COLORS: Record<string, number> = {
+  fire: 0xff8a4c,
+  ice: 0x9fdcff,
+  poison: 0x9fe07a,
+  bleed: 0xe0607a,
+  physical: 0xf1e3b8,
+  shadow: 0xb08cff,
+};
+const SKILL_FAMILY: Record<string, keyof typeof SKILL_COLORS> = {
+  fireball: 'fire',
+  flame_burst: 'fire',
+  inferno: 'fire',
+  frost_nova: 'ice',
+  ice_shards: 'ice',
+  blizzard: 'ice',
+  toxic_volley: 'poison',
+  poison_trap: 'poison',
+  blood_blades: 'bleed',
+  lacerate: 'bleed',
+  shadow_strike: 'shadow',
+  seismic_impact: 'physical',
+};
+function skillColor(key: string): number {
+  const id = key.split(/[#:]/)[0];
+  return SKILL_COLORS[SKILL_FAMILY[id] ?? 'physical'];
+}
+const SYNERGY_LABELS: Record<string, string> = {
+  thermal_shock: 'ТЕРМОШОК',
+  wildfire: 'ЛЕСНОЙ ПОЖАР',
+  shattered_ice: 'РАСКОЛ',
+  skull_crusher: 'СОКРУШЕНИЕ',
+  battle_momentum: 'НАПОР',
+  seismic_impact: 'СЕЙСМИКА',
+  toxic_barrage: 'ТОКСИН',
+  plague_chain: 'ЧУМА',
+  deadly_precision: 'ТОЧНОСТЬ',
+  blood_frenzy: 'БЕЗУМИЕ',
+  deep_wounds: 'ГЛУБОКИЕ РАНЫ',
+  final_cut: 'РАЗРЕЗ',
+};
 declare global {
   interface Window {
     __alpha?: {

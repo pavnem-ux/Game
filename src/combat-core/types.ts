@@ -34,6 +34,13 @@ export interface AttackRequest {
   readonly attackerId: string;
   readonly damageType: DamageType;
   readonly coefficient: number;
+  /** Task 07: additive crit-chance points for this attack only; the global crit cap still applies. */
+  readonly criticalChanceBonus?: number;
+}
+/** Task 07: per-target resolution options. One attack snapshot keeps exactly one crit roll. */
+export interface ResolveAttackOptions {
+  /** Target-specific multiplier on the snapshot's raw damage (marks/focus bonuses). Default 1. */
+  readonly damageMultiplier?: number;
 }
 
 /** Contains values only: no reference to the attacker's mutable lifecycle or stats. */
@@ -102,6 +109,8 @@ export interface PeriodicDamageResult {
   readonly status: 'hit' | 'inactive';
   readonly damage: number;
   readonly appliedDamage: number;
+  /** Task 07: damage absorbed by a temporary barrier; present only when positive. */
+  readonly absorbed?: number;
   readonly previousHp: number;
   readonly currentHp: number;
   readonly events: readonly (PeriodicDamageEvent | DeathEvent)[];
@@ -151,6 +160,8 @@ export interface DamageResult {
   /** Rounded, mitigated damage before limiting the HP loss to remaining HP. */
   readonly damage: number;
   readonly appliedDamage: number;
+  /** Task 07: damage absorbed by a temporary barrier; present only when positive. */
+  readonly absorbed?: number;
   readonly previousHp: number;
   readonly currentHp: number;
   readonly events: readonly CombatEvent[];

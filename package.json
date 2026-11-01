@@ -19,6 +19,7 @@
     "test:enemies": "vitest run tests/enemy-ai",
     "test:survival": "vitest run tests/player-survival",
     "test:alpha": "vitest run tests/gameplay",
+    "test:skills": "vitest run tests/skills",
     "test:production": "node tests/alpha-production.mjs"
   },
   "dependencies": {

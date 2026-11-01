@@ -73,6 +73,15 @@ export function createTestingController(
           },
         ]);
         break;
+      case 'choose-skill':
+        w.chooseSkill(a.card as string);
+        break;
+      case 'reroll-skills':
+        w.rerollSkillOffer();
+        break;
+      case 'grant-skill':
+        w.grantTestSkill(a.skillId as string, a.rank as number | undefined);
+        break;
       default:
         throw new Error('Unknown test action.');
     }

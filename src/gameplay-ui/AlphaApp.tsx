@@ -4,6 +4,7 @@ import { CHARACTER_CLASSES, calculateCharacterStats } from '../character-stats';
 import { CLASS_LABELS, WEAPON_LABELS } from '../gameplay';
 import { alphaBridge } from './store';
 import { AlphaCanvas } from './AlphaCanvas';
+import { LevelUpDialog, SkillBar } from './SkillPanels';
 import './alpha.css';
 const DeveloperPanel = import.meta.env.DEV ? lazy(() => import('./DeveloperPanel')) : null;
 const time = (seconds: number) =>
@@ -38,7 +39,7 @@ export function AlphaApp() {
         </div>
         <span className="header-caption">ХРОНИКИ ПОСЛЕДНЕГО СВЕТА</span>
         <span className="build-badge">
-          COMBAT ALPHA <span>06</span>
+          COMBAT ALPHA <span>07</span>
         </span>
       </header>
       <main className={`arena alpha-arena screen-${state.screen}`}>
@@ -66,7 +67,7 @@ export function AlphaApp() {
               <p className="alpha-note">
                 Тестовая арена · предварительный баланс
                 <br />
-                Собирайте XP-кристаллы · новые группы врагов приходят постоянно.
+                Собирайте XP-кристаллы · на каждом уровне — выбор навыка.
               </p>
             </div>
             <div className="alpha-selection">
@@ -186,6 +187,7 @@ export function AlphaApp() {
                 </button>
               </div>
             </div>
+            <SkillBar world={s} />
             <div className="alpha-mobile-summary">
               {time(s.time)} · {s.kills} повержено
             </div>
@@ -222,6 +224,7 @@ export function AlphaApp() {
             </div>
           </>
         )}
+        {state.screen === 'level-up' && s?.skills.offer && <LevelUpDialog world={s} />}
         {(state.screen === 'paused' || state.screen === 'revival' || state.screen === 'ended') && (
           <section
             className="overlay modal-overlay"

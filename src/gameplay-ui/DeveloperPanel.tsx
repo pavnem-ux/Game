@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { CHARACTER_CLASSES } from '../character-stats';
 import type { CharacterClass } from '../character-stats';
 import { CLASS_LABELS, DEFAULT_SPAWNING } from '../gameplay';
+import { skillsForClass } from '../skills';
 import { alphaBridge } from './store';
 import type { AlphaState } from './store';
 export default function DeveloperPanel({ state }: { state: AlphaState }) {
@@ -21,6 +22,8 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
   const [hp, setHp] = useState(50),
     [protectedTest, setProtection] = useState(false);
   const [xpAmount, setXpAmount] = useState(20);
+  const [skillId, setSkillId] = useState(''),
+    [skillRank, setSkillRank] = useState(1);
   const [spawnInterval, setSpawnInterval] = useState(
     w?.spawning.settings.interval ?? DEFAULT_SPAWNING.interval,
   );
@@ -160,6 +163,45 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
               Добавить группу
             </button>
             <button onClick={() => send({ type: 'clear-enemies' })}>Убрать врагов</button>
+          </fieldset>
+          <fieldset>
+            <legend>Навыки</legend>
+            <p>
+              Слоты {w.skills.slots.auto.used}/4 · {w.skills.slots.passive.used}/6 · перебросов{' '}
+              {w.skills.rerolls} · ожидает выборов {w.skills.pendingChoices}
+            </p>
+            <label>
+              Навык
+              <select
+                aria-label="DEV навык"
+                value={skillId}
+                onChange={(e) => setSkillId(e.target.value)}
+              >
+                <option value="">—</option>
+                {skillsForClass(w.character.characterClass).map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name} ({d.kind === 'auto' ? 'актив.' : 'пассив.'})
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Ранг
+              <input
+                aria-label="DEV ранг"
+                type="number"
+                min="1"
+                max="5"
+                value={skillRank}
+                onChange={(e) => setSkillRank(Number(e.target.value))}
+              />
+            </label>
+            <button
+              disabled={!skillId}
+              onClick={() => send({ type: 'grant-skill', skillId, rank: skillRank })}
+            >
+              Выдать навык
+            </button>
           </fieldset>
           <fieldset>
             <legend>XP и волны</legend>

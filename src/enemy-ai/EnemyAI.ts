@@ -16,6 +16,7 @@ import type {
   SeparationStats,
   EnemyProjectileDue,
   EnemyBehaviorState,
+  EnemyControl,
 } from './types';
 import {
   EPS,
@@ -135,6 +136,7 @@ export class EnemyAI {
     if (!actor) throw new Error(`Unknown enemy AI: ${id}.`);
     const alive = this.core.getEntity(id).alive;
     const playerAlive = this.core.getEntity(this.options.playerId).alive;
+    const controlled = actor.stunned || (actor.speedFactor ?? 1) !== 1;
     return Object.freeze({
       entityId: id,
       config: actor.config,
@@ -143,7 +145,34 @@ export class EnemyAI {
       state: !alive ? 'dead' : playerAlive ? actor.state : 'idle',
       alive,
       nextAttackAt: actor.nextAttackAt,
+      ...(controlled
+        ? {
+            control: Object.freeze({
+              movementMultiplier: actor.speedFactor ?? 1,
+              stunned: actor.stunned === true,
+            }),
+          }
+        : {}),
     });
+  }
+  /**
+   * Task 07: apply Slow/Stun at the current boundary. Velocities are recomputed on the next
+   * prepareBoundary/steer, so control changes never rewrite already elapsed motion.
+   */
+  setControl(id: string, control: EnemyControl): void {
+    this.active();
+    const actor = this.actors.get(id);
+    if (!actor) throw new Error(`Unknown enemy AI: ${id}.`);
+    if (!control || typeof control !== 'object') throw new TypeError('Invalid enemy control.');
+    finite(control.movementMultiplier, 'movementMultiplier');
+    if (control.movementMultiplier <= 0 || control.movementMultiplier > 1)
+      throw new RangeError('movementMultiplier must be in (0, 1].');
+    if (typeof control.stunned !== 'boolean') throw new TypeError('stunned must be boolean.');
+    if (actor.speedFactor === control.movementMultiplier && actor.stunned === control.stunned)
+      return;
+    actor.speedFactor = control.movementMultiplier;
+    actor.stunned = control.stunned;
+    this.dirty = true;
   }
   getEnemies(): readonly EnemySnapshot[] {
     this.active();
@@ -409,6 +438,7 @@ export class EnemyAI {
     consider({ kind: 'steer', at: steeringAt, priority: 3, key: '' });
     const horizon = Math.max(this.clock, Math.min(end, steeringAt));
     for (const actor of living) {
+      if (actor.stunned) continue;
       const ready = Math.max(this.clock, actor.nextAttackAt);
       if (ready <= horizon || sameTime(ready, horizon)) {
         const start = {
@@ -475,7 +505,7 @@ export class EnemyAI {
   }
   private attempt(actor: EnemyActor, output: EnemyEvent[]) {
     const player = this.core.getEntity(this.options.playerId);
-    if (!player.alive || !this.core.getEntity(actor.id).alive) return;
+    if (!player.alive || !this.core.getEntity(actor.id).alive || actor.stunned) return;
     const overlap =
       actor.config.behavior === 'melee'
         ? Math.hypot(actor.x - this.player!.x, actor.y - this.player!.y) <=

@@ -1,6 +1,6 @@
 # Task 06.1 — Experience, run levels and continuous waves
 
-The playable alpha now has collectible XP drops and continuous mixed enemy reinforcements. These are provisional combat-testing rules. Task 07 skills, skill selection, permanent progression and new combat-stat growth are not implemented.
+The playable alpha now has collectible XP drops and continuous mixed enemy reinforcements. These are provisional combat-testing rules. As of Task 06.1, skills, skill selection, permanent progression and new combat-stat growth were not implemented; Task 07 later added in-run skills and level-up choices ([IN_RUN_SKILLS.md](IN_RUN_SKILLS.md)).
 
 ## Play and inspect
 
@@ -115,4 +115,4 @@ There are no skill choices, stat gains from run levels, permanent XP saves, boss
 
 The build contract is unchanged: Node.js 24.19.0, production branch `main`, build command `npm run build`, output `dist`, repository root. No server/API/secret is needed. Developer Testing Mode remains excluded from all production and Preview builds. The deployment target is Cloudflare Workers Builds (static-assets Worker `game`); see [deployment instructions](DEPLOY_CLOUDFLARE_WORKERS.md).
 
-A successful local production build and static/browser regression establish that the new version can be built with the configured command. They do not establish a successful remote Cloudflare deployment; actual deployment status and the live URL require Cloudflare dashboard access or a provided URL. No live Cloudflare URL was verified in this task. Task 07 has not begun.
+A successful local production build and static/browser regression establish that the new version can be built with the configured command. They do not establish a successful remote Cloudflare deployment; actual deployment status and the live URL require Cloudflare dashboard access or a provided URL. No live Cloudflare URL was verified in this task. (Task 07 later added in-run skills: see [IN_RUN_SKILLS.md](IN_RUN_SKILLS.md); a run level-up now pauses for a skill choice.)

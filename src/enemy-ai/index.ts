@@ -25,4 +25,5 @@ export type {
   SeparationStats,
   EnemyProjectileLaunch,
   EnemyProjectileDue,
+  EnemyControl,
 } from './types';

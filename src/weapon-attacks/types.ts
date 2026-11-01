@@ -110,6 +110,31 @@ export interface WeaponState {
   readonly nextCycleAt: number;
   readonly secondStrikeAt: number | null;
 }
+/** Task 07: target-specific multiplier for player hits resolved by this module. */
+export interface DamageModifierContext {
+  readonly attack: AttackSnapshot;
+  readonly weaponId: string;
+  readonly targetId: string;
+  readonly projectileId?: string;
+}
+export interface WeaponAttacksOptions {
+  /** Must be pure for the given context: no HP, RNG or scheduling side effects. */
+  readonly damageModifier?: (context: DamageModifierContext) => number;
+}
+/** Task 07: an externally created projectile flown by the shared swept-collision engine. */
+export interface ProjectileLaunchInput {
+  readonly sourceId: string;
+  /** Identifies the launching ability for impact routing; must not be an equipped weapon ID. */
+  readonly weaponId: string;
+  readonly origin: Point;
+  readonly direction: Point;
+  readonly speed: number;
+  readonly radius: number;
+  readonly maxTravelDistance: number;
+  readonly attack: AttackSnapshot;
+  /** Additional targets after the first; each target is hit at most once per projectile. */
+  readonly pierce?: number;
+}
 export interface UpdateOptions {
   readonly paused?: boolean;
 }

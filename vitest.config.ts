@@ -11,6 +11,7 @@ export default defineConfig({
       'tests/enemy-ai/**/*.test.ts',
       'tests/player-survival/**/*.test.ts',
       'tests/gameplay/**/*.test.ts',
+      'tests/skills/**/*.test.ts',
     ],
   },
 });

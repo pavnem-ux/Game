@@ -352,3 +352,94 @@
     top: 148px;
   }
 }
+
+/* Task 07 — level-up skill choice and skill bar */
+.skill-card h3 em {
+  font-style: normal;
+  color: #c9ddb1;
+  font-size: 18px;
+}
+.skill-card.kind-passive {
+  background: linear-gradient(160deg, #2a3341, #171f29);
+}
+.skill-card.kind-bonus {
+  background: linear-gradient(160deg, #3b3524, #211c13);
+}
+.skill-card:focus-visible {
+  outline: 2px solid #e6f1c9;
+  outline-offset: 3px;
+}
+.skill-panel .text-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.skill-bar {
+  position: absolute;
+  left: 50%;
+  bottom: 70px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  max-width: min(720px, calc(100% - 32px));
+  pointer-events: none;
+  z-index: 4;
+}
+.skill-chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid #9db68755;
+  background: #14201ae6;
+  color: #e5e6cf;
+  font-size: 12px;
+  border-radius: 4px;
+}
+.skill-chip.kind-passive {
+  border-color: #8ea6c855;
+  background: #141b24e6;
+}
+.skill-chip i {
+  font-style: normal;
+  font-size: 15px;
+}
+.skill-chip b {
+  font-size: 10px;
+  color: #c9ddb1;
+}
+.skill-chip small {
+  font-size: 9px;
+  color: #f0c58a;
+}
+.skill-slots,
+.skill-gold,
+.skill-barrier,
+.skill-buff {
+  padding: 4px 8px;
+  font-size: 10px;
+  color: #a9bba0;
+  background: #14201acc;
+  border-radius: 4px;
+}
+.skill-gold {
+  color: #f0d58a;
+}
+.skill-barrier {
+  color: #bfe4ff;
+}
+.skill-buff {
+  color: #ffd3a6;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+@media (max-width: 700px) {
+  .skill-bar {
+    bottom: 96px;
+  }
+  .upgrade-grid {
+    grid-template-columns: 1fr;
+  }
+}
