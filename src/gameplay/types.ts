@@ -24,7 +24,7 @@ export interface GameplayOptions {
   readonly viewport?: ViewportSize;
   readonly onHit?: readonly EffectDefinition[];
   /** Task 08: play a campaign map (scaled enemies/spawning, timer, scheduled events). */
-  readonly campaign?: Readonly<{ mapId: number }>;
+  readonly campaign?: Readonly<{ mapId: number; runId?: string }>;
 }
 export interface WorldEvent {
   readonly sequence: number;
@@ -96,7 +96,13 @@ export type CampaignEvent =
       readonly bossId: string;
       readonly bossName: string;
     }
-  | { readonly type: 'duration-reached'; readonly eventId: 'end' };
+  | { readonly type: 'duration-reached'; readonly eventId: 'end' }
+  | {
+      readonly type: 'run-resolved';
+      readonly outcome: 'victory' | 'defeat' | 'abandoned';
+      readonly runId: string | null;
+      readonly elapsed: number;
+    };
 export interface CampaignSnapshot {
   readonly mapId: number;
   readonly mapName: string;
@@ -113,6 +119,12 @@ export interface CampaignSnapshot {
   readonly bossTime: number;
   readonly bossEnemyId: string | null;
   readonly eliteEnemyIds: readonly string[];
+  readonly runId: string | null;
+  /** Run state machine (exactly-once resolution). */
+  readonly status: 'active' | 'victory' | 'defeat' | 'abandoned';
+  readonly bossKilled: boolean;
+  readonly eliteKills: number;
+  readonly resolvedAt: number | null;
 }
 
 export interface RewardEvent {

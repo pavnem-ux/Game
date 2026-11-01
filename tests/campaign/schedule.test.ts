@@ -31,7 +31,8 @@ function world(mapId: number, extra: Record<string, unknown> = {}) {
 function run(w: GameplayWorld, seconds: number, step: number, sink: WorldEvent[]) {
   const end = w.time + seconds;
   let seq = w.getEvents().at(-1)?.sequence ?? 0;
-  while (w.time < end - 1e-9) {
+  // A resolved campaign run freezes the world, so stop there.
+  while (w.time < end - 1e-9 && w.getSnapshot().campaign?.status !== 'victory') {
     resolveOffers(w);
     w.update(Math.min(step, end - w.time));
     const fresh = w.getEvents(seq);
@@ -106,8 +107,11 @@ describe('scheduled events in the world fire exactly once at their time', () => 
         { id: 'boss', time: 600 },
         { id: 'end', time: 600 },
       ]);
+      expect(events.filter((e) => e.event.type === 'run-resolved').length).toBeLessThanOrEqual(1);
       if (step < 1)
-        expect(events.map((e) => [e.time, e.event.type])).toEqual([
+        expect(
+          events.filter((e) => e.event.type !== 'run-resolved').map((e) => [e.time, e.event.type]),
+        ).toEqual([
           [120, 'elite-spawned'],
           [240, 'elite-spawned'],
           [360, 'elite-spawned'],

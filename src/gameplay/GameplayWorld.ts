@@ -41,12 +41,14 @@ import type { SpawnSettings, ViewportSize } from './spawning';
 import {
   CAMPAIGN_BALANCE,
   CampaignDirector,
+  INITIAL_RUN_STATE,
   campaignSpawning,
+  reduceRun,
   getCampaignMap,
   runClock,
   scaleEnemyStats,
 } from '../campaign';
-import type { CampaignMap } from '../campaign';
+import type { CampaignMap, CampaignRunState, RunInput } from '../campaign';
 /** The sole world scheduler. All damage is resolved by existing modules, one boundary at a time. */
 export class GameplayWorld {
   readonly core: CombatCore;
@@ -89,6 +91,7 @@ export class GameplayWorld {
   private readonly director: CampaignDirector | null;
   private bossEnemyId: string | null = null;
   private readonly eliteEnemyIds: string[] = [];
+  private campaignRun: CampaignRunState = INITIAL_RUN_STATE;
   constructor(
     readonly options: GameplayOptions,
     createCore: (random: RandomSource) => CombatCore = (random) => new CombatCore(random),
@@ -209,7 +212,10 @@ export class GameplayWorld {
   }
   get paused() {
     return (
-      this.manualPause || this.survival.getState().requiresWorldPause || this.run.pendingChoices > 0
+      this.manualPause ||
+      this.survival.getState().requiresWorldPause ||
+      this.run.pendingChoices > 0 ||
+      this.campaignRun.status !== 'active'
     );
   }
   /** Effective run stats: permanent Character Stats + passives/buffs, capped centrally. */
@@ -289,6 +295,11 @@ export class GameplayWorld {
       bossTime: CAMPAIGN_BALANCE.boss.spawnTime,
       bossEnemyId: this.bossEnemyId,
       eliteEnemyIds: Object.freeze([...this.eliteEnemyIds]),
+      runId: this.options.campaign?.runId ?? null,
+      status: this.campaignRun.status,
+      bossKilled: this.campaignRun.bossKilled,
+      eliteKills: this.campaignRun.eliteKills,
+      resolvedAt: this.campaignRun.resolvedAt,
       stage: Object.freeze({
         id: clock.stage.id,
         name: clock.stage.name,
@@ -326,7 +337,9 @@ export class GameplayWorld {
       else if (next.kind === 'campaign') this.resolveCampaignEvent();
       this.skills.endStep();
       if (
-        (this.survival.getState().requiresWorldPause || this.run.pendingChoices > 0) &&
+        (this.survival.getState().requiresWorldPause ||
+          this.run.pendingChoices > 0 ||
+          this.campaignRun.status !== 'active') &&
         pauseAt === null
       ) {
         pauseAt = this.clock;
@@ -338,7 +351,10 @@ export class GameplayWorld {
   decide(decision: RevivalDecision): void {
     const result = this.survival.decide(decision, this.statuses);
     this.record('survival', result.events);
-    if (this.survival.getState().runState === 'ended') this.run.clearPending();
+    if (this.survival.getState().runState === 'ended') {
+      this.run.clearPending();
+      this.syncDefeat();
+    }
     if (result.revival) this.forwardCombat(result.revival.events);
     if (result.removedEffects) this.record('status', result.removedEffects);
     this.manualPause = false;
@@ -600,7 +616,37 @@ export class GameplayWorld {
           bossName: map.bossName,
         }),
       ]);
-    } else this.record('campaign', [Object.freeze({ type: 'duration-reached', eventId: 'end' })]);
+    } else {
+      this.record('campaign', [Object.freeze({ type: 'duration-reached', eventId: 'end' })]);
+      this.campaignInput({ type: 'duration-reached', time: this.clock });
+    }
+  }
+  /** Feeds the pure run state machine; records `run-resolved` exactly once. */
+  private campaignInput(input: RunInput) {
+    if (!this.campaignMap) return;
+    const { state, resolved } = reduceRun(this.campaignRun, input);
+    this.campaignRun = state;
+    if (resolved) {
+      this.input = Object.freeze({ x: 0, y: 0 });
+      this.record('campaign', [
+        Object.freeze({
+          type: 'run-resolved',
+          outcome: resolved,
+          runId: this.options.campaign?.runId ?? null,
+          elapsed: Math.min(this.clock, this.campaignMap.durationSeconds),
+        }),
+      ]);
+    }
+  }
+  /** Quit/reload during a campaign run: resolves as abandoned (no rewards); false if not active. */
+  abandonRun(): boolean {
+    if (!this.campaignMap || this.campaignRun.status !== 'active') return false;
+    this.campaignInput({ type: 'abandon', time: this.clock });
+    return true;
+  }
+  private syncDefeat() {
+    if (this.campaignMap && this.survival.getState().runState === 'ended')
+      this.campaignInput({ type: 'player-defeated', time: this.clock });
   }
   /**
    * Scheduled elite/boss spawn: off-screen like waves (spawn RNG stream), stats = map difficulty ×
@@ -911,6 +957,10 @@ export class GameplayWorld {
           ]);
         }
         this.skills.noteDeath(event.entityId, enemy.position);
+        if (event.entityId === this.bossEnemyId)
+          this.campaignInput({ type: 'boss-killed', time: this.clock });
+        else if (this.eliteEnemyIds.includes(event.entityId))
+          this.campaignInput({ type: 'elite-killed', time: this.clock });
         this.enemyIds.delete(event.entityId);
         this.enemies.unregisterEnemy(event.entityId);
         this.weapons.removeBody(event.entityId);
@@ -921,8 +971,10 @@ export class GameplayWorld {
     if (
       events.some((e) => e.type === 'death' && e.entityId === this.playerId) &&
       this.survival.getState().runState === 'ended'
-    )
+    ) {
       this.run.clearPending();
+      this.syncDefeat();
+    }
   }
   protected record(channel: WorldEvent['channel'], events: readonly WorldEvent['event'][]) {
     for (const event of events)

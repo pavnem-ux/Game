@@ -1,3 +1,4 @@
+import { sameInstant } from '../simulation-boundary';
 import { CAMPAIGN_BALANCE, CAMPAIGN_MAPS } from './config';
 import type { CampaignMap, EliteProfileId } from './config';
 
@@ -59,7 +60,8 @@ export class CampaignDirector {
   /** Fires the earliest pending event due at or before `time`; null if none is due. */
   fire(time: number): ScheduledEvent | null {
     const next = this.peek();
-    if (!next || next.time > time) return null;
+    // Same tolerance as the world's boundary selection, so a selected boundary always fires.
+    if (!next || (next.time > time && !sameInstant(next.time, time))) return null;
     this.fired.set(next.id, time);
     return next;
   }
