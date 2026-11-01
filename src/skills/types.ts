@@ -11,6 +11,7 @@ export type CombatTag =
   | 'magical'
   | 'fire'
   | 'ice'
+  | 'poison'
   | 'melee'
   | 'heavy_melee'
   | 'dagger'

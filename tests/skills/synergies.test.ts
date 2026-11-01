@@ -10,6 +10,13 @@ import { arena, skillEvents, stationaryMelee } from './helpers';
 /** Far-away enemies (beyond every basic weapon range), basic on-hit disabled, huge HP. */
 function setup(c: CharacterClass, count = 1) {
   const w = arena(c, { level: 10, onHit: [] });
+  const prerequisites: Record<CharacterClass, string[]> = {
+    mage: ['frost_nova', 'fireball'],
+    warrior: ['ground_slam'],
+    archer: ['toxic_volley'],
+    rogue: ['blade_flurry'],
+  };
+  for (const skill of prerequisites[c]) w.grantTestSkill(skill, 1);
   w.weapons.setAttackSpeed('player', 1);
   const ids = Array.from({ length: count }, (_, i) =>
     w.spawnEnemy('melee', 900 + i * 30, 0, stationaryMelee),
@@ -307,7 +314,7 @@ describe('rules are class-specific and tag-driven', () => {
   it('triggers depend on tags, not skill IDs: an unnamed ice projectile works like Ice Shards', () => {
     const { w, ids } = setup('mage');
     dot(w, ids[0], 'burn');
-    expect(w.run.getState().owned).toEqual([]);
+    expect(w.run.rank('frost_nova')).toBe(1);
     strike(w, ids[0], tags('ice'));
     expect(fired(w, 'thermal_shock')).toHaveLength(1);
   });

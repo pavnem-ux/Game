@@ -311,7 +311,10 @@ describe('run lifecycle', () => {
       w.grantTestSkill(id, 5);
     w.grantTestSkill('serrated_blades', 5);
     play(w, 120, 0.25);
-    const engine = w.skills as unknown as Record<string, Map<unknown, unknown>>;
+    const engine = w.skills as unknown as Record<
+      'controls' | 'projectiles' | 'counters',
+      ReadonlyMap<unknown, unknown>
+    > & { readonly queue: readonly unknown[] };
     expect(engine.controls.size).toBeLessThanOrEqual(120);
     expect(engine.projectiles.size).toBeLessThan(200);
     expect(engine.counters.size).toBeLessThan(500);

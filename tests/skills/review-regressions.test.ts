@@ -65,6 +65,7 @@ describe('review regressions', () => {
   });
   it('lethal weapon impacts keep the victim position: Wildfire spreads from a staff kill', () => {
     const w = arena('mage', { level: 10, onHit: [] });
+    w.grantTestSkill('elemental_mastery', 1);
     const victim = w.spawnEnemy('melee', 200, 0, stationaryMelee);
     const neighbour = w.spawnEnemy('melee', 240, 0, stationaryMelee);
     huge(w, neighbour);

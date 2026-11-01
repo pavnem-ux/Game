@@ -46,7 +46,7 @@ export const ARCHER_SKILLS: readonly SkillDefinition[] = Object.freeze([
     maxRank: 5,
     icon: '⫸',
     description: 'Веер отравленных стрел: урон и Poison.',
-    tags: ['skill', 'physical', 'projectile'],
+    tags: ['skill', 'physical', 'poison', 'projectile'],
     targeting: 'nearest',
     ranks: cumulativeRanks(
       {
@@ -120,7 +120,7 @@ export const ARCHER_SKILLS: readonly SkillDefinition[] = Object.freeze([
     maxRank: 5,
     icon: '⋔',
     description: 'Стрела раскалывается на осколки при первом попадании.',
-    tags: ['skill', 'physical', 'projectile'],
+    tags: ['skill', 'physical', 'poison', 'projectile'],
     targeting: 'nearest',
     ranks: cumulativeRanks(
       {
@@ -157,7 +157,7 @@ export const ARCHER_SKILLS: readonly SkillDefinition[] = Object.freeze([
     maxRank: 5,
     icon: '⚘',
     description: 'Ловушка на пути врагов: срабатывает и отравляет.',
-    tags: ['skill', 'physical', 'trap', 'zone'],
+    tags: ['skill', 'physical', 'poison', 'trap', 'zone'],
     targeting: 'cluster',
     ranks: cumulativeRanks(
       {

@@ -24,12 +24,15 @@ export interface SynergyRule {
   readonly name: string;
   readonly characterClass: CharacterClass;
   readonly trigger: 'hit' | 'kill';
+  /** Any acquired skill with one of these catalogue tags unlocks this rule (rank I+). */
+  readonly requiredSkillTags: readonly CombatTag[];
   readonly description: string;
 }
 /** Display/catalogue data. Conditions are evaluated from tags, statuses and events below. */
 export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
   {
     id: 'thermal_shock',
+    requiredSkillTags: Object.freeze(['ice']),
     name: 'Термошок',
     characterClass: 'mage',
     trigger: 'hit',
@@ -37,6 +40,7 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
   },
   {
     id: 'wildfire',
+    requiredSkillTags: Object.freeze(['fire']),
     name: 'Лесной пожар',
     characterClass: 'mage',
     trigger: 'kill',
@@ -44,6 +48,7 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
   },
   {
     id: 'shattered_ice',
+    requiredSkillTags: Object.freeze(['ice']),
     name: 'Расколотый лёд',
     characterClass: 'mage',
     trigger: 'hit',
@@ -51,6 +56,7 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
   },
   {
     id: 'skull_crusher',
+    requiredSkillTags: Object.freeze(['melee']),
     name: 'Сокрушитель черепов',
     characterClass: 'warrior',
     trigger: 'hit',
@@ -58,6 +64,7 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
   },
   {
     id: 'battle_momentum',
+    requiredSkillTags: Object.freeze(['melee']),
     name: 'Боевой напор',
     characterClass: 'warrior',
     trigger: 'kill',
@@ -65,6 +72,7 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
   },
   {
     id: 'seismic_impact',
+    requiredSkillTags: Object.freeze(['heavy_melee']),
     name: 'Сейсмический удар',
     characterClass: 'warrior',
     trigger: 'hit',
@@ -72,6 +80,7 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
   },
   {
     id: 'toxic_barrage',
+    requiredSkillTags: Object.freeze(['projectile']),
     name: 'Токсичный шквал',
     characterClass: 'archer',
     trigger: 'hit',
@@ -80,6 +89,7 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
   },
   {
     id: 'plague_chain',
+    requiredSkillTags: Object.freeze(['poison']),
     name: 'Цепь чумы',
     characterClass: 'archer',
     trigger: 'kill',
@@ -87,6 +97,7 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
   },
   {
     id: 'deadly_precision',
+    requiredSkillTags: Object.freeze(['projectile']),
     name: 'Смертельная точность',
     characterClass: 'archer',
     trigger: 'hit',
@@ -94,6 +105,7 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
   },
   {
     id: 'blood_frenzy',
+    requiredSkillTags: Object.freeze(['dagger']),
     name: 'Кровавое безумие',
     characterClass: 'rogue',
     trigger: 'hit',
@@ -101,6 +113,7 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
   },
   {
     id: 'deep_wounds',
+    requiredSkillTags: Object.freeze(['dagger']),
     name: 'Глубокие раны',
     characterClass: 'rogue',
     trigger: 'hit',
@@ -108,12 +121,15 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
   },
   {
     id: 'final_cut',
+    requiredSkillTags: Object.freeze(['dagger', 'mark']),
     name: 'Последний разрез',
     characterClass: 'rogue',
     trigger: 'hit',
     description: 'Удар по кровоточащей цели с низким HP — добивающий урон.',
   },
 ] satisfies SynergyRule[]);
+
+const RULES_BY_ID = new Map(SYNERGY_RULES.map((rule) => [rule.id, rule]));
 
 const SYNERGY_TAGS: ReadonlySet<CombatTag> = new Set(['synergy', 'secondary']);
 const T = SYNERGY_TUNING;
@@ -130,6 +146,17 @@ export class SynergyResolver {
   constructor(private readonly e: SkillEngine) {}
   private get cls() {
     return this.e.host.characterClass;
+  }
+  private eligible(id: SynergyId): boolean {
+    const rule = RULES_BY_ID.get(id)!;
+    return (
+      rule.characterClass === this.cls &&
+      this.e.run
+        .ownedIds()
+        .some((skillId) =>
+          this.e.run.definition(skillId).tags.some((tag) => rule.requiredSkillTags.includes(tag)),
+        )
+    );
   }
   private now() {
     return this.e.time;
@@ -207,6 +234,7 @@ export class SynergyResolver {
     switch (this.cls) {
       case 'mage':
         if (
+          this.eligible('thermal_shock') &&
           tags.has('ice') &&
           pre.effects.has('burn') &&
           this.ready('thermal_shock', targetId) &&
@@ -219,7 +247,13 @@ export class SynergyResolver {
             'ice',
           ]);
         }
-        if (tags.has('ice') && pre.slowed && this.ready('shattered_ice', targetId) && alive()) {
+        if (
+          this.eligible('shattered_ice') &&
+          tags.has('ice') &&
+          pre.slowed &&
+          this.ready('shattered_ice', targetId) &&
+          alive()
+        ) {
           this.cool('shattered_ice', targetId, T.shatteredIce.cooldown);
           this.announce('shattered_ice', targetId, pre.position);
           this.procDamage('shattered_ice', targetId, T.shatteredIce.coefficient, 'magical', [
@@ -229,12 +263,19 @@ export class SynergyResolver {
         break;
       case 'warrior': {
         const physicalMelee = tags.has('physical') && tags.has('melee');
-        if (physicalMelee && pre.stunned && this.ready('skull_crusher', targetId) && alive()) {
+        if (
+          this.eligible('skull_crusher') &&
+          physicalMelee &&
+          pre.stunned &&
+          this.ready('skull_crusher', targetId) &&
+          alive()
+        ) {
           this.cool('skull_crusher', targetId, T.skullCrusher.cooldown);
           this.announce('skull_crusher', targetId, pre.position);
           this.procDamage('skull_crusher', targetId, T.skullCrusher.coefficient, 'physical');
         }
         if (
+          this.eligible('seismic_impact') &&
           tags.has('heavy_melee') &&
           pre.stunned &&
           this.ready('seismic_impact', targetId) &&
@@ -258,7 +299,12 @@ export class SynergyResolver {
           break;
         }
         // Toxic Barrage: distinct projectiles on one poisoned target inside a short window.
-        if (tags.has('projectile') && hit.projectileKey && this.ready('toxic_barrage', targetId)) {
+        if (
+          this.eligible('toxic_barrage') &&
+          tags.has('projectile') &&
+          hit.projectileKey &&
+          this.ready('toxic_barrage', targetId)
+        ) {
           let b = this.barrage.get(targetId);
           if (!b || this.now() - b.since > T.toxicBarrage.window) {
             b = { since: this.now(), keys: new Set() };
@@ -290,28 +336,30 @@ export class SynergyResolver {
           }
         }
         // Deadly Precision: repeated direct hits on the same poisoned target; resets on change/expiry.
-        const f = this.focus;
-        if (!f || f.targetId !== targetId || this.now() - f.since > T.deadlyPrecision.window)
-          this.focus = {
-            targetId,
-            since: this.now(),
-            hits: 1,
-            bonusUntil: f?.targetId === targetId ? f.bonusUntil : 0,
-          };
-        else f.hits++;
-        const focus = this.focus!;
-        if (focus.hits >= T.deadlyPrecision.hits) {
-          const fresh = !(focus.bonusUntil > this.now());
-          focus.bonusUntil = this.now() + T.deadlyPrecision.duration;
-          focus.hits = 0;
-          focus.since = this.now();
-          if (fresh) this.announce('deadly_precision', targetId, pre.position);
+        if (this.eligible('deadly_precision')) {
+          const f = this.focus;
+          if (!f || f.targetId !== targetId || this.now() - f.since > T.deadlyPrecision.window)
+            this.focus = {
+              targetId,
+              since: this.now(),
+              hits: 1,
+              bonusUntil: f?.targetId === targetId ? f.bonusUntil : 0,
+            };
+          else f.hits++;
+          const focus = this.focus!;
+          if (focus.hits >= T.deadlyPrecision.hits) {
+            const fresh = !(focus.bonusUntil > this.now());
+            focus.bonusUntil = this.now() + T.deadlyPrecision.duration;
+            focus.hits = 0;
+            focus.since = this.now();
+            if (fresh) this.announce('deadly_precision', targetId, pre.position);
+          }
         }
         break;
       }
       case 'rogue': {
         if (!pre.effects.has('bleed')) break;
-        if (tags.has('dagger')) {
+        if (this.eligible('blood_frenzy') && tags.has('dagger')) {
           const current = this.e.buff('blood_frenzy');
           if (!current) this.announce('blood_frenzy', targetId, pre.position);
           // Refresh duration, never stack: the global Attack Speed cap still applies.
@@ -322,7 +370,12 @@ export class SynergyResolver {
             this.now() + T.bloodFrenzy.duration,
           );
         }
-        if (hit.attack.critical && this.ready('deep_wounds', targetId) && alive()) {
+        if (
+          this.eligible('deep_wounds') &&
+          hit.attack.critical &&
+          this.ready('deep_wounds', targetId) &&
+          alive()
+        ) {
           this.cool('deep_wounds', targetId, T.deepWounds.cooldown);
           this.announce('deep_wounds', targetId, pre.position);
           this.e.applyStatus(
@@ -337,7 +390,7 @@ export class SynergyResolver {
             'synergy:deep_wounds',
           );
         }
-        if (alive()) {
+        if (this.eligible('final_cut') && alive()) {
           const target = this.e.host.core.getEntity(targetId);
           if (
             (target.currentHp / target.maxHp) * 100 < T.finalCut.hpThresholdPercent &&
@@ -358,7 +411,7 @@ export class SynergyResolver {
     cause: { direct: boolean; tags: ReadonlySet<CombatTag>; procs: boolean },
   ): void {
     if (!cause.procs || cause.tags.has('synergy')) return;
-    if (this.cls === 'mage' && pre.effects.has('burn') && pre.position) {
+    if (this.eligible('wildfire') && pre.effects.has('burn') && pre.position) {
       const n = this.spread(
         'wildfire',
         pre.position,
@@ -371,7 +424,7 @@ export class SynergyResolver {
       );
       if (n) this.announce('wildfire', targetId, pre.position);
     }
-    if (this.cls === 'archer' && pre.effects.has('poison') && pre.position) {
+    if (this.eligible('plague_chain') && pre.effects.has('poison') && pre.position) {
       const n = this.spread(
         'plague_chain',
         pre.position,
@@ -384,7 +437,7 @@ export class SynergyResolver {
       );
       if (n) this.announce('plague_chain', targetId, pre.position);
     }
-    if (this.cls === 'warrior' && cause.direct && cause.tags.has('melee')) {
+    if (this.eligible('battle_momentum') && cause.direct && cause.tags.has('melee')) {
       if (!this.e.buff('battle_momentum')) this.announce('battle_momentum', targetId, pre.position);
       this.e.setBuff(
         'battle_momentum',
