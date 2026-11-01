@@ -15,3 +15,5 @@ export type {
 } from './config';
 export { campaignSpawning, runClock, scaleEnemyStats, stageAt, stageBoundaries } from './timer';
 export type { CampaignStage, RunClock } from './timer';
+export { CampaignDirector, campaignSchedule, scheduledEnemyCount } from './schedule';
+export type { ScheduledEvent } from './schedule';

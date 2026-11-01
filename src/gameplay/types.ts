@@ -37,7 +37,8 @@ export interface WorldEvent {
     | 'survival'
     | 'progression'
     | 'spawning'
-    | 'skill';
+    | 'skill'
+    | 'campaign';
   readonly event:
     | CombatEvent
     | WeaponEvent
@@ -48,7 +49,8 @@ export interface WorldEvent {
     | RunLevelHealingEvent
     | RewardEvent
     | WaveEvent
-    | SkillEvent;
+    | SkillEvent
+    | CampaignEvent;
 }
 export interface GameplaySnapshot {
   readonly time: number;
@@ -79,6 +81,22 @@ export interface GameplaySnapshot {
   /** Task 08: campaign run state (null outside campaign runs). */
   readonly campaign: CampaignSnapshot | null;
 }
+/** Task 08 scheduled campaign events (channel `campaign`), each emitted exactly once. */
+export type CampaignEvent =
+  | {
+      readonly type: 'elite-spawned';
+      readonly eventId: string;
+      readonly enemyId: string;
+      readonly profile: 'melee' | 'ranged';
+    }
+  | {
+      readonly type: 'boss-spawned';
+      readonly eventId: 'boss';
+      readonly enemyId: string;
+      readonly bossId: string;
+      readonly bossName: string;
+    }
+  | { readonly type: 'duration-reached'; readonly eventId: 'end' };
 export interface CampaignSnapshot {
   readonly mapId: number;
   readonly mapName: string;
@@ -87,6 +105,14 @@ export interface CampaignSnapshot {
   readonly remaining: number;
   readonly durationReached: boolean;
   readonly stage: Readonly<{ id: string; name: string; index: number }>;
+  /** Next scheduled event (elite/boss/end) or null when all fired. */
+  readonly nextEvent: Readonly<{ id: string; kind: 'elite' | 'boss' | 'end'; time: number }> | null;
+  readonly firedEvents: readonly string[];
+  /** Fired events with their simulation fire time. */
+  readonly firedLog: readonly Readonly<{ id: string; time: number }>[];
+  readonly bossTime: number;
+  readonly bossEnemyId: string | null;
+  readonly eliteEnemyIds: readonly string[];
 }
 
 export interface RewardEvent {

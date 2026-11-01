@@ -36,8 +36,12 @@ export const CAMPAIGN_BALANCE = Object.freeze({
     placeholderHpMultiplier: 15,
     placeholderDamageMultiplier: 1.6,
   }),
-  /** Alpha enemy slots kept free for scheduled elites/boss (automatic waves stop earlier). */
-  reservedSlots: 4,
+  /**
+   * Alpha enemy slots kept free for scheduled elites/boss (automatic waves stop earlier), so a
+   * scheduled spawn never exceeds the 120-enemy cap and is never skipped. Must be ≥ the largest
+   * number of scheduled enemies on any map (validated).
+   */
+  reservedSlots: 8,
   rewards: Object.freeze({
     victoryXpBase: 100,
     victoryXpPerMap: 50,

@@ -38,7 +38,14 @@ import type { CombatAttributes } from '../character-stats';
 import type { EffectType } from '../status-effects';
 import { spawningSettings, wavePressure, offscreenPosition, viewportSize } from './spawning';
 import type { SpawnSettings, ViewportSize } from './spawning';
-import { campaignSpawning, getCampaignMap, runClock, scaleEnemyStats } from '../campaign';
+import {
+  CAMPAIGN_BALANCE,
+  CampaignDirector,
+  campaignSpawning,
+  getCampaignMap,
+  runClock,
+  scaleEnemyStats,
+} from '../campaign';
 import type { CampaignMap } from '../campaign';
 /** The sole world scheduler. All damage is resolved by existing modules, one boundary at a time. */
 export class GameplayWorld {
@@ -79,6 +86,9 @@ export class GameplayWorld {
   /** Task 08: campaign map of this run (null = classic alpha) and its scaled enemy stats. */
   readonly campaignMap: CampaignMap | null;
   private readonly enemyStats: CombatAttributes;
+  private readonly director: CampaignDirector | null;
+  private bossEnemyId: string | null = null;
+  private readonly eliteEnemyIds: string[] = [];
   constructor(
     readonly options: GameplayOptions,
     createCore: (random: RandomSource) => CombatCore = (random) => new CombatCore(random),
@@ -102,6 +112,7 @@ export class GameplayWorld {
       return spawnSeed / 4294967296;
     };
     this.campaignMap = options.campaign ? getCampaignMap(options.campaign.mapId) : null;
+    this.director = this.campaignMap ? new CampaignDirector(this.campaignMap) : null;
     this.enemyStats = this.campaignMap
       ? scaleEnemyStats(ALPHA_ENEMY_STATS, this.campaignMap.difficulty)
       : ALPHA_ENEMY_STATS;
@@ -269,6 +280,15 @@ export class GameplayWorld {
       elapsed: clock.elapsed,
       remaining: clock.remaining,
       durationReached: clock.durationReached,
+      nextEvent: (() => {
+        const next = this.director!.peek();
+        return next ? Object.freeze({ id: next.id, kind: next.kind, time: next.time }) : null;
+      })(),
+      firedEvents: this.director!.firedIds(),
+      firedLog: this.director!.firedLog(),
+      bossTime: CAMPAIGN_BALANCE.boss.spawnTime,
+      bossEnemyId: this.bossEnemyId,
+      eliteEnemyIds: Object.freeze([...this.eliteEnemyIds]),
       stage: Object.freeze({
         id: clock.stage.id,
         name: clock.stage.name,
@@ -303,6 +323,7 @@ export class GameplayWorld {
       else if (next.kind === 'enemy') this.consumeEnemies(this.enemies.resolveBoundary());
       else if (next.kind === 'spawn') this.spawnWave();
       else if (next.kind === 'skill') this.skills.resolveBoundary();
+      else if (next.kind === 'campaign') this.resolveCampaignEvent();
       this.skills.endStep();
       if (
         (this.survival.getState().requiresWorldPause || this.run.pendingChoices > 0) &&
@@ -356,9 +377,10 @@ export class GameplayWorld {
     kind: 'melee' | 'ranged',
     position: Point,
     profile: EnemyConfig = ALPHA_ENEMIES[kind],
+    stats: CombatAttributes = this.enemyStats,
   ): string {
     const id = `enemy-${++this.enemySequence}`;
-    this.core.addEntity({ id, affiliation: 'enemy', stats: this.enemyStats });
+    this.core.addEntity({ id, affiliation: 'enemy', stats });
     this.enemies.registerEnemy({ entityId: id, config: profile, position });
     this.enemyIds.add(id);
     this.prepare();
@@ -544,6 +566,65 @@ export class GameplayWorld {
       }),
     ]);
   }
+  /** Fires exactly one due scheduled event (state-based; see CampaignDirector). */
+  private resolveCampaignEvent() {
+    const event = this.director?.fire(this.clock);
+    const map = this.campaignMap;
+    if (!event || !map) return;
+    if (event.kind === 'elite') {
+      const { hpMultiplier, damageMultiplier } = CAMPAIGN_BALANCE.elite;
+      const enemyId = this.spawnScheduled(event.profile, hpMultiplier, damageMultiplier);
+      this.eliteEnemyIds.push(enemyId);
+      this.record('campaign', [
+        Object.freeze({
+          type: 'elite-spawned',
+          eventId: event.id,
+          enemyId,
+          profile: event.profile,
+        }),
+      ]);
+    } else if (event.kind === 'boss') {
+      const b = CAMPAIGN_BALANCE.boss;
+      const enemyId = this.spawnScheduled(
+        'melee',
+        b.placeholderHpMultiplier,
+        b.placeholderDamageMultiplier,
+      );
+      this.bossEnemyId = enemyId;
+      this.record('campaign', [
+        Object.freeze({
+          type: 'boss-spawned',
+          eventId: 'boss',
+          enemyId,
+          bossId: map.bossId,
+          bossName: map.bossName,
+        }),
+      ]);
+    } else this.record('campaign', [Object.freeze({ type: 'duration-reached', eventId: 'end' })]);
+  }
+  /**
+   * Scheduled elite/boss spawn: off-screen like waves (spawn RNG stream), stats = map difficulty ×
+   * extra multipliers. Reserved slots guarantee the 120-enemy cap is never exceeded.
+   */
+  private spawnScheduled(kind: 'melee' | 'ranged', hp: number, damage: number): string {
+    const profile = ALPHA_ENEMIES[kind];
+    const position = offscreenPosition(
+      this.body,
+      this.viewport,
+      profile.radius,
+      this.spawnSettings,
+      this.spawnRandom,
+    ) ?? {
+      x: this.clamp(this.body.x + 420, 20),
+      y: this.clamp(this.body.y, 20),
+    };
+    return this.registerEnemy(
+      kind,
+      position,
+      profile,
+      scaleEnemyStats(this.enemyStats, { hp, damage }),
+    );
+  }
   private spawnWave() {
     const pressure = wavePressure(this.clock, this.spawnSettings);
     this.nextSpawnAt = this.clock + pressure.interval;
@@ -672,7 +753,15 @@ export class GameplayWorld {
       const candidates: {
         time: number;
         rank: number;
-        kind: 'control' | 'weapon' | 'status' | 'enemy' | 'spawn' | 'skill' | 'advance';
+        kind:
+          | 'control'
+          | 'weapon'
+          | 'status'
+          | 'enemy'
+          | 'spawn'
+          | 'skill'
+          | 'campaign'
+          | 'advance';
       }[] = [];
       const add = (time: number, rank: number, kind: (typeof candidates)[number]['kind']) => {
         if (time < horizon || sameInstant(time, horizon))
@@ -696,6 +785,9 @@ export class GameplayWorld {
       // Task 07: skill actions after player strikes, before enemy attacks; expirations after statuses.
       const k = this.skills.peekBoundary(horizon);
       if (k) add(k.time, k.priority === 0 ? 5.5 : 8.5, 'skill');
+      // Task 08: scheduled elite/boss/end events resolve last at equal time (after reinforcements).
+      const scheduled = this.director?.peek();
+      if (scheduled) add(scheduled.time, 9.5, 'campaign');
       const next = candidates.sort((a, b) =>
         sameInstant(a.time, b.time) ? a.rank - b.rank : a.time - b.time,
       )[0];
