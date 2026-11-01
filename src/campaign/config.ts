@@ -54,60 +54,6 @@ export const CAMPAIGN_BALANCE = Object.freeze({
   boss: Object.freeze({
     /** Simulation seconds; the scheduled elite at this time is replaced by the boss. */
     spawnTime: 600,
-    /** Placeholder boss (Phase 1): a scaled melee enemy until Phase 2 boss configs exist. */
-    placeholderHpMultiplier: 15,
-    placeholderDamageMultiplier: 1.6,
-    /** Phase 2.2 default ability set (per-boss configs replace it in 2.3). Provisional. */
-    defaultAbilities: Object.freeze([
-      Object.freeze({
-        id: 'burst',
-        kind: 'radial_burst',
-        cooldown: 7,
-        windup: 0.6,
-        initialDelay: 2,
-        projectiles: 10,
-        coefficient: 0.7,
-        speed: 220,
-      }),
-      Object.freeze({
-        id: 'slam',
-        kind: 'circle_aoe',
-        cooldown: 9,
-        windup: 1.2,
-        initialDelay: 4,
-        radius: 95,
-        coefficient: 1.5,
-      }),
-      Object.freeze({
-        id: 'charge',
-        kind: 'charge',
-        cooldown: 11,
-        windup: 1,
-        initialDelay: 6,
-        duration: 0.9,
-        speedMultiplier: 3.5,
-        impactCoefficient: 1.3,
-        impactRange: 24,
-      }),
-      Object.freeze({
-        id: 'haste',
-        kind: 'speed_buff',
-        cooldown: 14,
-        windup: 0,
-        initialDelay: 8,
-        duration: 4,
-        multiplier: 1.4,
-      }),
-      Object.freeze({
-        id: 'adds',
-        kind: 'summon',
-        cooldown: 16,
-        windup: 0.8,
-        initialDelay: 10,
-        count: 3,
-        profile: 'melee',
-      }),
-    ] as const),
   }),
   /**
    * Alpha enemy slots kept free for scheduled elites/boss (automatic waves stop earlier), so a

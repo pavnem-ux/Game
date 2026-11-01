@@ -11,7 +11,7 @@ function world(protect = true) {
     initialEnemies: false,
     spawning: { enabled: false },
     onHit: [],
-    campaign: { mapId: 1 },
+    campaign: { mapId: 10 }, // last_dark: all five ability kinds
   });
   w.setTestProtection(protect);
   w.weapons.setAttackSpeed('player', 0.01); // the staff must not kill the boss during checks
@@ -45,7 +45,7 @@ describe('boss abilities in the world (Task 08 §2.2)', () => {
     const bossId = w.getSnapshot().campaign!.bossEnemyId!;
     expect(bossId).not.toBeNull();
     const events = run(w, 640, 0.05);
-    for (const id of ['burst', 'slam', 'charge', 'haste', 'adds'])
+    for (const id of ['void_bloom', 'collapse', 'night_rush', 'dread_tide', 'last_shadows'])
       expect(boss(events, 'boss-ability-executed', id).length, id).toBeGreaterThan(0);
     // Radial burst launched existing enemy projectiles from the boss.
     const launched = events.filter(
@@ -54,17 +54,19 @@ describe('boss abilities in the world (Task 08 §2.2)', () => {
         e.event.type === 'enemy-projectile-launched' &&
         e.event.projectile.sourceId === bossId,
     );
-    expect(launched.length % 10).toBe(0);
-    expect(launched.length).toBeGreaterThanOrEqual(10);
+    expect(launched.length % 16).toBe(0);
+    expect(launched.length).toBeGreaterThanOrEqual(16);
     // Summon added regular enemies.
-    expect(boss(events, 'boss-ability-executed', 'adds')[0].event).toMatchObject({ count: 3 });
+    expect(boss(events, 'boss-ability-executed', 'last_shadows')[0].event).toMatchObject({
+      count: 4,
+    });
     // Dangerous attacks were telegraphed with geometry before executing.
-    const slamStart = boss(events, 'boss-cast-started', 'slam')[0];
-    const slamExec = boss(events, 'boss-ability-executed', 'slam')[0];
-    expect(slamExec.time - slamStart.time).toBeCloseTo(1.2, 9);
+    const slamStart = boss(events, 'boss-cast-started', 'collapse')[0];
+    const slamExec = boss(events, 'boss-ability-executed', 'collapse')[0];
+    expect(slamExec.time - slamStart.time).toBeCloseTo(1.3, 9);
     expect(
       (slamStart.event as { telegraph: { center: unknown; radius: number } }).telegraph,
-    ).toMatchObject({ radius: 95 });
+    ).toMatchObject({ radius: 125 });
   });
   it('speed abilities boost the boss through EnemyAI and reset afterwards', () => {
     const w = world();
@@ -78,7 +80,7 @@ describe('boss abilities in the world (Task 08 §2.2)', () => {
       if (e?.speedBoost) boosted = Math.max(boosted, e.speedBoost);
       seq++;
     }
-    expect(boosted).toBe(3.5);
+    expect(boosted).toBe(3.8);
     // After every effect has ended, no boost remains.
     const effects = w.getSnapshot().campaign!.bossEffects;
     const e = w.getSnapshot().enemies.find((x) => x.entityId === bossId)!;
@@ -145,6 +147,7 @@ describe('boss abilities in the world (Task 08 §2.2)', () => {
     w.clearEnemies();
     const events = run(w, 660, 0.5);
     expect(boss(events, 'boss-ability-executed')).toHaveLength(0);
-    expect(w.getSnapshot().campaign!.status).toBe('victory');
+    // Map 10 lasts 15:00, so the run stays active (boss killed) until the duration.
+    expect(w.getSnapshot().campaign).toMatchObject({ bossKilled: true, status: 'active' });
   });
 });

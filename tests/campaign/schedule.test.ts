@@ -4,6 +4,7 @@ import {
   CAMPAIGN_MAPS,
   CampaignDirector,
   campaignSchedule,
+  getBossDefinition,
   getCampaignMap,
   scheduledEnemyCount,
 } from '../../src/campaign';
@@ -155,7 +156,7 @@ describe('scheduled events in the world fire exactly once at their time', () => 
     w.update(1);
     expect(w.getSnapshot().campaign!.firedEvents).toEqual(['elite-1']);
   });
-  it('elites and the boss are scaled placeholders; a single boss per run', () => {
+  it('elites and the boss use their scaled definitions; a single boss per run', () => {
     const w = world(4);
     const events: WorldEvent[] = [];
     run(w, 601, 1, events);
@@ -165,7 +166,7 @@ describe('scheduled events in the world fire exactly once at their time', () => 
     expect(elite.maxHp).toBeCloseTo(base.maxHp * 2.5, 6);
     expect(elite.physicalDamage).toBeCloseTo(base.physicalDamage * 1.4, 6);
     const boss = w.core.getEntity(c.bossEnemyId!);
-    expect(boss.maxHp).toBeCloseTo(base.maxHp * CAMPAIGN_BALANCE.boss.placeholderHpMultiplier, 6);
+    expect(boss.maxHp).toBeCloseTo(base.maxHp * getBossDefinition('ash_wolf').hpMultiplier, 6);
     const bosses = events.filter((e) => e.event.type === 'boss-spawned');
     expect(bosses).toHaveLength(1);
     expect(bosses[0].event).toMatchObject({ bossId: 'ash_wolf', bossName: 'Пепельный волк' });

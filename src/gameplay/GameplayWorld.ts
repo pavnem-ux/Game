@@ -45,6 +45,7 @@ import {
   campaignSpawning,
   eliteEnemyConfig,
   eliteProfile,
+  getBossDefinition,
   reduceRun,
   getCampaignMap,
   runClock,
@@ -52,8 +53,8 @@ import {
 } from '../campaign';
 import { BossController } from '../campaign';
 import type {
-  BossAbility,
   BossAbilityOutcome,
+  BossDefinition,
   BossHost,
   CampaignMap,
   CampaignRunState,
@@ -107,6 +108,8 @@ export class GameplayWorld {
   private campaignRun: CampaignRunState = INITIAL_RUN_STATE;
   /** Task 08 boss ability controller (boundary module), created when the boss spawns. */
   private bossController: BossController | null = null;
+  private bossDefinition: BossDefinition | null = null;
+  private bossDefeated = false;
   /** Hostile direct-damage policies shared by EnemyAI and boss abilities (survival + test guard). */
   private hostilePolicies!: {
     readonly canResolveDirectDamage: DirectDamagePolicy;
@@ -213,6 +216,10 @@ export class GameplayWorld {
         recordStatus: (events) => world.record('status', events),
         recordSkill: (events) => world.record('skill', events),
         statsChanged: (stats) => world.applyStats(stats),
+        controlLimits: (targetId) =>
+          targetId === world.bossEnemyId && world.bossDefinition
+            ? world.bossDefinition.control
+            : null,
       },
       this.run,
       skillRandom,
@@ -329,6 +336,16 @@ export class GameplayWorld {
       bossKilled: this.campaignRun.bossKilled,
       eliteKills: this.campaignRun.eliteKills,
       resolvedAt: this.campaignRun.resolvedAt,
+      boss: this.bossEnemyId
+        ? Object.freeze({
+            enemyId: this.bossEnemyId,
+            bossId: map.bossId,
+            name: map.bossName,
+            hp: this.core.getEntity(this.bossEnemyId).currentHp,
+            maxHp: this.core.getEntity(this.bossEnemyId).maxHp,
+            alive: this.core.getEntity(this.bossEnemyId).alive,
+          })
+        : null,
       bossCast: this.bossController?.currentCast() ?? null,
       bossEffects: this.bossController?.activeEffects() ?? Object.freeze([]),
       stage: Object.freeze({
@@ -722,17 +739,21 @@ export class GameplayWorld {
         }),
       ]);
     } else if (event.kind === 'boss') {
-      const b = CAMPAIGN_BALANCE.boss;
+      const def = getBossDefinition(map.bossId);
+      const base = ALPHA_ENEMIES[def.behavior];
       const enemyId = this.spawnScheduled(
-        'melee',
-        b.placeholderHpMultiplier,
-        b.placeholderDamageMultiplier,
+        def.behavior,
+        def.hpMultiplier,
+        def.damageMultiplier,
+        Object.freeze({
+          ...base,
+          radius: base.radius * def.radiusScale,
+          movementSpeed: base.movementSpeed * def.speedScale,
+        }),
       );
       this.bossEnemyId = enemyId;
-      this.bossController = new BossController(
-        b.defaultAbilities as readonly BossAbility[],
-        this.clock,
-      );
+      this.bossDefinition = def;
+      this.bossController = new BossController(def.abilities, this.clock);
       this.record('campaign', [
         Object.freeze({
           type: 'boss-spawned',
@@ -1079,7 +1100,10 @@ export class GameplayWorld {
           // Task 08: elites drop their normal crystal plus the profile's extra run XP.
           const xp =
             (enemy.config.behavior === 'melee' ? XP_RULES.meleeReward : XP_RULES.rangedReward) +
-            (elite ? eliteProfile(elite).extraXp : 0);
+            (elite ? eliteProfile(elite).extraXp : 0) +
+            (event.entityId === this.bossEnemyId && this.bossDefinition
+              ? this.bossDefinition.xpReward
+              : 0);
           const crystal = this.experience.drop(enemy.position, xp);
           this.record('progression', [
             Object.freeze({
@@ -1096,9 +1120,18 @@ export class GameplayWorld {
           ]);
         }
         this.skills.noteDeath(event.entityId, enemy.position);
-        if (event.entityId === this.bossEnemyId)
+        if (event.entityId === this.bossEnemyId && !this.bossDefeated) {
+          this.bossDefeated = true;
+          this.record('campaign', [
+            Object.freeze({
+              type: 'boss-defeated',
+              enemyId: event.entityId,
+              bossId: this.campaignMap!.bossId,
+              bossName: this.campaignMap!.bossName,
+            }),
+          ]);
           this.campaignInput({ type: 'boss-killed', time: this.clock });
-        else if (this.eliteEnemyIds.includes(event.entityId))
+        } else if (this.eliteEnemyIds.includes(event.entityId))
           this.campaignInput({ type: 'elite-killed', time: this.clock });
         this.enemyIds.delete(event.entityId);
         this.enemies.unregisterEnemy(event.entityId);

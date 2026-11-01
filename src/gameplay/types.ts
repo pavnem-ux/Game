@@ -100,6 +100,12 @@ export type CampaignEvent =
   | { readonly type: 'duration-reached'; readonly eventId: 'end' }
   | BossAbilityOutcome
   | {
+      readonly type: 'boss-defeated';
+      readonly enemyId: string;
+      readonly bossId: string;
+      readonly bossName: string;
+    }
+  | {
       readonly type: 'run-resolved';
       readonly outcome: 'victory' | 'defeat' | 'abandoned';
       readonly runId: string | null;
@@ -133,6 +139,15 @@ export interface CampaignSnapshot {
   readonly bossKilled: boolean;
   readonly eliteKills: number;
   readonly resolvedAt: number | null;
+  /** Boss status for the HP bar (null before the boss spawns). */
+  readonly boss: Readonly<{
+    enemyId: string;
+    bossId: string;
+    name: string;
+    hp: number;
+    maxHp: number;
+    alive: boolean;
+  }> | null;
   /** Current boss telegraph (null when idle) and active boss movement effects. */
   readonly bossCast: BossCastState | null;
   readonly bossEffects: readonly Readonly<{

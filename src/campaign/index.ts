@@ -34,3 +34,10 @@ export type {
   BossCastState,
   BossHost,
 } from './boss-abilities';
+export {
+  BOSS_DEFINITIONS,
+  bossSignature,
+  getBossDefinition,
+  validateBossDefinitions,
+} from './bosses';
+export type { BossControlLimits, BossDefinition } from './bosses';

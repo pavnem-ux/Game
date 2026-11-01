@@ -64,6 +64,15 @@ export interface SkillHost {
   recordSkill(events: readonly SkillEvent[]): void;
   /** Called when passive/buff changes alter effective stats or on-hit definitions. */
   statsChanged(stats: CombatAttributes): void;
+  /**
+   * Task 08 (optional, additive): stricter crowd-control limits for specific targets (bosses).
+   * Values can only tighten the global CONTROL_RULES; null/absent = global rules.
+   */
+  controlLimits?(targetId: string): Readonly<{
+    maxSlow: number;
+    stunScale: number;
+    stunImmunity: number;
+  }> | null;
 }
 /** Target state captured immediately before a hit; synergies and kill rules read only this. */
 export interface PreHit {
@@ -639,7 +648,9 @@ export class SkillEngine {
     if (!this.host.core.getEntity(targetId).alive || duration <= 0 || strength <= 0) return;
     const bonus =
       this.rank('elemental_mastery') > 0 ? this.params('elemental_mastery').slowBonus : 0;
-    const s = Math.min(CONTROL_RULES.maxSlow, strength + bonus);
+    const limits = this.host.controlLimits?.(targetId) ?? null;
+    const cap = limits ? Math.min(CONTROL_RULES.maxSlow, limits.maxSlow) : CONTROL_RULES.maxSlow;
+    const s = Math.min(cap, strength + bonus);
     const c = this.control(targetId);
     const active = c.slowUntil > this.clock;
     c.slow = active ? Math.max(c.slow, s) : s;
@@ -654,9 +665,17 @@ export class SkillEngine {
     if (!this.host.core.getEntity(targetId).alive || duration <= 0) return false;
     const c = this.control(targetId);
     if (c.stunUntil > this.clock || c.stunImmuneUntil > this.clock) return false;
-    const d = Math.min(CONTROL_RULES.maxStunDuration, duration);
+    const limits = this.host.controlLimits?.(targetId) ?? null;
+    const d =
+      Math.min(CONTROL_RULES.maxStunDuration, duration) *
+      (limits ? Math.min(1, limits.stunScale) : 1);
+    if (d <= 0) return false;
     c.stunUntil = this.clock + d;
-    c.stunImmuneUntil = c.stunUntil + CONTROL_RULES.stunImmunity;
+    c.stunImmuneUntil =
+      c.stunUntil +
+      (limits
+        ? Math.max(CONTROL_RULES.stunImmunity, limits.stunImmunity)
+        : CONTROL_RULES.stunImmunity);
     this.syncControl(targetId);
     this.host.recordSkill([
       Object.freeze({ type: 'control-applied', targetId, control: 'stun', until: c.stunUntil }),

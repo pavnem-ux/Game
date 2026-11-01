@@ -1,7 +1,7 @@
 # Task 08 progress
 
 Branch: task-08-campaign | PR: https://github.com/pavnem-ux/Game/pull/4 (draft)
-Current: Phase 2, step 2.3
+Current: Phase 3, step 3.1 (Phase 2 done; waiting for "continue")
 
 ## Steps
 
@@ -14,7 +14,7 @@ Current: Phase 2, step 2.3
 - [x] 1.4 Run state machine: victory/defeat/abandon, exactly-once resolution
 - [x] 2.1 Elite profiles (melee, ranged): visuals, name/HP bar, extra XP
 - [x] 2.2 Boss ability library (5 abilities) with telegraphs and cooldowns
-- [ ] 2.3 10 boss configs, boss HP bar, spawn notification, CC limits, death event
+- [x] 2.3 10 boss configs, boss HP bar, spawn notification, CC limits, death event
 - [ ] 3.1 Reward calculation (victory/defeat/abandon)
 - [ ] 3.2 Class XP, overflow, cap 50, lifetime XP; talent points function
 - [ ] 3.3 applyRunResult(profile, result) → new profile (pure, idempotent)
@@ -52,7 +52,11 @@ Current: Phase 2, step 2.3
   gap, effects; 5 kinds; `validateBossAbilities`). World: `bossHost` (Core + `hostilePolicies`,
   EnemyAI `launchProjectile`/`setSpeedBoost`), boundary kind `boss` rank 6.5, snapshot
   `bossCast`/`bossEffects`; scene telegraphs. EnemyAI additive APIs: `setSpeedBoost`,
-  `launchProjectile`, snapshot `speedBoost`; `movement.ts` `futureCrossings`. Tests `tests/campaign/` (`npm run test:campaign`).
+  `launchProjectile`, snapshot `speedBoost`; `movement.ts` `futureCrossings`.
+  `bosses.ts` (`BOSS_DEFINITIONS` ×10 keyed by map `bossId`: behaviour, HP/dmg/size/speed,
+  xpReward, CC limits, abilities; `validateBossDefinitions`). World: boss spawned from its
+  definition, `boss-defeated` event once, snapshot `campaign.boss` (HP bar data); SkillEngine
+  optional host hook `controlLimits` (boss-only Slow cap / stun scale / immunity). Tests `tests/campaign/` (`npm run test:campaign`).
 - Node 24, `npm ci`. Unit: `npm test` (Vitest + Node prototype tests). Per module: `test:stats`,
   `test:combat`, `test:weapons`, `test:status`, `test:enemies`, `test:survival`, `test:alpha`
   (tests/gameplay), `test:skills`. Typecheck `npm run typecheck`; format `npm run format:check`
@@ -124,6 +128,10 @@ level)`, caps `COMBAT_ATTRIBUTE_CAPS`, `scaleCooldown`/`scaleCircularAoeRadius`)
   exact centre with separation velocity produced a crossing root below the clock resolution at
   large t, looping forever. `futureCrossings` drops roots that are the same instant as now;
   regression tests in `tests/enemy-ai/task08-regressions.test.ts`.
+- 2.3: boss CC limits only tighten the global rules (Slow cap 25–30%, stun ×0.4–0.5, immunity
+  3–4 s). Boss/elite HP bars are drawn in-world for now; the HUD boss bar is Phase 5.4. Boss XP
+  (+120…260 run XP, provisional) rides on the normal deduplicated crystal. Removed the Phase 1
+  placeholder boss values from the config.
 - Task 07.2 is on the PR #3 branch (`claude/stoic-carson-76vdrx`, `dde421a` + v2 `9e8aa93`), not
   on `main` (PR #3 unmerged). `task-08-campaign` is stacked on that branch; the draft PR targets it
   so its diff shows only Task 08. Retarget to `main` after PR #3 is merged.
@@ -133,4 +141,5 @@ level)`, caps `COMBAT_ATTRIBUTE_CAPS`, `scaleCooldown`/`scaleCircularAoeRadius`)
 
 ## Blockers / known issues
 
-- None.
+- Campaign visuals (elite/boss looks, telegraphs, notifications) are not yet visible in the
+  browser: no UI can start a campaign run until Phase 5; verified by unit tests only so far.

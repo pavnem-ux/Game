@@ -252,6 +252,14 @@ export class AlphaScene extends Phaser.Scene {
           y: e.position.y - 18,
           text: SYNERGY_LABELS[e.synergyId] ?? e.synergyId,
         });
+      if (event.channel === 'campaign' && (e.type === 'boss-spawned' || e.type === 'boss-defeated'))
+        this.fx.push({
+          event,
+          until: event.time + 3,
+          x: s.playerBody.x,
+          y: s.playerBody.y - 70,
+          text: e.type === 'boss-spawned' ? `⚠ Босс: ${e.bossName}` : `✦ ${e.bossName} повержен`,
+        });
       if (event.channel === 'skill' && e.type === 'synergy-unlocked')
         this.fx.push({
           event,
@@ -306,18 +314,30 @@ export class AlphaScene extends Phaser.Scene {
       const ranged = enemy.config.behavior === 'ranged';
       // Task 08: elites are bigger, glow in their profile colour and carry a name + wide HP bar.
       let eliteName: string | null = null;
-      if (elites)
+      const isBoss = s.campaign?.boss?.enemyId === enemy.entityId;
+      if (isBoss) eliteName = s.campaign!.boss!.name;
+      else if (elites)
         for (const elite of elites) if (elite.enemyId === enemy.entityId) eliteName = elite.name;
       const f = eliteName ? enemy.config.radius / (ranged ? 15 : 14) : 1;
-      const hpWidth = eliteName ? 64 : 34;
+      const hpWidth = isBoss ? 120 : eliteName ? 64 : 34;
       const barY = y - 25 * f;
       if (eliteName)
-        g.lineStyle(3, ranged ? 0xb68cff : 0xff8a3d, 0.85)
+        g.lineStyle(isBoss ? 4 : 3, isBoss ? 0xff3b5c : ranged ? 0xb68cff : 0xff8a3d, 0.85)
           .strokeCircle(x, y, enemy.config.radius + 7)
           .lineStyle(1, 0xfff0c4, 0.5)
           .strokeCircle(x, y, enemy.config.radius + 11);
       g.fillStyle(0x060c0c, 0.4).fillEllipse(x, y + 15 * f, 34 * f, 12 * f);
-      g.fillStyle(eliteName ? (ranged ? 0x7d4fc0 : 0xb5532b) : ranged ? 0xb2739b : 0x87996e);
+      g.fillStyle(
+        isBoss
+          ? 0x8e1f3a
+          : eliteName
+            ? ranged
+              ? 0x7d4fc0
+              : 0xb5532b
+            : ranged
+              ? 0xb2739b
+              : 0x87996e,
+      );
       if (ranged) g.fillTriangle(x, y - 18 * f, x - 17 * f, y + 14 * f, x + 17 * f, y + 14 * f);
       else g.fillEllipse(x, y, 30 * f, 33 * f);
       g.fillStyle(0x18231f).fillEllipse(x, y - 3 * f, 18 * f, 11 * f);
@@ -325,7 +345,7 @@ export class AlphaScene extends Phaser.Scene {
         .fillRect(x - 6 * f, y - 6 * f, 4 * f, 3 * f)
         .fillRect(x + 3 * f, y - 6 * f, 4 * f, 3 * f);
       g.fillStyle(0x19201b).fillRect(x - hpWidth / 2, barY, hpWidth, eliteName ? 5 : 3);
-      g.fillStyle(eliteName ? 0xffb347 : ranged ? 0xe09ac1 : 0xc8d79c).fillRect(
+      g.fillStyle(isBoss ? 0xff4d6d : eliteName ? 0xffb347 : ranged ? 0xe09ac1 : 0xc8d79c).fillRect(
         x - hpWidth / 2,
         barY,
         (hpWidth * enemy.entity.currentHp) / enemy.entity.maxHp,
@@ -334,7 +354,7 @@ export class AlphaScene extends Phaser.Scene {
       if (eliteName)
         this.label(this.nameLabels, nameLabel++)
           .setText(eliteName)
-          .setColor(ranged ? '#d9c4ff' : '#ffd0a8')
+          .setColor(isBoss ? '#ffb3c1' : ranged ? '#d9c4ff' : '#ffd0a8')
           .setPosition(x, barY - 10)
           .setDepth(11)
           .setVisible(true);
