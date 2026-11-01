@@ -7,6 +7,7 @@ import { loadSave, saveRun } from '../progression/save';
 import { createWorld } from './World';
 import type { TestingController } from '../gameplay/testing';
 import { stunIndicator } from './stun-indicator';
+import { oncePerKeyEvent } from './key-event-once';
 
 export class AlphaScene extends Phaser.Scene {
   private world: GameplayWorld | null = null;
@@ -38,7 +39,7 @@ export class AlphaScene extends Phaser.Scene {
     this.keys = this.input.keyboard!.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT') as typeof this.keys;
     // DOM controls retain their own key input. Phaser must not capture arrows/space in forms.
     this.input.keyboard!.clearCaptures();
-    const toggle = (e: KeyboardEvent) => {
+    const toggle = oncePerKeyEvent((e: KeyboardEvent) => {
       if ((e.target as HTMLElement)?.matches('input,select,textarea')) return;
       if (
         this.world &&
@@ -49,7 +50,7 @@ export class AlphaScene extends Phaser.Scene {
         this.clearInput();
         this.publish();
       }
-    };
+    });
     this.input.keyboard!.on('keydown-P', toggle).on('keydown-ESC', toggle);
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
       if (

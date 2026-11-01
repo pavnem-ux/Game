@@ -35,6 +35,40 @@ try {
   await page.waitForTimeout(200);
   assert.equal((await state()).world.time, paused.world.time);
   await page.keyboard.press('p');
+  assert.equal((await state()).screen, 'playing');
+  // Regression: keys pressed in the same frame as P/Esc must not replay the pause toggle
+  // (Phaser re-scans its key queue on every key event until the next game step).
+  const sameFrame = await page.evaluate(() => {
+    const key = (type, key, code, keyCode) =>
+      document.body.dispatchEvent(new KeyboardEvent(type, { key, code, keyCode, bubbles: true }));
+    const screens = [];
+    key('keydown', 'Escape', 'Escape', 27);
+    key('keyup', 'Escape', 'Escape', 27);
+    screens.push(window.__alpha.state().screen);
+    for (const [k, code, keyCode] of [
+      ['d', 'KeyD', 68],
+      ['w', 'KeyW', 87],
+    ]) {
+      key('keydown', k, code, keyCode);
+      screens.push(window.__alpha.state().screen);
+      key('keyup', k, code, keyCode);
+      screens.push(window.__alpha.state().screen);
+    }
+    key('keydown', 'Escape', 'Escape', 27);
+    key('keyup', 'Escape', 'Escape', 27);
+    screens.push(window.__alpha.state().screen);
+    return screens;
+  });
+  assert.deepEqual(sameFrame, ['paused', 'paused', 'paused', 'paused', 'paused', 'playing']);
+  // The normal hidden-page auto-pause is unchanged.
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+    document.dispatchEvent(new Event('visibilitychange'));
+    delete document.hidden;
+  });
+  assert.equal((await state()).screen, 'paused', 'hidden document pauses the alpha');
+  await page.keyboard.press('p');
+  assert.equal((await state()).screen, 'playing');
   await command({ type: 'protection', enabled: true });
   await command({ type: 'spawn', kind: 'melee', distance: 35 });
   await page.evaluate(() => window.__alpha.advance(1));

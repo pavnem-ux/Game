@@ -12,6 +12,7 @@ export default defineConfig({
       'tests/player-survival/**/*.test.ts',
       'tests/gameplay/**/*.test.ts',
       'tests/skills/**/*.test.ts',
+      'tests/engine/**/*.test.ts',
     ],
   },
 });

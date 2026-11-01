@@ -75,8 +75,6 @@ export async function checkSkillsAccess(page) {
     await page.keyboard.press('Escape');
     await screenIs('paused');
     await pauseDialog.getByRole('region', { name: 'Обзор навыков', exact: true }).waitFor();
-    // Phaser consumes key events once per rendered frame; let a few frames pass between presses.
-    await page.waitForTimeout(250);
     await page.keyboard.press('Escape');
     await screenIs('playing');
 
