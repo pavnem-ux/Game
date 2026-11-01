@@ -21,11 +21,11 @@ npm run build      # TypeScript + production-сборка в dist/
 npm run preview    # проверить собранную игру
 ```
 
-## Публикация в Cloudflare Pages
+## Публикация в Cloudflare Workers
 
-Проект подготовлен для статического хостинга из **приватного** `pavnem-ux/Game`: production branch `main`, build command `npm run build`, output `dist`, root directory — корень репозитория. Node.js закреплён в `.node-version` (`24.19.0`). Pages предоставляет SPA fallback без дополнительных rewrites. Developer Testing Mode исключён из production, включая `?debug`.
+Игра публикуется как статический Cloudflare Worker `game` через **Cloudflare Workers Builds** из **приватного** `pavnem-ux/Game`: production branch `main`, build command `npm run build`, deploy command `npx wrangler deploy`, root directory — корень репозитория. Что выкладывать (только `dist/`, SPA fallback), задаёт `wrangler.jsonc`. Каждая ветка с PR получает Preview на `workers.dev` (`npx wrangler preview`), ссылку публикует бот Cloudflare в PR. Node.js закреплён в `.node-version` (`24.19.0`). Developer Testing Mode исключён из production и Preview, включая `?debug`.
 
-[Точные шаги подключения GitHub, авторизации и публикации](docs/DEPLOY_CLOUDFLARE_PAGES.md). Потребуется войти в свой Cloudflare и разрешить GitHub App доступ только к Game. Публичный URL появится после успешного deployment; до проверки реального URL сайт не считается опубликованным и проверенным. Настройки хостинга не переопределяют игровые правила; Task 07 не начат.
+[Настройки проекта, `wrangler.jsonc`, откат и checklist проверки](docs/DEPLOY_CLOUDFLARE_WORKERS.md). Настройки хостинга не переопределяют игровые правила; Task 07 не начат.
 
 ## Разработка и ревью
 

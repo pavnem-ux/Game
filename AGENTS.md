@@ -8,7 +8,8 @@ this file wins until the project owner decides otherwise.
 
 Browser-based 2D top-down action roguelite. TypeScript (strict), React 19 for screens/HUD,
 Phaser 3 for rendering/input, Vite for builds, Vitest + Playwright (`playwright-core`) for tests.
-Static hosting on Cloudflare (GitHub App integration, currently a Workers Builds project `game`). No backend, accounts, external APIs or CDN assets.
+Hosted as a static-assets Cloudflare Worker `game`, built and deployed by Cloudflare Workers Builds
+(not Pages); configuration in `wrangler.jsonc`, details in `docs/DEPLOY_CLOUDFLARE_WORKERS.md`. No backend, accounts, external APIs or CDN assets.
 
 | Role                      | Responsibility                                                                                                                  |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
@@ -127,7 +128,9 @@ task explicitly requires it, and call out every such change in the PR descriptio
 
 Full process: [`docs/DEVELOPMENT_WORKFLOW.md`](docs/DEVELOPMENT_WORKFLOW.md).
 
-- `main` is protected and always deployable; it is the Cloudflare production branch.
+- `main` is protected and always deployable; it is the Workers Builds production branch (every push
+  to `main` deploys production). `wrangler.jsonc` controls production: change it only with owner
+  approval.
 - One branch per task/change, created from the latest `main`: `feature/task-NN-<slug>`,
   `fix/<slug>`, `chore/<slug>`, `docs/<slug>` (agent-session branches such as `claude/<slug>` are
   acceptable when the session assigns one). Never push directly to `main`; never force-push a branch

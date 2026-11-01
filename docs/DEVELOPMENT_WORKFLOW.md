@@ -55,11 +55,11 @@
 Workflow `CI` запускается на каждый PR, на push в `main` и вручную (`workflow_dispatch`).
 Node.js берётся из `.node-version` (24.19.0), зависимости — `npm ci` из lockfile.
 
-| Job                                          | Что проверяет                                                                                                                     |
-| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `Typecheck, format and unit tests`           | `npm run typecheck`, `npm run format:check`, `npm test` (Node-тесты прототипа и все наборы Vitest)                                |
-| `Production build and production regression` | `npm run build` (команда сборки, задокументированная для Cloudflare) и `npm run test:production`; `dist` сохраняется как artifact |
-| `Browser end-to-end (dev server)`            | Поднимает Vite dev server и запускает `npm run test:e2e` (прототип и альфа, включая DEV-сценарии); скриншоты — artifact           |
+| Job                                          | Что проверяет                                                                                                                       |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `Typecheck, format and unit tests`           | `npm run typecheck`, `npm run format:check`, `npm test` (Node-тесты прототипа и все наборы Vitest)                                  |
+| `Production build and production regression` | `npm run build` (та же build command, что в Cloudflare Workers Builds) и `npm run test:production`; `dist` сохраняется как artifact |
+| `Browser end-to-end (dev server)`            | Поднимает Vite dev server и запускает `npm run test:e2e` (прототип и альфа, включая DEV-сценарии); скриншоты — artifact             |
 
 Браузерные тесты используют Google Chrome, предустановленный в образе `ubuntu-24.04`
 (`CHROMIUM_PATH=/usr/bin/google-chrome`). Предупреждение Vite о размере Phaser-бандла не является
@@ -80,8 +80,10 @@ Node.js берётся из `.node-version` (24.19.0), зависимости �
 
 ## Тестирование в Cloudflare Preview
 
-Репозиторий подключён к Cloudflare через GitHub App как проект **Workers Builds `game`**
-(статическая сборка, без Worker-скрипта). Настройки проекта (Settings → Builds):
+Игра публикуется через **Cloudflare Workers Builds** как статический Worker `game` (без
+Worker-скрипта, без Pages). Подтверждено владельцем в дашборде 01.11.2026. Подробности, откат и
+checklist — [DEPLOY_CLOUDFLARE_WORKERS.md](DEPLOY_CLOUDFLARE_WORKERS.md). Настройки проекта
+(Workers & Pages → game → Settings → Builds), automatic builds включены:
 
 | Сборка                                 | Build command   | Deploy / Preview command | Root directory |
 | -------------------------------------- | --------------- | ------------------------ | -------------- |
@@ -89,13 +91,15 @@ Node.js берётся из `.node-version` (24.19.0), зависимости �
 | Previews Base (все остальные ветки/PR) | `npm run build` | `npx wrangler preview`   | `/`            |
 
 Что выкладывать, задаёт [`wrangler.jsonc`](../wrangler.jsonc) в корне репозитория: имя `game`,
-статические файлы из `dist`, SPA fallback (`not_found_handling: single-page-application`) и
-пустой блок `previews`, без которого `wrangler preview` (Cloudflare Previews, open beta)
-завершается ошибкой. Изменения этого файла влияют и на production и согласуются с владельцем.
+статические файлы из `dist`, SPA fallback (`not_found_handling: single-page-application`),
+Workers Logs и пустой блок `previews`, без которого `wrangler preview` (Cloudflare Previews, open
+beta) завершается ошибкой. Файл повторяет настройки, которые Wrangler раньше генерировал для
+production автоматически. Его изменения влияют на production и согласуются с владельцем.
 
 Как устроен процесс после настройки:
 
-1. После push в ветку PR Cloudflare собирает production-версию (`npm run build`, каталог `dist`).
+1. После push в ветку PR Cloudflare собирает production-сборку (`npm run build`, каталог `dist`)
+   и публикует её как Preview (`npx wrangler preview`).
    Статус появляется в PR как check `Workers Builds: game`, а ссылка — в комментарии бота Cloudflare («Preview Deployments by
    commit»). Тот же статус и логи — в **Workers & Pages → game → Deployments / Builds**.
 2. Адрес preview берётся **только из комментария/дашборда Cloudflare**, не угадывается

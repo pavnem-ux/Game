@@ -45,7 +45,7 @@ jobs:
           node-version-file: .node-version
           cache: npm
       - run: npm ci
-      - name: Build (documented Cloudflare build command)
+      - name: Build (same command as Cloudflare Workers Builds)
         run: npm run build
       - name: Production regression (no DEV code, SPA fallback, playable build)
         run: npm run test:production

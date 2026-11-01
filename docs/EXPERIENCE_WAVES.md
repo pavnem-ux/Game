@@ -4,7 +4,7 @@ The playable alpha now has collectible XP drops and continuous mixed enemy reinf
 
 ## Play and inspect
 
-Start with `npm ci` and `npm run dev`, or use a production Cloudflare Pages build. All four classes retain their Character Stats and main weapons. Defeat enemies, approach the green diamond crystals, and watch the HUD's run level, current XP and next-level progress. New groups arrive continuously from beyond the camera.
+Start with `npm ci` and `npm run dev`, or use the production Cloudflare Workers deployment. All four classes retain their Character Stats and main weapons. Defeat enemies, approach the green diamond crystals, and watch the HUD's run level, current XP and next-level progress. New groups arrive continuously from beyond the camera.
 
 The HUD explicitly distinguishes **run level** (`забег`) from **permanent level** (`Пост. ур.`). Collecting XP never calls calculateCharacterStats again, changes permanent level, raises HP/damage or pauses for a skill choice. A new run starts at run level 1 and 0 XP independently of the selected permanent level 1–50.
 
@@ -106,13 +106,13 @@ There are no skill choices, stat gains from run levels, permanent XP saves, boss
 ## Results for this change
 
 - `npm test`: **606 Vitest tests** (576 previous + 30 new) and **6 Node tests** passed with no skips.
-- Type checks and `npm run build` passed with the existing Phaser chunk-size advisory. The static artifact remains three files, approximately 1.54 MB of JavaScript plus CSS/HTML, below Pages' per-file limit.
+- Type checks and `npm run build` passed with the existing Phaser chunk-size advisory. The static artifact remains three files, approximately 1.54 MB of JavaScript plus CSS/HTML, below the Cloudflare static-asset per-file limit.
 - `npm run test:e2e`: legacy prototype and alpha scenarios passed, including actual crystal pickup/run-level progress, interactive XP control, off-screen waves/caps, four weapons, pause/revival and touchscreen joystick, with no uncaught browser errors.
 - `npm run test:production`: static artifact, nested SPA path, XP HUD/gameplay and production DEV-exclusion checks passed.
 - The bounded five-minute simulation passed. The short headless 120-enemy browser check recorded 74 animation frames in 1.2135 s (about 61 FPS); this is not a mobile-device or long-duration performance profile.
 
-## Cloudflare Pages
+## Cloudflare deployment
 
-The Pages build contract is unchanged: Node.js 24.19.0, production branch `main`, build command `npm run build`, output `dist`, repository root. No server/API/secret is needed. Developer Testing Mode remains excluded from all production/Pages preview builds. See [deployment instructions](DEPLOY_CLOUDFLARE_PAGES.md).
+The build contract is unchanged: Node.js 24.19.0, production branch `main`, build command `npm run build`, output `dist`, repository root. No server/API/secret is needed. Developer Testing Mode remains excluded from all production and Preview builds. The deployment target is Cloudflare Workers Builds (static-assets Worker `game`); see [deployment instructions](DEPLOY_CLOUDFLARE_WORKERS.md).
 
-A successful local production build and static/browser regression establish that the new version can be built with the configured Pages command. They do not establish a successful remote Cloudflare deployment. If the Pages Git integration is connected to `main`, the push triggers that build; actual deployment status and the live URL require Cloudflare dashboard access or a provided URL. No live Cloudflare URL has been verified in this task. Task 07 has not begun.
+A successful local production build and static/browser regression establish that the new version can be built with the configured command. They do not establish a successful remote Cloudflare deployment; actual deployment status and the live URL require Cloudflare dashboard access or a provided URL. No live Cloudflare URL was verified in this task. Task 07 has not begun.
