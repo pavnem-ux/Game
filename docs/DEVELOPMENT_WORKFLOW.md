@@ -55,11 +55,11 @@
 Workflow `CI` запускается на каждый PR, на push в `main` и вручную (`workflow_dispatch`).
 Node.js берётся из `.node-version` (24.19.0), зависимости — `npm ci` из lockfile.
 
-| Job                                          | Что проверяет                                                                                                           |
-| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `Typecheck, format and unit tests`           | `npm run typecheck`, `npm run format:check`, `npm test` (Node-тесты прототипа и все наборы Vitest)                      |
-| `Production build and production regression` | `npm run build` (та же команда, что у Cloudflare Pages) и `npm run test:production`; `dist` сохраняется как artifact    |
-| `Browser end-to-end (dev server)`            | Поднимает Vite dev server и запускает `npm run test:e2e` (прототип и альфа, включая DEV-сценарии); скриншоты — artifact |
+| Job                                          | Что проверяет                                                                                                                     |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `Typecheck, format and unit tests`           | `npm run typecheck`, `npm run format:check`, `npm test` (Node-тесты прототипа и все наборы Vitest)                                |
+| `Production build and production regression` | `npm run build` (команда сборки, задокументированная для Cloudflare) и `npm run test:production`; `dist` сохраняется как artifact |
+| `Browser end-to-end (dev server)`            | Поднимает Vite dev server и запускает `npm run test:e2e` (прототип и альфа, включая DEV-сценарии); скриншоты — artifact           |
 
 Браузерные тесты используют Google Chrome, предустановленный в образе `ubuntu-24.04`
 (`CHROMIUM_PATH=/usr/bin/google-chrome`). Предупреждение Vite о размере Phaser-бандла не является
@@ -80,17 +80,23 @@ Node.js берётся из `.node-version` (24.19.0), зависимости �
 
 ## Тестирование в Cloudflare Preview
 
-Cloudflare Pages, подключённый к репозиторию через GitHub App (см.
-[DEPLOY_CLOUDFLARE_PAGES.md](DEPLOY_CLOUDFLARE_PAGES.md)), собирает production-версию `main` и
-**preview-версию каждой другой ветки**, для которой включены preview deployments.
+> **Статус на момент PR #1: не проверено.** Репозиторий подключён к Cloudflare через GitHub App
+> как проект **Workers Builds `game`** (check `Workers Builds: game` и комментарий
+> `cloudflare-workers-and-pages[bot]` в PR), а не как Pages-проект из
+> [DEPLOY_CLOUDFLARE_PAGES.md](DEPLOY_CLOUDFLARE_PAGES.md). Preview-сборка ветки PR #1 завершилась
+> ошибкой; её лог доступен только в дашборде Cloudflare. Состояние production-деплоя `main` из
+> репозитория проверить нельзя. Пока владелец не исправит конфигурацию по логу сборки, Preview
+> недоступен, и проверка выполняется локально (`npm run build && npm run preview`).
 
-1. После push в ветку PR Cloudflare запускает `npm run build`. Статус и ссылка появляются в PR
-   (check / комментарий Cloudflare) и в **Workers & Pages → проект → Deployments**.
-2. Адреса preview:
-   - уникальный для коммита: `https://<hash>.<project>.pages.dev`;
-   - постоянный для ветки (branch alias): `https://<branch>.<project>.pages.dev`, где имя ветки
-     переведено в нижний регистр, символы кроме букв/цифр заменены на `-`, длина ограничена
-     (например, `feature/task-07-skills` → `feature-task-07-skills`).
+Как устроен процесс после настройки:
+
+1. После push в ветку PR Cloudflare собирает production-версию (`npm run build`, каталог `dist`).
+   Статус появляется в PR как check `Workers Builds: game` (или `Cloudflare Pages`, если проект
+   будет переведён на Pages), а ссылка — в комментарии бота Cloudflare («Preview Deployments by
+   commit»). Тот же статус и логи — в **Workers & Pages → game → Deployments / Builds**.
+2. Адрес preview берётся **только из комментария/дашборда Cloudflare**, не угадывается. Для Pages
+   это `https://<hash>.<project>.pages.dev` и alias ветки; для Workers — preview URL версии на
+   `workers.dev` (если в проекте включены Preview URLs).
 3. Preview — это **production-сборка**: DEV-панели, `/?debug` и `window.__alpha` там нет, так и
    задумано. Механики, требующие DEV-инструментов, проверяются локально (`npm run dev`, `/?debug`)
    и через `npm run test:e2e`.
@@ -98,9 +104,8 @@ Cloudflare Pages, подключённый к репозиторию через 
    за каждый затронутый класс; новая механика работает как описано в PR; пауза/продолжение;
    смерть → Revive → вторая смерть; телефонный размер экрана и джойстик; `/?debug` не показывает
    DEV. Полный список — в разделе «Live verification checklist» документа деплоя.
-5. Результат (URL preview и что проверено) отмечается в PR. Preview по умолчанию публично
-   доступен любому, у кого есть ссылка; при необходимости доступ ограничивается через Cloudflare
-   Access (настройка проекта Pages).
+5. Результат (URL preview и что проверено) отмечается в PR. Preview по умолчанию доступен любому,
+   у кого есть ссылка; при необходимости доступ ограничивается через Cloudflare Access.
 
 ## Ручная настройка репозитория (выполняет владелец)
 
@@ -109,9 +114,14 @@ Cloudflare Pages, подключённый к репозиторию через 
    workflow `CI`; требовать актуальность ветки и разрешение всех обсуждений. Если PR создаются от
    имени аккаунта владельца, обязательное число approvals оставить 0 — GitHub не позволяет
    одобрять собственный PR.
-2. **Codex code review** — включить для `pavnem-ux/Game` в настройках Codex.
-3. **Cloudflare Pages** — если проект ещё не создан, выполнить шаги из
-   [DEPLOY_CLOUDFLARE_PAGES.md](DEPLOY_CLOUDFLARE_PAGES.md); затем в Settings → Builds →
-   Branch control убедиться, что preview включены для всех не-production веток.
+2. **Codex code review** — включить для `pavnem-ux/Game` в настройках Codex и создать для
+   репозитория environment в Codex Cloud (Settings → Environments): бот `chatgpt-codex-connector`
+   сообщил в PR #1, что без него `@codex review` не выполняется.
+3. **Cloudflare** — открыть лог упавшей сборки `Workers Builds: game` (ссылка «View logs» в PR) и
+   исправить конфигурацию; проверить, что production branch проекта — `main`, build command —
+   `npm run build`, а статические файлы берутся из `dist`. Либо создать Pages-проект по
+   [DEPLOY_CLOUDFLARE_PAGES.md](DEPLOY_CLOUDFLARE_PAGES.md). В настройках сборки включить
+   preview для не-production веток. Изменения конфигурации деплоя в репозитории (например,
+   `wrangler.jsonc`) делаются отдельным PR после согласования.
 4. **GitHub Actions** — разрешены для репозитория (Settings → Actions → General). Workflow не
    использует секреты.
