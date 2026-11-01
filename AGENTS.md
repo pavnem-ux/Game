@@ -128,13 +128,20 @@ task explicitly requires it, and call out every such change in the PR descriptio
 
 Full process: [`docs/DEVELOPMENT_WORKFLOW.md`](docs/DEVELOPMENT_WORKFLOW.md).
 
-- `main` is protected and always deployable; it is the Workers Builds production branch (every push
-  to `main` deploys production). `wrangler.jsonc` controls production: change it only with owner
-  approval.
+- `main` is always deployable; it is the Workers Builds production branch (every push to `main`
+  deploys production). `wrangler.jsonc` controls production: change it only with owner approval.
+- **Mandatory, procedurally enforced.** GitHub rulesets/branch protection are not available for this
+  private personal repository on the current plan, so nothing technically blocks a direct push.
+  These rules are mandatory for every agent and contributor regardless:
+  1. Never commit or push directly to `main`; never force-push `main`.
+  2. Every change goes on a separate feature/fix branch and through a Pull Request against `main`.
+  3. Wait for all CI checks to pass.
+  4. Wait for the independent Codex code review and resolve or answer its findings.
+  5. Never merge without the owner's explicit approval; only the owner merges.
 - One branch per task/change, created from the latest `main`: `feature/task-NN-<slug>`,
   `fix/<slug>`, `chore/<slug>`, `docs/<slug>` (agent-session branches such as `claude/<slug>` are
-  acceptable when the session assigns one). Never push directly to `main`; never force-push a branch
-  someone else owns.
+  acceptable when the session assigns one; after its PR is merged, restart it from `main`). Never
+  force-push a branch someone else owns.
 - Commit titles: `Task NN: <imperative summary>` for task work, otherwise `<area>: <summary>`.
 - Open a PR against `main` using `.github/pull_request_template.md`. CI must be green, Codex review
   findings must be resolved or answered, and the owner must approve gameplay before merging.
