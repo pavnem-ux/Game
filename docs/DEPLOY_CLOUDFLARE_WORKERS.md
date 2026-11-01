@@ -74,7 +74,7 @@ Use the actual Production or Preview URL from the dashboard/PR comment:
    fresh run as Mage, Archer and Rogue.
 3. Take enemy damage, die, choose **Revive**, confirm the same arena continues with half HP and
    three seconds of protection; a later death ends the run.
-4. Open `/?debug`: there is **no DEV button**; console `typeof window.__alpha` is `"undefined"`.
+4. On Production (or a standard Preview), open `/?debug`: there is **no DEV/QA button**; console `typeof window.__alpha` is `"undefined"`.
 5. Open `/?prototype&debug`: the preserved prototype loads and `typeof window.__survivors` is
    `"undefined"`.
 6. Open `/alpha/routing-check` directly and reload it: the SPA fallback shows the alpha selection
@@ -99,11 +99,20 @@ models the same SPA fallback) and checks gameplay/pause, a nested path, `?debug`
 elimination of DEV code. GitHub Actions runs these on every PR; Cloudflare's build command runs
 only `npm run build`.
 
-## Developer Testing Mode
+## Developer Testing Mode and QA Preview (Task 07.1)
 
-Gated by `import.meta.env.DEV`. Production and Preview builds both use `npm run build`, so neither
-exposes the DEV panel, testing controllers or debug globals, even with `?debug`. Use
-`npm run dev` and `/?debug` locally for DEV-only checks.
+Production remains `main` → `npm run build` → `npx wrangler deploy`, using `wrangler.jsonc`
+and `dist/`. It always excludes DEV/QA code. Standard Previews using this same build are also
+without debug tools.
+
+For an explicitly enabled QA Preview, change **only Previews Base** to `npm run build:qa` and
+`npx wrangler preview --config wrangler.qa.jsonc`. This builds `dist-qa/` with a compile-time QA
+flag and fails closed unless Workers Builds supplies a non-main `WORKERS_CI_BRANCH`. The normal
+production configuration/file is unchanged. Do not set branch variables manually in Cloudflare.
+
+Exact setup, URL patterns, local tests and a separate QA Worker fallback:
+[GAMEPLAY_BALANCE_QA.md](GAMEPLAY_BALANCE_QA.md). Production must still pass
+`npm run test:production`. Local development remains `npm run dev` → `/?debug`.
 
 ## Troubleshooting
 
@@ -115,8 +124,9 @@ exposes the DEV panel, testing controllers or debug globals, even with `?debug`.
 - **Deep-link 404:** check `assets.not_found_handling` is `single-page-application`.
 - **Wrong Node version:** `.node-version` must stay `24.19.0`; the build log shows the detected
   version.
-- **Hosted DEV controls are visible:** the deployment was not built with `npm run build`; fix the
-  build command and redeploy. `npm run test:production` rejects such bundles.
+- **Production DEV/QA controls are visible:** verify the main build is `npm run build` with
+  `wrangler.jsonc` / `dist/`; redeploy the production artifact. An explicitly configured QA Preview
+  is expected to expose its QA tools. `npm run test:production` rejects such bundles.
 - **Large bundle warning:** Vite's Phaser chunk advisory is expected and is not an error.
 
 ## References

@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.stats.json",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "node --experimental-strip-types tests/model.test.ts && vitest run",
+    "test": "npm run test:build-policy && node --experimental-strip-types tests/model.test.ts && vitest run",
     "test:e2e": "node tests/browser.mjs && node tests/alpha-browser.mjs",
     "test:stats": "vitest run tests/character-stats",
     "test:combat": "vitest run tests/combat-core",
@@ -20,7 +20,10 @@
     "test:survival": "vitest run tests/player-survival",
     "test:alpha": "vitest run tests/gameplay",
     "test:skills": "vitest run tests/skills",
-    "test:production": "node tests/alpha-production.mjs"
+    "test:production": "node tests/alpha-production.mjs",
+    "build:qa": "npm run typecheck && vite build --mode qa",
+    "test:build-policy": "node tests/qa-build.test.mjs",
+    "test:qa": "node tests/alpha-qa.mjs"
   },
   "dependencies": {
     "phaser": "3.90.0",

@@ -71,20 +71,25 @@ export const ALPHA_WEAPONS: Readonly<Record<CharacterClass, WeaponConfig>> = {
     secondStrikeFraction: 0.4,
   },
 };
+export const ALPHA_BALANCE = Object.freeze({
+  enemyMovementMultiplier: 0.8,
+  enemyAttackIntervalMultiplier: 1.3,
+  runLevelHealingFraction: 0.15,
+});
 export const ALPHA_ENEMIES: Readonly<Record<'melee' | 'ranged', EnemyConfig>> = {
   melee: {
     behavior: 'melee',
-    movementSpeed: 100,
+    movementSpeed: 100 * ALPHA_BALANCE.enemyMovementMultiplier,
     radius: 14,
-    attackInterval: 0.9,
+    attackInterval: 0.9 * ALPHA_BALANCE.enemyAttackIntervalMultiplier,
     attackCoefficient: 1,
     damageType: 'physical',
   },
   ranged: {
     behavior: 'ranged',
-    movementSpeed: 82,
+    movementSpeed: 82 * ALPHA_BALANCE.enemyMovementMultiplier,
     radius: 15,
-    attackInterval: 1.7,
+    attackInterval: 1.7 * ALPHA_BALANCE.enemyAttackIntervalMultiplier,
     attackCoefficient: 1,
     damageType: 'magical',
     attackRange: 360,
@@ -103,6 +108,7 @@ export const ALPHA_ENEMY_STATS = Object.freeze({
   dodgeChance: 0,
 });
 export function defaultOnHit(characterClass: CharacterClass): readonly EffectDefinition[] {
+  if (characterClass === 'warrior') return [];
   return [
     {
       effectType:

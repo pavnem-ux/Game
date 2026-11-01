@@ -170,6 +170,21 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
               Слоты {w.skills.slots.auto.used}/4 · {w.skills.slots.passive.used}/6 · перебросов{' '}
               {w.skills.rerolls} · ожидает выборов {w.skills.pendingChoices}
             </p>
+            <ul aria-label="Приобретённые навыки QA">
+              {w.skills.owned.map((skill) => (
+                <li key={skill.skillId}>
+                  {skill.name} · {['', 'I', 'II', 'III', 'IV', 'V'][skill.rank]}
+                  <button
+                    disabled={skill.rank >= 5}
+                    onClick={() =>
+                      send({ type: 'grant-skill', skillId: skill.skillId, rank: skill.rank + 1 })
+                    }
+                  >
+                    Улучшить {skill.name}
+                  </button>
+                </li>
+              ))}
+            </ul>
             <label>
               Навык
               <select
@@ -221,6 +236,13 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
               />
             </label>
             <button onClick={() => send({ type: 'grant-xp', amount: xpAmount })}>Выдать XP</button>
+            <button
+              onClick={() =>
+                send({ type: 'grant-xp', amount: w.progression.nextXp - w.progression.xp })
+              }
+            >
+              Следующий уровень забега
+            </button>
             <button onClick={() => send({ type: 'xp-crystal', value: xpAmount, distance: 90 })}>
               Кристалл справа
             </button>

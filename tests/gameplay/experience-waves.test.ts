@@ -250,7 +250,14 @@ describe('continuous waves on the shared world timeline', () => {
     const w = new GameplayWorld({
       characterClass: 'warrior',
       initialEnemies: false,
-      spawning: { interval: 1, minimumInterval: 1, count: 3, maximumCount: 3, maxActive: 3 },
+      spawning: {
+        interval: 1,
+        minimumInterval: 1,
+        count: 3,
+        maximumCount: 3,
+        maxActive: 3,
+        rangedShare: 1 / 3,
+      },
     });
     w.setTestProtection(true);
     w.update(0.99);

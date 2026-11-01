@@ -15,7 +15,14 @@ import {
 } from '../player-survival';
 import type { RevivalDecision, SurvivalEvent } from '../player-survival';
 import { sameInstant } from '../simulation-boundary';
-import { ALPHA, ALPHA_ENEMIES, ALPHA_ENEMY_STATS, ALPHA_WEAPONS, defaultOnHit } from './config';
+import {
+  ALPHA,
+  ALPHA_BALANCE,
+  ALPHA_ENEMIES,
+  ALPHA_ENEMY_STATS,
+  ALPHA_WEAPONS,
+  defaultOnHit,
+} from './config';
 import type { GameplayOptions, GameplaySnapshot, WorldEvent } from './types';
 
 import { RunExperience, XP_RULES } from './experience';
@@ -377,8 +384,28 @@ export class GameplayWorld {
   private progression(events: readonly ExperienceEvent[]) {
     this.record('progression', events);
     for (const event of events)
-      if (event.type === 'run-level-up')
+      if (event.type === 'run-level-up') {
+        for (let level = event.previousLevel + 1; level <= event.level; level++) {
+          const player = this.core.getEntity(this.playerId);
+          const requestedHealing = player.maxHp * ALPHA_BALANCE.runLevelHealingFraction;
+          // Preserve no-op entity identity at full HP; only Core may actually change HP.
+          const result =
+            player.currentHp < player.maxHp
+              ? this.core.heal(this.playerId, requestedHealing)
+              : null;
+          if (result) this.forwardCombat(result.events);
+          // Record every gained level, including a capped zero heal. Core owns actual HP/events.
+          this.record('progression', [
+            Object.freeze({
+              type: 'run-level-healed',
+              level,
+              requestedHealing,
+              healed: result?.healed ?? 0,
+            }),
+          ]);
+        }
         this.record('skill', this.run.queueLevelUps(event.level - event.previousLevel));
+      }
   }
   private applyStats(stats: CombatAttributes) {
     const player = this.core.getEntity(this.playerId);
@@ -419,7 +446,12 @@ export class GameplayWorld {
     const enemyIds: string[] = [],
       positions: Point[] = [];
     for (let i = 0; i < count && this.enemyIds.size < this.spawnSettings.maxActive; i++) {
-      const kind = this.autoSpawnSequence % 3 === 0 ? 'ranged' : 'melee';
+      const share = this.spawnSettings.rangedShare;
+      const kind =
+        Math.floor((this.autoSpawnSequence + 1) * share) >
+        Math.floor(this.autoSpawnSequence * share)
+          ? 'ranged'
+          : 'melee';
       const position = offscreenPosition(
         this.body,
         this.viewport,

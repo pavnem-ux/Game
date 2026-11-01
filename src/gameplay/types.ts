@@ -43,6 +43,7 @@ export interface WorldEvent {
     | StatusEvent
     | SurvivalEvent
     | ExperienceEvent
+    | RunLevelHealingEvent
     | RewardEvent
     | WaveEvent
     | SkillEvent;
@@ -93,4 +94,12 @@ export interface WaveEvent {
   readonly enemyIds: readonly string[];
   readonly positions: readonly Point[];
   readonly nextSpawnAt: number;
+}
+
+/** One notification per gained run level; Combat Core emits positive HP healing separately. */
+export interface RunLevelHealingEvent {
+  readonly type: 'run-level-healed';
+  readonly level: number;
+  readonly requestedHealing: number;
+  readonly healed: number;
 }

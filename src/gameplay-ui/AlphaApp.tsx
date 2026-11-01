@@ -5,8 +5,10 @@ import { CLASS_LABELS, WEAPON_LABELS } from '../gameplay';
 import { alphaBridge } from './store';
 import { AlphaCanvas } from './AlphaCanvas';
 import { LevelUpDialog, SkillBar } from './SkillPanels';
+import { displayHp } from './format';
 import './alpha.css';
-const DeveloperPanel = import.meta.env.DEV ? lazy(() => import('./DeveloperPanel')) : null;
+const DeveloperPanel =
+  import.meta.env.DEV || __QA_BUILD__ ? lazy(() => import('./DeveloperPanel')) : null;
 const time = (seconds: number) =>
   `${Math.floor(seconds / 60)
     .toString()
@@ -24,8 +26,10 @@ export function AlphaApp() {
   const [selected, setSelected] = useState<CharacterClass>('warrior');
   const [level, setLevel] = useState(1);
   const [debugOpen, setDebugOpen] = useState(false);
-  const debug = import.meta.env.DEV && new URLSearchParams(location.search).has('debug');
+  const debug =
+    (import.meta.env.DEV || __QA_BUILD__) && new URLSearchParams(location.search).has('debug');
   const s = state.world;
+  const hp = s ? displayHp(s.player.currentHp, s.player.maxHp) : null;
   const start = () =>
     alphaBridge.send({ type: 'start', options: { characterClass: selected, level } });
   return (
@@ -39,7 +43,7 @@ export function AlphaApp() {
         </div>
         <span className="header-caption">ХРОНИКИ ПОСЛЕДНЕГО СВЕТА</span>
         <span className="build-badge">
-          COMBAT ALPHA <span>07</span>
+          {__QA_BUILD__ ? 'QA PREVIEW' : 'COMBAT ALPHA'} <span>07.1</span>
         </span>
       </header>
       <main className={`arena alpha-arena screen-${state.screen}`}>
@@ -85,7 +89,7 @@ export function AlphaApp() {
                       <strong>{CLASS_LABELS[c]}</strong>
                       <small>{WEAPON_LABELS[c]}</small>
                       <span>
-                        {stats.maxHp} HP ·{' '}
+                        {displayHp(stats.maxHp, stats.maxHp).max} HP ·{' '}
                         {c === 'mage' ? stats.magicalDamage : stats.physicalDamage} урона
                       </span>
                     </button>
@@ -129,8 +133,7 @@ export function AlphaApp() {
                       {CLASS_LABELS[s.character.characterClass]} · забег {s.progression.level}
                     </strong>
                     <span>
-                      {s.player.currentHp.toFixed(s.player.currentHp % 1 ? 1 : 0)} /{' '}
-                      {s.player.maxHp} HP
+                      {hp!.current} / {hp!.max} HP
                     </span>
                   </div>
                   <div
@@ -138,8 +141,8 @@ export function AlphaApp() {
                     role="progressbar"
                     aria-label="Здоровье"
                     aria-valuemin={0}
-                    aria-valuemax={s.player.maxHp}
-                    aria-valuenow={s.player.currentHp}
+                    aria-valuemax={hp!.max}
+                    aria-valuenow={hp!.current}
                   >
                     <div style={{ width: `${(s.player.currentHp / s.player.maxHp) * 100}%` }} />
                   </div>
@@ -314,7 +317,7 @@ export function AlphaApp() {
             aria-expanded={debugOpen}
             onClick={() => setDebugOpen(!debugOpen)}
           >
-            DEV · {debugOpen ? 'Закрыть' : 'Тестирование'}
+            {__QA_BUILD__ ? 'QA' : 'DEV'} · {debugOpen ? 'Закрыть' : 'Тестирование'}
           </button>
         )}
         {debug && debugOpen && DeveloperPanel && (

@@ -85,7 +85,11 @@ describe('shared world chronological boundaries', () => {
   });
   it('freeze on lethal direct hit is global even with a huge frame delta', () => {
     const w = world();
-    w.spawnEnemy('melee', 130, 0, { ...ALPHA_ENEMIES.melee, attackCoefficient: 1000 });
+    w.spawnEnemy('melee', 130, 0, {
+      ...ALPHA_ENEMIES.melee,
+      movementSpeed: 100,
+      attackCoefficient: 1000,
+    });
     w.update(40);
     expect(w.time).toBeCloseTo(1.03, 10);
     expect(clocks(w).every((t) => t === w.time)).toBe(true);

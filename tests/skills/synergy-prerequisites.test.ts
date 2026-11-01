@@ -155,10 +155,18 @@ describe('acquired-skill synergy prerequisites', () => {
 });
 
 describe('starting weapons retain their effects without unlocking synergies', () => {
+  it('Warrior starting sword has no Bleed and unlocks no synergies', () => {
+    const w = arena('warrior', { level: 10 });
+    const victim = w.spawnEnemy('melee', 35, 0, stationaryMelee);
+    w.core.updateEntityStats(victim, { ...w.core.getEntity(victim), maxHp: 1e9 });
+    w.update(3);
+    expect(w.statuses.getGroup(victim, 'bleed')).toBeNull();
+    expect(w.core.getEntity(victim).currentHp).toBeLessThan(1e9);
+    expect(skillEvents(w, 'synergy-triggered')).toHaveLength(0);
+  });
   it.each([
     ['mage', 'burn'],
     ['archer', 'poison'],
-    ['warrior', 'bleed'],
     ['rogue', 'bleed'],
   ] as const)('%s still applies its built-in %s without acquired skills', (cls, effect) => {
     const w = arena(cls, { level: 10 });

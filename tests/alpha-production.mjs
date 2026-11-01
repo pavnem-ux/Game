@@ -81,6 +81,8 @@ try {
   assert.equal(await page.evaluate(() => typeof window.__alpha), 'undefined');
   assert.equal(await page.evaluate(() => typeof window.__survivors), 'undefined');
   assert.equal(await page.getByLabel('Стартовый уровень').count(), 0);
+  assert.equal(await page.getByRole('button', { name: /QA ·/ }).count(), 0);
+  assert.equal(await page.getByText('QA PREVIEW', { exact: false }).count(), 0);
   await page.getByRole('button', { name: 'Маг Посох', exact: false }).click();
   await page.getByRole('button', { name: 'Начать забег' }).click();
   await page.getByRole('progressbar', { name: 'Здоровье' }).waitFor();
@@ -101,6 +103,7 @@ try {
         'testing controller eliminated from production JS',
       );
       assert.ok(!source.includes('__alpha'), 'alpha debug bridge eliminated from production JS');
+      assert.ok(!source.includes('QA PREVIEW'), 'QA build UI eliminated from production JS');
       assert.ok(
         !source.includes('__survivors'),
         'legacy debug bridge eliminated from production JS',
@@ -116,6 +119,10 @@ try {
   await page.goto('http://127.0.0.1:4179/?prototype&debug');
   await page.getByRole('button', { name: 'Войти в руины' }).waitFor();
   assert.equal(await page.evaluate(() => typeof window.__survivors), 'undefined');
+  await page.goto('http://127.0.0.1:4179/?debug&qa=true&VITE_ENABLE_QA=true');
+  await page.getByRole('button', { name: 'Начать забег' }).waitFor();
+  assert.equal(await page.getByRole('button', { name: /(?:QA|DEV) ·/ }).count(), 0);
+  assert.equal(await page.evaluate(() => typeof window.__alpha), 'undefined');
   assert.deepEqual(errors, []);
   console.log(
     'PASS production: playable Mage, pause/resume, nested SPA URL; alpha and legacy ?debug routes expose no testing controls/globals; testing controller code is absent.',

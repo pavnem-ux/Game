@@ -75,11 +75,14 @@ export class AlphaScene extends Phaser.Scene {
     const cleanup = () => {
       unsubscribe();
       document.removeEventListener('visibilitychange', visibility);
-      if (import.meta.env.DEV) delete window.__alpha;
+      if (import.meta.env.DEV || __QA_BUILD__) delete window.__alpha;
     };
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, cleanup);
     this.events.once(Phaser.Scenes.Events.DESTROY, cleanup);
-    if (import.meta.env.DEV && new URLSearchParams(location.search).has('debug')) {
+    if (
+      (import.meta.env.DEV || __QA_BUILD__) &&
+      new URLSearchParams(location.search).has('debug')
+    ) {
       void import('../gameplay/testing').then(({ createTestingController }) => {
         if (!this.scene.isActive()) return;
         this.testing = createTestingController(
@@ -148,7 +151,7 @@ export class AlphaScene extends Phaser.Scene {
           this.world?.rerollSkillOffer();
           break;
         case 'testing':
-          if (import.meta.env.DEV) this.testing?.(command.action);
+          if (import.meta.env.DEV || __QA_BUILD__) this.testing?.(command.action);
           break;
       }
     } catch (e) {

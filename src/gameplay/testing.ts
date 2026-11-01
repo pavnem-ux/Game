@@ -1,5 +1,5 @@
 import type { GameplayWorld, GameplayOptions } from './index';
-/** Imported only inside import.meta.env.DEV branches; no testing controller in production. */
+/** Imported only inside DEV or explicit QA-build branches; no testing controller in production. */
 export function createTestingController(
   getWorld: () => GameplayWorld | null,
   restart: (options: GameplayOptions) => void,

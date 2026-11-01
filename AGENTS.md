@@ -87,9 +87,13 @@ Detailed contracts live in `docs/`; read the relevant document before changing a
    Synergy/secondary hits never trigger synergies (no proc chains).
 9. **Immutable outputs.** Snapshots and events returned by modules are frozen/immutable; React
    receives throttled snapshots (~10 Hz), never per-enemy components or per-frame state.
-10. **DEV isolation.** Developer Testing Mode, `window.__alpha` / `window.__survivors` and testing
-    controllers exist only under `import.meta.env.DEV`. Production builds (including Cloudflare
-    previews) must not expose them, even with `?debug`. `npm run test:production` enforces this.
+10. **Production / QA isolation (owner-approved Task 07.1).** Normal `npm run build` always
+    excludes testing controllers and debug globals, even with `?debug`. Alpha QA tools may exist
+    only under `import.meta.env.DEV || __QA_BUILD__`; the latter is set exclusively by the explicit
+    non-main QA build policy in `config/qa-build.mjs`. Legacy debug remains DEV-only. QA artifacts
+    go to `dist-qa/`, served only with the separate Preview configuration; production still uses
+    `wrangler.jsonc` and `dist/`. Never enable QA for `main` or rely on a URL query as the boundary.
+    `npm run test:production`, `test:build-policy` and `test:qa` enforce the separation.
 11. **Bounded work.** Respect existing caps (alpha: 120 enemies, 512 crystal piles; prototype pools)
     and allocation-free hot loops in Phaser `update`.
 12. **Original content.** Procedural/original art only. No assets from other games, no CDN assets.

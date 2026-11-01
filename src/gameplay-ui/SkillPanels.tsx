@@ -1,5 +1,7 @@
 import type { GameplaySnapshot } from '../gameplay';
 import type { OfferCard } from '../skills';
+import { getSkill } from '../skills';
+import { useState } from 'react';
 import { alphaBridge } from './store';
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
@@ -92,34 +94,100 @@ export function LevelUpDialog({ world }: { world: GameplaySnapshot }) {
 
 /** Equipped skills with ranks and remaining cooldowns, plus gold and barrier. */
 export function SkillBar({ world }: { world: GameplaySnapshot }) {
+  const [open, setOpen] = useState(false);
   const { owned, slots, gold } = world.skills;
   const { cooldowns, barrier, buffs } = world.skillCombat;
   return (
-    <div className="skill-bar" aria-label="Навыки забега">
-      {owned.map((s) => (
-        <span
-          key={s.skillId}
-          className={`skill-chip kind-${s.kind}`}
-          title={`${s.name} ${ROMAN[s.rank]}`}
+    <>
+      <div className="skill-bar" aria-label="Навыки забега">
+        <button
+          className="skill-overview-toggle"
+          aria-label="Обзор навыков"
+          aria-expanded={open}
+          aria-controls="skill-overview"
+          onClick={() => setOpen(!open)}
         >
-          <i>{textGlyph(s.icon)}</i>
-          <b>{ROMAN[s.rank]}</b>
-          {s.kind === 'auto' && (cooldowns[s.skillId] ?? 0) > 0.05 && (
-            <small>{cooldowns[s.skillId].toFixed(1)}</small>
-          )}
+          Навыки
+        </button>
+        {owned.map((s) => (
+          <span
+            key={s.skillId}
+            className={`skill-chip kind-${s.kind}`}
+            title={`${s.name} ${ROMAN[s.rank]}`}
+          >
+            <i>{textGlyph(s.icon)}</i>
+            <b>{ROMAN[s.rank]}</b>
+            {s.kind === 'auto' && (cooldowns[s.skillId] ?? 0) > 0.05 && (
+              <small>{cooldowns[s.skillId].toFixed(1)}</small>
+            )}
+          </span>
+        ))}
+        <span className="skill-slots">
+          Автоматические {slots.auto.used}/{slots.auto.max} · Пассивные {slots.passive.used}/
+          {slots.passive.max}
         </span>
-      ))}
-      <span className="skill-slots">
-        {slots.auto.used}/{slots.auto.max} · {slots.passive.used}/{slots.passive.max}
-      </span>
-      {gold > 0 && <span className="skill-gold">◎ {gold}</span>}
-      {barrier > 0 && <span className="skill-barrier">◈ {Math.ceil(barrier)}</span>}
-      {buffs.map((b) => (
-        <span key={b.id} className="skill-buff">
-          {b.id.replace(/_/g, ' ')}
-          {b.stacks > 1 ? ` ×${b.stacks}` : ''}
-        </span>
-      ))}
-    </div>
+        {gold > 0 && <span className="skill-gold">◎ {gold}</span>}
+        {barrier > 0 && <span className="skill-barrier">◈ {Math.ceil(barrier)}</span>}
+        {buffs.map((b) => (
+          <span key={b.id} className="skill-buff">
+            {b.id.replace(/_/g, ' ')}
+            {b.stacks > 1 ? ` ×${b.stacks}` : ''}
+          </span>
+        ))}
+      </div>
+      {open && <SkillOverview world={world} onClose={() => setOpen(false)} />}
+    </>
+  );
+}
+
+/** Read-only, non-modal overview. Opening/closing never changes simulation pause state. */
+function SkillOverview({ world, onClose }: { world: GameplaySnapshot; onClose: () => void }) {
+  return (
+    <aside id="skill-overview" className="skill-overview" aria-label="Обзор навыков">
+      <div className="skill-overview-heading">
+        <h2>Навыки забега</h2>
+        <button onClick={onClose} aria-label="Закрыть обзор навыков">
+          ×
+        </button>
+      </div>
+      <p>Обзор не останавливает игру. Перебросов осталось: {world.skills.rerolls}.</p>
+      {(['auto', 'passive'] as const).map((kind) => {
+        const slots = world.skills.slots[kind];
+        const owned = world.skills.owned.filter((s) => s.kind === kind);
+        return (
+          <section
+            key={kind}
+            aria-label={kind === 'auto' ? 'Автоматические навыки' : 'Пассивные навыки'}
+          >
+            <h3>
+              {kind === 'auto' ? 'Автоматические' : 'Пассивные'} — {slots.used}/{slots.max}
+            </h3>
+            <p>Свободных слотов: {slots.max - slots.used}</p>
+            <ul>
+              {owned.map((skill) => {
+                const definition = getSkill(skill.skillId);
+                const remaining = world.skillCombat.cooldowns[skill.skillId] ?? 0;
+                return (
+                  <li key={skill.skillId}>
+                    <strong>
+                      <i aria-hidden="true">{textGlyph(skill.icon)}</i> {skill.name} ·{' '}
+                      {ROMAN[skill.rank]}
+                    </strong>
+                    <p>{definition.description}</p>
+                    <p>{definition.rankSummaries[skill.rank - 1]}</p>
+                    {kind === 'auto' && (
+                      <span aria-label={`Перезарядка: ${skill.name}`}>
+                        {remaining > 0.05 ? `Перезарядка: ${remaining.toFixed(1)} с` : 'Готов'}
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+            {owned.length === 0 && <p>Пока нет приобретённых навыков.</p>}
+          </section>
+        );
+      })}
+    </aside>
   );
 }

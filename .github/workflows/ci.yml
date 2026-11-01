@@ -91,3 +91,30 @@ jobs:
             vite.log
           if-no-files-found: ignore
           retention-days: 7
+
+  qa:
+    name: QA preview build and browser regression
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CHROMIUM_PATH: /usr/bin/google-chrome
+      WORKERS_CI: '1'
+      WORKERS_CI_BRANCH: ${{ github.head_ref }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - run: npm run build:qa
+      - run: npm run test:qa
+      - name: Upload QA screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-artifacts
+          path: artifacts/
+          if-no-files-found: ignore
+          retention-days: 7
