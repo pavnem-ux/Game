@@ -835,3 +835,96 @@
     margin: 6px 0;
   }
 }
+/* Task 07.2 v2 — damage readout and synergy pairs. */
+.damage-lines {
+  list-style: none;
+  margin: 6px 0 10px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+}
+.damage-line {
+  font-size: 12px;
+  line-height: 1.35;
+  color: #e8dfc4;
+}
+.damage-line small {
+  display: block;
+  font-size: 10.5px;
+  color: #a99f84;
+}
+.damage-lines.is-compact {
+  margin: -8px 0 14px;
+  gap: 2px;
+}
+.damage-lines.is-compact .damage-line {
+  font-size: 11px;
+}
+.damage-lines.is-compact .damage-line small {
+  font-size: 10px;
+}
+.damage-dot {
+  color: #e6c3a0;
+}
+.damage-control,
+.damage-area,
+.damage-note,
+.damage-buff,
+.damage-cooldown {
+  color: #b7c0c9;
+}
+.damage-none {
+  color: #c9bfa3;
+  font-style: italic;
+}
+.damage-change {
+  font-style: normal;
+  font-size: 10px;
+  padding: 0 4px;
+  margin-left: 4px;
+  border-radius: 3px;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+.damage-change.change-new {
+  color: #9fe0a8;
+}
+.damage-change.change-changed {
+  color: #f2d27a;
+}
+p.damage-note {
+  font-size: 11px;
+  max-width: 62ch;
+  margin-inline: auto;
+}
+.synergy-pairs {
+  font-size: 12px;
+  color: #d9d0b6;
+}
+.synergy-pairs ul {
+  list-style: none;
+  margin: 2px 0 4px;
+  padding: 0 0 0 10px;
+}
+.synergy-pair-row {
+  padding: 1px 0;
+}
+.synergy-pair-row.is-complete {
+  color: #f2d27a;
+}
+/* Damage lines live inside skill list items: neutralise the item box/colour styling. */
+.skill-overview .skill-group li.damage-line,
+.pause-skills .skill-group li.damage-line,
+.skill-overview li.damage-line {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  padding: 1px 0;
+  background: none;
+}
+.skill-overview li.damage-line span,
+.pause-skills .skill-group li.damage-line span {
+  color: inherit;
+}

@@ -249,6 +249,14 @@ export class AlphaScene extends Phaser.Scene {
           y: e.position.y - 18,
           text: SYNERGY_LABELS[e.synergyId] ?? e.synergyId,
         });
+      if (event.channel === 'skill' && e.type === 'synergy-unlocked')
+        this.fx.push({
+          event,
+          until: event.time + 2.4,
+          x: s.playerBody.x,
+          y: s.playerBody.y - 46,
+          text: `✦ Синергия открыта: ${SYNERGY_LABELS[e.synergyId] ?? e.synergyId}`,
+        });
       if (
         event.channel === 'combat' &&
         (e.type === 'damage' || e.type === 'periodic-damage' || e.type === 'dodge')

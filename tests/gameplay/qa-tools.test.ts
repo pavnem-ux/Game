@@ -3,7 +3,9 @@ import { GameplayWorld, ALPHA_ENEMIES } from '../../src/gameplay';
 import { QaGameplayWorld } from '../../src/gameplay/qa';
 import { createTestingController, createTestingWorld } from '../../src/gameplay/testing';
 import type { CharacterClass } from '../../src/character-stats';
+import { SYNERGY_RULES } from '../../src/skills';
 import type { CombatTag } from '../../src/skills';
+import { ALL_SYNERGY_SKILLS, unlockClassSynergies } from '../skills/helpers';
 import { stunIndicator } from '../../src/engine/stun-indicator';
 
 const options = (characterClass: CharacterClass = 'warrior') => ({
@@ -170,26 +172,34 @@ describe('QA-only HP guard', () => {
 });
 
 describe('event-backed QA synergy diagnostics', () => {
-  it.each([
-    ['warrior', 'ground_slam'],
-    ['mage', 'elemental_mastery'],
-    ['archer', 'toxic_volley'],
-    ['rogue', 'blade_flurry'],
-  ] as const)('%s shows exactly its three rules and authoritative prerequisites', (cls, skill) => {
-    const w = new QaGameplayWorld(options(cls));
-    expect(w.qaSnapshot().synergies).toHaveLength(3);
-    expect(
-      w.qaSnapshot().synergies.every((s) => !s.unlocked && s.count === 0 && s.lastTime === null),
-    ).toBe(true);
-    w.grantTestSkill('power');
-    expect(w.qaSnapshot().synergies.every((s) => !s.unlocked)).toBe(true);
-    w.grantTestSkill(skill);
-    expect(w.qaSnapshot().synergies.every((s) => s.unlocked && s.count === 0)).toBe(true);
-    expect(Object.isFrozen(w.qaSnapshot().synergies[0])).toBe(true);
-  });
+  it.each(['warrior', 'mage', 'archer', 'rogue'] as const)(
+    '%s shows exactly its three rules and authoritative unlock pairs',
+    (cls) => {
+      const w = new QaGameplayWorld(options(cls));
+      expect(w.qaSnapshot().synergies).toHaveLength(3);
+      expect(
+        w.qaSnapshot().synergies.every((s) => !s.unlocked && s.count === 0 && s.lastTime === null),
+      ).toBe(true);
+      for (const s of w.qaSnapshot().synergies)
+        expect(s.unlockPairs).toEqual(SYNERGY_RULES.find((r) => r.id === s.id)!.unlockPairs);
+      w.grantTestSkill('power');
+      // One half of a pair never unlocks anything.
+      w.grantTestSkill(ALL_SYNERGY_SKILLS[cls][0]);
+      expect(
+        w.qaSnapshot().synergies.every((s) => !s.unlocked && s.completedPairs.length === 0),
+      ).toBe(true);
+      for (const skill of ALL_SYNERGY_SKILLS[cls].slice(1)) w.grantTestSkill(skill);
+      expect(
+        w
+          .qaSnapshot()
+          .synergies.every((s) => s.unlocked && s.count === 0 && s.completedPairs.length > 0),
+      ).toBe(true);
+      expect(Object.isFrozen(w.qaSnapshot().synergies[0])).toBe(true);
+    },
+  );
   it('counts simultaneous hit and kill rules from actual events, including time zero', () => {
     const w = new QaGameplayWorld(options());
-    w.grantTestSkill('ground_slam');
+    unlockClassSynergies(w, 'warrior');
     const id = enemy(w);
     w.skills.stun(id, 0.6);
     hit(w, id);
@@ -209,7 +219,7 @@ describe('event-backed QA synergy diagnostics', () => {
   });
   it('counts beyond the bounded event history, and reset never resets the world or proc cooldowns', () => {
     const w = new QaGameplayWorld(options());
-    w.grantTestSkill('ground_slam');
+    unlockClassSynergies(w, 'warrior');
     w.setGodMode(true);
     for (let i = 0; i < 100; i++) {
       const id = enemy(w, 900 + i);

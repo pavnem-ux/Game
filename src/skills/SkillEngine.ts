@@ -26,6 +26,7 @@ import { ABILITIES } from './abilities';
 import { getSkill } from './catalog';
 import { BONUS_TUNING, CONTROL_RULES } from './config';
 import type { RunSkills } from './RunSkills';
+import { elementalDamageMultiplier, modifyPlayerEffect } from './modifiers';
 import { composeRunStats, NO_MODIFIERS } from './stats';
 import type { RunStatModifiers } from './stats';
 import { SynergyResolver } from './synergies';
@@ -268,16 +269,9 @@ export class SkillEngine {
   }
   /** Player status applications: Toxic Mastery, Lingering Effects and Elemental Mastery Burn. */
   playerEffect(definition: EffectDefinition): EffectDefinition {
-    let damage = definition.rawDamagePerTick,
-      duration = definition.duration;
-    if (this.rank('toxic_mastery') > 0)
-      damage *= 1 + this.params('toxic_mastery').dotDamagePercent / 100;
-    if (this.rank('lingering_effects') > 0)
-      duration *= 1 + this.params('lingering_effects').dotDurationPercent / 100;
-    if (definition.effectType === 'burn' && this.rank('elemental_mastery') > 0)
-      damage *= 1 + this.params('elemental_mastery').burnDamagePercent / 100;
-    return Object.freeze({ ...definition, rawDamagePerTick: damage, duration });
+    return modifyPlayerEffect(definition, this.rankOf);
   }
+  private readonly rankOf = (skillId: string) => this.rank(skillId);
   /** Target multiplier for every player hit: marks, focus bonus and per-enemy hit limits. Pure. */
   targetMultiplier(
     attack: AttackSnapshot,
@@ -430,15 +424,13 @@ export class SkillEngine {
 
   // ───────────────────────────── attacks and hits ─────────────────────────────
   elementalMultiplier(tags: ReadonlySet<CombatTag>): number {
-    if (this.rank('elemental_mastery') === 0 || !(tags.has('fire') || tags.has('ice'))) return 1;
-    const p = this.params('elemental_mastery');
     const alternate = this.buffs.get('elemental_alternation');
     const stacks =
       alternate &&
       (alternate.expiresAt > this.clock || sameInstant(alternate.expiresAt, this.clock))
         ? alternate.stacks
         : 0;
-    return 1 + (p.elementalDamagePercent + stacks * p.alternateBonusPercent) / 100;
+    return elementalDamageMultiplier(this.rankOf, tags, stacks);
   }
   attack(
     tags: ReadonlySet<CombatTag>,

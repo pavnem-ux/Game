@@ -31,9 +31,18 @@ export async function checkQaTools(page) {
   }
   await god.check();
   assert.equal((await state()).qa.godMode, true);
-  await page.getByLabel('DEV навык').selectOption('ground_slam');
-  await page.getByRole('button', { name: 'Выдать навык', exact: true }).click();
-  assert.ok((await state()).qa.synergies.every((s) => s.unlocked));
+  const grant = async (skillId) => {
+    await page.getByLabel('DEV навык').selectOption(skillId);
+    await page.getByRole('button', { name: 'Выдать навык', exact: true }).click();
+  };
+  // Task 07.2 v2: one skill of a pair unlocks nothing; each completed workbook pair unlocks its rule.
+  await grant('ground_slam');
+  assert.ok((await state()).qa.synergies.every((s) => !s.unlocked));
+  await grant('battle_fury'); // passive partner: Ground Slam + Battle Fury → Battle Momentum only
+  assert.deepEqual(
+    (await state()).qa.synergies.filter((s) => s.unlocked).map((s) => s.id),
+    ['battle_momentum'],
+  );
   await page.getByRole('button', { name: 'QA · Закрыть' }).click();
   await command({ type: 'spawn', kind: 'melee', distance: 50 });
   await page.waitForFunction(() => window.__alpha.presentation().stunIndicators.length > 0);
@@ -52,6 +61,14 @@ export async function checkQaTools(page) {
   );
   await page.getByRole('button', { name: 'Продолжить', exact: false }).click();
   await page.evaluate(() => window.__alpha.advance(0.65));
+  await page.getByRole('button', { name: 'QA · Тестирование' }).click();
+  for (const skillId of ['cleave', 'shield_bash']) await grant(skillId);
+  assert.ok((await state()).qa.synergies.every((s) => s.unlocked && s.completedPairs.length > 0));
+  assert.match(
+    await diagnostics.locator('[data-synergy-id="seismic_impact"]').innerText(),
+    /Разблокирована парой: ground_slam \+ shield_bash/,
+  );
+  await page.getByRole('button', { name: 'QA · Закрыть' }).click();
   assert.equal((await page.evaluate(() => window.__alpha.presentation().stunIndicators)).length, 0);
   const hp = (await state()).world.player.currentHp;
   await command({

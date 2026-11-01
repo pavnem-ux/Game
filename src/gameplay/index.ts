@@ -4,6 +4,7 @@ export {
   ALPHA_BALANCE,
   ALPHA_WEAPONS,
   ALPHA_ENEMIES,
+  ALPHA_ENEMY_STATS,
   CLASS_LABELS,
   WEAPON_LABELS,
 } from './config';

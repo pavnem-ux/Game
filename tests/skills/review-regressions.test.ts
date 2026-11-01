@@ -65,7 +65,9 @@ describe('review regressions', () => {
   });
   it('lethal weapon impacts keep the victim position: Wildfire spreads from a staff kill', () => {
     const w = arena('mage', { level: 10, onHit: [] });
+    // v2: Wildfire needs a completed pair; Inferno + Elemental Mastery is workbook pair 4.
     w.grantTestSkill('elemental_mastery', 1);
+    w.grantTestSkill('inferno', 1);
     const victim = w.spawnEnemy('melee', 200, 0, stationaryMelee);
     const neighbour = w.spawnEnemy('melee', 240, 0, stationaryMelee);
     huge(w, neighbour);
@@ -78,6 +80,19 @@ describe('review regressions', () => {
     });
     w.update(1);
     expect(w.core.getEntity(victim).alive).toBe(false);
+    // The lethal hit is the basic staff impact (not the Inferno zone).
+    const lethal = w
+      .getEvents()
+      .find(
+        (e) =>
+          e.channel === 'weapon' &&
+          e.event.type === 'impact' &&
+          e.event.targetId === victim &&
+          !e.event.result.events.every((c) => c.type !== 'death'),
+      );
+    expect(lethal && lethal.event.type === 'impact' && lethal.event.weaponId).not.toMatch(
+      /^skill:/,
+    );
     const wildfire = skillEvents(w, 'synergy-triggered').filter(
       (e) => (e.event as { synergyId: string }).synergyId === 'wildfire',
     );

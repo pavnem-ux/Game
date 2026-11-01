@@ -4,15 +4,17 @@ import type { CombatEntity, RandomSource } from '../combat-core';
 import { WeaponStatusAdapter } from '../status-effects';
 import type { OnHitEffectMapping, StatusEffects } from '../status-effects';
 import type { WeaponImpactEvent } from '../weapon-attacks';
-import { SYNERGY_RULES } from '../skills';
-import type { CombatTag, SynergyId } from '../skills';
+import { SYNERGY_RULES, completedPairs } from '../skills';
+import type { SynergyId, SynergyPair } from '../skills';
 import { GameplayWorld } from './GameplayWorld';
 import type { GameplayOptions, WorldEvent } from './types';
 
 export interface QaSynergyDiagnostic {
   readonly id: SynergyId;
   readonly name: string;
-  readonly requiredSkillTags: readonly CombatTag[];
+  /** All allowed unlock pairs (skill IDs) and the ones currently completed by acquired skills. */
+  readonly unlockPairs: readonly SynergyPair[];
+  readonly completedPairs: readonly SynergyPair[];
   readonly unlocked: boolean;
   readonly count: number;
   readonly lastTime: number | null;
@@ -104,7 +106,8 @@ export class QaGameplayWorld extends GameplayWorld {
             return Object.freeze({
               id: rule.id,
               name: rule.name,
-              requiredSkillTags: rule.requiredSkillTags,
+              unlockPairs: rule.unlockPairs,
+              completedPairs: Object.freeze(completedPairs(rule, this.run.ownedIds())),
               unlocked: this.skills.synergies.isEligible(rule.id),
               count: counter?.count ?? 0,
               lastTime: counter?.time ?? null,

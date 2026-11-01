@@ -45,3 +45,16 @@ export function play(w: GameplayWorld, seconds: number, step = 0.05) {
     if (w.survival.getState().runState !== 'active') break;
   }
 }
+/**
+ * Task 07.2 v2: one acquired-skill set per class that completes a workbook pair for all three
+ * class synergies (fits the 4 automatic + 6 passive slots).
+ */
+export const ALL_SYNERGY_SKILLS: Readonly<Record<CharacterClass, readonly string[]>> = {
+  mage: ['fireball', 'frost_nova', 'flame_burst', 'ice_shards'],
+  warrior: ['shield_bash', 'cleave', 'earthquake', 'battle_fury'],
+  archer: ['toxic_volley', 'split_shot', 'hunters_mark'],
+  rogue: ['blood_blades', 'blade_flurry', 'death_mark'],
+};
+export function unlockClassSynergies(w: GameplayWorld, c: CharacterClass, rank = 1) {
+  for (const skill of ALL_SYNERGY_SKILLS[c]) w.grantTestSkill(skill, rank);
+}

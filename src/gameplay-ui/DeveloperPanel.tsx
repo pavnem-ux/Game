@@ -99,8 +99,10 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
               </strong>
               <code>{synergy.id}</code>
               <p>
-                {synergy.unlocked ? 'Разблокирована' : 'Заблокирована'} · нужен приобретённый навык:{' '}
-                {synergy.requiredSkillTags.join(' / ')}
+                {synergy.unlocked
+                  ? `Разблокирована парой: ${synergy.completedPairs.map((p) => p.join(' + ')).join('; ')}`
+                  : 'Заблокирована'}{' '}
+                · пары: {synergy.unlockPairs.map((p) => p.join(' + ')).join(' | ')}
               </p>
               <p>
                 Активаций: <b>{synergy.count}</b>

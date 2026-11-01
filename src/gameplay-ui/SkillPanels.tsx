@@ -1,6 +1,19 @@
 import type { GameplaySnapshot } from '../gameplay';
-import type { OfferCard } from '../skills';
-import { cardSynergyHints, getSkill, synergyOverview } from '../skills';
+import { ALPHA_ENEMY_STATS, ALPHA_WEAPONS } from '../gameplay';
+import type {
+  DamageContext,
+  LineChange,
+  OfferCard,
+  ReadoutLine,
+  SkillDamageReadout,
+} from '../skills';
+import {
+  cardSynergyHints,
+  compareRanks,
+  getSkill,
+  skillDamageReadout,
+  synergyOverview,
+} from '../skills';
 import { useEffect, useRef } from 'react';
 import { alphaBridge } from './store';
 
@@ -61,7 +74,11 @@ export function LevelUpDialog({
                 ? cardSynergyHints(world.character.characterClass, ownedIds, card.skillId)
                 : null;
             const opens = (hints?.unlocks.length ?? 0) > 0;
-            const pairs = (hints?.combinesWith.length ?? 0) > 0;
+            const pairs = (hints?.halfPairs.length ?? 0) > 0;
+            const comparison =
+              card.kind === 'skill'
+                ? compareRanks(card.skillId, card.currentRank, damageContext(world))
+                : null;
             return (
               <button
                 key={`${offer.id}-${cardKey(card)}`}
@@ -70,7 +87,7 @@ export function LevelUpDialog({
                 role="listitem"
                 aria-label={
                   card.kind === 'skill'
-                    ? `${card.name}, ${card.isNew ? 'новый навык' : 'улучшение'}, ранг ${ROMAN[card.nextRank]}${opens ? `, откроет синергию: ${hints!.unlocks.map((u) => u.name).join(', ')}` : ''}`
+                    ? `${card.name}, ${card.isNew ? 'новый навык' : 'улучшение'}, ранг ${ROMAN[card.nextRank]}${opens ? `, откроет синергию: ${hints!.unlocks.map((u) => u.synergy.name).join(', ')}` : ''}`
                     : `${card.name}, награда`
                 }
                 onClick={() => alphaBridge.send({ type: 'choose-skill', card: cardKey(card) })}
@@ -89,6 +106,13 @@ export function LevelUpDialog({
                   {card.kind === 'skill' && <em> {ROMAN[card.nextRank]}</em>}
                 </h3>
                 <p>{card.summary}</p>
+                {comparison && (
+                  <DamageLines
+                    readout={comparison.to}
+                    changes={comparison.from ? comparison.changes.map((c) => c.change) : undefined}
+                    compact
+                  />
+                )}
                 {hints && <CardSynergyHint hints={hints} />}
                 <div className="card-bottom">
                   <span>
@@ -111,8 +135,12 @@ export function LevelUpDialog({
               0,
         ) && (
           <p className="faint synergy-hint-note">
-            ✦ Синергия открывается выбором навыка и срабатывает в бою, когда выполнено её условие.
+            ✦ Синергия открывается, когда собраны оба навыка пары, и срабатывает в бою, когда
+            выполнено её условие.
           </p>
+        )}
+        {offer.cards.some((c) => c.kind === 'skill') && (
+          <p className="faint damage-note">{DAMAGE_NOTE}</p>
         )}
         {!bonus && (
           <button
@@ -195,26 +223,31 @@ const short = (list: readonly string[]) =>
     ? `${list.slice(0, LIMIT).join(', ')} +${list.length - LIMIT}`
     : list.join(', ');
 
-/** Compact synergy hint for one offered card (prerequisites only, never a trigger promise). */
+/** Compact synergy hint for one offered card (pair prerequisites only, never a trigger promise). */
 function CardSynergyHint({ hints }: { hints: ReturnType<typeof cardSynergyHints> }) {
-  const unlocks = hints.unlocks.map((u) => u.name);
-  const partners = [...new Set(hints.combinesWith.flatMap((c) => c.ownedSkills))];
-  const pairedRules = hints.combinesWith.map((c) => c.synergy.name);
+  const unlocks = hints.unlocks.map((u) => u.synergy.name);
+  const unlockWith = [...new Set(hints.unlocks.flatMap((u) => u.withSkills))];
+  const halves = hints.halfPairs.map((h) => h.synergy.name);
   const already = hints.alreadyOpened.map((u) => u.name);
-  if (!unlocks.length && !partners.length && !already.length) return null;
+  if (!unlocks.length && !halves.length && !already.length) return null;
   return (
     <div className="card-synergy" aria-label="Синергии карты">
       {unlocks.length > 0 && (
-        <span className="card-synergy-unlock" title={`Откроет синергию: ${unlocks.join(', ')}`}>
-          ✦ Откроет: {short(unlocks)}
+        <span
+          className="card-synergy-unlock"
+          title={`Откроет: ${hints.unlocks.map((u) => `${u.synergy.name} (пара с: ${u.withSkills.join(' / ')})`).join('; ')}`}
+        >
+          ✦ Откроет: {short(unlocks)} · с {short(unlockWith)}
         </span>
       )}
-      {partners.length > 0 && (
+      {halves.length > 0 && (
         <span
           className="card-synergy-pair"
-          title={`Уже открытые синергии: ${pairedRules.join(', ')}`}
+          title={hints.halfPairs
+            .map((h) => `${h.synergy.name}: нужен ещё ${h.partners.join(' или ')}`)
+            .join('; ')}
         >
-          ⟷ Сочетается с: {short(partners)}
+          ◇ Половина пары: {short(halves)}
         </span>
       )}
       {already.length > 0 && (
@@ -226,8 +259,79 @@ function CardSynergyHint({ hints }: { hints: ReturnType<typeof cardSynergyHints>
   );
 }
 
+const DAMAGE_NOTE = `Урон — пример для текущих характеристик против врага с Resistance ${ALPHA_ENEMY_STATS.resistance}. Крит, число целей, метки и Dodge не гарантированы; итог боя — сумма отдельных попаданий и тиков.`;
+/** Readout context from the throttled snapshot only (stats already include passives and buffs). */
+function damageContext(world: GameplaySnapshot): DamageContext {
+  const ranks = new Map(world.skills.owned.map((o) => [o.skillId, o.rank]));
+  return {
+    stats: world.stats,
+    rankOf: (id) => ranks.get(id) ?? 0,
+    targetResistance: ALPHA_ENEMY_STATS.resistance,
+    weaponCoefficient: ALPHA_WEAPONS[world.character.characterClass].damageCoefficient,
+  };
+}
+const n1 = (v: number) => String(Math.round(v * 100) / 100);
+const DOT_LABEL = { burn: 'Burn', poison: 'Poison', bleed: 'Bleed' } as const;
+function lineText(l: ReadoutLine): { main: string; detail?: string } {
+  if (l.kind === 'hit') {
+    const count = l.count > 1 ? `${l.count} × ` : '';
+    const scope = l.perTarget ? ' за цель' : l.count > 1 ? ' каждый' : '';
+    const periodic = l.every ? `, каждые ${n1(l.every)} с (до ${l.ticks} тиков)` : '';
+    return {
+      main: `${l.label}: ${count}×${n1(l.coefficient)} → ${l.amount.normal}${scope}${periodic}`,
+      detail: `${l.damageType === 'magical' ? 'маг.' : 'физ.'} · крит ${l.amount.critical} (шанс ${n1(l.amount.critChance)}%)${l.secondary ? ' · доп. эффект, без синергий' : ''}${l.condition ? ` · ${l.condition}` : ''}`,
+    };
+  }
+  if (l.kind === 'dot')
+    return {
+      main: `${l.label}: ${n1(l.rawPerStack)} за стак/тик → ${l.perStackTick}`,
+      detail: `${DOT_LABEL[l.effectType]} · ${l.stacks > 1 ? `${l.stacks} стака · ` : ''}${l.chance < 100 ? `шанс ${n1(l.chance)}% · ` : ''}${n1(l.duration)} с · тик ${n1(l.tickInterval)} с · до ${l.stackCap} стаков (${l.fullStackTick}/тик)${l.condition ? ` · ${l.condition}` : ''}`,
+    };
+  return { main: l.text };
+}
+const CHANGE_BADGE: Record<LineChange, string | null> = {
+  new: 'новое',
+  changed: 'изменено',
+  same: null,
+};
+/** Separate damage events of one skill rank (never a single "total"). */
+function DamageLines({
+  readout,
+  changes,
+  compact = false,
+}: {
+  readout: SkillDamageReadout;
+  changes?: readonly LineChange[];
+  compact?: boolean;
+}) {
+  return (
+    <ul className={`damage-lines${compact ? ' is-compact' : ''}`} aria-label="Урон навыка">
+      {readout.kind === 'auto' && !readout.hasDirectDamage && (
+        <li className="damage-line damage-none">Нет прямого урона</li>
+      )}
+      {readout.lines.map((line, i) => {
+        const text = lineText(line);
+        const badge = changes ? CHANGE_BADGE[changes[i]] : null;
+        return (
+          <li key={`${line.kind}:${line.key}`} className={`damage-line damage-${line.kind}`}>
+            <span>
+              {text.main}
+              {badge && <em className={`damage-change change-${changes![i]}`}> {badge}</em>}
+            </span>
+            {text.detail && <small>{text.detail}</small>}
+          </li>
+        );
+      })}
+      {readout.cooldown !== undefined && (
+        <li className="damage-line damage-cooldown">Перезарядка {n1(readout.cooldown)} с</li>
+      )}
+    </ul>
+  );
+}
+
 /** Acquired skills, slots, cooldowns, rerolls and class synergies. Shared by every Skills view. */
 export function SkillsOverviewBody({ world }: { world: GameplaySnapshot }) {
+  const ctx = damageContext(world);
   return (
     <>
       <div className="skill-overview-groups">
@@ -256,6 +360,7 @@ export function SkillsOverviewBody({ world }: { world: GameplaySnapshot }) {
                       </strong>
                       <p className="skill-entry-description">{definition.description}</p>
                       <p>{definition.rankSummaries[skill.rank - 1]}</p>
+                      <DamageLines readout={skillDamageReadout(skill.skillId, skill.rank, ctx)} />
                       {kind === 'auto' && (
                         <span aria-label={`Перезарядка: ${skill.name}`}>
                           {remaining > 0.05 ? `Перезарядка: ${remaining.toFixed(1)} с` : 'Готов'}
@@ -275,12 +380,13 @@ export function SkillsOverviewBody({ world }: { world: GameplaySnapshot }) {
           );
         })}
       </div>
+      {world.skills.owned.length > 0 && <p className="faint damage-note">{DAMAGE_NOTE}</p>}
       <SynergySection world={world} />
     </>
   );
 }
 
-/** Class synergies: prerequisite status, unlocking skills, trigger condition and what is missing. */
+/** Class synergies: pair status, ALL allowed pairs, trigger condition and what is missing. */
 function SynergySection({ world }: { world: GameplaySnapshot }) {
   const info = synergyOverview(
     world.character.characterClass,
@@ -290,8 +396,9 @@ function SynergySection({ world }: { world: GameplaySnapshot }) {
     <section className="synergy-overview" aria-label="Синергии">
       <h3>Синергии</h3>
       <p className="synergy-overview-note">
-        Синергии не занимают слоты и не выбираются. «Доступна» значит, что нужный навык уже есть;
-        сама синергия срабатывает в бою, когда выполнено условие.
+        Синергии не занимают слоты и не выбираются. Каждая открывается любой своей парой из двух
+        приобретённых навыков (ранг I или выше); «Доступна» не значит «сработала» — эффект
+        появляется в бою, когда выполнено условие.
       </p>
       <ul>
         {info.map((s) => (
@@ -313,16 +420,30 @@ function SynergySection({ world }: { world: GameplaySnapshot }) {
             <p>
               <b>Эффект:</b> {s.effect}
             </p>
-            <p>
-              <b>Открывает:</b> {s.requirement} —{' '}
-              {s.unlockingSkills.map((u, i) => (
-                <span key={u.skillId} className={u.owned ? 'synergy-skill-owned' : undefined}>
-                  {i > 0 && ', '}
-                  {u.name}
-                  {u.owned && ' ✓'}
-                </span>
-              ))}
-            </p>
+            <div className="synergy-pairs">
+              <b>Пары:</b>
+              <ul>
+                {s.pairs.map((pair) => (
+                  <li
+                    key={pair.skills.map((k) => k.skillId).join('+')}
+                    className={`synergy-pair-row${pair.complete ? ' is-complete' : ''}`}
+                  >
+                    {pair.skills.map((k, i) => (
+                      <span key={k.skillId} className={k.owned ? 'synergy-skill-owned' : undefined}>
+                        {i > 0 && ' + '}
+                        {k.name}
+                        {k.owned ? ' ✓' : ''}
+                      </span>
+                    ))}
+                    {pair.complete
+                      ? ' — собрана'
+                      : pair.missing.length === 1
+                        ? ` — нужен ${pair.missing[0]}`
+                        : ''}
+                  </li>
+                ))}
+              </ul>
+            </div>
             <p className="synergy-explanation">{s.explanation}</p>
           </li>
         ))}

@@ -147,6 +147,14 @@ export interface SynergyTriggeredEvent {
   readonly targetId: string;
   readonly position: Point;
 }
+/** Task 07.2 v2: acquiring a skill completed the first unlock pair of a synergy (emitted once). */
+export interface SynergyUnlockedEvent {
+  readonly type: 'synergy-unlocked';
+  readonly synergyId: string;
+  /** The completed pair (skill IDs, workbook order); the acquired skill is one of them. */
+  readonly pair: readonly [string, string];
+  readonly skillId: string;
+}
 export interface ControlEvent {
   readonly type: 'control-applied' | 'control-expired';
   readonly targetId: string;
@@ -161,6 +169,7 @@ export type SkillEvent =
   | SkillActivatedEvent
   | SkillAreaEvent
   | SynergyTriggeredEvent
+  | SynergyUnlockedEvent
   | ControlEvent;
 
 export interface ZoneSnapshot {

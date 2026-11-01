@@ -48,20 +48,45 @@ export async function checkSkillsAccess(page) {
       0,
       'no redundant Skills button on the Pause screen',
     );
-    // 2. Synergies section from the authoritative rules.
+    // 2. Synergies section from the authoritative pair table (Task 07.2 v2).
     const synergies = skills.getByRole('region', { name: 'Синергии', exact: true });
     assert.equal(await synergies.locator('.synergy-entry').count(), 3);
     const wildfire = synergies.locator('[data-synergy-id="wildfire"]');
     const thermal = synergies.locator('[data-synergy-id="thermal_shock"]');
-    assert.match(await wildfire.getAttribute('class'), /is-available/);
+    // One skill of a pair opens nothing; every allowed pair is listed with readable names.
+    assert.match(await wildfire.getAttribute('class'), /is-locked/);
     assert.match(await thermal.getAttribute('class'), /is-locked/);
-    assert.match(await thermal.innerText(), /Не хватает: ледяной навык/);
-    assert.match(await thermal.innerText(), /Кольцо льда/);
-    assert.match(await wildfire.innerText(), /Открыто навыком: Огненный шар/);
+    assert.equal(await thermal.locator('.synergy-pair-row').count(), 4);
+    assert.match(await thermal.innerText(), /Огненный шар ✓ \+ Кольцо льда — нужен Кольцо льда/);
+    assert.match(
+      await thermal.innerText(),
+      /Не хватает одного навыка: Кольцо льда или Ледяные осколки/,
+    );
+    assert.doesNotMatch(await synergies.innerText(), /[a-z]+_[a-z]+/, 'no internal IDs');
+    // Owned skills show their computed damage breakdown.
+    const damage = skills.locator('.damage-lines').first();
+    assert.match(await damage.innerText(), /Снаряд: ×1\.4 → \d+/);
+    assert.match(await damage.innerText(), /Burn \(цель и задетые взрывом\): 3 за стак\/тик/);
+    // Acquiring the second skill of a pair unlocks the synergy at once and announces it.
+    await command({ type: 'grant-skill', skillId: 'frost_nova', rank: 1 });
+    await page.waitForFunction(() =>
+      document
+        .querySelector('[data-synergy-id="thermal_shock"]')
+        ?.className.includes('is-available'),
+    );
+    assert.match(await thermal.innerText(), /Открыто парой: Огненный шар \+ Кольцо льда/);
+    const unlocked = (await state()).events.filter((e) => e.event.type === 'synergy-unlocked');
+    assert.deepEqual(
+      unlocked.map((e) => [e.event.synergyId, e.event.pair]),
+      [['thermal_shock', ['fireball', 'frost_nova']]],
+    );
+    assert.equal((await state()).screen, 'paused', 'unlock does not resume');
     await page.screenshot({ path: `artifacts/alpha-18-pause-skills-${width}.png`, fullPage: true });
-    // Pause stays frozen while reading; layout fits the viewport.
+    // Pause stays frozen while reading (the unlock did not advance time); layout fits.
+    const frozen = await state();
+    assert.equal(frozen.world.time, paused.world.time);
     await page.waitForTimeout(120);
-    assert.deepEqual((await state()).world, paused.world);
+    assert.deepEqual((await state()).world, frozen.world);
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     const box = await pauseDialog.locator('.pause-panel').boundingBox();
     assert.ok(box.x >= 0 && box.x + box.width <= width + 1, 'pause panel fits the viewport');
@@ -107,10 +132,20 @@ export async function checkSkillsAccess(page) {
     assert.equal(await cards.count(), offered.length);
     for (let i = 0; i < offered.length; i++) {
       const card = offered[i];
-      const hint = cards.nth(i).locator('.card-synergy-unlock');
+      // No skills owned yet: a class card is only half of a pair, never an immediate unlock.
+      assert.equal(await cards.nth(i).locator('.card-synergy-unlock').count(), 0);
       if (card.kind === 'skill' && MAGE_CLASS_SKILLS.has(card.skillId))
-        assert.match(await hint.innerText(), /Откроет:/, `${card.skillId} unlocks a synergy`);
+        assert.match(
+          await cards.nth(i).locator('.card-synergy-pair').innerText(),
+          /Половина пары:/,
+          `${card.skillId} is half of a pair`,
+        );
       else assert.equal(await cards.nth(i).locator('.card-synergy').count(), 0, 'no hint');
+      if (card.kind === 'skill')
+        assert.ok(
+          (await cards.nth(i).locator('.damage-lines').count()) === 1,
+          `${card.skillId} shows its damage readout`,
+        );
     }
     await page.getByRole('button', { name: 'Обзор навыков', exact: true }).click();
     const blocking = page.locator('#skill-overview');

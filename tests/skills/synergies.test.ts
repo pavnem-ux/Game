@@ -5,18 +5,13 @@ import type { GameplayWorld } from '../../src/gameplay';
 import { SYNERGY_RULES, SYNERGY_TUNING } from '../../src/skills';
 import type { CombatTag } from '../../src/skills';
 import type { EffectType } from '../../src/status-effects';
-import { arena, skillEvents, stationaryMelee } from './helpers';
+import { arena, skillEvents, stationaryMelee, unlockClassSynergies } from './helpers';
 
 /** Far-away enemies (beyond every basic weapon range), basic on-hit disabled, huge HP. */
 function setup(c: CharacterClass, count = 1) {
   const w = arena(c, { level: 10, onHit: [] });
-  const prerequisites: Record<CharacterClass, string[]> = {
-    mage: ['frost_nova', 'fireball'],
-    warrior: ['ground_slam'],
-    archer: ['toxic_volley'],
-    rogue: ['blade_flurry'],
-  };
-  for (const skill of prerequisites[c]) w.grantTestSkill(skill, 1);
+  // Synergies need a completed workbook pair (v2); these sets open all three rules per class.
+  unlockClassSynergies(w, c);
   w.weapons.setAttackSpeed('player', 1);
   const ids = Array.from({ length: count }, (_, i) =>
     w.spawnEnemy('melee', 900 + i * 30, 0, stationaryMelee),

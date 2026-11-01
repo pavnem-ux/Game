@@ -11,7 +11,7 @@ export { RunSkills } from './RunSkills';
 export { SkillEngine } from './SkillEngine';
 export type { SkillHost, PreHit, HitInfo } from './SkillEngine';
 export { SYNERGY_RULES } from './synergies';
-export type { SynergyId, SynergyRule } from './synergies';
+export type { SynergyId, SynergyPair, SynergyRule } from './synergies';
 export { ABILITIES } from './abilities';
 export {
   eligiblePools,
@@ -24,12 +24,26 @@ export {
 export { composeRunStats, NO_MODIFIERS } from './stats';
 export type { RunStatModifiers } from './stats';
 export type * from './types';
-export { skillUnlocksSynergy } from './synergies';
-export {
-  synergyOverview,
-  cardSynergyHints,
-  rulesForClass,
-  requirementText,
-  SYNERGY_TAG_LABELS,
+export { completedPairs, pairComplete, synergyUnlocked, validateSynergyRules } from './synergies';
+export { synergyOverview, cardSynergyHints, rulesForClass, pairText } from './synergy-info';
+export type {
+  SynergyInfo,
+  SynergyPairInfo,
+  SynergyRef,
+  SynergySkillRef,
+  CardSynergyHints,
 } from './synergy-info';
-export type { SynergyInfo, SynergyRef, SynergySkillRef, CardSynergyHints } from './synergy-info';
+export { elementalDamageMultiplier, modifyPlayerEffect } from './modifiers';
+export type { RankLookup } from './modifiers';
+export { skillDamageReadout, compareRanks } from './damage-readout';
+export type {
+  DamageContext,
+  HitAmount,
+  HitLine,
+  DotLine,
+  InfoLine,
+  ReadoutLine,
+  SkillDamageReadout,
+  RankComparison,
+  LineChange,
+} from './damage-readout';

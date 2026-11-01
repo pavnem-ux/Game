@@ -32,7 +32,8 @@ import type { GameplayOptions, GameplaySnapshot, WorldEvent } from './types';
 
 import { RunExperience, XP_RULES } from './experience';
 import type { ExperienceEvent } from './experience';
-import { RunSkills, SkillEngine } from '../skills';
+import { RunSkills, SkillEngine, SYNERGY_RULES, completedPairs } from '../skills';
+import type { SkillEvent } from '../skills';
 import type { CombatAttributes } from '../character-stats';
 import type { EffectType } from '../status-effects';
 import { spawningSettings, wavePressure, offscreenPosition, viewportSize } from './spawning';
@@ -372,17 +373,40 @@ export class GameplayWorld {
   chooseSkill(cardKey: string): void {
     if (typeof cardKey !== 'string') throw new TypeError('Card key must be a string.');
     if (this.survival.getState().runState === 'ended') throw new Error('The run has ended.');
+    const unlockedBefore = new Set(this.skills.synergies.unlockedIds());
     const { result, events } = this.run.choose(cardKey);
     this.record('skill', events);
     this.skills.applyChoice(result);
+    if (result.type === 'skill') this.recordSynergyUnlocks(unlockedBefore, result.skillId);
     this.rebuildOnHit();
     this.prepare();
+  }
+  /** Emit `synergy-unlocked` for rules opened by this acquisition (a rule unlocks only once). */
+  private recordSynergyUnlocks(before: ReadonlySet<string>, skillId: string): void {
+    const owned = this.run.ownedIds();
+    const events: SkillEvent[] = [];
+    for (const rule of SYNERGY_RULES) {
+      if (before.has(rule.id) || !this.skills.synergies.isEligible(rule.id)) continue;
+      const pair = completedPairs(rule, owned).find((p) => p.includes(skillId));
+      if (pair)
+        events.push(
+          Object.freeze({
+            type: 'synergy-unlocked',
+            synergyId: rule.id,
+            pair: Object.freeze([pair[0], pair[1]] as const),
+            skillId,
+          }),
+        );
+    }
+    if (events.length > 0) this.record('skill', events);
   }
   /** DEV/tests only: equip a class/universal skill at a rank without an offer (limits still apply). */
   grantTestSkill(skillId: string, rank = 1): void {
     if (typeof skillId !== 'string') throw new TypeError('skillId must be a string.');
+    const unlockedBefore = new Set(this.skills.synergies.unlockedIds());
     this.skills.applyChoice(this.run.grantForTesting(skillId, rank));
     this.record('skill', [Object.freeze({ type: 'skill-chosen', skillId, rank })]);
+    this.recordSynergyUnlocks(unlockedBefore, skillId);
     this.rebuildOnHit();
     this.prepare();
   }

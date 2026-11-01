@@ -2,6 +2,7 @@ import type { CharacterClass } from '../character-stats';
 import { sameInstant } from '../simulation-boundary';
 import type { EffectType } from '../status-effects';
 import type { Point } from '../weapon-attacks';
+import { getSkill } from './catalog';
 import { SYNERGY_TUNING } from './config';
 import type { HitInfo, PreHit, SkillEngine } from './SkillEngine';
 import type { CombatTag } from './types';
@@ -19,13 +20,20 @@ export type SynergyId =
   | 'blood_frenzy'
   | 'deep_wounds'
   | 'final_cut';
+/** Two distinct skill IDs; order is presentation only (the workbook's «Навык 1» / «Навык 2»). */
+export type SynergyPair = readonly [string, string];
+const pairs = (list: readonly (readonly [string, string])[]): readonly SynergyPair[] =>
+  Object.freeze(list.map((pair) => Object.freeze([pair[0], pair[1]] as const)));
 export interface SynergyRule {
   readonly id: SynergyId;
   readonly name: string;
   readonly characterClass: CharacterClass;
   readonly trigger: 'hit' | 'kill';
-  /** Any acquired skill with one of these catalogue tags unlocks this rule (rank I+). */
-  readonly requiredSkillTags: readonly CombatTag[];
+  /**
+   * Task 07.2 v2 unlock: an OR of explicit two-skill pairs. A pair counts once both distinct skill
+   * IDs are acquired in this run (rank I+). Source: workbook sheet «Пары синергий» (40 rows).
+   */
+  readonly unlockPairs: readonly SynergyPair[];
   readonly description: string;
   /** Player-facing combat condition (display only; the resolver below is authoritative). */
   readonly condition: string;
@@ -36,7 +44,12 @@ export interface SynergyRule {
 export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
   {
     id: 'thermal_shock',
-    requiredSkillTags: Object.freeze(['ice']),
+    unlockPairs: pairs([
+      ['fireball', 'frost_nova'],
+      ['fireball', 'ice_shards'],
+      ['flame_burst', 'blizzard'],
+      ['inferno', 'frost_nova'],
+    ]),
     name: 'Термошок',
     characterClass: 'mage',
     trigger: 'hit',
@@ -46,7 +59,12 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
   },
   {
     id: 'wildfire',
-    requiredSkillTags: Object.freeze(['fire']),
+    unlockPairs: pairs([
+      ['fireball', 'flame_burst'],
+      ['fireball', 'inferno'],
+      ['flame_burst', 'inferno'],
+      ['inferno', 'elemental_mastery'],
+    ]),
     name: 'Лесной пожар',
     characterClass: 'mage',
     trigger: 'kill',
@@ -56,7 +74,12 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
   },
   {
     id: 'shattered_ice',
-    requiredSkillTags: Object.freeze(['ice']),
+    unlockPairs: pairs([
+      ['frost_nova', 'ice_shards'],
+      ['frost_nova', 'blizzard'],
+      ['ice_shards', 'blizzard'],
+      ['blizzard', 'elemental_mastery'],
+    ]),
     name: 'Расколотый лёд',
     characterClass: 'mage',
     trigger: 'hit',
@@ -66,7 +89,11 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
   },
   {
     id: 'skull_crusher',
-    requiredSkillTags: Object.freeze(['melee']),
+    unlockPairs: pairs([
+      ['shield_bash', 'cleave'],
+      ['shield_bash', 'whirlwind'],
+      ['ground_slam', 'cleave'],
+    ]),
     name: 'Сокрушитель черепов',
     characterClass: 'warrior',
     trigger: 'hit',
@@ -76,7 +103,12 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
   },
   {
     id: 'battle_momentum',
-    requiredSkillTags: Object.freeze(['melee']),
+    unlockPairs: pairs([
+      ['whirlwind', 'battle_fury'],
+      ['cleave', 'battle_fury'],
+      ['ground_slam', 'battle_fury'],
+      ['war_cry', 'battle_fury'],
+    ]),
     name: 'Боевой напор',
     characterClass: 'warrior',
     trigger: 'kill',
@@ -86,7 +118,11 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
   },
   {
     id: 'seismic_impact',
-    requiredSkillTags: Object.freeze(['heavy_melee']),
+    unlockPairs: pairs([
+      ['ground_slam', 'earthquake'],
+      ['shield_bash', 'earthquake'],
+      ['ground_slam', 'shield_bash'],
+    ]),
     name: 'Сейсмический удар',
     characterClass: 'warrior',
     trigger: 'hit',
@@ -96,7 +132,11 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
   },
   {
     id: 'toxic_barrage',
-    requiredSkillTags: Object.freeze(['projectile']),
+    unlockPairs: pairs([
+      ['toxic_volley', 'multishot'],
+      ['toxic_volley', 'split_shot'],
+      ['poison_trap', 'split_shot'],
+    ]),
     name: 'Токсичный шквал',
     characterClass: 'archer',
     trigger: 'hit',
@@ -108,7 +148,11 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
   },
   {
     id: 'plague_chain',
-    requiredSkillTags: Object.freeze(['poison']),
+    unlockPairs: pairs([
+      ['toxic_volley', 'poison_trap'],
+      ['toxic_volley', 'split_shot'],
+      ['poison_trap', 'arrow_rain'],
+    ]),
     name: 'Цепь чумы',
     characterClass: 'archer',
     trigger: 'kill',
@@ -118,7 +162,11 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
   },
   {
     id: 'deadly_precision',
-    requiredSkillTags: Object.freeze(['projectile']),
+    unlockPairs: pairs([
+      ['piercing_arrow', 'hunters_mark'],
+      ['split_shot', 'hunters_mark'],
+      ['toxic_volley', 'hunters_mark'],
+    ]),
     name: 'Смертельная точность',
     characterClass: 'archer',
     trigger: 'hit',
@@ -128,7 +176,11 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
   },
   {
     id: 'blood_frenzy',
-    requiredSkillTags: Object.freeze(['dagger']),
+    unlockPairs: pairs([
+      ['lacerate', 'blade_flurry'],
+      ['blood_blades', 'blade_flurry'],
+      ['fan_of_knives', 'serrated_blades'],
+    ]),
     name: 'Кровавое безумие',
     characterClass: 'rogue',
     trigger: 'hit',
@@ -138,7 +190,11 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
   },
   {
     id: 'deep_wounds',
-    requiredSkillTags: Object.freeze(['dagger']),
+    unlockPairs: pairs([
+      ['blood_blades', 'serrated_blades'],
+      ['lacerate', 'serrated_blades'],
+      ['blood_blades', 'blade_flurry'],
+    ]),
     name: 'Глубокие раны',
     characterClass: 'rogue',
     trigger: 'hit',
@@ -148,7 +204,11 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
   },
   {
     id: 'final_cut',
-    requiredSkillTags: Object.freeze(['dagger', 'mark']),
+    unlockPairs: pairs([
+      ['lacerate', 'death_mark'],
+      ['blood_blades', 'death_mark'],
+      ['blade_flurry', 'death_mark'],
+    ]),
     name: 'Последний разрез',
     characterClass: 'rogue',
     trigger: 'hit',
@@ -160,16 +220,66 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
 
 const RULES_BY_ID = new Map(SYNERGY_RULES.map((rule) => [rule.id, rule]));
 
-/**
- * The single prerequisite check: does this skill definition's tag set satisfy the rule?
- * Shared by combat (SynergyResolver), the Skills overview and level-up card hints.
- */
-export function skillUnlocksSynergy(
-  rule: Pick<SynergyRule, 'requiredSkillTags'>,
-  skill: { readonly tags: readonly CombatTag[] },
-): boolean {
-  return skill.tags.some((tag) => rule.requiredSkillTags.includes(tag));
+/** True once both skills of the pair are acquired (any rank ≥ I; upgrades never remove ownership). */
+export function pairComplete(pair: SynergyPair, owned: ReadonlySet<string>): boolean {
+  return owned.has(pair[0]) && owned.has(pair[1]);
 }
+/** Completed unlock pairs of a rule for the acquired skill IDs, in workbook order. */
+export function completedPairs(
+  rule: Pick<SynergyRule, 'unlockPairs'>,
+  ownedIds: Iterable<string>,
+): readonly SynergyPair[] {
+  const owned = ownedIds instanceof Set ? (ownedIds as ReadonlySet<string>) : new Set(ownedIds);
+  return rule.unlockPairs.filter((pair) => pairComplete(pair, owned));
+}
+/**
+ * The single unlock check, shared by combat (SynergyResolver), the Skills overview, level-up card
+ * hints and QA diagnostics: at least one allowed pair is fully acquired.
+ */
+export function synergyUnlocked(
+  rule: Pick<SynergyRule, 'unlockPairs'>,
+  ownedIds: Iterable<string>,
+): boolean {
+  return completedPairs(rule, ownedIds).length > 0;
+}
+
+/**
+ * Startup validation of the pair configuration: exactly 12 rules, 3 per class; every pair has two
+ * distinct existing skills legal for that class (class skill or universal), at least one active;
+ * no duplicate order-insensitive pair inside a rule; every rule has a pair. Throws on violation.
+ */
+export function validateSynergyRules(
+  rules: readonly Pick<SynergyRule, 'id' | 'characterClass' | 'unlockPairs'>[],
+  lookup: (skillId: string) => { readonly owner: string; readonly kind: 'auto' | 'passive' },
+): void {
+  if (rules.length !== 12) throw new Error(`Expected 12 synergies, found ${rules.length}.`);
+  const ids = new Set(rules.map((rule) => rule.id));
+  if (ids.size !== rules.length) throw new Error('Duplicate synergy ID.');
+  const perClass = new Map<string, number>();
+  for (const rule of rules) {
+    perClass.set(rule.characterClass, (perClass.get(rule.characterClass) ?? 0) + 1);
+    if (rule.unlockPairs.length === 0) throw new Error(`Synergy ${rule.id} has no unlock pair.`);
+    const seen = new Set<string>();
+    for (const pair of rule.unlockPairs) {
+      if (pair.length !== 2 || pair[0] === pair[1])
+        throw new Error(`Synergy ${rule.id} needs two distinct skills per pair.`);
+      const kinds = pair.map((skillId) => {
+        const skill = lookup(skillId);
+        if (skill.owner !== rule.characterClass && skill.owner !== 'universal')
+          throw new Error(`Skill ${skillId} is not available to ${rule.characterClass}.`);
+        return skill.kind;
+      });
+      if (!kinds.includes('auto'))
+        throw new Error(`Synergy ${rule.id} pair ${pair.join('+')} has no active skill.`);
+      const key = [...pair].sort().join('+');
+      if (seen.has(key)) throw new Error(`Synergy ${rule.id} repeats pair ${key}.`);
+      seen.add(key);
+    }
+  }
+  for (const [cls, n] of perClass)
+    if (n !== 3) throw new Error(`Class ${cls} must have exactly 3 synergies, found ${n}.`);
+}
+validateSynergyRules(SYNERGY_RULES, getSkill);
 
 const SYNERGY_TAGS: ReadonlySet<CombatTag> = new Set(['synergy', 'secondary']);
 const T = SYNERGY_TUNING;
@@ -187,15 +297,26 @@ export class SynergyResolver {
   private get cls() {
     return this.e.host.characterClass;
   }
+  private unlockedCache: { version: number; ids: ReadonlySet<SynergyId> } | null = null;
+  /**
+   * Unlocked rules of the current class. Ownership only grows within a run (choices are permanent),
+   * so the owned-skill count is a sufficient cache version.
+   */
+  unlockedIds(): ReadonlySet<SynergyId> {
+    const owned = this.e.run.ownedIds();
+    if (this.unlockedCache?.version === owned.length) return this.unlockedCache.ids;
+    const set = new Set(owned);
+    const ids = new Set(
+      SYNERGY_RULES.filter(
+        (rule) => rule.characterClass === this.cls && synergyUnlocked(rule, set),
+      ).map((rule) => rule.id),
+    );
+    this.unlockedCache = { version: owned.length, ids };
+    return ids;
+  }
   /** Pure ownership/class check shared with read-only QA diagnostics. */
   isEligible(id: SynergyId): boolean {
-    const rule = RULES_BY_ID.get(id)!;
-    return (
-      rule.characterClass === this.cls &&
-      this.e.run
-        .ownedIds()
-        .some((skillId) => skillUnlocksSynergy(rule, this.e.run.definition(skillId)))
-    );
+    return this.unlockedIds().has(id);
   }
   private now() {
     return this.e.time;
