@@ -48,6 +48,11 @@ export interface SkillHost {
   readonly characterClass: CharacterClass;
   readonly primary: PrimaryAttributes;
   readonly basicWeaponId: string;
+  /**
+   * Fixed simulation grid (the world's control step). Automatic activations happen only on this
+   * grid, so frame endpoints never decide when a moving target became eligible.
+   */
+  readonly activationStep: number;
   playerBody(): CombatBody;
   facing(): Point;
   /** Registered, Core-alive enemy IDs in stable order. */
@@ -320,6 +325,18 @@ export class SkillEngine {
   }
   private geometry: { id: string; body: CombatBody }[] | null = null;
   /** Living enemy bodies at the current instant; cached until time, deaths or spawns change them. */
+  /**
+   * Target position for pre-hit snapshots. Weapon impacts resolve Core damage before the world
+   * snapshot, so a lethal target is dead but still registered in EnemyAI until cleanup.
+   */
+  lastPosition(id: string): Point | null {
+    try {
+      const p = this.host.enemies.getEnemy(id).position;
+      return Object.freeze({ x: p.x, y: p.y });
+    } catch {
+      return this.deaths.get(id) ?? null;
+    }
+  }
   bodies(): readonly { id: string; body: CombatBody }[] {
     if (this.geometry) return this.geometry;
     const out: { id: string; body: CombatBody }[] = [];
@@ -375,7 +392,8 @@ export class SkillEngine {
     return this.bodies()
       .filter(({ body }) => {
         const d = Math.hypot(body.x - center.x, body.y - center.y);
-        return d <= radius + body.radius && d > innerRadius + body.radius;
+        // A ring excludes its inner disc; a filled circle includes targets at its very centre.
+        return d <= radius + body.radius && (innerRadius <= 0 || d > innerRadius + body.radius);
       })
       .map(({ id }) => id);
   }
@@ -448,7 +466,7 @@ export class SkillEngine {
       stunned: !!control && active(control.stunUntil),
       mark: this.activeMark(targetId),
       hpPercent: entity.maxHp > 0 ? (entity.currentHp / entity.maxHp) * 100 : 0,
-      position: this.body(targetId) ?? this.deaths.get(targetId) ?? null,
+      position: this.lastPosition(targetId),
     });
   }
   /**
@@ -786,8 +804,16 @@ export class SkillEngine {
     if (!state || !this.host.core.getEntity(this.host.playerId).alive) return null;
     const behavior = ABILITIES[skillId];
     if (!behavior?.canActivate?.(this, this.params(skillId))) return null;
-    return Math.max(this.clock, state.readyAt);
+    return this.gridCeil(Math.max(this.clock, state.readyAt));
   }
+  /** Smallest grid instant k·step ≥ t (same arithmetic as the world's control ticks). */
+  private gridCeil(t: number): number {
+    const step = this.host.activationStep;
+    // Already on the grid (within clock precision): keep the exact current instant.
+    if (sameInstant(Math.round(t / step) * step, t)) return t;
+    return Math.ceil(t / step) * step;
+  }
+
   /**
    * `includeAutos=false` excludes opportunistic activations. Their readiness depends on live enemy
    * geometry, which other modules advance first; they are evaluated only at real boundaries.

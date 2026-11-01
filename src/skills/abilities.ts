@@ -566,7 +566,8 @@ export const ABILITIES: Readonly<Record<string, AbilityBehavior>> = Object.freez
             if (!center) return;
             const body = engine.body(hit.targetId);
             const offset = (body?.radius ?? 14) + p.radius + 1;
-            // Sub-projectiles start outside the primary target and never split again.
+            // Sub-projectiles start outside the primary target, never split again and, as secondary
+            // hits, never trigger synergies or passive reactions.
             for (const d of fan(direction, p.splits, p.splitSpread)) {
               const st = tags('split_shot', 'secondary');
               engine.launch(
@@ -581,7 +582,7 @@ export const ABILITIES: Readonly<Record<string, AbilityBehavior>> = Object.freez
                 {
                   key: `${key}:split`,
                   tags: st,
-                  procs: true,
+                  procs: false,
                   onHit: (h, en) => {
                     if (p.splitPoisonDamage > 0 && h.pre.effects.has('poison'))
                       effect(en, h.targetId, 'poison', p.splitPoisonDamage, p.splitPoisonDuration);

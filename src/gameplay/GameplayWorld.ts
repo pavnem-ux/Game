@@ -134,6 +134,7 @@ export class GameplayWorld {
         characterClass: options.characterClass,
         primary: this.character.primaryAttributes,
         basicWeaponId: weapon.id,
+        activationStep: ALPHA.controlStep,
         playerBody: () => world.body,
         facing: () => world.facing,
         enemyIds: () => [...world.enemyIds].filter((id) => world.core.getEntity(id).alive),
