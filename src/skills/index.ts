@@ -24,3 +24,12 @@ export {
 export { composeRunStats, NO_MODIFIERS } from './stats';
 export type { RunStatModifiers } from './stats';
 export type * from './types';
+export { skillUnlocksSynergy } from './synergies';
+export {
+  synergyOverview,
+  cardSynergyHints,
+  rulesForClass,
+  requirementText,
+  SYNERGY_TAG_LABELS,
+} from './synergy-info';
+export type { SynergyInfo, SynergyRef, SynergySkillRef, CardSynergyHints } from './synergy-info';

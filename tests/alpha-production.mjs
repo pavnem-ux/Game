@@ -90,12 +90,12 @@ try {
   await page.getByRole('button', { name: 'Пауза', exact: true }).click();
   await page.getByRole('button', { name: 'Продолжить' }).waitFor();
   const pauseTime = await page.getByTestId('alpha-timer').innerText();
-  await page.getByRole('button', { name: 'Обзор навыков', exact: true }).click();
-  await page.getByRole('dialog', { name: 'Обзор навыков', exact: true }).waitFor();
+  // Task 07.3: the Pause screen shows Skills and Synergies immediately (production UI).
+  await page.getByRole('region', { name: 'Обзор навыков', exact: true }).waitFor();
+  await page.getByRole('region', { name: 'Синергии', exact: true }).waitFor();
+  assert.equal(await page.locator('.synergy-entry').count(), 3);
   await page.waitForTimeout(100);
   assert.equal(await page.getByTestId('alpha-timer').innerText(), pauseTime);
-  await page.getByRole('button', { name: 'Закрыть обзор навыков' }).click();
-  await page.getByRole('button', { name: 'Продолжить' }).waitFor();
   await page.getByRole('button', { name: 'Продолжить' }).click();
   await page.screenshot({ path: 'artifacts/alpha-09-production.png' });
   for (const file of await readdir('dist/assets'))

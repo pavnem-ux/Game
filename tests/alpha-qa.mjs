@@ -118,7 +118,9 @@ try {
   const paused = (await state()).world.time;
   await page.waitForTimeout(150);
   assert.equal((await state()).world.time, paused, 'overview does not override manual pause');
-  await page.getByRole('button', { name: 'Закрыть обзор навыков' }).click();
+  // Task 07.3: the quick-look folds into the Pause screen, which shows Skills inline.
+  await overview.waitFor({ state: 'detached' });
+  await page.getByRole('region', { name: 'Обзор навыков', exact: true }).waitFor();
   assert.equal((await state()).screen, 'paused');
   await page.getByRole('button', { name: 'Продолжить', exact: false }).click();
   await page.getByRole('button', { name: 'Обзор навыков', exact: true }).click();

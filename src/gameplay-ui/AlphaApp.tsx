@@ -12,7 +12,7 @@ import { CHARACTER_CLASSES, calculateCharacterStats } from '../character-stats';
 import { CLASS_LABELS, WEAPON_LABELS } from '../gameplay';
 import { alphaBridge } from './store';
 import { AlphaCanvas } from './AlphaCanvas';
-import { LevelUpDialog, SkillBar } from './SkillPanels';
+import { LevelUpDialog, PauseDialog, SkillBar } from './SkillPanels';
 import { displayHp } from './format';
 import './alpha.css';
 const DeveloperPanel =
@@ -49,6 +49,11 @@ export function AlphaApp() {
   useEffect(() => {
     setSkillsOpen(false);
   }, [state.runId]);
+  // The Pause screen shows Skills inline; a quick-look overview opened during play is folded into it.
+  // This only changes UI state, never the simulation's pause ownership.
+  useEffect(() => {
+    if (state.screen === 'paused') setSkillsOpen(false);
+  }, [state.screen]);
   const debug =
     (import.meta.env.DEV || __QA_BUILD__) && new URLSearchParams(location.search).has('debug');
   const s = state.world;
@@ -66,7 +71,7 @@ export function AlphaApp() {
         </div>
         <span className="header-caption">ХРОНИКИ ПОСЛЕДНЕГО СВЕТА</span>
         <span className="build-badge">
-          {__QA_BUILD__ ? 'QA PREVIEW' : 'COMBAT ALPHA'} <span>07.2</span>
+          {__QA_BUILD__ ? 'QA PREVIEW' : 'COMBAT ALPHA'} <span>07.3</span>
         </span>
       </header>
       <main className={`arena alpha-arena screen-${state.screen}`}>
@@ -259,7 +264,8 @@ export function AlphaApp() {
         {state.screen === 'level-up' && s?.skills.offer && (
           <LevelUpDialog world={s} onOpenSkills={openSkills} hiddenBehindSkills={skillsOpen} />
         )}
-        {(state.screen === 'paused' || state.screen === 'revival' || state.screen === 'ended') && (
+        {state.screen === 'paused' && s && <PauseDialog world={s} />}
+        {(state.screen === 'revival' || state.screen === 'ended') && (
           <section
             className="overlay modal-overlay"
             role="dialog"
@@ -269,45 +275,18 @@ export function AlphaApp() {
             aria-hidden={skillsOpen || undefined}
           >
             <div className="small-modal">
-              <div className="modal-sigil">{state.screen === 'paused' ? 'Ⅱ' : '◇'}</div>
+              <div className="modal-sigil">◇</div>
               <div className="eyebrow centered">
-                {state.screen === 'revival'
-                  ? 'МИР ЖДЁТ ВАШЕГО РЕШЕНИЯ'
-                  : state.screen === 'ended'
-                    ? 'ЗАБЕГ ЗАВЕРШЁН'
-                    : 'МИГ ТИШИНЫ'}
+                {state.screen === 'revival' ? 'МИР ЖДЁТ ВАШЕГО РЕШЕНИЯ' : 'ЗАБЕГ ЗАВЕРШЁН'}
               </div>
               <h2 id="alpha-dialog-title">
-                {state.screen === 'paused'
-                  ? 'Перевести дух.'
-                  : state.screen === 'revival'
-                    ? 'Ещё одна искра.'
-                    : 'Искра погасла.'}
+                {state.screen === 'revival' ? 'Ещё одна искра.' : 'Искра погасла.'}
               </h2>
               <p>
                 {state.screen === 'revival'
                   ? 'Вернитесь с 50% HP и защитой на 3 секунды. Арена и враги останутся прежними.'
-                  : state.screen === 'paused'
-                    ? 'Всё игровое время остановлено.'
-                    : `${time(s?.time ?? 0)} в руинах · ${s?.kills ?? 0} повержено`}
+                  : `${time(s?.time ?? 0)} в руинах · ${s?.kills ?? 0} повержено`}
               </p>
-              {state.screen === 'paused' && (
-                <button
-                  className="button skills-modal-open"
-                  aria-label="Обзор навыков"
-                  onClick={openSkills}
-                >
-                  Навыки
-                </button>
-              )}
-              {state.screen === 'paused' && (
-                <button
-                  className="button primary"
-                  onClick={() => alphaBridge.send({ type: 'resume' })}
-                >
-                  Продолжить →
-                </button>
-              )}
               {state.screen === 'revival' && (
                 <>
                   <button

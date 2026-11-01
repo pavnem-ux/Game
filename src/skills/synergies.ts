@@ -27,6 +27,10 @@ export interface SynergyRule {
   /** Any acquired skill with one of these catalogue tags unlocks this rule (rank I+). */
   readonly requiredSkillTags: readonly CombatTag[];
   readonly description: string;
+  /** Player-facing combat condition (display only; the resolver below is authoritative). */
+  readonly condition: string;
+  /** Player-facing outcome (display only). */
+  readonly effect: string;
 }
 /** Display/catalogue data. Conditions are evaluated from tags, statuses and events below. */
 export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
@@ -36,6 +40,8 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
     name: 'Термошок',
     characterClass: 'mage',
     trigger: 'hit',
+    condition: 'Прямой ледяной удар по врагу, который горит (Burn).',
+    effect: 'Дополнительный магический взрыв по цели.',
     description: 'Прямой удар льдом по цели с Burn — магический взрыв.',
   },
   {
@@ -44,6 +50,8 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
     name: 'Лесной пожар',
     characterClass: 'mage',
     trigger: 'kill',
+    condition: 'Враг погибает, пока на нём горит Burn.',
+    effect: 'Burn переходит на ближайших врагов.',
     description: 'Смерть цели с Burn распространяет Burn на соседей.',
   },
   {
@@ -52,6 +60,8 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
     name: 'Расколотый лёд',
     characterClass: 'mage',
     trigger: 'hit',
+    condition: 'Прямой ледяной удар по замедленному врагу (Slow).',
+    effect: 'Бонусный ледяной урон по цели.',
     description: 'Прямой удар льдом по замедленной цели — бонусный ледяной урон.',
   },
   {
@@ -60,6 +70,8 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
     name: 'Сокрушитель черепов',
     characterClass: 'warrior',
     trigger: 'hit',
+    condition: 'Физический удар ближнего боя по оглушённому врагу (Stun).',
+    effect: 'Дополнительный физический урон.',
     description: 'Физический удар ближнего боя по оглушённой цели — доп. урон.',
   },
   {
@@ -68,6 +80,8 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
     name: 'Боевой напор',
     characterClass: 'warrior',
     trigger: 'kill',
+    condition: 'Убийство врага ударом ближнего боя.',
+    effect: 'Кратковременный бонус к скорости атаки.',
     description: 'Убийство в ближнем бою — краткий бонус скорости атаки.',
   },
   {
@@ -76,6 +90,8 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
     name: 'Сейсмический удар',
     characterClass: 'warrior',
     trigger: 'hit',
+    condition: 'Тяжёлый удар ближнего боя по уже оглушённому врагу.',
+    effect: 'Ударная волна вокруг цели.',
     description: 'Тяжёлый удар по оглушённой цели — ударная волна.',
   },
   {
@@ -84,6 +100,9 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
     name: 'Токсичный шквал',
     characterClass: 'archer',
     trigger: 'hit',
+    condition:
+      'Несколько разных снарядов попадают в отравленного врага (Poison) за короткое время.',
+    effect: 'Ядовитый взрыв и дополнительный Poison.',
     description:
       'Несколько разных снарядов по отравленной цели за короткое время — ядовитый взрыв.',
   },
@@ -93,6 +112,8 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
     name: 'Цепь чумы',
     characterClass: 'archer',
     trigger: 'kill',
+    condition: 'Враг погибает, будучи отравленным (Poison).',
+    effect: 'Poison переходит на ближайших врагов.',
     description: 'Смерть отравленной цели распространяет Poison.',
   },
   {
@@ -101,6 +122,8 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
     name: 'Смертельная точность',
     characterClass: 'archer',
     trigger: 'hit',
+    condition: 'Серия прямых попаданий подряд по одному отравленному врагу.',
+    effect: 'Временный бонус урона по этой цели.',
     description: 'Серия прямых попаданий по одной отравленной цели — бонус урона по ней.',
   },
   {
@@ -109,6 +132,8 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
     name: 'Кровавое безумие',
     characterClass: 'rogue',
     trigger: 'hit',
+    condition: 'Удар кинжалом по кровоточащему врагу (Bleed).',
+    effect: 'Кратковременный бонус к скорости атаки.',
     description: 'Удар кинжалом по кровоточащей цели — бонус скорости атаки.',
   },
   {
@@ -117,6 +142,8 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
     name: 'Глубокие раны',
     characterClass: 'rogue',
     trigger: 'hit',
+    condition: 'Критический удар по кровоточащему врагу.',
+    effect: 'Дополнительный стак Bleed.',
     description: 'Крит по кровоточащей цели — дополнительный стак Bleed.',
   },
   {
@@ -125,11 +152,24 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
     name: 'Последний разрез',
     characterClass: 'rogue',
     trigger: 'hit',
+    condition: 'Удар по кровоточащему врагу с низким запасом здоровья.',
+    effect: 'Добивающий урон.',
     description: 'Удар по кровоточащей цели с низким HP — добивающий урон.',
   },
 ] satisfies SynergyRule[]);
 
 const RULES_BY_ID = new Map(SYNERGY_RULES.map((rule) => [rule.id, rule]));
+
+/**
+ * The single prerequisite check: does this skill definition's tag set satisfy the rule?
+ * Shared by combat (SynergyResolver), the Skills overview and level-up card hints.
+ */
+export function skillUnlocksSynergy(
+  rule: Pick<SynergyRule, 'requiredSkillTags'>,
+  skill: { readonly tags: readonly CombatTag[] },
+): boolean {
+  return skill.tags.some((tag) => rule.requiredSkillTags.includes(tag));
+}
 
 const SYNERGY_TAGS: ReadonlySet<CombatTag> = new Set(['synergy', 'secondary']);
 const T = SYNERGY_TUNING;
@@ -154,9 +194,7 @@ export class SynergyResolver {
       rule.characterClass === this.cls &&
       this.e.run
         .ownedIds()
-        .some((skillId) =>
-          this.e.run.definition(skillId).tags.some((tag) => rule.requiredSkillTags.includes(tag)),
-        )
+        .some((skillId) => skillUnlocksSynergy(rule, this.e.run.definition(skillId)))
     );
   }
   private now() {

@@ -197,6 +197,11 @@ DEV-команды (`window.__alpha.command`, development или явная QA-�
 используют один источник владения `RunSkills`; отдельного состояния «выбранная синергия» нет.
 Урон, кулдауны, лимиты, запрет proc-цепочек и порядок событий сохранены.
 
+Task 07.3: игрокам эти правила показываются на экране паузы и подсказками на картах уровня
+через `synergyOverview` / `cardSynergyHints` (`src/skills/synergy-info.ts`). Тексты условий и
+эффектов хранятся в полях `condition` / `effect` тех же `SYNERGY_RULES`; разблокировка и UI
+используют одну функцию `skillUnlocksSynergy`. См. [PAUSE_SKILLS_SYNERGIES.md](PAUSE_SKILLS_SYNERGIES.md).
+
 ## Настраиваемые параметры (все предварительные)
 
 - **Навыки.** `src/skills/catalog/{mage,warrior,archer,rogue,universal}.ts`: для каждого из
