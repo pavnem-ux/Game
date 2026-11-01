@@ -11,6 +11,7 @@ export {
 export type {
   GameplayOptions,
   GameplaySnapshot,
+  CampaignSnapshot,
   WorldEvent,
   RewardEvent,
   WaveEvent,

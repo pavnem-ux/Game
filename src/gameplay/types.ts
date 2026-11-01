@@ -23,6 +23,8 @@ export interface GameplayOptions {
   readonly spawning?: Partial<SpawnSettings>;
   readonly viewport?: ViewportSize;
   readonly onHit?: readonly EffectDefinition[];
+  /** Task 08: play a campaign map (scaled enemies/spawning, timer, scheduled events). */
+  readonly campaign?: Readonly<{ mapId: number }>;
 }
 export interface WorldEvent {
   readonly sequence: number;
@@ -74,6 +76,17 @@ export interface GameplaySnapshot {
   readonly statuses: readonly StatusGroupSnapshot[];
   readonly weapon: WeaponState;
   readonly movement: Point;
+  /** Task 08: campaign run state (null outside campaign runs). */
+  readonly campaign: CampaignSnapshot | null;
+}
+export interface CampaignSnapshot {
+  readonly mapId: number;
+  readonly mapName: string;
+  readonly duration: number;
+  readonly elapsed: number;
+  readonly remaining: number;
+  readonly durationReached: boolean;
+  readonly stage: Readonly<{ id: string; name: string; index: number }>;
 }
 
 export interface RewardEvent {

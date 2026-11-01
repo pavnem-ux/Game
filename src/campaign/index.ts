@@ -13,3 +13,5 @@ export type {
   MapOverrides,
   StageId,
 } from './config';
+export { campaignSpawning, runClock, scaleEnemyStats, stageAt, stageBoundaries } from './timer';
+export type { CampaignStage, RunClock } from './timer';

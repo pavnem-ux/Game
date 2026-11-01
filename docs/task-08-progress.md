@@ -1,7 +1,7 @@
 # Task 08 progress
 
 Branch: task-08-campaign | PR: https://github.com/pavnem-ux/Game/pull/4 (draft)
-Current: Phase 1, step 1.2
+Current: Phase 1, step 1.3
 
 ## Steps
 
@@ -9,7 +9,7 @@ Current: Phase 1, step 1.2
 - [x] 0.2 Create this progress file; fill the Code map
 - [x] 0.3 Commit, push, open draft PR "Task 08: Campaign Alpha"
 - [x] 1.1 Central campaign/balance config (10 maps, difficulty, stages, elites, boss refs)
-- [ ] 1.2 Run timer on simulation time + stages + wave scaling via existing spawner
+- [x] 1.2 Run timer on simulation time + stages + wave scaling via existing spawner
 - [ ] 1.3 Event scheduler: elites every 2:00, boss at 10:00, exactly-once
 - [ ] 1.4 Run state machine: victory/defeat/abandon, exactly-once resolution
 - [ ] 2.1 Elite profiles (melee, ranged): visuals, name/HP bar, extra XP
@@ -36,7 +36,9 @@ Current: Phase 1, step 1.2
 
 - Campaign (Task 08): `src/campaign/` — `config.ts` (CAMPAIGN_BALANCE: durations, difficulty,
   stages, elite/boss, rewards, reserved slots; CAMPAIGN_MAPS 1–10 with boss refs;
-  startup `validateCampaignConfig`). Tests `tests/campaign/` (`npm run test:campaign`).
+  startup `validateCampaignConfig`); `timer.ts` (pure `stageAt`/`runClock` on simulation time,
+  `campaignSpawning`, `scaleEnemyStats`). World hook: `GameplayOptions.campaign {mapId}` →
+  `GameplayWorld.campaignMap`, scaled `enemyStats`, spawner settings, snapshot `campaign`. Tests `tests/campaign/` (`npm run test:campaign`).
 - Node 24, `npm ci`. Unit: `npm test` (Vitest + Node prototype tests). Per module: `test:stats`,
   `test:combat`, `test:weapons`, `test:status`, `test:enemies`, `test:survival`, `test:alpha`
   (tests/gameplay), `test:skills`. Typecheck `npm run typecheck`; format `npm run format:check`
@@ -87,6 +89,9 @@ level)`, caps `COMBAT_ATTRIBUTE_CAPS`, `scaleCooldown`/`scaleCircularAoeRadius`)
 - 1.1: stage starts at 0 / 15% / 40% / 65% / 90% of duration (spec: relative boundaries, values
   not given). Map and boss names are original placeholders. Phase 1 boss = scaled melee
   placeholder (HP ×15, dmg ×1.6 on top of map difficulty), replaced in Phase 2.
+- 1.2: spawn rate ×m divides wave interval and its floor (min 0.25 s); campaign waves use
+  maxActive = 120 − 4 reserved slots for elites/boss. World event history is bounded (160):
+  exactly-once logic must use state, never history.
 - Task 07.2 is on the PR #3 branch (`claude/stoic-carson-76vdrx`, `dde421a` + v2 `9e8aa93`), not
   on `main` (PR #3 unmerged). `task-08-campaign` is stacked on that branch; the draft PR targets it
   so its diff shows only Task 08. Retarget to `main` after PR #3 is merged.

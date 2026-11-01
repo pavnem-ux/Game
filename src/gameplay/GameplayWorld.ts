@@ -28,7 +28,7 @@ import {
   ALPHA_WEAPONS,
   defaultOnHit,
 } from './config';
-import type { GameplayOptions, GameplaySnapshot, WorldEvent } from './types';
+import type { CampaignSnapshot, GameplayOptions, GameplaySnapshot, WorldEvent } from './types';
 
 import { RunExperience, XP_RULES } from './experience';
 import type { ExperienceEvent } from './experience';
@@ -38,6 +38,8 @@ import type { CombatAttributes } from '../character-stats';
 import type { EffectType } from '../status-effects';
 import { spawningSettings, wavePressure, offscreenPosition, viewportSize } from './spawning';
 import type { SpawnSettings, ViewportSize } from './spawning';
+import { campaignSpawning, getCampaignMap, runClock, scaleEnemyStats } from '../campaign';
+import type { CampaignMap } from '../campaign';
 /** The sole world scheduler. All damage is resolved by existing modules, one boundary at a time. */
 export class GameplayWorld {
   readonly core: CombatCore;
@@ -74,6 +76,9 @@ export class GameplayWorld {
   private readonly baseOnHit: readonly EffectDefinition[];
   private onHitDefinitions: readonly EffectDefinition[];
   private facing: Point = Object.freeze({ x: 1, y: 0 });
+  /** Task 08: campaign map of this run (null = classic alpha) and its scaled enemy stats. */
+  readonly campaignMap: CampaignMap | null;
+  private readonly enemyStats: CombatAttributes;
   constructor(
     readonly options: GameplayOptions,
     createCore: (random: RandomSource) => CombatCore = (random) => new CombatCore(random),
@@ -96,7 +101,19 @@ export class GameplayWorld {
       spawnSeed = (Math.imul(spawnSeed, 1664525) + 1013904223) >>> 0;
       return spawnSeed / 4294967296;
     };
-    this.spawnSettings = spawningSettings(options.spawning);
+    this.campaignMap = options.campaign ? getCampaignMap(options.campaign.mapId) : null;
+    this.enemyStats = this.campaignMap
+      ? scaleEnemyStats(ALPHA_ENEMY_STATS, this.campaignMap.difficulty)
+      : ALPHA_ENEMY_STATS;
+    // Campaign scaling goes through the existing spawner; explicit options still win (tests/QA).
+    this.spawnSettings = spawningSettings(
+      this.campaignMap
+        ? {
+            ...campaignSpawning(this.campaignMap, spawningSettings(), ALPHA.enemyCap),
+            ...options.spawning,
+          }
+        : options.spawning,
+    );
     this.viewport = viewportSize(options.viewport ?? { width: 1280, height: 720 });
     this.nextSpawnAt = this.spawnSettings.interval;
     this.core = createCore(this.random);
@@ -238,6 +255,25 @@ export class GameplayWorld {
       statuses: this.statuses.getGroups(),
       weapon: this.weapons.getWeaponState(this.playerId),
       movement: this.input,
+      campaign: this.campaignSnapshot(),
+    });
+  }
+  private campaignSnapshot(): CampaignSnapshot | null {
+    const map = this.campaignMap;
+    if (!map) return null;
+    const clock = runClock(map, this.clock);
+    return Object.freeze({
+      mapId: map.id,
+      mapName: map.name,
+      duration: clock.duration,
+      elapsed: clock.elapsed,
+      remaining: clock.remaining,
+      durationReached: clock.durationReached,
+      stage: Object.freeze({
+        id: clock.stage.id,
+        name: clock.stage.name,
+        index: clock.stage.index,
+      }),
     });
   }
   /** Never carry unconsumed frame time across death or manual pause. */
@@ -322,7 +358,7 @@ export class GameplayWorld {
     profile: EnemyConfig = ALPHA_ENEMIES[kind],
   ): string {
     const id = `enemy-${++this.enemySequence}`;
-    this.core.addEntity({ id, affiliation: 'enemy', stats: ALPHA_ENEMY_STATS });
+    this.core.addEntity({ id, affiliation: 'enemy', stats: this.enemyStats });
     this.enemies.registerEnemy({ entityId: id, config: profile, position });
     this.enemyIds.add(id);
     this.prepare();
@@ -647,7 +683,12 @@ export class GameplayWorld {
       const w = this.weapons.peekBoundary(horizon),
         s = this.statuses.peekBoundary(horizon),
         e = this.enemies.peekBoundary(horizon);
-      if (this.spawnSettings.enabled && this.survival.getState().canPlayerAct)
+      // Task 08: no new waves at or after the campaign duration (existing enemies keep acting).
+      if (
+        this.spawnSettings.enabled &&
+        this.survival.getState().canPlayerAct &&
+        (!this.campaignMap || this.nextSpawnAt < this.campaignMap.durationSeconds)
+      )
         add(this.nextSpawnAt, 9, 'spawn');
       if (w) add(w.time, w.priority <= 1 ? 2 : 5, 'weapon');
       if (s) add(s.time, s.priority === 0 ? 3 : 8, 'status');
