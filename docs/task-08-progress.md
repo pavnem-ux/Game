@@ -1,0 +1,93 @@
+# Task 08 progress
+
+Branch: task-08-campaign | PR: (draft, opened in step 0.3)
+Current: Phase 0, step 0.3
+
+## Steps
+
+- [x] 0.1 Confirm latest branch contains Task 07.2; create branch `task-08-campaign`
+- [x] 0.2 Create this progress file; fill the Code map
+- [ ] 0.3 Commit, push, open draft PR "Task 08: Campaign Alpha"
+- [ ] 1.1 Central campaign/balance config (10 maps, difficulty, stages, elites, boss refs)
+- [ ] 1.2 Run timer on simulation time + stages + wave scaling via existing spawner
+- [ ] 1.3 Event scheduler: elites every 2:00, boss at 10:00, exactly-once
+- [ ] 1.4 Run state machine: victory/defeat/abandon, exactly-once resolution
+- [ ] 2.1 Elite profiles (melee, ranged): visuals, name/HP bar, extra XP
+- [ ] 2.2 Boss ability library (5 abilities) with telegraphs and cooldowns
+- [ ] 2.3 10 boss configs, boss HP bar, spawn notification, CC limits, death event
+- [ ] 3.1 Reward calculation (victory/defeat/abandon)
+- [ ] 3.2 Class XP, overflow, cap 50, lifetime XP; talent points function
+- [ ] 3.3 applyRunResult(profile, result) → new profile (pure, idempotent)
+- [ ] 4.1 saveSchema: defaults, validate, migrations map
+- [ ] 4.2 saveStore: load/save, backup key, error handling
+- [ ] 4.3 Wire autosave into progression; failure warning state
+- [ ] 4.4 Export/import logic
+- [ ] 5.1 Main menu + navigation + Gold
+- [ ] 5.2 Character and Map selection
+- [ ] 5.3 Results screen (wired to applyRunResult) + Progression screen
+- [ ] 5.4 HUD additions
+- [ ] 5.5 Save Management screen + save-failure warning + mid-run-forfeit notice
+- [ ] 6.1 `/?debug` tools (absent in production)
+- [ ] 6.2 Full regression + production build
+- [ ] 6.3 Manual test path walkthrough; record results
+- [ ] 6.4 PR description; mark PR ready (don't merge)
+
+## Code map
+
+- Node 24, `npm ci`. Unit: `npm test` (Vitest + Node prototype tests). Per module: `test:stats`,
+  `test:combat`, `test:weapons`, `test:status`, `test:enemies`, `test:survival`, `test:alpha`
+  (tests/gameplay), `test:skills`. Typecheck `npm run typecheck`; format `npm run format:check`
+  (Prettier also checks docs/_.md). Build `npm run build` → `dist/`; `npm run test:production`.
+  QA: `GAME_LOCAL_QA=1 npm run build:qa` + `npm run test:qa`. E2E: `npm run dev` on :5173, then
+  `CHROMIUM_PATH=/opt/pw-browsers/chromium-_/chrome-linux64/chrome npm run test:e2e`.
+- Rules: `AGENTS.md` (invariants §4: Combat Core owns HP/damage; `GameplayWorld` is the sole
+  scheduler via peekBoundary/advanceToBoundary/resolveBoundary; seeded RNG only; stable tie order).
+- Combat: `src/combat-core/` (`CombatCore`, `attack.ts` createAttackSnapshot /
+  `calculateSuccessfulDamage`, periodic DoT damage, barrier, death events).
+- Stats: `src/character-stats/` (class attributes, levels 1–50, `calculateCharacterStats(class,
+level)`, caps `COMBAT_ATTRIBUTE_CAPS`, `scaleCooldown`/`scaleCircularAoeRadius`). Run stats:
+  `src/skills/stats.ts` `composeRunStats`.
+- Weapons: `src/weapon-attacks/` (targeting, melee sectors, projectiles). Alpha weapons:
+  `ALPHA_WEAPONS` in `src/gameplay/config.ts`.
+- Enemies: `src/enemy-ai/` (movement, separation grid, contact/ranged attacks, `setControl`
+  Slow/Stun). Profiles `ALPHA_ENEMIES`, `ALPHA_ENEMY_STATS` (`src/gameplay/config.ts`).
+- Status effects: `src/status-effects/` (`STATUS_RULES` 10 stacks, 1 s tick).
+- Survival/revival: `src/player-survival/` (one revival, 50% HP, 3 s protection, cleanse).
+- World/scheduler: `src/gameplay/GameplayWorld.ts` (boundaries, events `getEvents()`, snapshot
+  `getSnapshot()`, `spawnEnemy`, run XP crystals, `setPaused`). Types `src/gameplay/types.ts`.
+- Spawning/waves: `src/gameplay/spawning.ts` (`DEFAULT_SPAWNING`, `spawningSettings`,
+  `wavePressure`, off-screen positions; separate spawn RNG). Caps: 120 enemies, 512 crystals.
+- Run XP: `src/gameplay/experience.ts` (`XP_RULES`, `RunExperience`, `runXpCost`).
+- Skills (Task 07/07.2 v2): `src/skills/` (catalog, `RunSkills`, offers, `SkillEngine`,
+  `synergies.ts` pair unlock + `SynergyResolver`, `damage-readout.ts`, `synergy-info.ts`).
+- UI (React): `src/gameplay-ui/AlphaApp.tsx` (screens: menu/playing/paused/level-up/revival/
+  ended), `SkillPanels.tsx` (level-up, Skills overview, PauseDialog), `store.ts` (`alphaBridge`
+  snapshots ~10 Hz + commands), `alpha.css`. Entry `src/main.tsx` (`/?prototype` → legacy app).
+- Rendering/input (Phaser): `src/engine/AlphaScene.ts` (publishes screen, draws, P/Esc pause via
+  `oncePerKeyEvent`, scene FX for skill/synergy events), `createGame.ts`, `stun-indicator.ts`.
+- Debug/QA: `src/gameplay/testing.ts` (`createTestingController`, DEV/QA-only),
+  `src/gameplay/qa.ts` (`QaGameplayWorld`: God Mode, synergy diagnostics),
+  `src/gameplay-ui/DeveloperPanel.tsx`, gating `import.meta.env.DEV || __QA_BUILD__`,
+  `config/qa-build.mjs`, `window.__alpha` (state/command/advance/presentation).
+- Existing storage: `src/progression/save.ts` — localStorage key `fantasy-survivors.progression`
+  (v1: bestSeconds, bestKills, runs); `loadSave`/`saveRun` used by `AlphaScene` and the prototype.
+  No other persistence.
+- Tests: `tests/<module>/*.test.ts` (Vitest; skills helpers `tests/skills/helpers.ts` `arena`,
+  `play`, `ALL_SYNERGY_SKILLS`), browser `tests/alpha-browser.mjs`, `tests/browser.mjs`
+  (prototype), `tests/alpha-production.mjs`, `tests/alpha-qa.mjs`, `tests/skills-ui-browser.mjs`,
+  `tests/qa-tools-browser.mjs`. Screenshots → ignored `artifacts/`.
+- Docs: `docs/IN_RUN_SKILLS.md`, `docs/SYNERGIES_V2_DAMAGE.md`, `docs/PLAYABLE_COMBAT_ALPHA.md`,
+  `docs/EXPERIENCE_WAVES.md`, `docs/DEVELOPMENT_WORKFLOW.md`.
+
+## Decisions / deviations
+
+- Task 07.2 is on the PR #3 branch (`claude/stoic-carson-76vdrx`, `dde421a` + v2 `9e8aa93`), not
+  on `main` (PR #3 unmerged). `task-08-campaign` is stacked on that branch; the draft PR targets it
+  so its diff shows only Task 08. Retarget to `main` after PR #3 is merged.
+- Commit titles follow the Task 08 rule `task08: <phase>.<step> <summary>` (overrides AGENTS.md
+  `Task NN:` style for this task, per owner).
+- `docs/task-08.md` is the owner's spec verbatim, Prettier-formatted (whitespace only) for CI.
+
+## Blockers / known issues
+
+- None.
