@@ -379,6 +379,42 @@ export class AlphaScene extends Phaser.Scene {
       this.stunLabels[stunLabel].setVisible(false);
     for (; nameLabel < this.nameLabels.length; nameLabel++)
       this.nameLabels[nameLabel].setVisible(false);
+    // Task 08: boss telegraphs (dangerous attacks are announced before they resolve).
+    const cast = s.campaign?.bossCast;
+    if (cast && cast.center) {
+      const span = Math.max(1e-6, cast.executeAt - cast.startedAt);
+      const progress = Math.min(1, Math.max(0, (s.time - cast.startedAt) / span));
+      if (cast.kind === 'circle_aoe' && cast.radius) {
+        g.fillStyle(0xff4a3d, 0.12 + 0.18 * progress).fillCircle(
+          cast.center.x,
+          cast.center.y,
+          cast.radius * progress,
+        );
+        g.lineStyle(3, 0xff5a45, 0.95).strokeCircle(cast.center.x, cast.center.y, cast.radius);
+      } else if (cast.kind === 'charge' && cast.direction) {
+        const len = 320;
+        const ex = cast.center.x + cast.direction.x * len,
+          ey = cast.center.y + cast.direction.y * len;
+        g.lineStyle(14, 0xff5a45, 0.18 + 0.25 * progress).lineBetween(
+          cast.center.x,
+          cast.center.y,
+          ex,
+          ey,
+        );
+        g.lineStyle(2, 0xffb199, 0.9).lineBetween(cast.center.x, cast.center.y, ex, ey);
+      } else if (cast.kind === 'radial_burst')
+        g.lineStyle(2, 0xd99bff, 0.4 + 0.5 * progress).strokeCircle(
+          cast.center.x,
+          cast.center.y,
+          36 + 40 * progress,
+        );
+      else if (cast.kind === 'summon')
+        g.lineStyle(2, 0x9ad48a, 0.4 + 0.5 * progress).strokeCircle(
+          cast.center.x,
+          cast.center.y,
+          60,
+        );
+    }
     const { x, y } = s.playerBody,
       color = CLASS_COLORS[s.character.characterClass];
     g.fillStyle(0x030d0c, 0.45).fillEllipse(x, y + 17, 38, 13);

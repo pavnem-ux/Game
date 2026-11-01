@@ -50,7 +50,16 @@ import {
   runClock,
   scaleEnemyStats,
 } from '../campaign';
-import type { CampaignMap, CampaignRunState, RunInput } from '../campaign';
+import { BossController } from '../campaign';
+import type {
+  BossAbility,
+  BossAbilityOutcome,
+  BossHost,
+  CampaignMap,
+  CampaignRunState,
+  RunInput,
+} from '../campaign';
+import type { DirectDamageObserver, DirectDamagePolicy } from '../enemy-ai';
 /** The sole world scheduler. All damage is resolved by existing modules, one boundary at a time. */
 export class GameplayWorld {
   readonly core: CombatCore;
@@ -96,6 +105,13 @@ export class GameplayWorld {
   /** Elite enemy id → profile (kept after death for results/rewards). */
   private readonly eliteProfiles = new Map<string, 'melee' | 'ranged'>();
   private campaignRun: CampaignRunState = INITIAL_RUN_STATE;
+  /** Task 08 boss ability controller (boundary module), created when the boss spawns. */
+  private bossController: BossController | null = null;
+  /** Hostile direct-damage policies shared by EnemyAI and boss abilities (survival + test guard). */
+  private hostilePolicies!: {
+    readonly canResolveDirectDamage: DirectDamagePolicy;
+    readonly onDirectDamageResolved: DirectDamageObserver;
+  };
   constructor(
     readonly options: GameplayOptions,
     createCore: (random: RandomSource) => CombatCore = (random) => new CombatCore(random),
@@ -154,13 +170,16 @@ export class GameplayWorld {
         statusPolicies.canApply!(ctx),
     });
     const enemyPolicies = createEnemySurvivalPolicies(this.survival, emit);
+    this.hostilePolicies = Object.freeze({
+      canResolveDirectDamage: (ctx) =>
+        !this.testingProtection && enemyPolicies.canResolveDirectDamage!(ctx),
+      onDirectDamageResolved: enemyPolicies.onDirectDamageResolved!,
+    });
     this.enemies = new EnemyAI(this.core, {
       playerId: this.playerId,
       movementStep: 1 / 30,
       separation: { cellSize: 64, padding: 8, strength: 0.8 },
-      ...enemyPolicies,
-      canResolveDirectDamage: (ctx) =>
-        !this.testingProtection && enemyPolicies.canResolveDirectDamage!(ctx),
+      ...this.hostilePolicies,
     });
     this.weapons = new WeaponAttacks(this.core, {
       damageModifier: (context) => this.skills.damageModifier(context),
@@ -310,6 +329,8 @@ export class GameplayWorld {
       bossKilled: this.campaignRun.bossKilled,
       eliteKills: this.campaignRun.eliteKills,
       resolvedAt: this.campaignRun.resolvedAt,
+      bossCast: this.bossController?.currentCast() ?? null,
+      bossEffects: this.bossController?.activeEffects() ?? Object.freeze([]),
       stage: Object.freeze({
         id: clock.stage.id,
         name: clock.stage.name,
@@ -345,6 +366,7 @@ export class GameplayWorld {
       else if (next.kind === 'spawn') this.spawnWave();
       else if (next.kind === 'skill') this.skills.resolveBoundary();
       else if (next.kind === 'campaign') this.resolveCampaignEvent();
+      else if (next.kind === 'boss') this.resolveBossAbility();
       this.skills.endStep();
       if (
         (this.survival.getState().requiresWorldPause ||
@@ -592,6 +614,90 @@ export class GameplayWorld {
       }),
     ]);
   }
+  private bossActive(): boolean {
+    return (
+      !!this.bossController &&
+      !!this.bossEnemyId &&
+      this.campaignRun.status === 'active' &&
+      this.core.getEntity(this.bossEnemyId).alive
+    );
+  }
+  private resolveBossAbility() {
+    if (!this.bossActive()) return;
+    const outcomes = this.bossController!.resolve(this.clock, this.bossHost);
+    this.record('campaign', outcomes as readonly BossAbilityOutcome[]);
+  }
+  /** World implementation of the boss ability host: Core damage, survival policies, EnemyAI. */
+  private readonly bossHost: BossHost = {
+    bossPosition: () => this.enemies.getEnemy(this.bossEnemyId!).position,
+    bossRadius: () => this.enemies.getEnemy(this.bossEnemyId!).config.radius,
+    playerBody: () => this.body,
+    strikePlayer: (_abilityId, coefficient) => {
+      const boss = this.bossEnemyId!;
+      const context = {
+        time: this.clock,
+        sourceId: boss,
+        targetId: this.playerId,
+        kind: 'contact' as const,
+      };
+      if (!this.core.getEntity(this.playerId).alive) return false;
+      if (!this.hostilePolicies.canResolveDirectDamage({ ...context, attack: null })) return false;
+      const attack = this.core.createAttack({
+        attackerId: boss,
+        damageType: 'physical',
+        coefficient,
+      });
+      const result = this.core.resolveAttack(attack, this.playerId);
+      this.hostilePolicies.onDirectDamageResolved({ ...context, attack }, result);
+      this.forwardCombat(result.events);
+      return result.status === 'hit';
+    },
+    launchRadial: (_abilityId, count, coefficient, speed) => {
+      if (!this.core.getEntity(this.playerId).alive) return 0;
+      const boss = this.enemies.getEnemy(this.bossEnemyId!);
+      const events = [];
+      for (let i = 0; i < count; i++) {
+        const angle = (i * Math.PI * 2) / count;
+        const direction = { x: Math.cos(angle), y: Math.sin(angle) };
+        events.push(
+          this.enemies.launchProjectile({
+            sourceId: boss.entityId,
+            origin: boss.position,
+            target: {
+              x: boss.position.x + direction.x * 200,
+              y: boss.position.y + direction.y * 200,
+              radius: 1,
+            },
+            damageType: 'magical',
+            coefficient,
+            projectile: { speed, radius: 7, maxTravelDistance: 650 },
+            fallbackDirection: direction,
+          }),
+        );
+      }
+      this.record('enemy', events);
+      return events.length;
+    },
+    setSpeedBoost: (multiplier) => {
+      if (this.bossEnemyId && this.core.getEntity(this.bossEnemyId).alive)
+        this.enemies.setSpeedBoost(this.bossEnemyId, multiplier);
+    },
+    summon: (_abilityId, count, profile) => {
+      const boss = this.enemies.getEnemy(this.bossEnemyId!);
+      let spawned = 0;
+      for (let i = 0; i < count; i++) {
+        if (this.enemyIds.size >= this.spawnSettings.maxActive) break; // never touches reserved slots
+        const angle = (i * Math.PI * 2) / count;
+        const distance = boss.config.radius + 40;
+        this.registerEnemy(profile, {
+          x: this.clamp(boss.position.x + Math.cos(angle) * distance, 20),
+          y: this.clamp(boss.position.y + Math.sin(angle) * distance, 20),
+        });
+        spawned++;
+      }
+      return spawned;
+    },
+  };
   /** Fires exactly one due scheduled event (state-based; see CampaignDirector). */
   private resolveCampaignEvent() {
     const event = this.director?.fire(this.clock);
@@ -623,6 +729,10 @@ export class GameplayWorld {
         b.placeholderDamageMultiplier,
       );
       this.bossEnemyId = enemyId;
+      this.bossController = new BossController(
+        b.defaultAbilities as readonly BossAbility[],
+        this.clock,
+      );
       this.record('campaign', [
         Object.freeze({
           type: 'boss-spawned',
@@ -826,6 +936,7 @@ export class GameplayWorld {
           | 'enemy'
           | 'spawn'
           | 'skill'
+          | 'boss'
           | 'campaign'
           | 'advance';
       }[] = [];
@@ -851,6 +962,11 @@ export class GameplayWorld {
       // Task 07: skill actions after player strikes, before enemy attacks; expirations after statuses.
       const k = this.skills.peekBoundary(horizon);
       if (k) add(k.time, k.priority === 0 ? 5.5 : 8.5, 'skill');
+      // Task 08: boss ability actions rank with enemy attacks (after skill actions and enemy attacks).
+      if (this.bossActive() && this.survival.getState().canPlayerAct) {
+        const bossAt = this.bossController!.peek();
+        if (bossAt !== null) add(bossAt, 6.5, 'boss');
+      }
       // Task 08: scheduled elite/boss/end events resolve last at equal time (after reinforcements).
       const scheduled = this.director?.peek();
       if (scheduled) add(scheduled.time, 9.5, 'campaign');

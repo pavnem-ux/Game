@@ -110,7 +110,11 @@ describe('scheduled events in the world fire exactly once at their time', () => 
       expect(events.filter((e) => e.event.type === 'run-resolved').length).toBeLessThanOrEqual(1);
       if (step < 1)
         expect(
-          events.filter((e) => e.event.type !== 'run-resolved').map((e) => [e.time, e.event.type]),
+          events
+            .filter((e) =>
+              ['elite-spawned', 'boss-spawned', 'duration-reached'].includes(e.event.type),
+            )
+            .map((e) => [e.time, e.event.type]),
         ).toEqual([
           [120, 'elite-spawned'],
           [240, 'elite-spawned'],
@@ -119,14 +123,20 @@ describe('scheduled events in the world fire exactly once at their time', () => 
           [600, 'boss-spawned'],
           [600, 'duration-reached'],
         ]);
-      const seen = events.length;
+      const scheduled = () =>
+        events.filter((e) =>
+          ['elite-spawned', 'boss-spawned', 'duration-reached', 'run-resolved'].includes(
+            e.event.type,
+          ),
+        ).length;
+      const seen = scheduled();
       const c = w.getSnapshot().campaign!;
       expect(c.firedEvents).toEqual(['elite-1', 'elite-2', 'elite-3', 'elite-4', 'boss', 'end']);
       expect(c.eliteEnemyIds).toHaveLength(4);
       expect(c.bossEnemyId).not.toBeNull();
       expect(c.nextEvent).toBeNull();
       run(w, 300, step, events);
-      expect(events).toHaveLength(seen); // nothing fires again
+      expect(scheduled()).toBe(seen); // nothing scheduled fires again
       expect(w.getSnapshot().campaign!.firedLog).toHaveLength(6);
     }
   });

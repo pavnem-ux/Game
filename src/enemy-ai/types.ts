@@ -55,6 +55,8 @@ export interface EnemySnapshot {
   readonly nextAttackAt: number;
   /** Task 07: present only while crowd-controlled. */
   readonly control?: EnemyControl;
+  /** Task 08: present only while a boss speed boost (> 1) is active. */
+  readonly speedBoost?: number;
 }
 /** Task 07 crowd-control state supplied by the owner of Slow/Stun timers. */
 export interface EnemyControl {

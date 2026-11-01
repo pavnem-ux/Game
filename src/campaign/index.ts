@@ -21,3 +21,16 @@ export { INITIAL_RUN_STATE, reduceRun } from './run-state';
 export type { CampaignRunState, RunInput, RunOutcome, RunTransition } from './run-state';
 export { eliteEnemyConfig, eliteProfile } from './elites';
 export type { EliteProfile } from './elites';
+export {
+  BossController,
+  GLOBAL_CAST_GAP,
+  MIN_TELEGRAPH,
+  validateBossAbilities,
+} from './boss-abilities';
+export type {
+  BossAbility,
+  BossAbilityKind,
+  BossAbilityOutcome,
+  BossCastState,
+  BossHost,
+} from './boss-abilities';

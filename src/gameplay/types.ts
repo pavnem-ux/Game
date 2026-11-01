@@ -1,6 +1,7 @@
 import type { ExperienceEvent, RunProgression, XpCrystal } from './experience';
 import type { SpawnSettings, ViewportSize } from './spawning';
 import type { CharacterClass, CharacterStatsSnapshot, CombatAttributes } from '../character-stats';
+import type { BossAbilityOutcome, BossCastState } from '../campaign';
 import type { RunSkillsSnapshot, SkillCombatSnapshot, SkillEvent } from '../skills';
 import type { CombatEntity, CombatEvent } from '../combat-core';
 import type { EnemyEvent, EnemySnapshot, EnemyProjectileSnapshot } from '../enemy-ai';
@@ -97,6 +98,7 @@ export type CampaignEvent =
       readonly bossName: string;
     }
   | { readonly type: 'duration-reached'; readonly eventId: 'end' }
+  | BossAbilityOutcome
   | {
       readonly type: 'run-resolved';
       readonly outcome: 'victory' | 'defeat' | 'abandoned';
@@ -131,6 +133,13 @@ export interface CampaignSnapshot {
   readonly bossKilled: boolean;
   readonly eliteKills: number;
   readonly resolvedAt: number | null;
+  /** Current boss telegraph (null when idle) and active boss movement effects. */
+  readonly bossCast: BossCastState | null;
+  readonly bossEffects: readonly Readonly<{
+    abilityId: string;
+    until: number;
+    multiplier: number;
+  }>[];
 }
 
 export interface RewardEvent {

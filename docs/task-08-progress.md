@@ -1,7 +1,7 @@
 # Task 08 progress
 
 Branch: task-08-campaign | PR: https://github.com/pavnem-ux/Game/pull/4 (draft)
-Current: Phase 2, step 2.2
+Current: Phase 2, step 2.3
 
 ## Steps
 
@@ -13,7 +13,7 @@ Current: Phase 2, step 2.2
 - [x] 1.3 Event scheduler: elites every 2:00, boss at 10:00, exactly-once
 - [x] 1.4 Run state machine: victory/defeat/abandon, exactly-once resolution
 - [x] 2.1 Elite profiles (melee, ranged): visuals, name/HP bar, extra XP
-- [ ] 2.2 Boss ability library (5 abilities) with telegraphs and cooldowns
+- [x] 2.2 Boss ability library (5 abilities) with telegraphs and cooldowns
 - [ ] 2.3 10 boss configs, boss HP bar, spawn notification, CC limits, death event
 - [ ] 3.1 Reward calculation (victory/defeat/abandon)
 - [ ] 3.2 Class XP, overflow, cap 50, lifetime XP; talent points function
@@ -47,7 +47,12 @@ Current: Phase 2, step 2.2
   capped at duration); world freezes (`paused`) once resolved.
   `elites.ts` (`eliteEnemyConfig` from existing melee/ranged profiles, `eliteProfile` name +
   extraXp; definitions in `CAMPAIGN_BALANCE.elite.definitions`). Snapshot `campaign.elites`;
-  scene draws aura, scaled body, wide HP bar and pooled name tags (`AlphaScene.nameLabels`). Tests `tests/campaign/` (`npm run test:campaign`).
+  scene draws aura, scaled body, wide HP bar and pooled name tags (`AlphaScene.nameLabels`).
+  `boss-abilities.ts` (`BossController` boundary module: telegraph → execute → cooldown, global
+  gap, effects; 5 kinds; `validateBossAbilities`). World: `bossHost` (Core + `hostilePolicies`,
+  EnemyAI `launchProjectile`/`setSpeedBoost`), boundary kind `boss` rank 6.5, snapshot
+  `bossCast`/`bossEffects`; scene telegraphs. EnemyAI additive APIs: `setSpeedBoost`,
+  `launchProjectile`, snapshot `speedBoost`; `movement.ts` `futureCrossings`. Tests `tests/campaign/` (`npm run test:campaign`).
 - Node 24, `npm ci`. Unit: `npm test` (Vitest + Node prototype tests). Per module: `test:stats`,
   `test:combat`, `test:weapons`, `test:status`, `test:enemies`, `test:survival`, `test:alpha`
   (tests/gameplay), `test:skills`. Typecheck `npm run typecheck`; format `npm run format:check`
@@ -110,6 +115,15 @@ level)`, caps `COMBAT_ATTRIBUTE_CAPS`, `scaleCooldown`/`scaleCircularAoeRadius`)
 - 2.1: elites reuse the existing enemy AI with scaled radius/speed/attack interval (melee) or
   range (ranged); extra run XP (+40, provisional) is added to the normal crystal, so the reward
   stays deduplicated by the world.
+- 2.2: boss actions get tie rank 6.5 (with enemy attacks, before status expirations); dangerous
+  abilities (circle AoE, charge) must telegraph ≥ 0.8 s; boss hits use the same survival policy
+  as enemy contact; summons never use the reserved elite/boss slots. Placeholder boss uses
+  `CAMPAIGN_BALANCE.boss.defaultAbilities` until 2.3. Charge = speed boost toward the player +
+  impact check at the end (not a teleport), reusing EnemyAI movement.
+- 2.2 fix (pre-existing EnemyAI edge case, exposed by elites): a melee enemy on the player's
+  exact centre with separation velocity produced a crossing root below the clock resolution at
+  large t, looping forever. `futureCrossings` drops roots that are the same instant as now;
+  regression tests in `tests/enemy-ai/task08-regressions.test.ts`.
 - Task 07.2 is on the PR #3 branch (`claude/stoic-carson-76vdrx`, `dde421a` + v2 `9e8aa93`), not
   on `main` (PR #3 unmerged). `task-08-campaign` is stacked on that branch; the draft PR targets it
   so its diff shows only Task 08. Retarget to `main` after PR #3 is merged.
