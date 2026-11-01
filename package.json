@@ -20,6 +20,7 @@
     "test:survival": "vitest run tests/player-survival",
     "test:alpha": "vitest run tests/gameplay",
     "test:skills": "vitest run tests/skills",
+    "test:campaign": "vitest run tests/campaign",
     "test:production": "node tests/alpha-production.mjs",
     "build:qa": "npm run typecheck && vite build --mode qa",
     "test:build-policy": "node tests/qa-build.test.mjs",

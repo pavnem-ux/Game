@@ -13,6 +13,7 @@ export default defineConfig({
       'tests/gameplay/**/*.test.ts',
       'tests/skills/**/*.test.ts',
       'tests/engine/**/*.test.ts',
+      'tests/campaign/**/*.test.ts',
     ],
   },
 });
