@@ -29,21 +29,21 @@ const events = statuses.update(1); // Первый тик в t=1, непосре
 statuses.update(10, { paused: true }); // Симуляционное время не двигается.
 ```
 
-| API                                      | Контракт                                                                                                                                                 |
-| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `StatusEffects(core, options?)`          | Использует авторитетные сущности Core; RNG относится только к вероятности приложения.                                                                    |
-| `apply(EffectApplication)`               | Валидирует, проверяет liveness/hook/вероятность, добавляет или заменяет стак, возвращает immutable `ApplicationResult`.                                  |
-| `applyBatch(applications)`               | Применяет список последовательно; при ошибке откатывает всю статусную часть пакета и счётчики ID.                                                        |
-| `update(delta, { paused?, shouldPause? })`             | Обрабатывает все тики/истечения до конца delta. Ноль не повторяет уже выполненные тики.                                                                  |
-| `advanceTo(time, options?)`              | Альтернативный абсолютный **симуляционный** timestamp; назад двигаться нельзя. Это не wall-clock время.                                                  |
-| `getGroup(targetId, effectType)`         | Immutable snapshot или null.                                                                                                                             |
-| `getGroups(targetId?)`                   | Immutable snapshots в стабильном порядке целей и типов.                                                                                                  |
-| `consumeCombatEvents(events)`            | Принимает direct/periodic Core events, очищает мёртвые цели, возвращает события удаления. Также проверяет актуальное состояние остальных активных целей. |
-| `validateCombatEvents(events)`           | Проверяет весь пакет без изменения состояния; используется адаптером перед несколькими приложениями.                                                     |
-| `isAlive(entityId)`                      | Читает авторитетный `Core.alive`; неизвестный ID — ошибка.                                                                                               |
-| `assertTime(time)`                       | Проверяет синхронизацию on-hit с текущим временем модуля.                                                                                                |
-| `WeaponStatusAdapter(statuses, mapping)` | Копирует/валидирует отдельный mapping weapon instance ID → readonly EffectDefinition[]. WeaponConfig не меняется.                                        |
-| `adapter.consumeImpact(event)`           | Принимает один уже разрешённый WeaponImpactEvent; применяет настроенные эффекты только после реальной потери HP у живой цели.                            |
+| API                                        | Контракт                                                                                                                                                 |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `StatusEffects(core, options?)`            | Использует авторитетные сущности Core; RNG относится только к вероятности приложения.                                                                    |
+| `apply(EffectApplication)`                 | Валидирует, проверяет liveness/hook/вероятность, добавляет или заменяет стак, возвращает immutable `ApplicationResult`.                                  |
+| `applyBatch(applications)`                 | Применяет список последовательно; при ошибке откатывает всю статусную часть пакета и счётчики ID.                                                        |
+| `update(delta, { paused?, shouldPause? })` | Обрабатывает все тики/истечения до конца delta. Ноль не повторяет уже выполненные тики.                                                                  |
+| `advanceTo(time, options?)`                | Альтернативный абсолютный **симуляционный** timestamp; назад двигаться нельзя. Это не wall-clock время.                                                  |
+| `getGroup(targetId, effectType)`           | Immutable snapshot или null.                                                                                                                             |
+| `getGroups(targetId?)`                     | Immutable snapshots в стабильном порядке целей и типов.                                                                                                  |
+| `consumeCombatEvents(events)`              | Принимает direct/periodic Core events, очищает мёртвые цели, возвращает события удаления. Также проверяет актуальное состояние остальных активных целей. |
+| `validateCombatEvents(events)`             | Проверяет весь пакет без изменения состояния; используется адаптером перед несколькими приложениями.                                                     |
+| `isAlive(entityId)`                        | Читает авторитетный `Core.alive`; неизвестный ID — ошибка.                                                                                               |
+| `assertTime(time)`                         | Проверяет синхронизацию on-hit с текущим временем модуля.                                                                                                |
+| `WeaponStatusAdapter(statuses, mapping)`   | Копирует/валидирует отдельный mapping weapon instance ID → readonly EffectDefinition[]. WeaponConfig не меняется.                                        |
+| `adapter.consumeImpact(event)`             | Принимает один уже разрешённый WeaponImpactEvent; применяет настроенные эффекты только после реальной потери HP у живой цели.                            |
 
 `EffectDefinition`: `effectType`, `rawDamagePerTick`, `duration`, `probabilityPercent`, optional `originId`. `EffectApplication` добавляет `targetId/sourceId`. Разрешены только `poison/burn/bleed`; числа конечны, raw damage ≥ 0, duration > 0, probability от 0 до 100 включительно. Origin и entity IDs — непустые строки. Source и target должны существовать в Core; source может быть уже мёртв, например после запуска снаряда.
 

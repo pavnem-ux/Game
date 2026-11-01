@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Typecheck, format and unit tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - name: TypeScript
+        run: npm run typecheck
+      - name: Prettier
+        run: npm run format:check
+      - name: Unit and integration tests
+        run: npm test
+
+  build:
+    name: Production build and production regression
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CHROMIUM_PATH: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - name: Build (same command as Cloudflare Pages)
+        run: npm run build
+      - name: Production regression (no DEV code, SPA fallback, playable build)
+        run: npm run test:production
+      - name: Upload dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7
+
+  e2e:
+    name: Browser end-to-end (dev server)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CHROMIUM_PATH: /usr/bin/google-chrome
+      GAME_URL: http://127.0.0.1:5173
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - name: Start dev server
+        run: |
+          nohup npx vite --host 127.0.0.1 --port 5173 --strictPort > vite.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -sf "$GAME_URL" > /dev/null && exit 0
+            sleep 1
+          done
+          cat vite.log
+          exit 1
+      - name: Prototype and alpha browser tests
+        run: npm run test:e2e
+      - name: Upload screenshots and server log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-artifacts
+          path: |
+            artifacts/
+            vite.log
+          if-no-files-found: ignore
+          retention-days: 7

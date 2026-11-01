@@ -6,19 +6,19 @@
 
 Создайте `new PlayerSurvival(core, playerId)` для зарегистрированного живого игрока с affiliation `player`. Для нового забега создайте новый Core/мировой контекст и новый экземпляр Survival; повторное использование завершённой сессии не предусмотрено.
 
-| API | Контракт |
-| --- | --- |
-| `getState(): PlayerSurvivalState` | Неизменяемый снимок: playerId, runState, revivalUsed, time, directInvulnerableUntil, fullInvulnerableUntil, directProtected, fullyProtected, requiresWorldPause, canPlayerAct, canRevive, availableDecisions. HP читается из Core, копии авторитетного HP нет. |
-| `time` | Текущее симуляционное время в секундах. |
-| `advanceTo(time, {paused?})` | Продвигает только часы Survival до абсолютного времени. При паузе, смерти или неактивном runState время сохраняется. Возвращает `SurvivalResult`. |
-| `update(deltaSeconds, {paused?})` | Относительный вариант advanceTo; не обновляет другие модули. |
-| `canReceiveHostileDirectDamage({time,sourceId,targetId})` | Синхронная проверка перед враждебным direct damage. Для своего игрока требует active/alive и отсутствие любой direct-защиты. |
-| `recordDirectResult(time, DamageResult)` | Немедленное сообщение фактического результата Core; положительная потеря HP живым игроком запускает 0.3 секунды защиты. Летальный результат сразу переводит lifecycle по его death event. |
-| `consumeCombatEvents(time, CombatEvent[])` | Принимает настоящие смерти игрока, в том числе periodic. Не создаёт новый Combat Core death и не отфильтровывает чужие события. |
-| `canReceivePeriodicDamage({time,targetId})` | Запрещает урон игроку только при полной защите либо неактивной/мёртвой сессии. Обычная защита не мешает DoT. |
-| `canApplyNegativeEffect({time,targetId})` | Та же eligibility для нового Poison/Burn/Bleed. |
-| `decide('revive', statuses)` | Только awaiting-revival-choice, unused revival и dead Core player. Требует StatusEffects того же Core на том же времени, даже если эффектов нет. Возвращает lifecycle, Core revival и removal events. |
-| `decide('finish-run')` | Завершает ожидающий забег без расходования revival. Повтор после ended не создаёт событий. |
+| API                                                       | Контракт                                                                                                                                                                                                                                                       |
+| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `getState(): PlayerSurvivalState`                         | Неизменяемый снимок: playerId, runState, revivalUsed, time, directInvulnerableUntil, fullInvulnerableUntil, directProtected, fullyProtected, requiresWorldPause, canPlayerAct, canRevive, availableDecisions. HP читается из Core, копии авторитетного HP нет. |
+| `time`                                                    | Текущее симуляционное время в секундах.                                                                                                                                                                                                                        |
+| `advanceTo(time, {paused?})`                              | Продвигает только часы Survival до абсолютного времени. При паузе, смерти или неактивном runState время сохраняется. Возвращает `SurvivalResult`.                                                                                                              |
+| `update(deltaSeconds, {paused?})`                         | Относительный вариант advanceTo; не обновляет другие модули.                                                                                                                                                                                                   |
+| `canReceiveHostileDirectDamage({time,sourceId,targetId})` | Синхронная проверка перед враждебным direct damage. Для своего игрока требует active/alive и отсутствие любой direct-защиты.                                                                                                                                   |
+| `recordDirectResult(time, DamageResult)`                  | Немедленное сообщение фактического результата Core; положительная потеря HP живым игроком запускает 0.3 секунды защиты. Летальный результат сразу переводит lifecycle по его death event.                                                                      |
+| `consumeCombatEvents(time, CombatEvent[])`                | Принимает настоящие смерти игрока, в том числе periodic. Не создаёт новый Combat Core death и не отфильтровывает чужие события.                                                                                                                                |
+| `canReceivePeriodicDamage({time,targetId})`               | Запрещает урон игроку только при полной защите либо неактивной/мёртвой сессии. Обычная защита не мешает DoT.                                                                                                                                                   |
+| `canApplyNegativeEffect({time,targetId})`                 | Та же eligibility для нового Poison/Burn/Bleed.                                                                                                                                                                                                                |
+| `decide('revive', statuses)`                              | Только awaiting-revival-choice, unused revival и dead Core player. Требует StatusEffects того же Core на том же времени, даже если эффектов нет. Возвращает lifecycle, Core revival и removal events.                                                          |
+| `decide('finish-run')`                                    | Завершает ожидающий забег без расходования revival. Повтор после ended не создаёт событий.                                                                                                                                                                     |
 
 Политики для других целей возвращают `true`: Survival не регулирует исходящий урон игрока и не подавляет уже допустимые смерти врагов. Проверка affiliation/допустимых целей остаётся в attack-модулях. Источник уже выпущенного снаряда может быть мёртв.
 
@@ -61,8 +61,12 @@ if (survival.canReceiveHostileDirectDamage({ time: hitTime, sourceId, targetId }
 ## Адаптеры и локальные точки остановки
 
 ```ts
-import { PlayerSurvival, createEnemySurvivalPolicies,
-  createStatusSurvivalPolicies, createSurvivalPausePolicy } from '../src/player-survival';
+import {
+  PlayerSurvival,
+  createEnemySurvivalPolicies,
+  createStatusSurvivalPolicies,
+  createSurvivalPausePolicy,
+} from '../src/player-survival';
 
 const survival = new PlayerSurvival(core, playerId);
 const onEvents = (events: readonly import('../src/player-survival').SurvivalEvent[]) => {
@@ -72,7 +76,9 @@ const statuses = new StatusEffects(core, {
   ...createStatusSurvivalPolicies(survival, onEvents),
 });
 const enemies = new EnemyAI(core, {
-  playerId, movementStep, separation,
+  playerId,
+  movementStep,
+  separation,
   ...createEnemySurvivalPolicies(survival, onEvents),
 });
 const pausePolicy = createSurvivalPausePolicy(survival);

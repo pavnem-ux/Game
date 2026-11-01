@@ -16,6 +16,7 @@ npm run dev
 ```bash
 npm run typecheck  # строгая проверка TypeScript
 npm test           # тесты прототипа + Vitest Stats, Combat, Weapons, Status, Enemy AI и Survival
+npm run format:check # проверка форматирования Prettier
 npm run build      # TypeScript + production-сборка в dist/
 npm run preview    # проверить собранную игру
 ```
@@ -25,6 +26,10 @@ npm run preview    # проверить собранную игру
 Проект подготовлен для статического хостинга из **приватного** `pavnem-ux/Game`: production branch `main`, build command `npm run build`, output `dist`, root directory — корень репозитория. Node.js закреплён в `.node-version` (`24.19.0`). Pages предоставляет SPA fallback без дополнительных rewrites. Developer Testing Mode исключён из production, включая `?debug`.
 
 [Точные шаги подключения GitHub, авторизации и публикации](docs/DEPLOY_CLOUDFLARE_PAGES.md). Потребуется войти в свой Cloudflare и разрешить GitHub App доступ только к Game. Публичный URL появится после успешного deployment; до проверки реального URL сайт не считается опубликованным и проверенным. Настройки хостинга не переопределяют игровые правила; Task 07 не начат.
+
+## Разработка и ревью
+
+Общие правила для разработчиков и AI-агентов — [AGENTS.md](AGENTS.md) (Claude Code читает его через [CLAUDE.md](CLAUDE.md)). Claude Code реализует утверждённые задачи в отдельных ветках и открывает Pull Request в `main`, OpenAI Codex выполняет независимое ревью, владелец проекта утверждает геймплей и выполняет merge. GitHub Actions (`.github/workflows/ci.yml`) на каждом PR запускает typecheck, Prettier, все тесты, production build с `test:production` и браузерный e2e. [Ветки, ревью, CI и проверка в Cloudflare Preview](docs/DEVELOPMENT_WORKFLOW.md).
 
 ## Как играть
 
