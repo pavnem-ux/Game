@@ -1,7 +1,7 @@
 # Task 08 progress
 
 Branch: task-08-campaign | PR: https://github.com/pavnem-ux/Game/pull/4 (draft)
-Current: Phase 3, step 3.3
+Current: Phase 4, step 4.1 (Phase 3 done; waiting for "continue")
 
 ## Steps
 
@@ -17,7 +17,7 @@ Current: Phase 3, step 3.3
 - [x] 2.3 10 boss configs, boss HP bar, spawn notification, CC limits, death event
 - [x] 3.1 Reward calculation (victory/defeat/abandon)
 - [x] 3.2 Class XP, overflow, cap 50, lifetime XP; talent points function
-- [ ] 3.3 applyRunResult(profile, result) → new profile (pure, idempotent)
+- [x] 3.3 applyRunResult(profile, result) → new profile (pure, idempotent)
 - [ ] 4.1 saveSchema: defaults, validate, migrations map
 - [ ] 4.2 saveStore: load/save, backup key, error handling
 - [ ] 4.3 Wire autosave into progression; failure warning state
@@ -59,7 +59,10 @@ Current: Phase 3, step 3.3
   optional host hook `controlLimits` (boss-only Slow cap / stun scale / immunity).
 - Profile/progression (pure, no storage/UI): `src/profile/` — `rewards.ts` (`RunResult`,
   `runRewards`), `class-xp.ts` (`xpToNextLevel`, `addClassXp` overflow/cap 50/lifetime,
-  derived `talentPoints`). Tests `tests/profile/` (`npm run test:profile`). Tests `tests/campaign/` (`npm run test:campaign`).
+  derived `talentPoints`), `profile.ts` (`PlayerProfile` schema v1, `createProfile(id, createdAt)`),
+  `apply-run.ts` (`applyRunResult(profile, result, finishedAt)` pure + idempotent by runId,
+  `isMapUnlocked`, `nextMapAfter`, `validateRunResult`). Tests `tests/profile/`
+  (`npm run test:profile`). Tests `tests/campaign/` (`npm run test:campaign`).
 - Node 24, `npm ci`. Unit: `npm test` (Vitest + Node prototype tests). Per module: `test:stats`,
   `test:combat`, `test:weapons`, `test:status`, `test:enemies`, `test:survival`, `test:alpha`
   (tests/gameplay), `test:skills`. Typecheck `npm run typecheck`; format `npm run format:check`
@@ -135,6 +138,10 @@ level)`, caps `COMBAT_ATTRIBUTE_CAPS`, `scaleCooldown`/`scaleCircularAoeRadius`)
   3–4 s). Boss/elite HP bars are drawn in-world for now; the HUD boss bar is Phase 5.4. Boss XP
   (+120…260 run XP, provisional) rides on the normal deduplicated crystal. Removed the Phase 1
   placeholder boss values from the config.
+- 3.3: abandoned runs only count in `stats.runs`, recent runs and processed ids (no rewards,
+  kills, survival or best results). A victory must have `bossKilled`. Locked maps cannot be
+  applied. Profile id and timestamps are supplied by the caller (pure). Recent runs keep
+  level before/after so a revisited results screen shows the exact original summary.
 - Task 07.2 is on the PR #3 branch (`claude/stoic-carson-76vdrx`, `dde421a` + v2 `9e8aa93`), not
   on `main` (PR #3 unmerged). `task-08-campaign` is stacked on that branch; the draft PR targets it
   so its diff shows only Task 08. Retarget to `main` after PR #3 is merged.
