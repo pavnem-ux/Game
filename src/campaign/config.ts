@@ -28,6 +28,28 @@ export const CAMPAIGN_BALANCE = Object.freeze({
     damageMultiplier: 1.4,
     /** Profiles alternate in this order (aggressive melee, ranged). */
     profiles: Object.freeze(['melee', 'ranged'] as const),
+    /**
+     * Elite profile definitions applied to the existing enemy profiles (same AI). Scales multiply
+     * the base melee/ranged config; extraXp is added to the elite's normal crystal reward.
+     */
+    definitions: Object.freeze({
+      melee: Object.freeze({
+        name: 'Свирепый громила',
+        radiusScale: 1.6,
+        movementScale: 1.3,
+        attackIntervalScale: 0.75,
+        attackRangeScale: 1,
+        extraXp: 40,
+      }),
+      ranged: Object.freeze({
+        name: 'Тёмный ворожей',
+        radiusScale: 1.5,
+        movementScale: 1,
+        attackIntervalScale: 0.8,
+        attackRangeScale: 1.2,
+        extraXp: 40,
+      }),
+    }),
   }),
   boss: Object.freeze({
     /** Simulation seconds; the scheduled elite at this time is replaced by the boss. */

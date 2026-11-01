@@ -43,6 +43,8 @@ import {
   CampaignDirector,
   INITIAL_RUN_STATE,
   campaignSpawning,
+  eliteEnemyConfig,
+  eliteProfile,
   reduceRun,
   getCampaignMap,
   runClock,
@@ -91,6 +93,8 @@ export class GameplayWorld {
   private readonly director: CampaignDirector | null;
   private bossEnemyId: string | null = null;
   private readonly eliteEnemyIds: string[] = [];
+  /** Elite enemy id → profile (kept after death for results/rewards). */
+  private readonly eliteProfiles = new Map<string, 'melee' | 'ranged'>();
   private campaignRun: CampaignRunState = INITIAL_RUN_STATE;
   constructor(
     readonly options: GameplayOptions,
@@ -295,6 +299,12 @@ export class GameplayWorld {
       bossTime: CAMPAIGN_BALANCE.boss.spawnTime,
       bossEnemyId: this.bossEnemyId,
       eliteEnemyIds: Object.freeze([...this.eliteEnemyIds]),
+      elites: Object.freeze(
+        this.eliteEnemyIds.map((enemyId) => {
+          const profile = eliteProfile(this.eliteProfiles.get(enemyId)!);
+          return Object.freeze({ enemyId, profile: profile.id, name: profile.name });
+        }),
+      ),
       runId: this.options.campaign?.runId ?? null,
       status: this.campaignRun.status,
       bossKilled: this.campaignRun.bossKilled,
@@ -589,8 +599,14 @@ export class GameplayWorld {
     if (!event || !map) return;
     if (event.kind === 'elite') {
       const { hpMultiplier, damageMultiplier } = CAMPAIGN_BALANCE.elite;
-      const enemyId = this.spawnScheduled(event.profile, hpMultiplier, damageMultiplier);
+      const enemyId = this.spawnScheduled(
+        event.profile,
+        hpMultiplier,
+        damageMultiplier,
+        eliteEnemyConfig(ALPHA_ENEMIES[event.profile], event.profile),
+      );
       this.eliteEnemyIds.push(enemyId);
+      this.eliteProfiles.set(enemyId, event.profile);
       this.record('campaign', [
         Object.freeze({
           type: 'elite-spawned',
@@ -652,8 +668,12 @@ export class GameplayWorld {
    * Scheduled elite/boss spawn: off-screen like waves (spawn RNG stream), stats = map difficulty ×
    * extra multipliers. Reserved slots guarantee the 120-enemy cap is never exceeded.
    */
-  private spawnScheduled(kind: 'melee' | 'ranged', hp: number, damage: number): string {
-    const profile = ALPHA_ENEMIES[kind];
+  private spawnScheduled(
+    kind: 'melee' | 'ranged',
+    hp: number,
+    damage: number,
+    profile: EnemyConfig = ALPHA_ENEMIES[kind],
+  ): string {
     const position = offscreenPosition(
       this.body,
       this.viewport,
@@ -939,8 +959,11 @@ export class GameplayWorld {
         ]);
         if (contributors.includes(this.playerId)) {
           this.kills++;
+          const elite = this.eliteProfiles.get(event.entityId);
+          // Task 08: elites drop their normal crystal plus the profile's extra run XP.
           const xp =
-            enemy.config.behavior === 'melee' ? XP_RULES.meleeReward : XP_RULES.rangedReward;
+            (enemy.config.behavior === 'melee' ? XP_RULES.meleeReward : XP_RULES.rangedReward) +
+            (elite ? eliteProfile(elite).extraXp : 0);
           const crystal = this.experience.drop(enemy.position, xp);
           this.record('progression', [
             Object.freeze({

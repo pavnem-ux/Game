@@ -25,6 +25,8 @@ export class AlphaScene extends Phaser.Scene {
   private labels: Phaser.GameObjects.Text[] = [];
   private damageLabels: Phaser.GameObjects.Text[] = [];
   private stunLabels: Phaser.GameObjects.Text[] = [];
+  /** Task 08: name tags of elites/bosses (pooled). */
+  private nameLabels: Phaser.GameObjects.Text[] = [];
   private testing?: TestingController;
   private testingWorld?: (options: GameplayOptions) => GameplayWorld;
   private testingReady: Promise<void> = Promise.resolve();
@@ -167,6 +169,7 @@ export class AlphaScene extends Phaser.Scene {
           this.labels.forEach((t) => t.setVisible(false));
           this.damageLabels.forEach((t) => t.setVisible(false));
           this.stunLabels.forEach((t) => t.setVisible(false));
+          this.nameLabels.forEach((t) => t.setVisible(false));
           this.joystick.clear();
           break;
         case 'pause':
@@ -295,25 +298,46 @@ export class AlphaScene extends Phaser.Scene {
     let stunLabel = 0;
     let label = 0,
       damageLabel = 0;
+    let nameLabel = 0;
+    const elites = s.campaign?.elites;
     for (const enemy of s.enemies) {
       if (!enemy.alive) continue;
       const { x, y } = enemy.position;
       const ranged = enemy.config.behavior === 'ranged';
-      g.fillStyle(0x060c0c, 0.4).fillEllipse(x, y + 15, 34, 12);
-      g.fillStyle(ranged ? 0xb2739b : 0x87996e);
-      if (ranged) g.fillTriangle(x, y - 18, x - 17, y + 14, x + 17, y + 14);
-      else g.fillEllipse(x, y, 30, 33);
-      g.fillStyle(0x18231f).fillEllipse(x, y - 3, 18, 11);
+      // Task 08: elites are bigger, glow in their profile colour and carry a name + wide HP bar.
+      let eliteName: string | null = null;
+      if (elites)
+        for (const elite of elites) if (elite.enemyId === enemy.entityId) eliteName = elite.name;
+      const f = eliteName ? enemy.config.radius / (ranged ? 15 : 14) : 1;
+      const hpWidth = eliteName ? 64 : 34;
+      const barY = y - 25 * f;
+      if (eliteName)
+        g.lineStyle(3, ranged ? 0xb68cff : 0xff8a3d, 0.85)
+          .strokeCircle(x, y, enemy.config.radius + 7)
+          .lineStyle(1, 0xfff0c4, 0.5)
+          .strokeCircle(x, y, enemy.config.radius + 11);
+      g.fillStyle(0x060c0c, 0.4).fillEllipse(x, y + 15 * f, 34 * f, 12 * f);
+      g.fillStyle(eliteName ? (ranged ? 0x7d4fc0 : 0xb5532b) : ranged ? 0xb2739b : 0x87996e);
+      if (ranged) g.fillTriangle(x, y - 18 * f, x - 17 * f, y + 14 * f, x + 17 * f, y + 14 * f);
+      else g.fillEllipse(x, y, 30 * f, 33 * f);
+      g.fillStyle(0x18231f).fillEllipse(x, y - 3 * f, 18 * f, 11 * f);
       g.fillStyle(ranged ? 0xffbebf : 0xe9d497)
-        .fillRect(x - 6, y - 6, 4, 3)
-        .fillRect(x + 3, y - 6, 4, 3);
-      g.fillStyle(0x19201b).fillRect(x - 17, y - 25, 34, 3);
-      g.fillStyle(ranged ? 0xe09ac1 : 0xc8d79c).fillRect(
-        x - 17,
-        y - 25,
-        (34 * enemy.entity.currentHp) / enemy.entity.maxHp,
-        3,
+        .fillRect(x - 6 * f, y - 6 * f, 4 * f, 3 * f)
+        .fillRect(x + 3 * f, y - 6 * f, 4 * f, 3 * f);
+      g.fillStyle(0x19201b).fillRect(x - hpWidth / 2, barY, hpWidth, eliteName ? 5 : 3);
+      g.fillStyle(eliteName ? 0xffb347 : ranged ? 0xe09ac1 : 0xc8d79c).fillRect(
+        x - hpWidth / 2,
+        barY,
+        (hpWidth * enemy.entity.currentHp) / enemy.entity.maxHp,
+        eliteName ? 5 : 3,
       );
+      if (eliteName)
+        this.label(this.nameLabels, nameLabel++)
+          .setText(eliteName)
+          .setColor(ranged ? '#d9c4ff' : '#ffd0a8')
+          .setPosition(x, barY - 10)
+          .setDepth(11)
+          .setVisible(true);
       const mark = s.skillCombat.marks.find((m) => m.targetId === enemy.entityId);
       if (mark)
         g.lineStyle(2, mark.kind === 'hunter' ? 0xffd27a : 0xd690ff, 0.9)
@@ -353,6 +377,8 @@ export class AlphaScene extends Phaser.Scene {
     }
     for (; stunLabel < this.stunLabels.length; stunLabel++)
       this.stunLabels[stunLabel].setVisible(false);
+    for (; nameLabel < this.nameLabels.length; nameLabel++)
+      this.nameLabels[nameLabel].setVisible(false);
     const { x, y } = s.playerBody,
       color = CLASS_COLORS[s.character.characterClass];
     g.fillStyle(0x030d0c, 0.45).fillEllipse(x, y + 17, 38, 13);

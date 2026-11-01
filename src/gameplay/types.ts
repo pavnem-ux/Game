@@ -119,6 +119,12 @@ export interface CampaignSnapshot {
   readonly bossTime: number;
   readonly bossEnemyId: string | null;
   readonly eliteEnemyIds: readonly string[];
+  /** Elites spawned this run (alive or dead) with profile and display name. */
+  readonly elites: readonly Readonly<{
+    enemyId: string;
+    profile: 'melee' | 'ranged';
+    name: string;
+  }>[];
   readonly runId: string | null;
   /** Run state machine (exactly-once resolution). */
   readonly status: 'active' | 'victory' | 'defeat' | 'abandoned';

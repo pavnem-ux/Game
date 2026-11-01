@@ -19,3 +19,5 @@ export { CampaignDirector, campaignSchedule, scheduledEnemyCount } from './sched
 export type { ScheduledEvent } from './schedule';
 export { INITIAL_RUN_STATE, reduceRun } from './run-state';
 export type { CampaignRunState, RunInput, RunOutcome, RunTransition } from './run-state';
+export { eliteEnemyConfig, eliteProfile } from './elites';
+export type { EliteProfile } from './elites';
