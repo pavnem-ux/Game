@@ -14,6 +14,7 @@ export default defineConfig({
       'tests/skills/**/*.test.ts',
       'tests/engine/**/*.test.ts',
       'tests/campaign/**/*.test.ts',
+      'tests/profile/**/*.test.ts',
     ],
   },
 });

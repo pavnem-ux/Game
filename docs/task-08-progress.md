@@ -1,7 +1,7 @@
 # Task 08 progress
 
 Branch: task-08-campaign | PR: https://github.com/pavnem-ux/Game/pull/4 (draft)
-Current: Phase 3, step 3.1 (Phase 2 done; waiting for "continue")
+Current: Phase 3, step 3.2
 
 ## Steps
 
@@ -15,7 +15,7 @@ Current: Phase 3, step 3.1 (Phase 2 done; waiting for "continue")
 - [x] 2.1 Elite profiles (melee, ranged): visuals, name/HP bar, extra XP
 - [x] 2.2 Boss ability library (5 abilities) with telegraphs and cooldowns
 - [x] 2.3 10 boss configs, boss HP bar, spawn notification, CC limits, death event
-- [ ] 3.1 Reward calculation (victory/defeat/abandon)
+- [x] 3.1 Reward calculation (victory/defeat/abandon)
 - [ ] 3.2 Class XP, overflow, cap 50, lifetime XP; talent points function
 - [ ] 3.3 applyRunResult(profile, result) → new profile (pure, idempotent)
 - [ ] 4.1 saveSchema: defaults, validate, migrations map
@@ -56,7 +56,9 @@ Current: Phase 3, step 3.1 (Phase 2 done; waiting for "continue")
   `bosses.ts` (`BOSS_DEFINITIONS` ×10 keyed by map `bossId`: behaviour, HP/dmg/size/speed,
   xpReward, CC limits, abilities; `validateBossDefinitions`). World: boss spawned from its
   definition, `boss-defeated` event once, snapshot `campaign.boss` (HP bar data); SkillEngine
-  optional host hook `controlLimits` (boss-only Slow cap / stun scale / immunity). Tests `tests/campaign/` (`npm run test:campaign`).
+  optional host hook `controlLimits` (boss-only Slow cap / stun scale / immunity).
+- Profile/progression (pure, no storage/UI): `src/profile/` — `rewards.ts` (`RunResult`,
+  `runRewards`). Tests `tests/profile/` (`npm run test:profile`). Tests `tests/campaign/` (`npm run test:campaign`).
 - Node 24, `npm ci`. Unit: `npm test` (Vitest + Node prototype tests). Per module: `test:stats`,
   `test:combat`, `test:weapons`, `test:status`, `test:enemies`, `test:survival`, `test:alpha`
   (tests/gameplay), `test:skills`. Typecheck `npm run typecheck`; format `npm run format:check`
