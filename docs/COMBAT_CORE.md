@@ -148,3 +148,11 @@ Weapon Attacks использует существующие API без изме
 `reviveEntity(entityId, restoredHp): RevivalResult` — отдельная операция для dead entity: конечный положительный HP не выше текущего Max HP, без округления. Возвращает frozen entity/restoredHp/events и один `RevivalEvent`: `type: 'revived'`, entityId, previousHp=0, currentHp, maxHp. Повторный вызов по живой сущности отвергается; новая смерть после revival снова создаёт обычный death. Healing и Max HP changes по-прежнему не оживляют. Ограничение «один раз за забег» находится в PlayerSurvival, общий Core его не вводит.
 
 CombatEvent получил новый вариант `revived`: exhaustive consumers должны его обработать. Формулы Character Stats и существующие damage/HP API не менялись. Core сам не проверяет защитные таймеры: incoming attack caller применяет synchronous eligibility до resolve и сразу передаёт результат Survival. [Полный протокол Task 05](PLAYER_SURVIVAL.md).
+
+## Task 07.2 — protected integration hook
+
+`hpAfterDamage(target, unabsorbedDamage)` выделяет прежнюю формулу уменьшения HP после
+mitigation/расходования барьера. Default-поведение и публичные результаты не меняются.
+Единственная запись HP остаётся в Core. QA-only подкласс использует hook, чтобы предотвратить
+потерю HP игрока без изменения stats/Dodge/рассчитанного damage; его реализация отсутствует
+в Production. [Контракт и изоляция](SKILLS_PAUSE_QA.md).

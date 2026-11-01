@@ -5,6 +5,8 @@ import { alphaBridge, CLASS_COLORS } from '../gameplay-ui/store';
 import type { AlphaCommand } from '../gameplay-ui/store';
 import { loadSave, saveRun } from '../progression/save';
 import { createWorld } from './World';
+import type { TestingController } from '../gameplay/testing';
+import { stunIndicator } from './stun-indicator';
 
 export class AlphaScene extends Phaser.Scene {
   private world: GameplayWorld | null = null;
@@ -21,7 +23,10 @@ export class AlphaScene extends Phaser.Scene {
   private fx: { event: WorldEvent; until: number; x: number; y: number; text?: string }[] = [];
   private labels: Phaser.GameObjects.Text[] = [];
   private damageLabels: Phaser.GameObjects.Text[] = [];
-  private testing?: (action: unknown) => void;
+  private stunLabels: Phaser.GameObjects.Text[] = [];
+  private testing?: TestingController;
+  private testingWorld?: (options: GameplayOptions) => GameplayWorld;
+  private testingReady: Promise<void> = Promise.resolve();
   constructor() {
     super('combat-alpha');
   }
@@ -83,30 +88,51 @@ export class AlphaScene extends Phaser.Scene {
       (import.meta.env.DEV || __QA_BUILD__) &&
       new URLSearchParams(location.search).has('debug')
     ) {
-      void import('../gameplay/testing').then(({ createTestingController }) => {
-        if (!this.scene.isActive()) return;
-        this.testing = createTestingController(
-          () => this.world,
-          (options) => this.start(options),
-        );
-        window.__alpha = {
-          state: () => alphaBridge.getSnapshot(),
-          command: (action) => this.command({ type: 'testing', action }),
-          advance: (seconds) => {
-            this.world?.update(seconds);
-            this.publish();
-          },
-        };
-        this.publish();
-      });
+      this.testingReady = import('../gameplay/testing').then(
+        ({ createTestingController, createTestingWorld }) => {
+          if (!this.scene.isActive()) return;
+          this.testingWorld = createTestingWorld;
+          this.testing = createTestingController(
+            () => this.world,
+            (options) => this.start(options),
+          );
+          window.__alpha = {
+            state: () => alphaBridge.getSnapshot(),
+            command: (action) => this.command({ type: 'testing', action }),
+            advance: (seconds) => {
+              this.world?.update(seconds);
+              if (this.world) this.draw(this.world.getSnapshot());
+              this.publish();
+            },
+            presentation: () =>
+              Object.freeze({
+                stunIndicators: Object.freeze(
+                  this.stunLabels
+                    .filter((label) => label.visible)
+                    .map((label) =>
+                      Object.freeze({
+                        entityId: label.getData('entityId') as string,
+                        text: label.text,
+                      }),
+                    ),
+                ),
+              }),
+          };
+          this.publish();
+        },
+      );
     }
     this.publish();
   }
   private start(options: GameplayOptions) {
-    const next = new GameplayWorld({
+    const input = {
       ...options,
       viewport: { width: this.scale.width, height: this.scale.height },
-    }); // Validate before replacing a running session.
+    };
+    const next =
+      (import.meta.env.DEV || __QA_BUILD__) && this.testingWorld
+        ? this.testingWorld(input)
+        : new GameplayWorld(input); // Validate before replacing a session.
     this.world = next;
     this.runId++;
     this.lastEvent = 0;
@@ -116,6 +142,18 @@ export class AlphaScene extends Phaser.Scene {
     this.keys && this.input.keyboard?.resetKeys();
   }
   private command(command: AlphaCommand) {
+    if (
+      (import.meta.env.DEV || __QA_BUILD__) &&
+      command.type === 'start' &&
+      new URLSearchParams(location.search).has('debug') &&
+      !this.testingWorld
+    ) {
+      // A fast initial click waits for the QA factory; later restarts remain synchronous.
+      void this.testingReady.then(() => {
+        if (this.scene.isActive()) this.command(command);
+      });
+      return;
+    }
     try {
       this.error = '';
       switch (command.type) {
@@ -127,6 +165,7 @@ export class AlphaScene extends Phaser.Scene {
           this.clearInput();
           this.labels.forEach((t) => t.setVisible(false));
           this.damageLabels.forEach((t) => t.setVisible(false));
+          this.stunLabels.forEach((t) => t.setVisible(false));
           this.joystick.clear();
           break;
         case 'pause':
@@ -244,6 +283,7 @@ export class AlphaScene extends Phaser.Scene {
         .fillTriangle(x - 4, y, x + 4, y, x, y + 6);
       g.lineStyle(1, 0xe4ffe1, 0.7).lineBetween(x, y - 4, x - 2, y);
     }
+    let stunLabel = 0;
     let label = 0,
       damageLabel = 0;
     for (const enemy of s.enemies) {
@@ -271,8 +311,23 @@ export class AlphaScene extends Phaser.Scene {
           .strokeCircle(x, y, 22)
           .lineBetween(x - 26, y, x - 18, y)
           .lineBetween(x + 18, y, x + 26, y);
-      if (enemy.control?.stunned) g.fillStyle(0xfff2a8, 0.9).fillCircle(x, y - 30, 4);
-      else if (enemy.control && enemy.control.movementMultiplier < 1)
+      const stun = stunIndicator(enemy);
+      if (stun) {
+        const index = stunLabel++;
+        const badge =
+          this.stunLabels[index] ??
+          this.label(this.stunLabels, index)
+            .setText(stun.text)
+            .setColor(stun.color)
+            .setBackgroundColor(stun.background)
+            .setPadding(4, 2)
+            .setDepth(12);
+        badge
+          .setPosition(x, y + stun.offsetY)
+          .setData('entityId', enemy.entityId)
+          .setVisible(true);
+        g.lineStyle(2, 0xffe88e, 0.95).lineBetween(x - 7, y - 39, x + 7, y - 39);
+      } else if (enemy.control && enemy.control.movementMultiplier < 1)
         g.lineStyle(2, 0x9fdcff, 0.7).strokeEllipse(x, y + 14, 34, 10);
       const effects = s.statuses.filter((v) => v.targetId === enemy.entityId);
       if (effects.length) {
@@ -287,6 +342,8 @@ export class AlphaScene extends Phaser.Scene {
           .setVisible(true);
       }
     }
+    for (; stunLabel < this.stunLabels.length; stunLabel++)
+      this.stunLabels[stunLabel].setVisible(false);
     const { x, y } = s.playerBody,
       color = CLASS_COLORS[s.character.characterClass];
     g.fillStyle(0x030d0c, 0.45).fillEllipse(x, y + 17, 38, 13);
@@ -433,6 +490,7 @@ export class AlphaScene extends Phaser.Scene {
       this.recordedRun = this.runId;
     }
     alphaBridge.publish({
+      ...(import.meta.env.DEV || __QA_BUILD__ ? { qa: this.testing?.snapshot() ?? null } : {}),
       screen,
       world,
       runId: this.runId,
@@ -488,6 +546,9 @@ declare global {
       state: () => ReturnType<typeof alphaBridge.getSnapshot>;
       command: (action: unknown) => void;
       advance: (seconds: number) => void;
+      presentation: () => {
+        readonly stunIndicators: readonly { readonly entityId: string; readonly text: string }[];
+      };
     };
   }
 }

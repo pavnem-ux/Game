@@ -183,3 +183,8 @@ Enemy separation использует прежний spatial grid. Активн�
 [Experience & Enemy Waves](EXPERIENCE_WAVES.md) описывает текущие defaults, collectible crystals, provisional XP curve, отдельные run/permanent levels, off-screen placement, schedule/pressure/caps и новые DEV controls. Порядок общей timeline сохранён, spawn стоит после combat events на равном timestamp. Приведённые выше результаты 576 тестов и параметры стартового сценария относятся к завершённому Task 06; актуальные проверки Task 06.1 описаны в новом документе.
 
 Task 07.1: обзор навыков без паузы, целые HP в HUD, лечение 15% Max HP за уровень забега, 18% ranged в обычных волнах и отдельная QA-сборка Preview описаны в [GAMEPLAY_BALANCE_QA.md](GAMEPLAY_BALANCE_QA.md).
+
+Task 07.2 добавляет безопасный обзор навыков поверх paused/level-up диалогов, pooled-бейдж Stun,
+QA-only God Mode и диагностику реальных синергий. Второй optional аргумент GameplayWorld —
+фабрика Core для специализированной интеграции; protected factories/record сохраняют default
+поведение и прежние API. [Описание изменений и QA checklist](SKILLS_PAUSE_QA.md).

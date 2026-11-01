@@ -1,10 +1,15 @@
 import { calculateCharacterStats, scaleMovementSpeed } from '../character-stats';
 import { CombatCore, calculateSuccessfulDamage } from '../combat-core';
-import type { CombatEvent } from '../combat-core';
+import type { CombatEvent, RandomSource } from '../combat-core';
 import { WeaponAttacks } from '../weapon-attacks';
 import type { WeaponEvent, CombatBody, Point } from '../weapon-attacks';
 import { StatusEffects, WeaponStatusAdapter } from '../status-effects';
-import type { EffectApplication, EffectDefinition, StatusEvent } from '../status-effects';
+import type {
+  EffectApplication,
+  EffectDefinition,
+  StatusEvent,
+  OnHitEffectMapping,
+} from '../status-effects';
 import { EnemyAI } from '../enemy-ai';
 import { enemyConfig } from '../enemy-ai/validation';
 import type { EnemyConfig, EnemyEvent } from '../enemy-ai';
@@ -68,7 +73,11 @@ export class GameplayWorld {
   private readonly baseOnHit: readonly EffectDefinition[];
   private onHitDefinitions: readonly EffectDefinition[];
   private facing: Point = Object.freeze({ x: 1, y: 0 });
-  constructor(readonly options: GameplayOptions) {
+  constructor(
+    readonly options: GameplayOptions,
+    createCore: (random: RandomSource) => CombatCore = (random) => new CombatCore(random),
+  ) {
+    if (typeof createCore !== 'function') throw new TypeError('createCore must be a function.');
     this.character = calculateCharacterStats(options.characterClass, options.level ?? 1);
     let seed = options.seed ?? 1337;
     if (!Number.isSafeInteger(seed) || seed < 0) throw new RangeError('Invalid random seed.');
@@ -89,7 +98,7 @@ export class GameplayWorld {
     this.spawnSettings = spawningSettings(options.spawning);
     this.viewport = viewportSize(options.viewport ?? { width: 1280, height: 720 });
     this.nextSpawnAt = this.spawnSettings.interval;
-    this.core = new CombatCore(this.random);
+    this.core = createCore(this.random);
     this.core.addEntity({
       id: this.playerId,
       affiliation: 'player',
@@ -563,12 +572,15 @@ export class GameplayWorld {
   private makeAdapter(definitions: readonly EffectDefinition[]) {
     // Player basic-weapon effects receive run modifiers (Toxic Mastery, Lingering, Elemental Mastery).
     const player = this.skills ? definitions.map((d) => this.skills.playerEffect(d)) : definitions;
-    return new WeaponStatusAdapter(this.statuses, {
+    return this.createStatusAdapter({
       [ALPHA_WEAPONS[this.character.characterClass].id]: player,
       'alpha-enemy': [
         { effectType: 'poison', probabilityPercent: 25, duration: 4, rawDamagePerTick: 2 },
       ],
     });
+  }
+  protected createStatusAdapter(mapping: OnHitEffectMapping): WeaponStatusAdapter {
+    return new WeaponStatusAdapter(this.statuses, mapping);
   }
   private movePlayer() {
     const speed = scaleMovementSpeed(
@@ -755,7 +767,7 @@ export class GameplayWorld {
     )
       this.run.clearPending();
   }
-  private record(channel: WorldEvent['channel'], events: readonly WorldEvent['event'][]) {
+  protected record(channel: WorldEvent['channel'], events: readonly WorldEvent['event'][]) {
     for (const event of events)
       this.history.push(
         Object.freeze({ sequence: ++this.eventSequence, time: this.clock, channel, event }),

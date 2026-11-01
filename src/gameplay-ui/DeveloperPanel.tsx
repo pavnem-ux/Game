@@ -64,6 +64,56 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
     <aside className="developer-panel" aria-label="Developer Testing Mode">
       <h2>Developer Testing Mode</h2>
       <p>Временный баланс · изменения класса/уровня начинают новый мир.</p>
+      {w && state.qa && (
+        <fieldset>
+          <legend>God Mode</legend>
+          <label>
+            <input
+              type="checkbox"
+              aria-label="God Mode"
+              checked={state.qa.godMode}
+              onChange={(e) => send({ type: 'god-mode', enabled: e.target.checked })}
+            />{' '}
+            God Mode {state.qa.godMode ? 'ON' : 'OFF'}
+          </label>
+          <p>
+            Останавливает только потерю HP. Атаки, статусы и таймеры продолжают работать. Новый
+            забег: OFF.
+          </p>
+        </fieldset>
+      )}
+      {w && state.qa && (
+        <fieldset aria-label="Synergy Diagnostics">
+          <legend>Synergy Diagnostics · Синергии</legend>
+          <button onClick={() => send({ type: 'reset-synergy-counters' })}>
+            Сбросить счётчики синергий
+          </button>
+          {state.qa.synergies.map((synergy) => (
+            <div className="synergy-diagnostic" key={synergy.id} data-synergy-id={synergy.id}>
+              <strong>
+                {synergy.name} ·{' '}
+                {synergy.id
+                  .split('_')
+                  .map((word) => word[0].toUpperCase() + word.slice(1))
+                  .join(' ')}
+              </strong>
+              <code>{synergy.id}</code>
+              <p>
+                {synergy.unlocked ? 'Разблокирована' : 'Заблокирована'} · нужен приобретённый навык:{' '}
+                {synergy.requiredSkillTags.join(' / ')}
+              </p>
+              <p>
+                Активаций: <b>{synergy.count}</b>
+              </p>
+              <p>
+                {synergy.lastTime === null
+                  ? 'Ещё не срабатывала'
+                  : `Последняя: ${synergy.lastTime.toFixed(2)} с · цель ${synergy.lastTargetId}`}
+              </p>
+            </div>
+          ))}
+        </fieldset>
+      )}
       <fieldset>
         <legend>Персонаж</legend>
         <label>

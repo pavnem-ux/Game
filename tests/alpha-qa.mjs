@@ -2,6 +2,8 @@ import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { mkdir, readFile } from 'node:fs/promises';
+import { checkSkillsAccess } from './skills-ui-browser.mjs';
+import { checkQaTools } from './qa-tools-browser.mjs';
 
 await mkdir('artifacts', { recursive: true });
 const html = await readFile('dist-qa/index.html', 'utf8');
@@ -104,8 +106,10 @@ try {
   await command({ type: 'clear-enemies' });
   await command({ type: 'hp', value: (await state()).world.player.maxHp - 1 });
   await command({ type: 'grant-xp', amount: 30 });
+  await page.getByRole('button', { name: 'Закрыть обзор навыков' }).click();
   await page.locator('.skill-card').first().click();
   await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
+  await page.getByRole('button', { name: 'Обзор навыков', exact: true }).click();
   const label = await page.locator('.health-label > span').innerText();
   assert.match(label, /^\d+ \/ \d+ HP$/, 'HUD uses whole HP');
   const [current, maximum] = label.match(/\d+/g).map(Number);
@@ -114,13 +118,18 @@ try {
   const paused = (await state()).world.time;
   await page.waitForTimeout(150);
   assert.equal((await state()).world.time, paused, 'overview does not override manual pause');
+  await page.getByRole('button', { name: 'Закрыть обзор навыков' }).click();
+  assert.equal((await state()).screen, 'paused');
   await page.getByRole('button', { name: 'Продолжить', exact: false }).click();
+  await page.getByRole('button', { name: 'Обзор навыков', exact: true }).click();
   await page.setViewportSize({ width: 390, height: 844 });
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   const box = await overview.boundingBox();
   assert.ok(box.x >= 0 && box.x + box.width <= 390, 'skill overview fits mobile viewport');
   await page.screenshot({ path: 'artifacts/alpha-13-qa-skills-mobile.png' });
   await page.getByRole('button', { name: 'Закрыть обзор навыков' }).click();
+  await checkSkillsAccess(page);
+  await checkQaTools(page);
   await page.goto('http://127.0.0.1:4189/?prototype&debug');
   await page.getByRole('button', { name: 'Войти в руины' }).waitFor();
   assert.equal(
@@ -130,7 +139,7 @@ try {
   );
   assert.deepEqual(errors, []);
   console.log(
-    'PASS QA static build: panel, XP/level healing, skill grants/upgrades, slot overview, cooldowns, whole HP, desktop/mobile, pause preservation; legacy debug remains excluded.',
+    'PASS QA static build: panel, XP/level healing, skills/ranks/cooldowns/slots, whole HP, paused and queued-level Skills access on desktop/mobile, actual Stun badges, exact synergy diagnostics/reset and God Mode ON/OFF/new-run reset; legacy debug remains excluded.',
   );
 } finally {
   await browser?.close();

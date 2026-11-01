@@ -277,10 +277,15 @@ export class CombatCore {
       if (barrier - absorbed > 0) this.barriers.set(target.id, barrier - absorbed);
       else this.barriers.delete(target.id);
     }
-    const currentHp = Math.max(0, target.currentHp - (damage - absorbed));
+    const currentHp = this.hpAfterDamage(target, damage - absorbed);
     const appliedDamage = target.currentHp - currentHp;
     const next = this.store({ ...target, currentHp, alive: currentHp > 0 });
     return { currentHp, appliedDamage, absorbed, next };
+  }
+
+  /** Extension point after mitigation/barriers and before the sole HP mutation. */
+  protected hpAfterDamage(target: CombatEntity, unabsorbedDamage: number): number {
+    return Math.max(0, target.currentHp - unabsorbedDamage);
   }
 
   private store(entity: CombatEntity): CombatEntity {

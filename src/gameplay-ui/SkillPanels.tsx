@@ -1,7 +1,7 @@
 import type { GameplaySnapshot } from '../gameplay';
 import type { OfferCard } from '../skills';
 import { getSkill } from '../skills';
-import { useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { alphaBridge } from './store';
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
@@ -10,7 +10,15 @@ const textGlyph = (icon: string) => `${icon}\uFE0E`;
 const cardKey = (c: OfferCard) => (c.kind === 'skill' ? c.skillId : `bonus:${c.bonusId}`);
 
 /** Level-up choice: up to three cards, exactly one pick, three rerolls per run. */
-export function LevelUpDialog({ world }: { world: GameplaySnapshot }) {
+export function LevelUpDialog({
+  world,
+  onOpenSkills,
+  hiddenBehindSkills = false,
+}: {
+  world: GameplaySnapshot;
+  onOpenSkills: () => void;
+  hiddenBehindSkills?: boolean;
+}) {
   const skills = world.skills;
   const offer = skills.offer!;
   const bonus = offer.mode === 'bonus';
@@ -20,6 +28,8 @@ export function LevelUpDialog({ world }: { world: GameplaySnapshot }) {
       role="dialog"
       aria-modal="true"
       aria-labelledby="skill-title"
+      inert={hiddenBehindSkills}
+      aria-hidden={hiddenBehindSkills || undefined}
     >
       <div className="upgrade-panel skill-panel">
         <div className="modal-sigil">✧</div>
@@ -36,6 +46,13 @@ export function LevelUpDialog({ world }: { world: GameplaySnapshot }) {
             : `Активные ${skills.slots.auto.used}/${skills.slots.auto.max} · пассивные ${skills.slots.passive.used}/${skills.slots.passive.max} · выбор навсегда до конца забега`}
           {skills.pendingChoices > 1 && ` · ещё выборов: ${skills.pendingChoices - 1}`}
         </p>
+        <button
+          className="button skills-modal-open"
+          aria-label="Обзор навыков"
+          onClick={onOpenSkills}
+        >
+          Навыки
+        </button>
         <div className="upgrade-grid" role="list">
           {offer.cards.map((card, i) => (
             <button
@@ -93,8 +110,19 @@ export function LevelUpDialog({ world }: { world: GameplaySnapshot }) {
 }
 
 /** Equipped skills with ranks and remaining cooldowns, plus gold and barrier. */
-export function SkillBar({ world }: { world: GameplaySnapshot }) {
-  const [open, setOpen] = useState(false);
+export function SkillBar({
+  world,
+  open,
+  onOpen,
+  onClose,
+  context,
+}: {
+  world: GameplaySnapshot;
+  open: boolean;
+  onOpen: () => void;
+  onClose: () => void;
+  context: string;
+}) {
   const { owned, slots, gold } = world.skills;
   const { cooldowns, barrier, buffs } = world.skillCombat;
   return (
@@ -105,7 +133,8 @@ export function SkillBar({ world }: { world: GameplaySnapshot }) {
           aria-label="Обзор навыков"
           aria-expanded={open}
           aria-controls="skill-overview"
-          onClick={() => setOpen(!open)}
+          hidden={context !== 'playing'}
+          onClick={open ? onClose : onOpen}
         >
           Навыки
         </button>
@@ -135,59 +164,115 @@ export function SkillBar({ world }: { world: GameplaySnapshot }) {
           </span>
         ))}
       </div>
-      {open && <SkillOverview world={world} onClose={() => setOpen(false)} />}
+      {open && <SkillOverview world={world} onClose={onClose} context={context} />}
     </>
   );
 }
 
 /** Read-only, non-modal overview. Opening/closing never changes simulation pause state. */
-function SkillOverview({ world, onClose }: { world: GameplaySnapshot; onClose: () => void }) {
+function SkillOverview({
+  world,
+  onClose,
+  context,
+}: {
+  world: GameplaySnapshot;
+  onClose: () => void;
+  context: string;
+}) {
+  const closeButton = useRef<HTMLButtonElement>(null);
+  const blocking = context !== 'playing';
+  useEffect(() => {
+    closeButton.current?.focus();
+    const keyboard = (event: KeyboardEvent) => {
+      const pauseKey = event.code === 'KeyP' || event.key.toLowerCase() === 'p';
+      if (event.key === 'Escape' || (blocking && pauseKey)) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (event.key === 'Escape' && !event.repeat) onClose();
+      }
+      if (event.key === 'Tab' && blocking) {
+        // The overview contains only this one control; keep focus above the inert underlying modal.
+        event.preventDefault();
+        closeButton.current?.focus();
+      }
+    };
+    document.addEventListener('keydown', keyboard, true);
+    return () => document.removeEventListener('keydown', keyboard, true);
+  }, [onClose, blocking]);
   return (
-    <aside id="skill-overview" className="skill-overview" aria-label="Обзор навыков">
-      <div className="skill-overview-heading">
-        <h2>Навыки забега</h2>
-        <button onClick={onClose} aria-label="Закрыть обзор навыков">
-          ×
-        </button>
-      </div>
-      <p>Обзор не останавливает игру. Перебросов осталось: {world.skills.rerolls}.</p>
-      {(['auto', 'passive'] as const).map((kind) => {
-        const slots = world.skills.slots[kind];
-        const owned = world.skills.owned.filter((s) => s.kind === kind);
-        return (
-          <section
-            key={kind}
-            aria-label={kind === 'auto' ? 'Автоматические навыки' : 'Пассивные навыки'}
+    <>
+      {blocking && <div className="skill-overview-backdrop" aria-hidden="true" />}
+      <aside
+        id="skill-overview"
+        className={`skill-overview ${blocking ? 'is-blocking' : ''}`}
+        aria-label="Обзор навыков"
+        role={blocking ? 'dialog' : undefined}
+        aria-modal={blocking || undefined}
+      >
+        <div className="skill-overview-heading">
+          <h2>Навыки забега</h2>
+          <span
+            className="skill-rerolls"
+            aria-label={`Перебросов осталось: ${world.skills.rerolls}`}
+            title="Оставшиеся перебросы"
           >
-            <h3>
-              {kind === 'auto' ? 'Автоматические' : 'Пассивные'} — {slots.used}/{slots.max}
-            </h3>
-            <p>Свободных слотов: {slots.max - slots.used}</p>
-            <ul>
-              {owned.map((skill) => {
-                const definition = getSkill(skill.skillId);
-                const remaining = world.skillCombat.cooldowns[skill.skillId] ?? 0;
-                return (
-                  <li key={skill.skillId}>
-                    <strong>
-                      <i aria-hidden="true">{textGlyph(skill.icon)}</i> {skill.name} ·{' '}
-                      {ROMAN[skill.rank]}
-                    </strong>
-                    <p>{definition.description}</p>
-                    <p>{definition.rankSummaries[skill.rank - 1]}</p>
-                    {kind === 'auto' && (
-                      <span aria-label={`Перезарядка: ${skill.name}`}>
-                        {remaining > 0.05 ? `Перезарядка: ${remaining.toFixed(1)} с` : 'Готов'}
-                      </span>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-            {owned.length === 0 && <p>Пока нет приобретённых навыков.</p>}
-          </section>
-        );
-      })}
-    </aside>
+            ↻ {world.skills.rerolls}
+          </span>
+          <button ref={closeButton} onClick={onClose} aria-label="Закрыть обзор навыков">
+            {blocking ? (context === 'level-up' ? 'К выбору' : 'Назад') : '×'}
+          </button>
+        </div>
+        <p className="skill-overview-note">
+          {blocking
+            ? 'Игра остаётся на паузе. Esc — назад.'
+            : 'Обзор не останавливает игру. Esc — закрыть.'}
+        </p>
+        <div className="skill-overview-groups">
+          {(['auto', 'passive'] as const).map((kind) => {
+            const slots = world.skills.slots[kind];
+            const owned = world.skills.owned.filter((s) => s.kind === kind);
+            return (
+              <section
+                key={kind}
+                className={`skill-group kind-${kind}`}
+                aria-label={kind === 'auto' ? 'Автоматические навыки' : 'Пассивные навыки'}
+              >
+                <h3>
+                  {kind === 'auto' ? 'Автоматические' : 'Пассивные'} — {slots.used}/{slots.max}
+                </h3>
+                <p>Свободных слотов: {slots.max - slots.used}</p>
+                <ul>
+                  {owned.map((skill) => {
+                    const definition = getSkill(skill.skillId);
+                    const remaining = world.skillCombat.cooldowns[skill.skillId] ?? 0;
+                    return (
+                      <li key={skill.skillId}>
+                        <strong className="skill-entry-heading">
+                          <i aria-hidden="true">{textGlyph(skill.icon)}</i> {skill.name} ·{' '}
+                          {ROMAN[skill.rank]}
+                        </strong>
+                        <p className="skill-entry-description">{definition.description}</p>
+                        <p>{definition.rankSummaries[skill.rank - 1]}</p>
+                        {kind === 'auto' && (
+                          <span aria-label={`Перезарядка: ${skill.name}`}>
+                            {remaining > 0.05 ? `Перезарядка: ${remaining.toFixed(1)} с` : 'Готов'}
+                          </span>
+                        )}
+                      </li>
+                    );
+                  })}
+                  {Array.from({ length: slots.max - slots.used }, (_, i) => (
+                    <li key={`empty-${i}`} className="skill-empty-slot">
+                      ◇ Свободный слот {slots.used + i + 1}
+                    </li>
+                  ))}
+                </ul>
+                {owned.length === 0 && <p>Пока нет приобретённых навыков.</p>}
+              </section>
+            );
+          })}
+        </div>
+      </aside>
+    </>
   );
 }

@@ -1,10 +1,18 @@
 import type { GameplayWorld, GameplayOptions } from './index';
+import { QaGameplayWorld } from './qa';
+import type { QaSnapshot } from './qa';
+export const createTestingWorld = (options: GameplayOptions): GameplayWorld =>
+  new QaGameplayWorld(options);
+export interface TestingController {
+  (input: unknown): void;
+  snapshot(): QaSnapshot | null;
+}
 /** Imported only inside DEV or explicit QA-build branches; no testing controller in production. */
 export function createTestingController(
   getWorld: () => GameplayWorld | null,
   restart: (options: GameplayOptions) => void,
-) {
-  return (input: unknown) => {
+): TestingController {
+  const command = (input: unknown) => {
     if (!input || typeof input !== 'object' || !('type' in input))
       throw new TypeError('Invalid test action.');
     const a = input as Record<string, unknown>;
@@ -39,10 +47,12 @@ export function createTestingController(
         w.healPlayer();
         break;
       case 'hp':
-        w.setPlayerHp(a.value as number);
+        if (w instanceof QaGameplayWorld) w.setQaHp(a.value as number);
+        else w.setPlayerHp(a.value as number);
         break;
       case 'death':
-        w.setPlayerHp(0);
+        if (w instanceof QaGameplayWorld) w.setQaHp(0);
+        else w.setPlayerHp(0);
         break;
       case 'protection':
         w.setTestProtection(a.enabled as boolean);
@@ -82,8 +92,23 @@ export function createTestingController(
       case 'grant-skill':
         w.grantTestSkill(a.skillId as string, a.rank as number | undefined);
         break;
+      case 'god-mode':
+        if (!(w instanceof QaGameplayWorld)) throw new Error('God Mode requires a QA world.');
+        w.setGodMode(a.enabled as boolean);
+        break;
+      case 'reset-synergy-counters':
+        if (!(w instanceof QaGameplayWorld))
+          throw new Error('Synergy diagnostics require a QA world.');
+        w.resetSynergyCounters();
+        break;
       default:
         throw new Error('Unknown test action.');
     }
   };
+  return Object.assign(command, {
+    snapshot: () => {
+      const w = getWorld();
+      return w instanceof QaGameplayWorld ? w.qaSnapshot() : null;
+    },
+  });
 }

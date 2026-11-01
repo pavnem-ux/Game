@@ -1,4 +1,12 @@
-import { lazy, Suspense, useState, useSyncExternalStore } from 'react';
+import {
+  lazy,
+  Suspense,
+  useState,
+  useSyncExternalStore,
+  useRef,
+  useCallback,
+  useEffect,
+} from 'react';
 import type { CharacterClass } from '../character-stats';
 import { CHARACTER_CLASSES, calculateCharacterStats } from '../character-stats';
 import { CLASS_LABELS, WEAPON_LABELS } from '../gameplay';
@@ -26,6 +34,21 @@ export function AlphaApp() {
   const [selected, setSelected] = useState<CharacterClass>('warrior');
   const [level, setLevel] = useState(1);
   const [debugOpen, setDebugOpen] = useState(false);
+  const [skillsOpen, setSkillsOpen] = useState(false);
+  const skillsOpener = useRef<HTMLElement | null>(null);
+  const openSkills = useCallback(() => {
+    skillsOpener.current = document.activeElement as HTMLElement | null;
+    setSkillsOpen(true);
+  }, []);
+  const closeSkills = useCallback(() => {
+    setSkillsOpen(false);
+    requestAnimationFrame(() => {
+      if (skillsOpener.current?.isConnected) skillsOpener.current.focus();
+    });
+  }, []);
+  useEffect(() => {
+    setSkillsOpen(false);
+  }, [state.runId]);
   const debug =
     (import.meta.env.DEV || __QA_BUILD__) && new URLSearchParams(location.search).has('debug');
   const s = state.world;
@@ -43,7 +66,7 @@ export function AlphaApp() {
         </div>
         <span className="header-caption">ХРОНИКИ ПОСЛЕДНЕГО СВЕТА</span>
         <span className="build-badge">
-          {__QA_BUILD__ ? 'QA PREVIEW' : 'COMBAT ALPHA'} <span>07.1</span>
+          {__QA_BUILD__ ? 'QA PREVIEW' : 'COMBAT ALPHA'} <span>07.2</span>
         </span>
       </header>
       <main className={`arena alpha-arena screen-${state.screen}`}>
@@ -190,7 +213,13 @@ export function AlphaApp() {
                 </button>
               </div>
             </div>
-            <SkillBar world={s} />
+            <SkillBar
+              world={s}
+              open={skillsOpen}
+              onOpen={openSkills}
+              onClose={closeSkills}
+              context={state.screen}
+            />
             <div className="alpha-mobile-summary">
               {time(s.time)} · {s.kills} повержено
             </div>
@@ -227,13 +256,17 @@ export function AlphaApp() {
             </div>
           </>
         )}
-        {state.screen === 'level-up' && s?.skills.offer && <LevelUpDialog world={s} />}
+        {state.screen === 'level-up' && s?.skills.offer && (
+          <LevelUpDialog world={s} onOpenSkills={openSkills} hiddenBehindSkills={skillsOpen} />
+        )}
         {(state.screen === 'paused' || state.screen === 'revival' || state.screen === 'ended') && (
           <section
             className="overlay modal-overlay"
             role="dialog"
             aria-modal="true"
             aria-labelledby="alpha-dialog-title"
+            inert={skillsOpen}
+            aria-hidden={skillsOpen || undefined}
           >
             <div className="small-modal">
               <div className="modal-sigil">{state.screen === 'paused' ? 'Ⅱ' : '◇'}</div>
@@ -258,6 +291,15 @@ export function AlphaApp() {
                     ? 'Всё игровое время остановлено.'
                     : `${time(s?.time ?? 0)} в руинах · ${s?.kills ?? 0} повержено`}
               </p>
+              {state.screen === 'paused' && (
+                <button
+                  className="button skills-modal-open"
+                  aria-label="Обзор навыков"
+                  onClick={openSkills}
+                >
+                  Навыки
+                </button>
+              )}
               {state.screen === 'paused' && (
                 <button
                   className="button primary"

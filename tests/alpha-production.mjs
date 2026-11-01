@@ -89,6 +89,13 @@ try {
   await page.getByRole('progressbar', { name: 'Опыт забега' }).waitFor();
   await page.getByRole('button', { name: 'Пауза', exact: true }).click();
   await page.getByRole('button', { name: 'Продолжить' }).waitFor();
+  const pauseTime = await page.getByTestId('alpha-timer').innerText();
+  await page.getByRole('button', { name: 'Обзор навыков', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Обзор навыков', exact: true }).waitFor();
+  await page.waitForTimeout(100);
+  assert.equal(await page.getByTestId('alpha-timer').innerText(), pauseTime);
+  await page.getByRole('button', { name: 'Закрыть обзор навыков' }).click();
+  await page.getByRole('button', { name: 'Продолжить' }).waitFor();
   await page.getByRole('button', { name: 'Продолжить' }).click();
   await page.screenshot({ path: 'artifacts/alpha-09-production.png' });
   for (const file of await readdir('dist/assets'))
@@ -104,6 +111,18 @@ try {
       );
       assert.ok(!source.includes('__alpha'), 'alpha debug bridge eliminated from production JS');
       assert.ok(!source.includes('QA PREVIEW'), 'QA build UI eliminated from production JS');
+      for (const marker of [
+        'god-mode',
+        'God Mode',
+        'godMode',
+        'QaGameplayWorld',
+        'reset-synergy-counters',
+        'Synergy Diagnostics',
+      ])
+        assert.ok(
+          !source.includes(marker),
+          `${marker} QA implementation is absent from production JS`,
+        );
       assert.ok(
         !source.includes('__survivors'),
         'legacy debug bridge eliminated from production JS',
@@ -116,6 +135,7 @@ try {
   await page.getByRole('button', { name: 'Начать забег' }).waitFor();
   assert.equal(await page.getByRole('button', { name: /DEV ·/ }).count(), 0);
   assert.equal(await page.evaluate(() => typeof window.__alpha), 'undefined');
+  assert.equal(await page.getByRole('checkbox', { name: 'God Mode', exact: true }).count(), 0);
   await page.goto('http://127.0.0.1:4179/?prototype&debug');
   await page.getByRole('button', { name: 'Войти в руины' }).waitFor();
   assert.equal(await page.evaluate(() => typeof window.__survivors), 'undefined');
@@ -125,7 +145,7 @@ try {
   assert.equal(await page.evaluate(() => typeof window.__alpha), 'undefined');
   assert.deepEqual(errors, []);
   console.log(
-    'PASS production: playable Mage, pause/resume, nested SPA URL; alpha and legacy ?debug routes expose no testing controls/globals; testing controller code is absent.',
+    'PASS production: playable Mage, paused Skills overview/return, pause/resume, nested SPA URL; alpha and legacy ?debug routes expose no QA/God Mode controls/globals or implementation.',
   );
 } finally {
   await browser?.close();

@@ -1,5 +1,6 @@
 import type { CharacterClass } from '../character-stats';
 import type { GameplayOptions, GameplaySnapshot, WorldEvent } from '../gameplay';
+import type { QaSnapshot } from '../gameplay/qa';
 export type AlphaCommand =
   | { type: 'start'; options: GameplayOptions }
   | { type: 'pause' | 'resume' | 'menu' | 'revive' | 'finish' | 'reroll' }
@@ -12,6 +13,7 @@ export interface AlphaState {
   readonly runId: number;
   readonly record: number;
   readonly error: string;
+  readonly qa?: QaSnapshot | null;
 }
 let snapshot: AlphaState = {
   screen: 'menu',

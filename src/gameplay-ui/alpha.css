@@ -525,3 +525,114 @@
     gap: 4px;
   }
 }
+
+.skills-modal-open {
+  margin: 8px 0 14px;
+  background: #203b2c;
+  border: 1px solid #8da87b;
+  color: #e6edd4;
+  font-family: inherit;
+  font-weight: 600;
+}
+.skills-modal-open:focus-visible {
+  outline: 2px solid #ead8a1;
+  outline-offset: 3px;
+}
+.skills-modal-open:hover {
+  background: #2a4935;
+}
+.skill-overview-backdrop {
+  position: absolute;
+  inset: 0;
+  background: #08130ed9;
+  z-index: 24;
+}
+.skill-overview {
+  z-index: 25;
+  width: 650px;
+}
+.skill-overview.is-blocking {
+  top: 50%;
+  left: 50%;
+  right: auto;
+  transform: translate(-50%, -50%);
+  max-height: calc(100% - 36px);
+}
+.skill-overview-heading {
+  position: sticky;
+  top: -16px;
+  padding: 8px 0;
+  background: #10231d;
+  z-index: 1;
+}
+.skill-overview-heading button {
+  flex-shrink: 0;
+}
+.skill-overview-groups {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.skill-group {
+  border: 1px solid #79a77666;
+  border-radius: 6px;
+  padding: 10px;
+  min-width: 0;
+  background: #162c20;
+}
+.skill-group.kind-passive {
+  border-color: #85a9d466;
+  background: #142330;
+}
+.skill-overview .skill-group h3 {
+  margin: 0 0 6px;
+}
+.skill-overview .skill-group li {
+  margin: 6px 0;
+  border: 1px solid #b8d2aa44;
+  border-radius: 4px;
+  padding: 8px;
+  background: #0e1c17;
+}
+.skill-entry-heading {
+  display: block;
+  line-height: 1.45;
+  color: #f3eed5;
+}
+.skill-entry-description {
+  color: #c4d2c1;
+}
+.skill-overview .skill-empty-slot {
+  border-style: dashed !important;
+  background: transparent !important;
+  color: #94a897;
+  padding: 7px !important;
+  font-size: 12px;
+}
+.skill-rerolls {
+  color: #e6cb88;
+}
+@media (max-width: 760px) {
+  .skill-overview-groups {
+    grid-template-columns: 1fr;
+  }
+  .skill-overview.is-blocking {
+    max-height: calc(100% - 24px);
+  }
+  .skill-overview-heading {
+    top: -12px;
+  }
+  .skill-overview-heading h2 {
+    font-size: 18px;
+  }
+}
+
+.synergy-diagnostic {
+  border-top: 1px solid #91b59c55;
+  padding: 10px 0;
+}
+.synergy-diagnostic code {
+  display: block;
+  color: #b4c9df;
+  margin-top: 4px;
+}

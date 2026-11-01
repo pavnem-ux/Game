@@ -147,7 +147,8 @@ export class SynergyResolver {
   private get cls() {
     return this.e.host.characterClass;
   }
-  private eligible(id: SynergyId): boolean {
+  /** Pure ownership/class check shared with read-only QA diagnostics. */
+  isEligible(id: SynergyId): boolean {
     const rule = RULES_BY_ID.get(id)!;
     return (
       rule.characterClass === this.cls &&
@@ -234,7 +235,7 @@ export class SynergyResolver {
     switch (this.cls) {
       case 'mage':
         if (
-          this.eligible('thermal_shock') &&
+          this.isEligible('thermal_shock') &&
           tags.has('ice') &&
           pre.effects.has('burn') &&
           this.ready('thermal_shock', targetId) &&
@@ -248,7 +249,7 @@ export class SynergyResolver {
           ]);
         }
         if (
-          this.eligible('shattered_ice') &&
+          this.isEligible('shattered_ice') &&
           tags.has('ice') &&
           pre.slowed &&
           this.ready('shattered_ice', targetId) &&
@@ -264,7 +265,7 @@ export class SynergyResolver {
       case 'warrior': {
         const physicalMelee = tags.has('physical') && tags.has('melee');
         if (
-          this.eligible('skull_crusher') &&
+          this.isEligible('skull_crusher') &&
           physicalMelee &&
           pre.stunned &&
           this.ready('skull_crusher', targetId) &&
@@ -275,7 +276,7 @@ export class SynergyResolver {
           this.procDamage('skull_crusher', targetId, T.skullCrusher.coefficient, 'physical');
         }
         if (
-          this.eligible('seismic_impact') &&
+          this.isEligible('seismic_impact') &&
           tags.has('heavy_melee') &&
           pre.stunned &&
           this.ready('seismic_impact', targetId) &&
@@ -300,7 +301,7 @@ export class SynergyResolver {
         }
         // Toxic Barrage: distinct projectiles on one poisoned target inside a short window.
         if (
-          this.eligible('toxic_barrage') &&
+          this.isEligible('toxic_barrage') &&
           tags.has('projectile') &&
           hit.projectileKey &&
           this.ready('toxic_barrage', targetId)
@@ -336,7 +337,7 @@ export class SynergyResolver {
           }
         }
         // Deadly Precision: repeated direct hits on the same poisoned target; resets on change/expiry.
-        if (this.eligible('deadly_precision')) {
+        if (this.isEligible('deadly_precision')) {
           const f = this.focus;
           if (!f || f.targetId !== targetId || this.now() - f.since > T.deadlyPrecision.window)
             this.focus = {
@@ -359,7 +360,7 @@ export class SynergyResolver {
       }
       case 'rogue': {
         if (!pre.effects.has('bleed')) break;
-        if (this.eligible('blood_frenzy') && tags.has('dagger')) {
+        if (this.isEligible('blood_frenzy') && tags.has('dagger')) {
           const current = this.e.buff('blood_frenzy');
           if (!current) this.announce('blood_frenzy', targetId, pre.position);
           // Refresh duration, never stack: the global Attack Speed cap still applies.
@@ -371,7 +372,7 @@ export class SynergyResolver {
           );
         }
         if (
-          this.eligible('deep_wounds') &&
+          this.isEligible('deep_wounds') &&
           hit.attack.critical &&
           this.ready('deep_wounds', targetId) &&
           alive()
@@ -390,7 +391,7 @@ export class SynergyResolver {
             'synergy:deep_wounds',
           );
         }
-        if (this.eligible('final_cut') && alive()) {
+        if (this.isEligible('final_cut') && alive()) {
           const target = this.e.host.core.getEntity(targetId);
           if (
             (target.currentHp / target.maxHp) * 100 < T.finalCut.hpThresholdPercent &&
@@ -411,7 +412,7 @@ export class SynergyResolver {
     cause: { direct: boolean; tags: ReadonlySet<CombatTag>; procs: boolean },
   ): void {
     if (!cause.procs || cause.tags.has('synergy')) return;
-    if (this.eligible('wildfire') && pre.effects.has('burn') && pre.position) {
+    if (this.isEligible('wildfire') && pre.effects.has('burn') && pre.position) {
       const n = this.spread(
         'wildfire',
         pre.position,
@@ -424,7 +425,7 @@ export class SynergyResolver {
       );
       if (n) this.announce('wildfire', targetId, pre.position);
     }
-    if (this.eligible('plague_chain') && pre.effects.has('poison') && pre.position) {
+    if (this.isEligible('plague_chain') && pre.effects.has('poison') && pre.position) {
       const n = this.spread(
         'plague_chain',
         pre.position,
@@ -437,7 +438,7 @@ export class SynergyResolver {
       );
       if (n) this.announce('plague_chain', targetId, pre.position);
     }
-    if (this.eligible('battle_momentum') && cause.direct && cause.tags.has('melee')) {
+    if (this.isEligible('battle_momentum') && cause.direct && cause.tags.has('melee')) {
       if (!this.e.buff('battle_momentum')) this.announce('battle_momentum', targetId, pre.position);
       this.e.setBuff(
         'battle_momentum',
