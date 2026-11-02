@@ -1,7 +1,7 @@
 # Task 08 progress
 
 Branch: task-08-campaign | PR: https://github.com/pavnem-ux/Game/pull/4 (draft)
-Current: Phase 6, step 6.2 (6.1 done)
+Current: Phase 6, step 6.3 (6.2 done)
 
 ## Steps
 
@@ -28,7 +28,7 @@ Current: Phase 6, step 6.2 (6.1 done)
 - [x] 5.4 HUD additions
 - [x] 5.5 Save Management screen + save-failure warning + mid-run-forfeit notice
 - [x] 6.1 `/?debug` tools (absent in production)
-- [ ] 6.2 Full regression + production build
+- [x] 6.2 Full regression + production build
 - [ ] 6.3 Manual test path walkthrough; record results
 - [ ] 6.4 PR description; mark PR ready (don't merge)
 
@@ -204,6 +204,13 @@ level)`, caps `COMBAT_ATTRIBUTE_CAPS`, `scaleCooldown`/`scaleCircularAoeRadius`)
 - Commit titles follow the Task 08 rule `task08: <phase>.<step> <summary>` (overrides AGENTS.md
   `Task NN:` style for this task, per owner).
 - `docs/task-08.md` is the owner's spec verbatim, Prettier-formatted (whitespace only) for CI.
+
+## Verification log
+
+- 6.2 (full regression): typecheck ✓, format ✓, `npm test` 977 Vitest + Node suites ✓ (combat,
+  AI, status, weapons, survival, Task 07 skills/synergies, campaign/profile/persistence),
+  `npm run build` ✓, `test:production` 2 PASS (debug markers absent), QA build + `test:qa` PASS,
+  `test:e2e` 3 PASS (prototype, alpha, campaign incl. DEV campaign tools).
 
 ## Blockers / known issues
 

@@ -255,6 +255,45 @@ try {
   assert.equal(JSON.parse(await stored()).selectedClass, 'warrior');
   assert.equal(await banner.count(), 0);
 
+  // 6.1 DEV campaign tools (normal pipelines): unlock maps, class level, Gold, boss, force win.
+  await page.getByRole('button', { name: /DEV · Тестирование/ }).click();
+  const devProfile = page.getByRole('group', { name: 'Campaign Debug' });
+  await devProfile.getByRole('button', { name: 'Открыть все карты' }).click();
+  await page.getByLabel('Debug уровень класса').fill('12');
+  await devProfile.getByRole('button', { name: /Установить уровень/ }).click();
+  await page.getByLabel('Debug золото').fill('500');
+  await devProfile.getByRole('button', { name: 'Выдать золото' }).click();
+  const devSave = JSON.parse(await stored());
+  assert.equal(devSave.highestUnlockedMap, 10);
+  assert.equal(devSave.classes[devSave.selectedClass].level, 12);
+  const goldBefore = devSave.gold;
+  await nav.getByRole('button', { name: 'Карты', exact: true }).click();
+  await page.getByRole('button', { name: 'Играть: карта 10', exact: true }).click();
+  await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
+  assert.equal((await state()).world.character.permanentLevel, 12);
+  const devRun = page.getByRole('group', { name: 'Campaign Run Debug' });
+  await devRun.getByRole('button', { name: 'Призвать босса' }).click();
+  await page.getByRole('progressbar', { name: 'Здоровье босса' }).waitFor();
+  await devRun.getByRole('button', { name: 'HP босса → 10%' }).click();
+  await page.getByLabel('Ускорение забега').fill('5');
+  await devRun.getByRole('button', { name: 'Победа', exact: true }).click();
+  const devResults = page.getByRole('dialog', { name: 'Победа.' });
+  await devResults.waitFor();
+  await page.waitForFunction(() =>
+    document.querySelector('.results-save')?.textContent?.includes('Прогресс сохранён'),
+  );
+  const afterDev = JSON.parse(await stored());
+  assert.ok(afterDev.completedMaps.includes(10), 'forced victory completes Map 10');
+  assert.ok(afterDev.gold > goldBefore, 'forced victory pays through the normal results pipeline');
+  await page.screenshot({ path: 'artifacts/campaign-10-dev-victory.png' });
+  await devResults.getByRole('button', { name: 'В меню' }).click();
+  await nav.waitFor();
+  page.once('dialog', (d) => d.accept());
+  await devProfile.getByRole('button', { name: 'Сбросить тестовый прогресс' }).click();
+  await page.getByLabel('Золото: 0').waitFor();
+  assert.equal(JSON.parse(await stored()).highestUnlockedMap, 1);
+  await page.getByRole('button', { name: /DEV · Закрыть/ }).click();
+
   // Phone width: every menu page fits without horizontal scrolling.
   await page.setViewportSize({ width: 390, height: 844 });
   for (const tab of ['Играть', 'Персонаж', 'Карты', 'Прогресс', 'Настройки']) {
@@ -269,7 +308,7 @@ try {
 
   if (errors.length) throw new Error(errors.join('\n'));
   console.log(
-    'PASS campaign: menu/Gold, Character, Maps (lock/boss reveal), Map 1 win → results/rewards/unlock/save, reload keeps progress, Map 2 with another class (separate XP, shared Gold), quit/reload = abandoned without rewards, Save Management (export, invalid/newer import unchanged, confirm/cancel/replace, round-trip), write-failure warning + retry.',
+    'PASS campaign: menu/Gold, Character, Maps (lock/boss reveal), Map 1 win → results/rewards/unlock/save, reload keeps progress, Map 2 with another class (separate XP, shared Gold), quit/reload = abandoned without rewards, Save Management (export, invalid/newer import unchanged, confirm/cancel/replace, round-trip), write-failure warning + retry, DEV campaign tools (unlock/level/Gold, boss, forced Map 10 win, reset).',
   );
 } finally {
   await browser.close();
