@@ -1,7 +1,7 @@
 # Task 08 progress
 
 Branch: task-08-campaign | PR: https://github.com/pavnem-ux/Game/pull/4 (draft)
-Current: Phase 6, step 6.3 (6.2 done)
+Current: Phase 6, step 6.4 (6.3 done)
 
 ## Steps
 
@@ -29,7 +29,7 @@ Current: Phase 6, step 6.3 (6.2 done)
 - [x] 5.5 Save Management screen + save-failure warning + mid-run-forfeit notice
 - [x] 6.1 `/?debug` tools (absent in production)
 - [x] 6.2 Full regression + production build
-- [ ] 6.3 Manual test path walkthrough; record results
+- [x] 6.3 Manual test path walkthrough; record results
 - [ ] 6.4 PR description; mark PR ready (don't merge)
 
 ## Code map
@@ -211,6 +211,19 @@ level)`, caps `COMBAT_ATTRIBUTE_CAPS`, `scaleCooldown`/`scaleCircularAoeRadius`)
   AI, status, weapons, survival, Task 07 skills/synergies, campaign/profile/persistence),
   `npm run build` ✓, `test:production` 2 PASS (debug markers absent), QA build + `test:qa` PASS,
   `test:e2e` 3 PASS (prototype, alpha, campaign incl. DEV campaign tools).
+
+- 6.3 (test path, no debug tools): `tests/campaign/walkthrough.test.ts` — new profile → Map 1
+  (warrior: run skills, elites, boss at 10:00, victory, +XP/Gold/level, Map 2 unlocked) → new
+  service over the same storage (= browser restart) keeps progress → Map 2 with the mage
+  (separate class XP, shared Gold) → Maps 3–10 won in order (all 10 bosses killed) → export →
+  import into a fresh storage gives the identical profile. Normal simulation only; regular waves
+  off for speed, player protected and idle (stand-in for a human dodging). UI path (menu,
+  results, reload, Map 2 other class, export/import) covered by `tests/campaign-browser.mjs`
+  without debug tools (fast-forward uses `advance`, the same simulation).
+- 6.3 full-wave probe (not in the suite, ~2 min each): Map 10 with normal waves, protected idle
+  player, seed 8 — warrior Lv 1 and Lv 10 and mage Lv 10 all won at 15:00 (boss 4493 HP killed;
+  510 / 510 / 1872 kills). Not verified: an unprotected human-skill playthrough of Map 10 (needs
+  the owner's Preview playtest).
 
 ## Blockers / known issues
 
