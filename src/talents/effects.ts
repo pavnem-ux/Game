@@ -37,6 +37,7 @@ export const TALENT_STATS: readonly TalentStat[] = Object.freeze([
   'movementSpeed',
   'dodgeChance',
   'cooldownReduction',
+  'movementSpeedPercent',
 ]);
 export function validateTalentEffect(effect: TalentEffect, where: string): void {
   if (effect.kind === 'behavior') {

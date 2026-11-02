@@ -36,6 +36,11 @@ export interface AttackRequest {
   readonly coefficient: number;
   /** Task 07: additive crit-chance points for this attack only; the global crit cap still applies. */
   readonly criticalChanceBonus?: number;
+  /**
+   * Task 09.1 (additive): an attack that can never be critical (G4 shadow copy). No crit roll is
+   * drawn for it; every other attack keeps exactly one draw.
+   */
+  readonly noCritical?: boolean;
 }
 /** Task 07: per-target resolution options. One attack snapshot keeps exactly one crit roll. */
 export interface ResolveAttackOptions {

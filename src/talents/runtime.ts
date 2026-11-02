@@ -1,4 +1,5 @@
 import { TALENT_CONFIG } from './config';
+import type { TalentStat } from './effects';
 import type { TalentConfig, TalentRanks } from './types';
 
 /**
@@ -47,7 +48,10 @@ export class TalentRuntime {
   private readonly config: TalentConfig;
   private readonly ranks: TalentRanks;
   private readonly cooldowns = new Map<string, number>();
-  private readonly buffs = new Map<string, { value: number; until: number }>();
+  private readonly buffs = new Map<
+    string,
+    { value: number; until: number; stat: TalentStat | null }
+  >();
   private readonly entities = new Map<string, TalentEntity>();
   private readonly actions = new Map<string, EntityAction>();
   private entitySequence = 0;
@@ -101,10 +105,18 @@ export class TalentRuntime {
     this.startCooldown(key, seconds);
     return true;
   }
-  setBuff(id: string, value: number, seconds: number): void {
+  /** Refresh, don't stack: the same id replaces value and expiry. `stat` feeds run stats. */
+  setBuff(id: string, value: number, seconds: number, stat: TalentStat | null = null): void {
     const had = this.buffValue(id);
-    this.buffs.set(id, { value, until: this.now + seconds });
+    this.buffs.set(id, { value, until: this.now + seconds, stat });
     if (had !== value) this.onBuffsChanged();
+  }
+  /** Active stat buffs summed per stat (composed with the other run modifiers once). */
+  statBuffs(): Partial<Record<TalentStat, number>> {
+    const out: Partial<Record<TalentStat, number>> = {};
+    for (const [id, b] of this.buffs)
+      if (b.stat && this.buffValue(id)) out[b.stat] = (out[b.stat] ?? 0) + b.value;
+    return out;
   }
   buffValue(id: string): number {
     const b = this.buffs.get(id);

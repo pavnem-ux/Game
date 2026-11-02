@@ -15,6 +15,8 @@ export interface RunStatModifiers {
   readonly magicalDamagePercent: number;
   readonly dodgeChance: number;
   readonly cooldownReduction: number;
+  /** Task 09.1: percent movement-speed bonus (talents «скорость движения +X%»). */
+  readonly movementSpeedPercent: number;
 }
 export const NO_MODIFIERS: RunStatModifiers = Object.freeze({
   damagePercent: 0,
@@ -28,6 +30,7 @@ export const NO_MODIFIERS: RunStatModifiers = Object.freeze({
   magicalDamagePercent: 0,
   dodgeChance: 0,
   cooldownReduction: 0,
+  movementSpeedPercent: 0,
 });
 
 /**
@@ -45,7 +48,7 @@ export function composeRunStats(primary: PrimaryAttributes, m: RunStatModifiers)
     attackSpeed: base.attackSpeed + m.attackSpeed,
     criticalChance: base.criticalChance + m.criticalChance,
     criticalDamage: base.criticalDamage + m.criticalDamage,
-    movementSpeed: base.movementSpeed + m.movementSpeed,
+    movementSpeed: (base.movementSpeed + m.movementSpeed) * (1 + m.movementSpeedPercent / 100),
     dodgeChance: base.dodgeChance + m.dodgeChance,
     cooldownReduction: base.cooldownReduction + m.cooldownReduction,
   });

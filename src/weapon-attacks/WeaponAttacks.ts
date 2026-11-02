@@ -69,6 +69,8 @@ export class WeaponAttacks {
     if (!options || typeof options !== 'object') throw new TypeError('options must be an object.');
     if (options.damageModifier !== undefined && typeof options.damageModifier !== 'function')
       throw new TypeError('damageModifier must be a function.');
+    if (options.attackModifier !== undefined && typeof options.attackModifier !== 'function')
+      throw new TypeError('attackModifier must be a function.');
     this.options = Object.freeze({ ...options });
   }
   /** Task 07: fly an ability projectile through the same swept-collision scheduler. */
@@ -347,10 +349,17 @@ export class WeaponAttacks {
     });
     validatePoint(origin, 'launch origin');
     const direction = aimDirection(origin, target, w.fallbackDirection);
+    const bonus =
+      this.options.attackModifier?.({
+        entityId: w.entityId,
+        weaponId: w.weapon.id,
+        targetId,
+      })?.criticalChanceBonus ?? 0;
     const attack = this.core.createAttack({
       attackerId: w.entityId,
       damageType: w.weapon.damageType,
       coefficient: w.weapon.damageCoefficient,
+      ...(bonus > 0 ? { criticalChanceBonus: bonus } : {}),
     });
     if (w.weapon.pattern === 'projectile') {
       const id = `projectile-${this.nextProjectileId}`,

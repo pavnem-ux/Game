@@ -1,3 +1,5 @@
+import { TalentCombat } from '../talents/combat';
+import { TALENT_HANDLERS } from '../talents/handlers';
 import { TalentRuntime } from '../talents/runtime';
 import type { TalentConfig, TalentRanks } from '../talents/types';
 import { scaleCircularAoeRadius, scaleCooldown } from '../character-stats';
@@ -211,6 +213,37 @@ export class SkillEngine {
   readonly synergies: SynergyResolver;
   /** Task 09.1: talent runtime (cooldowns, buffs, proc guard, entities) on simulation time. */
   readonly talents: TalentRuntime;
+  /** Task 09.1: talent combat hooks (direct-hit bonuses, crit, DoT, reactions). */
+  readonly talentCombat: TalentCombat;
+  // ── TalentEngine view (read-only helpers for talent handlers) ──
+  get statuses() {
+    return this.host.statuses;
+  }
+  entity(id: string) {
+    return this.host.core.getEntity(id);
+  }
+  enemiesInCircle(center: Point, radius: number): string[] {
+    return this.inCircle(center, radius);
+  }
+  enemyPosition(id: string): Point | null {
+    const b = this.body(id);
+    return b ? { x: b.x, y: b.y } : null;
+  }
+  playerPosition(): Point {
+    return { x: this.player.x, y: this.player.y };
+  }
+  facing(): Point {
+    return this.host.facing();
+  }
+  /** Task 09.1: a dodge by the player (enemy direct attack missed). */
+  onPlayerDodged(attackerId: string): void {
+    this.talentCombat.onPlayerDodged(attackerId);
+  }
+  /** Task 09.1: crit-chance bonus for the player's equipped weapon at strike creation. */
+  weaponAttackBonus(): { criticalChanceBonus?: number } {
+    const bonus = this.talentCombat.critChance(new Set(BASIC_TAGS[this.host.characterClass]));
+    return bonus > 0 ? { criticalChanceBonus: bonus } : {};
+  }
   constructor(
     readonly host: SkillHost,
     readonly run: RunSkills,
@@ -228,6 +261,11 @@ export class SkillEngine {
         }),
     });
     this.talents.onBuffsChanged = () => this.refreshStats();
+    this.talentCombat = new TalentCombat(
+      this,
+      TALENT_HANDLERS[host.characterClass],
+      host.characterClass,
+    );
     this.synergies = new SynergyResolver(this);
   }
   get time() {
@@ -287,6 +325,9 @@ export class SkillEngine {
     const m: Record<keyof RunStatModifiers, number> = {
       ...(this.host.talentModifiers ?? NO_MODIFIERS),
     };
+    // Task 09.1: timed talent stat buffs (refresh, don't stack) join the same composition.
+    for (const [stat, value] of Object.entries(this.talents.statBuffs()))
+      m[stat as keyof RunStatModifiers] += value ?? 0;
     const add = (key: keyof RunStatModifiers, skillId: string, param: string) => {
       if (this.rank(skillId) > 0) m[key] += this.params(skillId)[param];
     };
@@ -318,8 +359,21 @@ export class SkillEngine {
     if (changed) this.host.statsChanged(next);
   }
   /** Player status applications: Toxic Mastery, Lingering Effects and Elemental Mastery Burn. */
-  playerEffect(definition: EffectDefinition): EffectDefinition {
-    return modifyPlayerEffect(definition, this.rankOf);
+  playerEffect(
+    definition: EffectDefinition,
+    origin?: Readonly<{ basic?: boolean }>,
+  ): EffectDefinition {
+    const base = modifyPlayerEffect(definition, this.rankOf);
+    // Task 09.1: talent DoT factors (e.g. Bleed applied by daggers). Origin: the basic weapon or
+    // the skill currently executing.
+    const skillId = this.source?.startsWith('skill:') ? this.source.slice(6) : null;
+    const dagger =
+      (origin?.basic && BASIC_TAGS[this.host.characterClass].includes('dagger')) ||
+      (!!skillId && getSkill(skillId).tags.includes('dagger'));
+    const factor = this.talentCombat.dotFactor(base.effectType, { dagger });
+    return factor === 1
+      ? base
+      : Object.freeze({ ...base, rawDamagePerTick: base.rawDamagePerTick * factor });
   }
   private readonly rankOf = (skillId: string) => this.rank(skillId);
   /** Target multiplier for every player hit: marks, focus bonus and per-enemy hit limits. Pure. */
@@ -327,6 +381,7 @@ export class SkillEngine {
     attack: AttackSnapshot,
     targetId: string,
     limit?: Readonly<{ key: string; max: number }>,
+    tags?: ReadonlySet<CombatTag>,
   ): number {
     if (attack.attackerId !== this.host.playerId) return 1;
     if (limit && this.counted(limit.key, targetId) >= limit.max) return 0;
@@ -337,11 +392,17 @@ export class SkillEngine {
     if (mark?.kind === 'death')
       multiplier *= 1 + getSkill('death_mark').ranks[mark.rank - 1].bonusPercent / 100;
     multiplier *= this.synergies.focusMultiplier(targetId);
+    // Task 09.1: talent direct-hit / crit-damage bonuses (never on talent or secondary hits).
+    multiplier *= this.talentCombat.hitMultiplier(attack, targetId, tags);
     return multiplier;
   }
   damageModifier(context: DamageModifierContext): number {
     const payload = context.projectileId ? this.projectiles.get(context.projectileId) : undefined;
-    return this.targetMultiplier(context.attack, context.targetId, payload?.limit);
+    const tags =
+      context.weaponId === this.host.basicWeaponId
+        ? new Set<CombatTag>(BASIC_TAGS[this.host.characterClass])
+        : payload?.tags;
+    return this.targetMultiplier(context.attack, context.targetId, payload?.limit, tags);
   }
   /** Short-lived per-activation counters (hit limits); pruned after a few seconds. */
   count(key: string, targetId: string): number {
@@ -488,11 +549,12 @@ export class SkillEngine {
     damageType: DamageType,
     criticalChanceBonus = 0,
   ): AttackSnapshot {
+    const critBonus = criticalChanceBonus + this.talentCombat.critChance(tags);
     const attack = this.host.core.createAttack({
       attackerId: this.host.playerId,
       damageType,
       coefficient: coefficient * this.elementalMultiplier(tags),
-      ...(criticalChanceBonus > 0 ? { criticalChanceBonus } : {}),
+      ...(critBonus > 0 ? { criticalChanceBonus: critBonus } : {}),
     });
     if (this.source) this.tagAttack(attack.id, this.source);
     return attack;
@@ -514,6 +576,7 @@ export class SkillEngine {
     coefficient: number,
     damageType: DamageType,
     extraTags: readonly CombatTag[] = [],
+    options: { noCritical?: boolean } = {},
   ): HitInfo | null {
     if (!/^(warrior|mage|archer|rogue)\.b[1-3]\.n0[1-5]$/.test(nodeId))
       throw new RangeError(`Unknown talent source ${nodeId}.`);
@@ -522,9 +585,16 @@ export class SkillEngine {
     let hit: HitInfo | null = null;
     this.withSource(`talent:${nodeId}`, () => {
       const tags = new Set<CombatTag>(['talent', 'secondary', damageType, ...extraTags]);
-      hit = this.hit(targetId, this.attack(new Set(), coefficient, damageType), tags, {
-        procs: false,
-      });
+      const attack = options.noCritical
+        ? this.host.core.createAttack({
+            attackerId: this.host.playerId,
+            damageType,
+            coefficient,
+            noCritical: true,
+          })
+        : this.attack(new Set(), coefficient, damageType);
+      if (options.noCritical) this.tagAttack(attack.id, `talent:${nodeId}`);
+      hit = this.hit(targetId, attack, tags, { procs: false });
     });
     return hit;
   }
@@ -582,7 +652,8 @@ export class SkillEngine {
     if (!this.host.core.getEntity(targetId).alive) return null;
     const pre = this.preHit(targetId);
     const result = this.host.core.resolveAttack(attack, targetId, {
-      damageMultiplier: this.targetMultiplier(attack, targetId) * (options.multiplier ?? 1),
+      damageMultiplier:
+        this.targetMultiplier(attack, targetId, undefined, tags) * (options.multiplier ?? 1),
     });
     this.host.forwardCombat(result.events);
     const hit: HitInfo = Object.freeze({

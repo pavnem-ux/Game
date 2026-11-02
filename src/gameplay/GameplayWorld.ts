@@ -203,6 +203,9 @@ export class GameplayWorld {
     });
     this.weapons = new WeaponAttacks(this.core, {
       damageModifier: (context) => this.skills.damageModifier(context),
+      // Task 09.1: talent crit-chance bonus for the player's weapon (category, at strike start).
+      attackModifier: (context) =>
+        context.entityId === this.playerId ? this.skills.weaponAttackBonus() : {},
     });
     this.weapons.setBody(this.playerId, this.body);
     const weapon = ALPHA_WEAPONS[options.characterClass];
@@ -1050,7 +1053,9 @@ export class GameplayWorld {
   }
   private makeAdapter(definitions: readonly EffectDefinition[]) {
     // Player basic-weapon effects receive run modifiers (Toxic Mastery, Lingering, Elemental Mastery).
-    const player = this.skills ? definitions.map((d) => this.skills.playerEffect(d)) : definitions;
+    const player = this.skills
+      ? definitions.map((d) => this.skills.playerEffect(d, { basic: true }))
+      : definitions;
     return this.createStatusAdapter({
       [ALPHA_WEAPONS[this.character.characterClass].id]: player,
       'alpha-enemy': [
@@ -1194,6 +1199,8 @@ export class GameplayWorld {
           }).events,
         );
         this.forwardCombat(event.result.events);
+        // Task 09.1: a dodged enemy direct attack (counterattack, shadow copy, Elusive).
+        if (event.result.status === 'dodged') this.skills.onPlayerDodged(attack.attackerId);
       }
   }
   private consumeStatuses(events: readonly StatusEvent[]) {
