@@ -1,3 +1,5 @@
+import { TalentRuntime } from '../talents/runtime';
+import type { TalentConfig, TalentRanks } from '../talents/types';
 import { scaleCircularAoeRadius, scaleCooldown } from '../character-stats';
 import type { CharacterClass, CombatAttributes, PrimaryAttributes } from '../character-stats';
 import type {
@@ -53,6 +55,12 @@ export interface SkillHost {
    * of `modifiers()`, so talents combine with passives/buffs and are capped once.
    */
   readonly talentModifiers?: RunStatModifiers;
+  /** Task 09.1: this run's talent ranks (+ test config) and the seeded talent stream. */
+  readonly talents?: Readonly<{
+    ranks: TalentRanks;
+    config?: TalentConfig;
+    random?: () => number;
+  }>;
   readonly basicWeaponId: string;
   /**
    * Fixed simulation grid (the world's control step). Automatic activations happen only on this
@@ -201,12 +209,25 @@ export class SkillEngine {
   private barrierUntil: number | null = null;
   private stats: CombatAttributes;
   readonly synergies: SynergyResolver;
+  /** Task 09.1: talent runtime (cooldowns, buffs, proc guard, entities) on simulation time. */
+  readonly talents: TalentRuntime;
   constructor(
     readonly host: SkillHost,
     readonly run: RunSkills,
     private readonly random: () => number,
   ) {
     this.stats = composeRunStats(host.primary, host.talentModifiers ?? NO_MODIFIERS);
+    this.talents = new TalentRuntime({
+      ranks: host.talents?.ranks,
+      config: host.talents?.config,
+      now: () => this.clock,
+      random:
+        host.talents?.random ??
+        (() => {
+          throw new Error('Talent RNG used without a seeded stream.');
+        }),
+    });
+    this.talents.onBuffsChanged = () => this.refreshStats();
     this.synergies = new SynergyResolver(this);
   }
   get time() {
@@ -956,6 +977,8 @@ export class SkillEngine {
     }
     for (const [id, b] of this.buffs) consider(b.expiresAt, 1, 1, () => this.expireBuff(id));
     for (const [id, m] of this.marks) consider(m.expiresAt, 1, 2, () => this.marks.delete(id));
+    // Task 09.1: talent entity actions/expirations and talent buff expirations.
+    for (const t of this.talents.scheduled()) consider(t.at, t.priority, 3e9 + t.order, t.run);
     if (this.barrierUntil !== null)
       consider(this.barrierUntil, 1, 3, () => {
         this.host.core.setBarrier(this.host.playerId, 0);
@@ -1040,6 +1063,7 @@ export class SkillEngine {
       if ((!living.has(id) && !this.deaths.has(id)) || m.expiresAt < this.clock)
         this.marks.delete(id);
     for (const [key, c] of this.counters) if (c.at < this.clock - 5) this.counters.delete(key);
+    this.talents.prune();
     this.synergies.prune(living);
   }
   /** World calls this after finishing each boundary so death positions never accumulate. */

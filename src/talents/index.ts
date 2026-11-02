@@ -18,3 +18,6 @@ export { TALENT_STATS, validateTalentEffect } from './effects';
 export type { TalentEffect, TalentStat, TalentStatEffect } from './effects';
 export { activeTalentEffects, talentLoadout, talentStatModifiers } from './pipeline';
 export type { ResolvedTalentEffect, TalentLoadout } from './pipeline';
+export { TALENT_BLOCKED, TALENT_RANK_EFFECTS, withEffectData } from './effect-data';
+export type { RankEffects } from './effect-data';
+export type { TalentBehaviorEffect } from './effects';

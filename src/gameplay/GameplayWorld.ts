@@ -225,6 +225,11 @@ export class GameplayWorld {
         characterClass: options.characterClass,
         primary: this.character.primaryAttributes,
         talentModifiers: this.talents.modifiers,
+        talents: {
+          ranks: this.talents.ranks,
+          ...(options.talents?.config ? { config: options.talents.config } : {}),
+          random: rng.talents,
+        },
         basicWeaponId: weapon.id,
         activationStep: ALPHA.controlStep,
         playerBody: () => world.body,
@@ -389,6 +394,7 @@ export class GameplayWorld {
   update(delta: number): void {
     if (!Number.isFinite(delta) || delta < 0 || !Number.isFinite(this.clock + delta))
       throw new RangeError('delta must be finite and non-negative.');
+    this.cleanupTalentEntities(); // also while frozen (death, revival choice, resolved run)
     if (this.paused) return;
     let end = this.clock;
     if (delta > 0) {
@@ -415,6 +421,7 @@ export class GameplayWorld {
       else if (next.kind === 'campaign') this.resolveCampaignEvent();
       else if (next.kind === 'boss') this.resolveBossAbility();
       this.skills.endStep();
+      this.cleanupTalentEntities();
       if (
         (this.survival.getState().requiresWorldPause ||
           this.run.pendingChoices > 0 ||
@@ -426,6 +433,15 @@ export class GameplayWorld {
         this.input = Object.freeze({ x: 0, y: 0 });
       }
     }
+  }
+  /** Task 09.1: talent entities never outlive the player's life or the run. */
+  private cleanupTalentEntities(): void {
+    if (
+      !this.core.getEntity(this.playerId).alive ||
+      this.survival.getState().runState === 'ended' ||
+      this.campaignRun.status !== 'active'
+    )
+      this.skills.talents.clearEntities();
   }
   decide(decision: RevivalDecision): void {
     const result = this.survival.decide(decision, this.statuses);

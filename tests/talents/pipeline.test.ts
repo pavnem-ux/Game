@@ -10,7 +10,12 @@ import {
   loadTalentConfig,
   talentLoadout,
 } from '../../src/talents';
-import type { TalentCatalogData, TalentEffect, TalentRanks } from '../../src/talents';
+import type {
+  TalentCatalogData,
+  TalentEffect,
+  TalentRanks,
+  TalentStatEffect,
+} from '../../src/talents';
 import { play, resolveOffers, ring, unlockClassSynergies } from '../skills/helpers';
 
 /**
@@ -34,7 +39,7 @@ function fixture(effects: Record<string, Partial<Record<1 | 2 | 3, TalentEffect[
   };
   return loadTalentConfig(data, true);
 }
-const stat = (s: TalentEffect['stat'], value: number): TalentEffect => ({
+const stat = (s: TalentStatEffect['stat'], value: number): TalentEffect => ({
   kind: 'stat',
   stat: s,
   value,

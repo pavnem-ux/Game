@@ -61,7 +61,7 @@ Spec: [task-09.1-talent-effects.md](task-09.1-talent-effects.md). Source: `docs/
 v1.2 (byte-identical to the owner's file; excluded from Prettier). Gap resolution:
 [talents-gaps.md](talents-gaps.md#resolution-table-catalog-v12-task-091).
 
-Current: 09.1 Phase 1, step 1.1
+Current: 09.1 Phase 2 (Rogue b1–b2)
 
 ### 09.1 steps
 
@@ -69,8 +69,8 @@ Current: 09.1 Phase 1, step 1.1
       regenerated (verbatim texts, `refs` per rank); status model `pending`/`ready`/`blocked`
 - [x] 0.2 Inert ranks listed below
 - [x] 0.3 Resolution table in `docs/talents-gaps.md` (original audit kept)
-- [ ] 1.1 Condition helpers · [ ] 1.2 Cooldowns/refresh buffs · [ ] 1.3 Secondary sources ·
-      [ ] 1.4 Talent entities · [ ] Phase 1 tests
+- [x] 1.1 Condition helpers · [x] 1.2 Cooldowns/refresh buffs · [x] 1.3 Secondary sources ·
+      [x] 1.4 Talent entities · [x] Phase 1 tests
 - [ ] Phase 2 Rogue b1–b2 (G3, G4, C8)
 - [ ] Phase 3 Rogue b3 (G1, G2, G5, C5)
 - [ ] Phase 4 Mage b1–b2 (C2)
@@ -91,6 +91,19 @@ had effect descriptors):
 - mage: `mage.b1.n01`, `mage.b1.n02`, `mage.b1.n03`, `mage.b1.n04`, `mage.b1.n05`, `mage.b2.n01`, `mage.b2.n02`, `mage.b2.n03`, `mage.b2.n04`, `mage.b2.n05`, `mage.b3.n01`, `mage.b3.n02`, `mage.b3.n03`, `mage.b3.n04` — I–III
 - warrior: `warrior.b1.n01`, `warrior.b1.n02`, `warrior.b1.n03`, `warrior.b1.n04`, `warrior.b1.n05`, `warrior.b2.n01`, `warrior.b2.n02`, `warrior.b2.n03`, `warrior.b2.n04`, `warrior.b2.n05`, `warrior.b3.n01`, `warrior.b3.n02`, `warrior.b3.n03`, `warrior.b3.n04` — I–III
 - archer: `archer.b1.n01`, `archer.b1.n02`, `archer.b1.n03`, `archer.b1.n04`, `archer.b1.n05`, `archer.b2.n01`, `archer.b2.n02`, `archer.b2.n03`, `archer.b2.n04`, `archer.b2.n05`, `archer.b3.n01`, `archer.b3.n02`, `archer.b3.n03`, `archer.b3.n04` — I–III
+
+### 09.1 code map
+
+- **Phase 1:**
+  - `src/talents/effect-data.ts`: `TALENT_RANK_EFFECTS` (implemented ranks → `ready`) and `TALENT_BLOCKED`, applied by `withEffectData`; `effects.ts` gains the `behavior` kind (catalog params).
+  - `src/talents/runtime.ts`: `TalentRuntime` with active `rank`/`params`, seeded `roll`, cooldowns, refresh-not-stack buffs (`onBuffsChanged` → `refreshStats`), the proc guard, and entities with `scheduled()` boundaries.
+  - `src/talents/conditions.ts`: DoT stacks/types, HP %, stunned/slowed/marked, moving.
+  - Wiring:
+    - `SkillEngine.talents` merges the runtime entries into `nextEvent` and prunes them;
+    - `SkillHost.talents {ranks, config?, random}`;
+    - a new `talents` RNG stream (`STREAM_SALTS.talents`);
+    - `GameplayWorld.cleanupTalentEntities` runs on death and run end, also while frozen.
+  - Tests: `tests/talents/runtime.test.ts`.
 
 ### 09.1 decisions
 

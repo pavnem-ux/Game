@@ -2,6 +2,7 @@ import { CHARACTER_CLASSES } from '../character-stats';
 import type { CharacterClass } from '../character-stats';
 import { TALENT_CATALOG_DATA } from './catalog';
 import { validateTalentEffect } from './effects';
+import { withEffectData } from './effect-data';
 import type {
   TalentBranch,
   TalentBranchNumber,
@@ -127,4 +128,4 @@ export function loadTalentConfig(
   });
 }
 /** The validated app-wide talent config (validated at startup). */
-export const TALENT_CONFIG: TalentConfig = loadTalentConfig();
+export const TALENT_CONFIG: TalentConfig = loadTalentConfig(withEffectData(TALENT_CATALOG_DATA));
