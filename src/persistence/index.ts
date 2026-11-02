@@ -23,3 +23,5 @@ export type {
   ProgressionState,
   SaveStatus,
 } from './progressionService';
+export { MAX_IMPORT_BYTES, exportFilename, exportProfile, prepareImport } from './transfer';
+export type { ExportResult } from './transfer';

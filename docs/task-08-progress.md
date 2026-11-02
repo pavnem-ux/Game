@@ -1,7 +1,7 @@
 # Task 08 progress
 
 Branch: task-08-campaign | PR: https://github.com/pavnem-ux/Game/pull/4 (draft)
-Current: Phase 4, step 4.4
+Current: Phase 5, step 5.1 (Phase 4 done; waiting for "continue")
 
 ## Steps
 
@@ -21,7 +21,7 @@ Current: Phase 4, step 4.4
 - [x] 4.1 saveSchema: defaults, validate, migrations map
 - [x] 4.2 saveStore: load/save, backup key, error handling
 - [x] 4.3 Wire autosave into progression; failure warning state
-- [ ] 4.4 Export/import logic
+- [x] 4.4 Export/import logic
 - [ ] 5.1 Main menu + navigation + Gold
 - [ ] 5.2 Character and Map selection
 - [ ] 5.3 Results screen (wired to applyRunResult) + Progression screen
@@ -72,7 +72,9 @@ Current: Phase 4, step 4.4
   keys `skazki.profile`, `.backup`, `.quarantine`). `progressionService.ts`
   (`createProgressionService(store)`: in-memory profile + `SaveStatus` saved/unsaved/
   not-persisted/error, `commitRun` one save per run, `selectClass`, `retrySave`,
-  `replaceProfile`, `subscribe`; `generateRunId`). Tests `tests/persistence/`. Tests `tests/campaign/` (`npm run test:campaign`).
+  `replaceProfile`, `subscribe`; `generateRunId`), `transfer.ts` (`exportProfile` →
+  `skazki-save-YYYY-MM-DD.json`, `prepareImport` size limit 1 MB + parse/validate/migrate, no
+  side effects). Tests `tests/persistence/` (`npm run test:persistence`). Tests `tests/campaign/` (`npm run test:campaign`).
 - Node 24, `npm ci`. Unit: `npm test` (Vitest + Node prototype tests). Per module: `test:stats`,
   `test:combat`, `test:weapons`, `test:status`, `test:enemies`, `test:survival`, `test:alpha`
   (tests/gameplay), `test:skills`. Typecheck `npm run typecheck`; format `npm run format:check`
@@ -159,6 +161,9 @@ level)`, caps `COMBAT_ATTRIBUTE_CAPS`, `scaleCooldown`/`scaleCircularAoeRadius`)
   The old prototype key `fantasy-survivors.progression` is left untouched (separate data).
 - 4.3: a new profile is saved immediately on first launch. On a failed write the progress stays
   in memory for the session (status `unsaved` + failure) and `CommitResult.saved` is false.
+- 4.4: import keeps the file's own profileId; confirmation + "export current first" and the
+  actual download/upload are UI (5.5). A confirmed import goes through `replaceProfile`, so the
+  previous valid save becomes the backup.
 - Task 07.2 is on the PR #3 branch (`claude/stoic-carson-76vdrx`, `dde421a` + v2 `9e8aa93`), not
   on `main` (PR #3 unmerged). `task-08-campaign` is stacked on that branch; the draft PR targets it
   so its diff shows only Task 08. Retarget to `main` after PR #3 is merged.
