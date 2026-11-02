@@ -52,7 +52,10 @@ try {
   assert.equal(await maps.count(), 10);
   assert.match(await maps.nth(0).innerText(), /Открыта[\s\S]*Терновый страж/);
   assert.match(await maps.nth(1).innerText(), /Закрыта[\s\S]*Босс: \?\?\?/);
-  assert.equal(await page.getByRole('button', { name: 'Играть: карта 2', exact: true }).isDisabled(), true);
+  assert.equal(
+    await page.getByRole('button', { name: 'Играть: карта 2', exact: true }).isDisabled(),
+    true,
+  );
   await page.screenshot({ path: 'artifacts/campaign-02-maps.png', fullPage: true });
   await page.getByRole('button', { name: 'Играть: карта 1', exact: true }).click();
   await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
