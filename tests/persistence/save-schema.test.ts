@@ -36,9 +36,9 @@ const code = (raw: unknown) => {
 };
 
 describe('saveSchema (Task 08 §1.4, step 4.1)', () => {
-  it('v1 is current and the migrations map starts empty', () => {
-    expect(SAVE_SCHEMA_VERSION).toBe(1);
-    expect(Object.keys(migrations)).toEqual([]);
+  it('v2 is current (Task 09 talents) and the migrations map upgrades v1 → v2', () => {
+    expect(SAVE_SCHEMA_VERSION).toBe(2);
+    expect(Object.keys(migrations)).toEqual(['1']);
   });
   it('a valid profile round-trips through JSON unchanged', () => {
     const p = played();
@@ -52,12 +52,12 @@ describe('saveSchema (Task 08 §1.4, step 4.1)', () => {
     delete p.recentRuns;
     delete (p.classes as Record<string, unknown>).rogue;
     delete ((p.classes as Record<string, Record<string, unknown>>).mage as Record<string, unknown>)
-      .talentsSpent;
+      .talents;
     const r = parseProfile(p);
     if (!r.ok) throw r.error;
     expect(r.profile.classes.mage.level).toBe(played().classes.mage.level);
-    expect(r.profile.classes.mage.talentsSpent).toBe(0);
-    expect(r.profile.classes.rogue).toEqual({ xp: 0, level: 1, lifetimeXp: 0, talentsSpent: 0 });
+    expect(r.profile.classes.mage.talents).toEqual({});
+    expect(r.profile.classes.rogue).toEqual({ xp: 0, level: 1, lifetimeXp: 0, talents: {} });
     expect(r.profile.stats.runs).toBe(0);
     expect(r.profile.recentRuns).toEqual([]);
     expect(r.profile.gold).toBe(played().gold);
@@ -99,12 +99,12 @@ describe('saveSchema (Task 08 §1.4, step 4.1)', () => {
     expect(code([base])).toBe('not-an-object');
   });
   it('newer-version and malformed JSON are reported with distinct codes', () => {
-    expect(code({ ...json(played()), schemaVersion: 2 })).toBe('newer-version');
+    expect(code({ ...json(played()), schemaVersion: 3 })).toBe('newer-version');
     const bad = parseProfileJson('{"schemaVersion": 1,');
     expect(!bad.ok && bad.error.code).toBe('malformed-json');
   });
   it('migration stub: an older version is upgraded through the migrations map', () => {
-    const v1 = json(played());
+    const v1 = { ...json(played()), schemaVersion: 1 };
     const r = parseProfile(v1, {
       targetVersion: 2,
       migrations: { 1: (d) => ({ ...d, gold: (d.gold as number) + 1 }) },

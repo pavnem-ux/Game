@@ -5,7 +5,7 @@ Spec: [task-09-talents.md](task-09-talents.md) (owner's text, Prettier-formatted
 [talents-gaps.md](talents-gaps.md). Code map: reuse [task-08-progress.md](task-08-progress.md)
 and [task-08.5-progress.md](task-08.5-progress.md) (additions below).
 
-Current: Phase 2, step 2.1 (content gate: gaps found — build Phases 1–4, then stop and report)
+Current: Phase 3, step 3.1 (content gate: gaps found — build Phases 1–4, then stop and report)
 
 Branch `task-09-talents` from `task-08.5-playtest` (Task 08.5, PR #5): 08.5 is not merged into
 `main` yet (spec 0.1). The draft PR targets `task-08.5-playtest` so its diff shows only Task 09;
@@ -28,8 +28,8 @@ retarget after PR #3/#4/#5 are merged.
 
 ### Phase 2 — Persistence
 
-- [ ] 2.1 Schema bump, migration (`talents`, drop `talentsSpent`), validation
-- [ ] Tests (reload, class switch, export/import, migration, invalid data rejected)
+- [x] 2.1 Schema bump, migration (`talents`, drop `talentsSpent`), validation
+- [x] Tests (reload, class switch, export/import, migration, invalid data rejected)
 
 ### Phase 3 — Modifier pipeline
 
@@ -120,9 +120,23 @@ Task 09 additions:
 
   Tests `tests/talents/rules.test.ts`.
 
+- 2.1 save schema v2:
+  - `PROFILE_SCHEMA_VERSION = 2`;
+  - `ClassProgress.talents` (node → rank) replaces `talentsSpent`;
+  - `saveSchema.migrateV1toV2`, `migrations {1: …}`;
+  - `classProgress()` validates talents with `validateTalentRanks`.
+
+  Other changes:
+  - `ProgressionService.purchaseTalent(class, nodeId)` buys and autosaves;
+  - the debug `setClassLevel` keeps talents.
+
+  Tests `tests/persistence/talents.test.ts`.
+
 ## Verification log
 
 - Phase 1: typecheck ✓, format ✓, `npm test` 1044 Vitest tests + Node suites ✓ (talents 12).
+- Phase 2: typecheck ✓, format ✓, `npm test` 1050 ✓, `npm run build` ✓, `test:production` 2 PASS,
+  `test:e2e` 3 PASS.
 
 ## Decisions / deviations
 
@@ -141,6 +155,19 @@ Task 09 additions:
 
 - 1.2: one rank costs one point (spec: «available = earned − spent ranks»). Purchase check order:
   class/id → max rank → level gate → prerequisite → points (first failing reason is shown).
+
+- 2.1: required by the schema bump, these existing Task 08 tests were updated to the v2 equivalent
+  without weakening them:
+  - «v1 is current» → «v2 is current, migration 1→2»;
+  - the `talentsSpent` default → the `talents` default `{}`;
+  - «newer version» now uses v3 instead of v2;
+  - the migration-seam test starts from an explicit v1 label;
+  - `class-xp` expectations use `talents: {}`.
+
+  Other decisions:
+  - A v2 save is unreadable by Task 08/08.5 builds (`newer-version` → quarantine; the documented behaviour).
+  - A refused purchase writes nothing.
+  - A failed write keeps the purchase in memory as «unsaved» (same as run results).
 
 ## Blockers / known issues
 

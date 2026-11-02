@@ -24,7 +24,7 @@ describe('class XP (Task 08 §1.3)', () => {
   });
   it('overflow carries across several levels at once', () => {
     const r = addClassXp(NEW_CLASS_PROGRESS, 100 + 150 + 30);
-    expect(r.progress).toEqual({ xp: 30, level: 3, lifetimeXp: 280, talentsSpent: 0 });
+    expect(r.progress).toEqual({ xp: 30, level: 3, lifetimeXp: 280, talents: {} });
     expect(r.levelsGained).toBe(2);
     const exact = addClassXp(NEW_CLASS_PROGRESS, 100);
     expect(exact.progress).toMatchObject({ xp: 0, level: 2 });
@@ -34,7 +34,7 @@ describe('class XP (Task 08 §1.3)', () => {
   it('caps at 50; extra XP goes only to the lifetime counter', () => {
     const toCap = totalToReach(MAX_CLASS_LEVEL);
     const r = addClassXp(NEW_CLASS_PROGRESS, toCap + 999);
-    expect(r.progress).toEqual({ xp: 0, level: 50, lifetimeXp: toCap + 999, talentsSpent: 0 });
+    expect(r.progress).toEqual({ xp: 0, level: 50, lifetimeXp: toCap + 999, talents: {} });
     expect(r.levelsGained).toBe(49);
     const more = addClassXp(r.progress, 5000);
     expect(more).toMatchObject({ levelsGained: 0, progress: { xp: 0, level: 50 } });

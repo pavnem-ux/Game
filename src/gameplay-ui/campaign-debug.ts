@@ -62,7 +62,11 @@ export const campaignDebug = {
       ...p,
       classes: {
         ...p.classes,
-        [characterClass]: addClassXp(NEW_CLASS_PROGRESS, toReach).progress,
+        // Task 09: talents are kept (an invalid tree at a lower level is refused by validation).
+        [characterClass]: {
+          ...addClassXp(NEW_CLASS_PROGRESS, toReach).progress,
+          talents: p.classes[characterClass].talents,
+        },
       },
     }));
   },
