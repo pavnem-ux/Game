@@ -3,7 +3,7 @@
 Spec: [task-08.5.md](task-08.5.md) (owner's text, Prettier-formatted). Code map: reuse
 [task-08-progress.md](task-08-progress.md#code-map) (additions below).
 
-Current: Phase 5 done — waiting for "continue" (next: Phase 6, step 6.1)
+Current: Phase 6, step 6.2
 
 Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR targets
 `task-08-campaign` so its diff shows only Task 08.5; retarget after PR #3/#4 are merged.
@@ -50,7 +50,7 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
 
 ### Phase 6 — Playtest kit & delivery
 
-- [ ] 6.1 `docs/playtest.md` (Russian)
+- [x] 6.1 `docs/playtest.md` (Russian)
 - [ ] 6.2 Full regression + production build; no debug in production
 - [ ] 6.3 PR description; mark ready (don't merge)
 
@@ -234,6 +234,10 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
   changes (56/37/17/18 vs 58/42/17/18 fps over 8 s), so game feel adds no measurable cost. The
   drop to ~17 fps once 108 enemies crowd around the player exists before 08.5 as well (software
   rendering + crowding); it needs a check on real devices (owner Preview playtest).
+
+- 6.1: `docs/playtest.md` notes that the standard Cloudflare Preview is a production build (no
+  `/?debug`), so debug shortcuts need `npm run dev` or an explicitly configured QA Preview; the
+  Definition of Done path itself needs no debug tools.
 
 ## Blockers / known issues
 
