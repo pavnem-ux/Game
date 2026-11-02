@@ -1,7 +1,7 @@
 # Task 08 progress
 
 Branch: task-08-campaign | PR: https://github.com/pavnem-ux/Game/pull/4 (draft)
-Current: Phase 4, step 4.2
+Current: Phase 4, step 4.3
 
 ## Steps
 
@@ -19,7 +19,7 @@ Current: Phase 4, step 4.2
 - [x] 3.2 Class XP, overflow, cap 50, lifetime XP; talent points function
 - [x] 3.3 applyRunResult(profile, result) → new profile (pure, idempotent)
 - [x] 4.1 saveSchema: defaults, validate, migrations map
-- [ ] 4.2 saveStore: load/save, backup key, error handling
+- [x] 4.2 saveStore: load/save, backup key, error handling
 - [ ] 4.3 Wire autosave into progression; failure warning state
 - [ ] 4.4 Export/import logic
 - [ ] 5.1 Main menu + navigation + Gold
@@ -66,7 +66,10 @@ Current: Phase 4, step 4.2
 - Persistence: `src/persistence/` — `saveSchema.ts` (`parseProfile`/`parseProfileJson` never
   throw: version check → `migrations` (empty, keyed by from-version) → `normalizeProfile`
   defaults + strict validation, unknown fields dropped; `SaveDataError` codes malformed-json /
-  not-an-object / newer-version / unsupported-version / invalid). Tests `tests/persistence/`. Tests `tests/campaign/` (`npm run test:campaign`).
+  not-an-object / newer-version / unsupported-version / invalid). `saveStore.ts`
+  (`createSaveStore({storage, now, newProfileId})` → `load()` new/loaded/recovered/error/
+  unavailable, `save()` with backup copy + quota/unavailable/blocked/invalid, `clearForDev`;
+  keys `skazki.profile`, `.backup`, `.quarantine`). Tests `tests/persistence/`. Tests `tests/campaign/` (`npm run test:campaign`).
 - Node 24, `npm ci`. Unit: `npm test` (Vitest + Node prototype tests). Per module: `test:stats`,
   `test:combat`, `test:weapons`, `test:status`, `test:enemies`, `test:survival`, `test:alpha`
   (tests/gameplay), `test:skills`. Typecheck `npm run typecheck`; format `npm run format:check`
@@ -148,6 +151,9 @@ level)`, caps `COMBAT_ATTRIBUTE_CAPS`, `scaleCooldown`/`scaleCircularAoeRadius`)
   level before/after so a revisited results screen shows the exact original summary.
 - 4.1: invalid data is rejected, never auto-repaired (except defaults for missing fields).
   Consistency check: every completed map must have unlocked its successor.
+- 4.2: an unusable main save is copied to a quarantine key before the backup can be used, so
+  even a newer-version or corrupt save is never lost. If neither is usable, writes are blocked.
+  The old prototype key `fantasy-survivors.progression` is left untouched (separate data).
 - Task 07.2 is on the PR #3 branch (`claude/stoic-carson-76vdrx`, `dde421a` + v2 `9e8aa93`), not
   on `main` (PR #3 unmerged). `task-08-campaign` is stacked on that branch; the draft PR targets it
   so its diff shows only Task 08. Retarget to `main` after PR #3 is merged.
