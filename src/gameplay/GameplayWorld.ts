@@ -257,6 +257,8 @@ export class GameplayWorld {
       this.run,
       skillRandom,
     );
+    // Task 09.1 C1: a talent may add a real automatic slot (Mage superpower) for this run.
+    if (this.skills.talentCombat.extraAutoSlots() > 0) this.run.enableExtraAutoSlot();
     this.baseOnHit = Object.freeze([...(options.onHit ?? defaultOnHit(options.characterClass))]);
     this.onHitDefinitions = this.baseOnHit;
     this.adapter = this.makeAdapter(this.baseOnHit);
@@ -278,6 +280,7 @@ export class GameplayWorld {
       this.manualPause ||
       this.survival.getState().requiresWorldPause ||
       this.run.pendingChoices > 0 ||
+      this.run.pendingEnhancedChoice !== null ||
       this.campaignRun.status !== 'active'
     );
   }
@@ -441,6 +444,7 @@ export class GameplayWorld {
       if (
         (this.survival.getState().requiresWorldPause ||
           this.run.pendingChoices > 0 ||
+          this.run.pendingEnhancedChoice !== null ||
           this.campaignRun.status !== 'active') &&
         pauseAt === null
       ) {
@@ -597,10 +601,21 @@ export class GameplayWorld {
   grantTestSkill(skillId: string, rank = 1): void {
     if (typeof skillId !== 'string') throw new TypeError('skillId must be a string.');
     const unlockedBefore = new Set(this.skills.synergies.unlockedIds());
-    this.skills.applyChoice(this.run.grantForTesting(skillId, rank));
-    this.record('skill', [Object.freeze({ type: 'skill-chosen', skillId, rank })]);
+    const granted = this.run.grantWithEvents(skillId, rank);
+    this.skills.applyChoice(granted.result);
+    this.record('skill', [
+      Object.freeze({ type: 'skill-chosen', skillId, rank }),
+      ...granted.events,
+    ]);
     this.recordSynergyUnlocks(unlockedBefore, skillId);
     this.rebuildOnHit();
+    this.prepare();
+  }
+  /** Task 09.1 C1: the one-time choice of the enhanced skill among the five actives. */
+  chooseEnhancedSkill(skillId: string): void {
+    if (typeof skillId !== 'string') throw new TypeError('skillId must be a string.');
+    if (this.survival.getState().runState === 'ended') throw new Error('The run has ended.');
+    this.record('skill', this.run.chooseEnhanced(skillId));
     this.prepare();
   }
   /** Spend one of the run's three rerolls on the current offer; never grants an extra choice. */

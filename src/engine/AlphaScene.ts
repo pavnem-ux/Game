@@ -70,7 +70,8 @@ export class AlphaScene extends Phaser.Scene {
       if (
         this.world &&
         !this.world.survival.getState().requiresWorldPause &&
-        this.world.run.pendingChoices === 0
+        this.world.run.pendingChoices === 0 &&
+        this.world.run.pendingEnhancedChoice === null
       ) {
         this.world.setPaused(!this.world.paused);
         this.clearInput();
@@ -219,6 +220,10 @@ export class AlphaScene extends Phaser.Scene {
           break;
         case 'choose-skill':
           this.world?.chooseSkill(command.card);
+          this.clearInput();
+          break;
+        case 'choose-enhanced':
+          this.world?.chooseEnhancedSkill(command.skillId);
           this.clearInput();
           break;
         case 'reroll':
@@ -686,11 +691,13 @@ export class AlphaScene extends Phaser.Scene {
           ? 'revival'
           : run === 'ended'
             ? 'ended'
-            : world.skills.offer
-              ? 'level-up'
-              : world.paused
-                ? 'paused'
-                : 'playing';
+            : world.skills.enhancedChoice
+              ? 'enhanced-skill'
+              : world.skills.offer
+                ? 'level-up'
+                : world.paused
+                  ? 'paused'
+                  : 'playing';
     if (screen === 'ended' && !world?.campaign && this.recordedRun !== this.runId) {
       this.record = saveRun(world!.time, world!.kills).bestSeconds;
       this.recordedRun = this.runId;

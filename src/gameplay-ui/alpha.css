@@ -1733,3 +1733,11 @@ p.damage-note {
   margin-top: 6px;
   width: 100%;
 }
+/* Task 09.1 C1: the Mage's enhanced (5th-slot) skill. */
+.skill-chip.enhanced {
+  outline: 1px solid #e8c36a;
+  outline-offset: 1px;
+}
+.skill-card.enhanced {
+  border-color: #e8c36a;
+}

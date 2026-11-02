@@ -53,6 +53,8 @@ export interface TalentEngine {
   /** Control state of an enemy right now (Slow/Stun as the Skill Engine tracks them). */
   controlState(id: string): { readonly slowed: boolean; readonly stunned: boolean };
   readonly playerId: string;
+  /** Task 09.1 C1: the Mage's enhanced (5th-slot) skill, null while that slot is empty. */
+  enhancedSkillId(): string | null;
   /** Shortens the remaining cooldown of an owned automatic skill (never below «ready now»). */
   reduceSkillCooldown(skillId: string, seconds: number): void;
   /** Grants a barrier through the single shared barrier slot (C2 rules). */
@@ -68,6 +70,9 @@ export interface DirectHitContext {
   readonly attack: AttackSnapshot;
   readonly tags: ReadonlySet<CombatTag>;
   readonly dagger: boolean;
+  /** The skill whose code made this hit (null = basic weapon or other) and whether it is enhanced. */
+  readonly skillId: string | null;
+  readonly enhanced: boolean;
   /** Target slowed at the moment of the hit. */
   readonly slowed: boolean;
   /** Player HP at the moment of the hit. */
@@ -97,12 +102,20 @@ export interface TalentClassHandlers {
     base: Readonly<{ radius: number; maxTargets: number }>,
     params: (id: string) => Params,
   ): Readonly<{ radius: number; maxTargets: number }>;
-  /** Radius multiplier for the AoE of a skill with these tags. */
-  skillAreaFactor?(tags: ReadonlySet<CombatTag>, params: (id: string) => Params): number;
+  /** Radius multiplier for the AoE of a skill with these tags (`enhanced` = the C1 skill). */
+  skillAreaFactor?(
+    tags: ReadonlySet<CombatTag>,
+    params: (id: string) => Params,
+    enhanced: boolean,
+  ): number;
   /** Slow fraction added to a Slow applied by a skill with these tags (before the cap). */
   slowBonus?(tags: ReadonlySet<CombatTag>, params: (id: string) => Params): number;
   /** Extra CDR points at the moment an automatic skill starts its cooldown (before caps). */
   cooldownReductionBonus?(engine: TalentEngine): number;
+  /** Extra real automatic skill slots for the run (Mage superpower). */
+  extraAutoSlots?(params: (id: string) => Params): number;
+  /** Multiplier on the final (already CDR-scaled) cooldown of this automatic skill. */
+  cooldownMultiplier?(skillId: string, enhanced: boolean, params: (id: string) => Params): number;
   /** A direct hit of a skill landed as a critical hit. */
   onSkillCrit?(engine: TalentEngine, skillId: string, tags: ReadonlySet<CombatTag>): void;
   /** The player took real direct damage (after mitigation and barrier absorption). */
@@ -120,6 +133,8 @@ export interface DotOrigin {
   readonly dagger: boolean;
   /** The skill whose code applied it (null = basic weapon, synergy, talent or other). */
   readonly skillId?: string | null;
+  /** Applied by the Mage's enhanced skill. */
+  readonly enhanced?: boolean;
 }
 const SECONDARY: readonly CombatTag[] = ['talent', 'secondary', 'synergy'];
 const isSecondary = (tags: ReadonlySet<CombatTag>) => SECONDARY.some((t) => tags.has(t));
@@ -145,6 +160,8 @@ export class TalentCombat {
       attack,
       tags,
       dagger: tags.has('dagger'),
+      skillId: source?.startsWith('skill:') ? source.slice(6) : null,
+      enhanced: !!source && source === `skill:${this.engine.enhancedSkillId()}`,
       slowed: this.engine.controlState(targetId).slowed,
       player: this.engine.entity(this.engine.playerId),
       statuses: this.engine.statuses,
@@ -161,7 +178,8 @@ export class TalentCombat {
     return this.handlers.critChance?.(tags, this.params) ?? 0;
   }
   dotFactor(effectType: EffectType, origin: DotOrigin): number {
-    return this.handlers.dotFactor?.(effectType, origin, this.params) ?? 1;
+    const enhanced = !!origin.skillId && origin.skillId === this.engine.enhancedSkillId();
+    return this.handlers.dotFactor?.(effectType, { ...origin, enhanced }, this.params) ?? 1;
   }
   dotDuration(effectType: EffectType, origin: DotOrigin): number {
     return this.handlers.dotDuration?.(effectType, origin, this.params) ?? 1;
@@ -172,11 +190,19 @@ export class TalentCombat {
   ): Readonly<{ radius: number; maxTargets: number }> {
     return this.handlers.synergySpread?.(synergyId, base, this.params) ?? base;
   }
-  skillAreaFactor(tags: ReadonlySet<CombatTag>): number {
-    return this.handlers.skillAreaFactor?.(tags, this.params) ?? 1;
+  skillAreaFactor(tags: ReadonlySet<CombatTag>, skillId: string | null = null): number {
+    const enhanced = !!skillId && skillId === this.engine.enhancedSkillId();
+    return this.handlers.skillAreaFactor?.(tags, this.params, enhanced) ?? 1;
   }
   slowBonus(tags: ReadonlySet<CombatTag>): number {
     return this.handlers.slowBonus?.(tags, this.params) ?? 0;
+  }
+  extraAutoSlots(): number {
+    return this.handlers.extraAutoSlots?.(this.params) ?? 0;
+  }
+  cooldownMultiplier(skillId: string): number {
+    const enhanced = this.engine.enhancedSkillId() === skillId;
+    return this.handlers.cooldownMultiplier?.(skillId, enhanced, this.params) ?? 1;
   }
   cooldownReductionBonus(): number {
     return this.handlers.cooldownReductionBonus?.(this.engine) ?? 0;

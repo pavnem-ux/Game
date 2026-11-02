@@ -15,10 +15,19 @@ export type AlphaCommand =
         | 'kill-on-screen';
     }
   | { type: 'choose-skill'; card: string }
+  | { type: 'choose-enhanced'; skillId: string }
   | { type: 'time-scale'; scale: number }
   | { type: 'testing'; action: unknown };
 export interface AlphaState {
-  readonly screen: 'menu' | 'playing' | 'paused' | 'revival' | 'ended' | 'level-up' | 'results';
+  readonly screen:
+    | 'menu'
+    | 'playing'
+    | 'paused'
+    | 'revival'
+    | 'ended'
+    | 'level-up'
+    | 'enhanced-skill'
+    | 'results';
   readonly world: GameplaySnapshot | null;
   readonly events: readonly WorldEvent[];
   readonly runId: number;

@@ -98,6 +98,18 @@ export interface RunSkillsSnapshot {
   readonly offer: LevelUpOffer | null;
   readonly gold: number;
   readonly bonusesClaimed: Readonly<Record<BonusRewardId, number>>;
+  /**
+   * Task 09.1 C1 (Mage superpower): the active skill in the extra 5th slot (null while it is
+   * empty), and the one-time choice among the five actives offered when the 5th is acquired.
+   */
+  readonly enhancedSkillId?: string | null;
+  readonly enhancedChoice?: readonly string[] | null;
+}
+export interface EnhancedSkillEvent {
+  readonly type: 'enhanced-skill';
+  readonly skillId: string;
+  /** `default` = assigned on acquiring the 5th active; `chosen` = the player's one-time choice. */
+  readonly reason: 'default' | 'chosen';
 }
 export type ChoiceResult =
   | { readonly type: 'skill'; readonly skillId: string; readonly rank: number }
@@ -172,6 +184,7 @@ export type SkillEvent =
   | SkillAreaEvent
   | SynergyTriggeredEvent
   | SynergyUnlockedEvent
+  | EnhancedSkillEvent
   | ControlEvent;
 
 export interface ZoneSnapshot {

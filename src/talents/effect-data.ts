@@ -157,6 +157,27 @@ export const TALENT_RANK_EFFECTS: Readonly<Record<string, RankEffects>> = Object
     2: same({ reduce: 0.2, icd: 1 }),
     3: same({ reduce: 0.3, icd: 0.8 }),
   },
+  // ── Mage · Верховный маг (Phase 5; C1: enhanced = the 5th-slot active) ──
+  'mage.b3.n01': {
+    1: same({ extraSlots: 1 }),
+    2: same({ extraSlots: 1, bonus: 8 }),
+    3: same({ extraSlots: 1, bonus: 15, cd: 5 }),
+  },
+  'mage.b3.n02': {
+    1: same({ area: 5 }),
+    2: same({ area: 10, dot: 8 }),
+    3: same({ area: 15, dot: 15 }),
+  },
+  'mage.b3.n03': {
+    1: same({ cd: 5 }),
+    2: same({ cd: 10 }),
+    3: same({ cd: 15 }),
+  },
+  'mage.b3.n04': {
+    1: same({ bonus: 10 }),
+    2: same({ bonus: 18, critDamage: 15 }),
+    3: same({ bonus: 28, critDamage: 25 }),
+  },
 });
 /** Ranks blocked by an engine conflict: node → ranks (reason in `docs/talents-gaps.md`). */
 export const TALENT_BLOCKED: Readonly<Record<string, readonly (1 | 2 | 3)[]>> = Object.freeze({

@@ -238,6 +238,9 @@ export class SkillEngine {
   get playerId(): string {
     return this.host.playerId;
   }
+  enhancedSkillId(): string | null {
+    return this.run.enhancedSkillId;
+  }
   controlState(id: string): { readonly slowed: boolean; readonly stunned: boolean } {
     const pre = this.preHit(id);
     return { slowed: pre.slowed, stunned: pre.stunned };
@@ -568,7 +571,7 @@ export class SkillEngine {
   area(radius: number): number {
     // Task 09.1: a talent radius bonus for the executing skill's AoE (never synergy/talent areas).
     const tags = this.sourceSkillTags();
-    const factor = tags ? this.talentCombat.skillAreaFactor(tags) : 1;
+    const factor = tags ? this.talentCombat.skillAreaFactor(tags, this.source!.slice(6)) : 1;
     return scaleCircularAoeRadius(radius * factor, this.stats.areaSize);
   }
   /** Tags of the skill whose code is executing (null outside a skill). */
@@ -1151,7 +1154,11 @@ export class SkillEngine {
     const before = this.clock;
     if (!behavior?.activate) throw new Error(`No behavior for ${skillId}.`);
     state.activationCount++;
-    state.readyAt = before + scaleCooldown(p.cooldown, this.cooldownReduction());
+    // Task 09.1: talent cooldown reductions apply to the already CDR-scaled cooldown.
+    state.readyAt =
+      before +
+      scaleCooldown(p.cooldown, this.cooldownReduction()) *
+        this.talentCombat.cooldownMultiplier(skillId);
     this.host.recordSkill([
       Object.freeze({
         type: 'skill-activated',

@@ -26,20 +26,34 @@ function direct(ctx: DirectHitContext) {
   // 2.4 Концентрация: active magical skills while the player's HP is above 70%.
   const n24 = ctx.params('mage.b2.n04');
   if (n24 && magicalSkill(tags) && hpAbove(ctx.player, n24.hpAbove)) percent += n24.bonus;
+  // C1 enhanced skill: 3.1 II/III and 3.4 (summed with the other talent bonuses).
+  if (ctx.enhanced) {
+    percent += ctx.params('mage.b3.n01')?.bonus ?? 0;
+    const n34 = ctx.params('mage.b3.n04');
+    if (n34) {
+      percent += n34.bonus;
+      critDamage += n34.critDamage ?? 0;
+    }
+  }
   return { percent, critDamage };
 }
 
 export const MAGE_HANDLERS: TalentClassHandlers = {
   direct,
-  // 1.1 II/III: AoE radius of fire and ice skills.
-  skillAreaFactor(tags, params) {
-    const n = params('mage.b1.n01');
-    return n?.area && elementalSkill(tags) ? 1 + n.area / 100 : 1;
+  // 1.1 II/III: AoE radius of fire and ice skills; 3.2: AoE radius of the enhanced skill.
+  skillAreaFactor(tags, params, enhanced) {
+    const n11 = params('mage.b1.n01');
+    let percent = n11?.area && elementalSkill(tags) ? n11.area : 0;
+    if (enhanced) percent += params('mage.b3.n02')?.area ?? 0;
+    return 1 + percent / 100;
   },
   // 1.2 Жар пламени: Burn applied by Mage skills (damage; II/III also the group duration).
+  // 3.2 II/III: DoT damage of the enhanced skill.
   dotFactor(effectType, origin, params) {
-    const n = params('mage.b1.n02');
-    return n && effectType === 'burn' && origin.skillId ? 1 + n.burnDamage / 100 : 1;
+    const n12 = params('mage.b1.n02');
+    let percent = n12 && effectType === 'burn' && origin.skillId ? n12.burnDamage : 0;
+    if (origin.enhanced) percent += params('mage.b3.n02')?.dot ?? 0;
+    return 1 + percent / 100;
   },
   dotDuration(effectType, origin, params) {
     const n = params('mage.b1.n02');
@@ -71,6 +85,14 @@ export const MAGE_HANDLERS: TalentClassHandlers = {
         ? Math.min(n.maxNeighbours, base.maxTargets + n.neighbours)
         : base.maxTargets,
     };
+  },
+  // 3.1 Пятый круг (superpower, C1): one extra real automatic slot.
+  extraAutoSlots: (params) => params('mage.b3.n01')?.extraSlots ?? 0,
+  // 3.1 III and 3.3 Глубокая практика: the enhanced skill's cooldown, after CDR (summed %).
+  cooldownMultiplier(_skillId, enhanced, params) {
+    if (!enhanced) return 1;
+    const percent = (params('mage.b3.n01')?.cd ?? 0) + (params('mage.b3.n03')?.cd ?? 0);
+    return 1 - percent / 100;
   },
   // 2.2 Магическая точность: crit chance of magical skills.
   critChance: (tags, params) => (magicalSkill(tags) ? (params('mage.b2.n02')?.critChance ?? 0) : 0),

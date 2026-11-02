@@ -61,7 +61,7 @@ Spec: [task-09.1-talent-effects.md](task-09.1-talent-effects.md). Source: `docs/
 v1.2 (byte-identical to the owner's file; excluded from Prettier). Gap resolution:
 [talents-gaps.md](talents-gaps.md#resolution-table-catalog-v12-task-091).
 
-Current: 09.1 Phase 5 (Mage b3)
+Current: 09.1 Phase 6 (Warrior b1–b2)
 
 ### 09.1 steps
 
@@ -74,7 +74,7 @@ Current: 09.1 Phase 5 (Mage b3)
 - [x] Phase 2 Rogue b1–b2 (G3, G4, C8) — 28 ranks ready; `rogue.b1.n02` II–III blocked (E1)
 - [x] Phase 3 Rogue b3 (G1, G2, G5, C5) — 10 ranks ready; `rogue.b3.n03` II–III blocked (E2)
 - [x] Phase 4 Mage b1–b2 (C2) — 30 ranks ready, none blocked
-- [ ] Phase 5 Mage b3 (C1)
+- [x] Phase 5 Mage b3 (C1) — 12 ranks ready, none blocked
 - [ ] Phase 6 Warrior b1–b2 (C3, C6, G12)
 - [ ] Phase 7 Warrior b3 (G6, G7, C4)
 - [ ] Phase 8 Archer b1–b2 (G11)
@@ -88,7 +88,7 @@ All 168 ranks are `pending` at the start of 09.1 (Task 09 built only the stat pi
 had effect descriptors):
 
 - rogue: `rogue.b1.n02` II–III **blocked** (E1); `rogue.b3.n03` II–III **blocked** (E2); all other 38 Rogue ranks ready (Phases 2–3)
-- mage: `mage.b3.n01`–`n04` I–III pending; all Mage b1–b2 ranks ready (Phase 4)
+- mage: all 42 Mage ranks ready (Phases 4–5)
 - warrior: `warrior.b1.n01`, `warrior.b1.n02`, `warrior.b1.n03`, `warrior.b1.n04`, `warrior.b1.n05`, `warrior.b2.n01`, `warrior.b2.n02`, `warrior.b2.n03`, `warrior.b2.n04`, `warrior.b2.n05`, `warrior.b3.n01`, `warrior.b3.n02`, `warrior.b3.n03`, `warrior.b3.n04` — I–III
 - archer: `archer.b1.n01`, `archer.b1.n02`, `archer.b1.n03`, `archer.b1.n04`, `archer.b1.n05`, `archer.b2.n01`, `archer.b2.n02`, `archer.b2.n03`, `archer.b2.n04`, `archer.b2.n05`, `archer.b3.n01`, `archer.b3.n02`, `archer.b3.n03`, `archer.b3.n04` — I–III
 
@@ -146,6 +146,13 @@ had effect descriptors):
   - The world forwards real direct damage to the player (`appliedDamage > 0`) as `onPlayerDirectDamage`.
   - Tests: `tests/talents/mage.test.ts`.
 
+- **Phase 5:**
+  - `RunSkills`: `enableExtraAutoSlot()` (set once at run start), `autoSlots` (4 or 5), `enhancedSkillId`, `pendingEnhancedChoice`, `chooseEnhanced`, `grantWithEvents`; offers use the run's slot maximum (`OwnedView.autoMax`, additive). New skill event `enhanced-skill` (`default` / `chosen`); the snapshot gains `enhancedSkillId` / `enhancedChoice`.
+  - World: the slot comes from the handler hook `extraAutoSlots`; a pending enhanced choice pauses the world like a level-up offer; `chooseEnhancedSkill(id)`.
+  - Talent hooks: `cooldownMultiplier` (after CDR), `enhancedSkillId()` in the engine view, `DirectHitContext.skillId/enhanced`, `DotOrigin.enhanced`, `skillAreaFactor(…, enhanced)`.
+  - UI: `EnhancedSkillDialog` (screen `enhanced-skill`, bridge command `choose-enhanced`), enhanced chip marker in the skill bar; P/Esc does not unpause while the choice is open.
+  - Tests: `tests/talents/mage-b3.test.ts`.
+
 ### 09.1 decisions
 
 - 0.1: the owner asked to keep the catalog content exactly, so `docs/talents.md` is the uploaded
@@ -172,6 +179,11 @@ had effect descriptors):
   - 2.3 / C2: real direct damage = a Core `damage` event on the player with `appliedDamage > 0` (a hit fully absorbed by a barrier does not trigger). One barrier slot for the bonus Barrier and the talent: a weaker new barrier only extends the expiry. The bonus Barrier now follows the same C2 rule (before: it always replaced) — required by C2, which names the bonus Barrier.
   - 2.4 «HP выше 70%» is strict. The CDR bonus is read when a cooldown starts.
   - 2.5 the internal cooldown (1/1/0.8 s) is one per node, not per skill; the reduction never makes a cooldown end before «now».
+- **Phase 5:**
+  - C1: the choice opens right after the 5th distinct active is acquired (offer or DEV grant), with that skill enhanced by default; it pauses the world until the player picks one of the five (picking the default is allowed). There is no later reassignment (no further actives can be acquired).
+  - Enhanced-skill % bonuses (3.1, 3.2, 3.4) are summed with the other talent bonuses of the same hit/area/DoT, then applied once. The enhanced skill's cooldown reductions (3.1 III −5%, 3.3 −5/10/15%) are summed and multiply the already CDR-scaled cooldown; they never touch other skills.
+  - 3.2 «урон DoT этого навыка»: DoT applied while the enhanced skill's own code runs (not a passive reacting to its hit).
+  - 3.4 «капы сохраняются»: crit chance and CDR caps stay central; Character Stats has no crit-damage cap, so the extra crit damage is not capped.
 - 0.1: status model per rule 7. `TALENT_CATALOG_APPROVED = true` (G0), but a rank is active only
   when `ready`, and a `ready` rank must carry effects; the loader enforces both. The UI marks
   pending ranks «пока не действует в бою».
@@ -292,12 +304,16 @@ Task 09 additions:
   (talent debug markers absent), QA build + `test:qa` PASS, `test:e2e` 3 PASS.
 
 - 09.1 Phase 3: typecheck ✓, format ✓, `npm test` 1090 ✓, `npm run build` ✓, `test:production`
-  PASS, `test:e2e` 3 PASS. The campaign browser test still asserted the pre-G0 banner «Каталог
+  static check only (run without `CHROMIUM_PATH`, so its browser half did not start — corrected in
+  Phase 5), `test:e2e` 3 PASS. The campaign browser test still asserted the pre-G0 banner «Каталог
   талантов ещё не утверждён»; it now asserts the current one («Часть рангов пока не действует в бою»).
 
 - 09.1 Phase 4: typecheck ✓, format ✓, `npm test` 1104 ✓ (one run hit the pre-existing ~4 s
   boss-world test's 5 s timeout under load; it passes alone and on rerun, unchanged duration),
-  `npm run build` ✓, `test:production` PASS, `test:e2e` 3 PASS.
+  `npm run build` ✓, `test:production` static check only (same omission as Phase 3), `test:e2e` 3 PASS.
+
+- 09.1 Phase 5: typecheck ✓, format ✓, `npm test` 1111 ✓, `npm run build` ✓, `test:production`
+  2 PASS (static artifact + production browser check, with `CHROMIUM_PATH`), `test:e2e` 3 PASS.
 
 ## Decisions / deviations
 

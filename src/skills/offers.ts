@@ -12,6 +12,8 @@ export interface OwnedView {
   readonly ranks: ReadonlyMap<string, number>;
   readonly autoUsed: number;
   readonly passiveUsed: number;
+  /** Task 09.1: automatic-slot maximum (default `SKILL_RULES.autoSlots`). */
+  readonly autoMax?: number;
 }
 
 function draw(random: Random): number {
@@ -42,7 +44,7 @@ export function eligiblePools(classPool: readonly SkillDefinition[], owned: Owne
       if (rank < SKILL_RULES.maxRank) upgrades.push(d);
     } else if (
       d.kind === 'auto'
-        ? owned.autoUsed < SKILL_RULES.autoSlots
+        ? owned.autoUsed < (owned.autoMax ?? SKILL_RULES.autoSlots)
         : owned.passiveUsed < SKILL_RULES.passiveSlots
     )
       fresh.push(d);

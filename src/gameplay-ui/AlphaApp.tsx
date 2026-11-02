@@ -11,7 +11,7 @@ import type { CharacterClass } from '../character-stats';
 import { CLASS_LABELS, WEAPON_LABELS } from '../gameplay';
 import { alphaBridge } from './store';
 import { AlphaCanvas } from './AlphaCanvas';
-import { LevelUpDialog, PauseDialog, SkillBar } from './SkillPanels';
+import { EnhancedSkillDialog, LevelUpDialog, PauseDialog, SkillBar } from './SkillPanels';
 import { CampaignMenu } from './CampaignMenu';
 import { ResultsScreen } from './ResultsScreen';
 import { CampaignHud } from './CampaignHud';
@@ -194,6 +194,7 @@ export function AlphaApp() {
             </div>
           </>
         )}
+        {state.screen === 'enhanced-skill' && s && <EnhancedSkillDialog world={s} />}
         {state.screen === 'level-up' && s?.skills.offer && (
           <LevelUpDialog world={s} onOpenSkills={openSkills} hiddenBehindSkills={skillsOpen} />
         )}
