@@ -21,6 +21,8 @@
     "src/gameplay",
     "tests/gameplay",
     "src/skills",
-    "tests/skills"
+    "tests/skills",
+    "src/talents",
+    "tests/talents"
   ]
 }

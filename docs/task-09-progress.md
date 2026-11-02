@@ -5,7 +5,7 @@ Spec: [task-09-talents.md](task-09-talents.md) (owner's text, Prettier-formatted
 [talents-gaps.md](talents-gaps.md). Code map: reuse [task-08-progress.md](task-08-progress.md)
 and [task-08.5-progress.md](task-08.5-progress.md) (additions below).
 
-Current: Phase 1, step 1.1 (content gate: gaps found — build Phases 1–4, then stop and report)
+Current: Phase 1, step 1.2 (content gate: gaps found — build Phases 1–4, then stop and report)
 
 Branch `task-09-talents` from `task-08.5-playtest` (Task 08.5, PR #5): 08.5 is not merged into
 `main` yet (spec 0.1). The draft PR targets `task-08.5-playtest` so its diff shows only Task 09;
@@ -21,7 +21,7 @@ retarget after PR #3/#4/#5 are merged.
 
 ### Phase 1 — Data model & rules
 
-- [ ] 1.1 Talent config schema + loader (missing entries marked, inert)
+- [x] 1.1 Talent config schema + loader (missing entries marked, inert)
 - [ ] 1.2 Purchase/validation, points derivation, prerequisites, level-30 gate
 - [ ] Tests (4 × 3 × 14 × 3, prereq rank II, rank III optional, ≤ III, points ≥ 0, gate,
       superpower inactive before b3.n01 rank I, independent trees)
@@ -103,6 +103,16 @@ Existing APIs this task builds on (0.2, verified present):
 - **Run start** (UI): `campaignStore.startRun(mapId, class, seed?)` sends `options {characterClass, level, seed, campaign}` — talents will be added to these options at run start.
 - **Progression UI**: `src/gameplay-ui/CampaignPages.tsx` `ProgressionPage` holds the «Таланты · Снаряжение — скоро» placeholder (to be removed in 4.1); player text in `src/gameplay-ui/strings-ru.ts`.
 
+Task 09 additions:
+
+- 1.1 `src/talents/`:
+  - `catalog.ts` holds the data, generated once from `docs/talents.md`, with verbatim texts plus per-rank status/gaps from `talents-gaps.md`;
+  - `types.ts`;
+  - `config.ts` provides `loadTalentConfig` (structure validation), `TALENT_CONFIG`, `TALENT_RULES`, and `TALENT_CATALOG_APPROVED = false` (G0);
+  - `index.ts`.
+
+  Test `tests/talents/catalog.test.ts` re-parses the Markdown (`?raw`) and fails on any difference. `tsconfig.stats.json` now typechecks `src/talents` and `tests/talents`; `npm run test:talents`.
+
 ## Decisions / deviations
 
 - `docs/talents.md`: pandoc conversion of `Skazki_Task08_Full_Talent_Catalog_Draft.docx`.
@@ -111,6 +121,16 @@ Existing APIs this task builds on (0.2, verified present):
   - Prettier formatting only.
 - An earlier upload, `Lumen_Fintech_Share_Issuance_Templates.docx`, was not a talent catalog and was not used.
 
+- 1.1: the config is a TypeScript data file (spec 1.1: «data config»), not a runtime Markdown
+  parser; «loader from the catalog» = generated once from `docs/talents.md` + a test that
+  re-parses the Markdown and requires identical ids/names/branches/rank texts. Effect descriptors
+  are added per rank only when it is `ready` and the catalog is approved (Phases 3/5). Inert
+  ranks (`missing`/`unclear`, and every rank while G0 is open) are still purchasable — the tree
+  rules are fully defined — but have no effect (`active: false`).
+
 ## Blockers / known issues
+
+- **Content gate (0.3):** the catalog is not approved (G0); 28 ranks miss parameters and 26 need
+  a rule decision — see `docs/talents-gaps.md`. Phases 5–6 cannot start until answered.
 
 - Cloudflare Preview cannot be opened by the agent (`*.workers.dev`).
