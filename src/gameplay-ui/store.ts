@@ -3,7 +3,17 @@ import type { GameplayOptions, GameplaySnapshot, WorldEvent } from '../gameplay'
 import type { QaSnapshot } from '../gameplay/qa';
 export type AlphaCommand =
   | { type: 'start'; options: GameplayOptions }
-  | { type: 'pause' | 'resume' | 'menu' | 'revive' | 'finish' | 'reroll' | 'abandon' }
+  | {
+      type:
+        | 'pause'
+        | 'resume'
+        | 'menu'
+        | 'revive'
+        | 'finish'
+        | 'reroll'
+        | 'abandon'
+        | 'kill-on-screen';
+    }
   | { type: 'choose-skill'; card: string }
   | { type: 'time-scale'; scale: number }
   | { type: 'testing'; action: unknown };

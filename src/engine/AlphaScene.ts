@@ -212,6 +212,12 @@ export class AlphaScene extends Phaser.Scene {
         case 'testing':
           if (import.meta.env.DEV || __QA_BUILD__) this.testing?.(command.action);
           break;
+        case 'kill-on-screen':
+          if (import.meta.env.DEV || __QA_BUILD__) {
+            const { x, y, width, height } = this.cameras.main.worldView;
+            this.testing?.({ type: 'kill-in-view', view: { x, y, width, height } });
+          }
+          break;
       }
     } catch (e) {
       this.error = e instanceof Error ? e.message : 'Команда отклонена';

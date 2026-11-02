@@ -131,6 +131,9 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
             К следующему событию ({w.campaign.nextEvent?.id ?? '—'})
           </button>
           <button onClick={() => send({ type: 'campaign-boss-now' })}>Призвать босса</button>
+          <button onClick={() => alphaBridge.send({ type: 'kill-on-screen' })}>
+            Убить всех на экране
+          </button>
           <button onClick={() => send({ type: 'campaign-boss-hp', fraction: 0.1 })}>
             HP босса → 10%
           </button>

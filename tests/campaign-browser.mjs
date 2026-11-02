@@ -272,6 +272,15 @@ try {
   await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
   assert.equal((await state()).world.character.permanentLevel, 12);
   const devRun = page.getByRole('group', { name: 'Campaign Run Debug' });
+  const killsBefore = (await state()).world.kills;
+  await page.evaluate(() =>
+    window.__alpha.command({ type: 'spawning', settings: { enabled: false } }),
+  );
+  await page.evaluate(() =>
+    window.__alpha.command({ type: 'spawn', kind: 'melee', distance: 150 }),
+  );
+  await devRun.getByRole('button', { name: 'Убить всех на экране' }).click();
+  await page.waitForFunction((k) => window.__alpha.state().world.kills > k, killsBefore);
   await devRun.getByRole('button', { name: 'Призвать босса' }).click();
   await page.getByRole('progressbar', { name: 'Здоровье босса' }).waitFor();
   await devRun.getByRole('button', { name: 'HP босса → 10%' }).click();

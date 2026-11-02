@@ -3,7 +3,7 @@
 Spec: [task-08.5.md](task-08.5.md) (owner's text, Prettier-formatted). Code map: reuse
 [task-08-progress.md](task-08-progress.md#code-map) (additions below).
 
-Current: Phase 1, step 1.2
+Current: Phase 1 done — waiting for "continue" (next: Phase 2, step 2.1)
 
 Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR targets
 `task-08-campaign` so its diff shows only Task 08.5; retarget after PR #3/#4 are merged.
@@ -17,8 +17,8 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
 ### Phase 1 — Debug speed
 
 - [x] 1.1 Time scale ×1/×2/×4/×8 on simulation time (same logic, same event order)
-- [ ] 1.2 God mode (no damage taken) + "kill all on screen" (normal deaths, drops, kill counts)
-- [ ] Tests: scheduled events fire once and in order at ×8; kill-all updates run stats
+- [x] 1.2 God mode (no damage taken) + "kill all on screen" (normal deaths, drops, kill counts)
+- [x] Tests: scheduled events fire once and in order at ×8; kill-all updates run stats
 
 ### Phase 2 — Run statistics
 
@@ -59,6 +59,10 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
 - 1.1 `src/engine/time-scale.ts` (`DEBUG_TIME_SCALES`, `frameStep`), scene `time-scale` command
   (presets only), `AlphaState.timeScale` (DEV/QA), panel group «Ускорение забега» ×1/×2/×4/×8;
   tests `tests/engine/time-scale.test.ts`.
+- 1.2 `GameplayWorld.debugKillInView(view?)` (shared `killEnemies` with `clearEnemies`), testing
+  action `kill-in-view`, scene command `kill-on-screen` (camera `worldView`), panel button
+  «Убить всех на экране»; God Mode = existing `QaGameplayWorld.setGodMode` (panel toggle, all
+  DEV/QA worlds incl. campaign); tests `tests/campaign/debug-speed.test.ts`.
 
 - Existing pieces this task builds on (from Task 07.x/08):
   - Time scale: `AlphaScene.timeScale` + `time-scale` command (DEV/QA, 1–20, multiplies the
@@ -86,6 +90,14 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
   240). Pre-existing and unchanged: enemy steering is sampled per update, so individual contact
   times/positions differ by a few ms between frame sizes (the same happens with real FPS jitter);
   rewards/deadlines are unaffected. Replaced the Task 08 1–20 slider (owner's ×1/2/4/8 spec).
+
+- 1.2: kill-all kills through Combat Core (periodic damage, MAX_SAFE_INTEGER), so deaths,
+  crystals, kill counts, elite/boss kills and boss-defeated are the normal deduplicated ones. The
+  run-stats part of the test covers the existing run counters (kills, elite/boss kills,
+  rewards); the Phase 2 collector gets its own kill-all test. God Mode was already present
+  (Task 07.2) and is reused unchanged. Like `clearEnemies`, the world method itself ships in the
+  production bundle but is unreachable there (no controller/UI); `test:production` checks the
+  controller/UI markers.
 
 ## Blockers / known issues
 

@@ -946,20 +946,51 @@ export class GameplayWorld {
     this.testingProtection = enabled;
   }
   clearEnemies(): void {
-    for (const id of this.enemyIds) {
+    this.killEnemies([...this.enemyIds], 'clear', 'test-clear');
+  }
+  /**
+   * Debug (Task 08.5 §1.2): kills every live enemy overlapping the visible area through Combat
+   * Core, so deaths, crystals, kill counts, elite/boss kills and campaign events are the normal
+   * ones. `view` is the camera's world rectangle; default = the player-centred viewport (the
+   * same view off-screen spawning uses). Returns the number of enemies killed.
+   */
+  debugKillInView(
+    view?: Readonly<{ x: number; y: number; width: number; height: number }>,
+  ): number {
+    const v = view ?? {
+      x: this.body.x - this.viewport.width / 2,
+      y: this.body.y - this.viewport.height / 2,
+      width: this.viewport.width,
+      height: this.viewport.height,
+    };
+    if (![v.x, v.y, v.width, v.height].every(Number.isFinite) || v.width <= 0 || v.height <= 0)
+      throw new RangeError('View must be a finite rectangle with a positive size.');
+    const ids = [...this.enemyIds].filter((id) => {
+      const enemy = this.enemies.getEnemy(id);
+      const r = enemy.config.radius;
+      const { x, y } = enemy.position;
+      return x + r >= v.x && x - r <= v.x + v.width && y + r >= v.y && y - r <= v.y + v.height;
+    });
+    return this.killEnemies(ids, 'debug-kill', 'debug-kill');
+  }
+  private killEnemies(ids: readonly string[], operation: string, effectId: string): number {
+    let killed = 0;
+    for (const id of ids) {
       if (this.core.getEntity(id).alive) {
         const raw = Number.MAX_SAFE_INTEGER;
         const result = this.core.applyPeriodicDamage({
-          operationId: `clear-${id}`,
+          operationId: `${operation}-${id}`,
           targetId: id,
-          effectId: 'test-clear',
+          effectId,
           rawDamage: raw,
-          sources: [{ applicationId: 'test-clear', sourceId: this.playerId, rawDamage: raw }],
+          sources: [{ applicationId: effectId, sourceId: this.playerId, rawDamage: raw }],
         });
         this.forwardCombat(result.events);
+        if (!this.core.getEntity(id).alive) killed++;
       }
     }
     this.prepare();
+    return killed;
   }
   private clamp(value: number, radius: number) {
     return Math.max(radius, Math.min(ALPHA.arenaSize - radius, value));

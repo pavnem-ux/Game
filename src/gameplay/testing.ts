@@ -34,6 +34,11 @@ export function createTestingController(
       case 'clear-enemies':
         w.clearEnemies();
         break;
+      case 'kill-in-view':
+        w.debugKillInView(
+          a.view as { x: number; y: number; width: number; height: number } | undefined,
+        );
+        break;
       case 'grant-xp':
         w.grantTestXp(a.amount as number);
         break;

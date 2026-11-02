@@ -123,6 +123,8 @@ try {
         'campaign-force',
         'campaign-boss-now',
         'Time scale must be',
+        'kill-in-view',
+        'Убить всех на экране',
       ])
         assert.ok(
           !source.includes(marker),
