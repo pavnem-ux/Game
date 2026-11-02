@@ -1,7 +1,7 @@
 # Task 08 progress
 
 Branch: task-08-campaign | PR: https://github.com/pavnem-ux/Game/pull/4 (draft)
-Current: Phase 5, step 5.4
+Current: Phase 5, step 5.5
 
 ## Steps
 
@@ -25,7 +25,7 @@ Current: Phase 5, step 5.4
 - [x] 5.1 Main menu + navigation + Gold
 - [x] 5.2 Character and Map selection
 - [x] 5.3 Results screen (wired to applyRunResult) + Progression screen
-- [ ] 5.4 HUD additions
+- [x] 5.4 HUD additions
 - [ ] 5.5 Save Management screen + save-failure warning + mid-run-forfeit notice
 - [ ] 6.1 `/?debug` tools (absent in production)
 - [ ] 6.2 Full regression + production build
@@ -81,6 +81,7 @@ Current: Phase 5, step 5.4
   class grid + «Начать забег» used by browser tests), `CampaignPages.tsx` (Character, Maps),
   `campaign-format.ts`, `ResultsScreen.tsx`; `campaignStore` commits resolved runs once
   (`runResultFrom`, `lastResult`), `quitToMenu` (→ `abandon` command), `pagehide` abandon.
+  `CampaignHud.tsx` (map/stage/time left/boss countdown/elite alert/boss HP bar).
   Scene screen `results` (campaign victory/defeat). Browser test `tests/campaign-browser.mjs`
   (part of `npm run test:e2e`). Tests `tests/campaign/` (`npm run test:campaign`).
 - Node 24, `npm ci`. Unit: `npm test` (Vitest + Node prototype tests). Per module: `test:stats`,
@@ -178,6 +179,8 @@ level)`, caps `COMBAT_ATTRIBUTE_CAPS`, `scaleCooldown`/`scaleCircularAoeRadius`)
 - 5.3: results are committed by the campaign UI state module (not components), once per runId;
   reload/close during a run commits an abandoned result on `pagehide` (sync localStorage).
   Results show «Прогресс сохранён» only when the commit reached storage.
+- 5.4: elite alert 10 s before each elite and 5 s after it spawns; HUD reads the snapshot only.
+  Run level/XP relabelled «Уровень забега · опыт забега» (blue), permanent «ур. класса».
 - Task 07.2 is on the PR #3 branch (`claude/stoic-carson-76vdrx`, `dde421a` + v2 `9e8aa93`), not
   on `main` (PR #3 unmerged). `task-08-campaign` is stacked on that branch; the draft PR targets it
   so its diff shows only Task 08. Retarget to `main` after PR #3 is merged.

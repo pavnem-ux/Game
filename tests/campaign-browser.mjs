@@ -71,10 +71,34 @@ try {
   const fastForward = async (until) => {
     for (let i = 0; i < 400 && (await state()).world.time < until; i++) {
       if ((await state()).screen === 'level-up') await page.locator('.skill-card').first().click();
-      else await page.evaluate(() => window.__alpha.advance(15));
+      else {
+        const t = (await state()).world.time;
+        await page.evaluate((dt) => window.__alpha.advance(dt), Math.min(15, until - t));
+      }
     }
   };
+  // 5.4 HUD: map, stage, time left, boss countdown; elite alert; boss HP bar.
+  const hud = page.getByLabel('Кампания', { exact: true });
+  await hud.waitFor();
+  assert.match(await hud.innerText(), /1\. Опушка забытых сказок/);
+  assert.match(await hud.innerText(), /Этап: Начало/);
+  assert.match(await hud.innerText(), /Осталось 9:\d\d|Осталось 10:00/);
+  assert.match(await hud.innerText(), /Босс через 9:\d\d|Босс через 10:00/);
+  assert.match(await page.locator('.run-level-label').innerText(), /Уровень забега \d+/);
+  await fastForward(112);
+  await page.waitForFunction(() =>
+    document.querySelector('.campaign-alert')?.textContent?.includes('Элита через'),
+  );
+  await page.screenshot({ path: 'artifacts/campaign-05-hud-elite.png' });
+  await fastForward(121);
+  await page.waitForFunction(() =>
+    document.querySelector('.campaign-alert')?.textContent?.includes('Элита: Свирепый громила'),
+  );
   await fastForward(600);
+  await page.getByRole('progressbar', { name: 'Здоровье босса' }).waitFor();
+  assert.match(await page.getByLabel('Босс: Терновый страж').innerText(), /Терновый страж/);
+  assert.match(await hud.innerText(), /Время вышло — добейте босса/);
+  await page.screenshot({ path: 'artifacts/campaign-06-boss.png' });
   s = await state();
   assert.equal(s.world.campaign.durationReached, true);
   assert.ok(s.world.campaign.boss?.alive, 'the boss spawned at 10:00 and is alive');

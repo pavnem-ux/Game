@@ -14,6 +14,7 @@ import { AlphaCanvas } from './AlphaCanvas';
 import { LevelUpDialog, PauseDialog, SkillBar } from './SkillPanels';
 import { CampaignMenu } from './CampaignMenu';
 import { ResultsScreen } from './ResultsScreen';
+import { CampaignHud } from './CampaignHud';
 import { displayHp } from './format';
 import './alpha.css';
 const DeveloperPanel =
@@ -85,7 +86,8 @@ export function AlphaApp() {
                 <div className="health-details">
                   <div className="health-label">
                     <strong>
-                      {CLASS_LABELS[s.character.characterClass]} · забег {s.progression.level}
+                      {CLASS_LABELS[s.character.characterClass]} · ур. класса{' '}
+                      {s.character.permanentLevel}
                     </strong>
                     <span>
                       {hp!.current} / {hp!.max} HP
@@ -102,8 +104,8 @@ export function AlphaApp() {
                     <div style={{ width: `${(s.player.currentHp / s.player.maxHp) * 100}%` }} />
                   </div>
                   <div className="alpha-run-xp">
-                    <span>
-                      Пост. ур. {s.character.permanentLevel} · XP {s.progression.xp} /{' '}
+                    <span className="run-level-label">
+                      Уровень забега {s.progression.level} · опыт забега {s.progression.xp} /{' '}
                       {s.progression.nextXp}
                     </span>
                     <div
@@ -145,6 +147,7 @@ export function AlphaApp() {
                 </button>
               </div>
             </div>
+            <CampaignHud world={s} />
             <SkillBar
               world={s}
               open={skillsOpen}
@@ -180,7 +183,8 @@ export function AlphaApp() {
                 </div>
               </div>
               <span className="arena-caption">
-                ЗАБЫТАЯ РОЩА <i /> <small>ВОЛНА {s.spawning.waves + 1}</small>
+                {s.campaign ? s.campaign.mapName.toUpperCase() : 'ЗАБЫТАЯ РОЩА'} <i />{' '}
+                <small>ВОЛНА {s.spawning.waves + 1}</small>
               </span>
               <span className="pause-hint">
                 <kbd>P</kbd> ПАУЗА

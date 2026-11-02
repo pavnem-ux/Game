@@ -1217,3 +1217,90 @@ p.damage-note {
   font-size: 12px;
   margin-top: 6px;
 }
+/* Task 08 — campaign HUD. */
+.campaign-hud {
+  position: absolute;
+  top: 92px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 14px;
+  padding: 6px 14px;
+  background: #0b1612cc;
+  border: 1px solid #425443;
+  border-radius: 6px;
+  color: #b6c4b5;
+  font-size: 12px;
+  z-index: 6;
+  pointer-events: none;
+  max-width: 92vw;
+}
+.campaign-hud-map {
+  color: #f1eddb;
+}
+.campaign-hud-time {
+  color: #c3e3b6;
+}
+.campaign-hud-boss-countdown {
+  color: #ff9db0;
+}
+.campaign-alert {
+  position: absolute;
+  top: 136px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #3a1f12e6;
+  border: 1px solid #ff8a3d;
+  color: #ffd0a8;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-weight: 600;
+  z-index: 6;
+  pointer-events: none;
+}
+.boss-bar {
+  position: absolute;
+  top: 136px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(520px, 90vw);
+  text-align: center;
+  color: #ffb3c1;
+  font-weight: 600;
+  z-index: 6;
+  pointer-events: none;
+}
+.boss-bar-track {
+  height: 10px;
+  margin: 4px 0 2px;
+  background: #2a0f17;
+  border: 1px solid #ff4d6d;
+  border-radius: 5px;
+  overflow: hidden;
+}
+.boss-bar-track > div {
+  height: 100%;
+  background: linear-gradient(90deg, #ff4d6d, #ff8a9e);
+}
+.boss-bar small {
+  font-size: 11px;
+  color: #d9a3ad;
+}
+.campaign-alert + .boss-bar {
+  top: 172px;
+}
+.run-level-label {
+  color: #9fd8e8;
+}
+@media (max-width: 760px) {
+  .campaign-hud {
+    top: 70px;
+    font-size: 11px;
+  }
+  .boss-bar,
+  .campaign-alert {
+    top: 112px;
+  }
+}
