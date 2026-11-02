@@ -1,4 +1,4 @@
-import { dotStacks, hpBelow } from '../conditions';
+import { DOT_TYPES, distinctDotTypes, dotStacks, hpBelow } from '../conditions';
 import type { DirectHitContext, Point2, TalentClassHandlers, TalentEngine } from '../combat';
 
 /**
@@ -25,6 +25,13 @@ function direct(ctx: DirectHitContext) {
   if (n04 && hpBelow(ctx.target, n04.hpBelow)) {
     percent += n04.bonus;
     if (n04.bleedExtra && bleed > 0) percent += n04.bleedExtra;
+  }
+  // 3.2 Алхимическая реакция: direct hits on targets with 2 / 3 distinct DoT types.
+  const n32 = ctx.params('rogue.b3.n02');
+  if (n32) {
+    const types = distinctDotTypes(ctx.statuses, ctx.targetId);
+    if (types >= 3 && n32.three) percent += n32.three;
+    else if (types >= 2) percent += n32.two;
   }
   // 1.5 Последний удар: dagger crit damage (+ bleeding / below 30% HP).
   const n05 = ctx.params('rogue.b1.n05');
@@ -66,7 +73,47 @@ function copyInterval(engine: TalentEngine) {
   return n03.interval / speed;
 }
 
+/** 3.1 superpower: basic dagger hits roll Poison and Burn separately (G1 tick, G2 4 s). */
+function superpowerProcs(engine: TalentEngine, targetId: string) {
+  const n = engine.talents.params('rogue.b3.n01');
+  if (!n) return;
+  for (const effectType of ['poison', 'burn'] as const)
+    if (engine.entity(targetId).alive && engine.talents.roll(n.chance))
+      engine.applyStatus(
+        targetId,
+        { effectType, rawDamagePerTick: n.tick, duration: n.duration, probabilityPercent: 100 },
+        1,
+        'talent:rogue.b3.n01',
+      );
+}
+/** 3.4 Смертельный синтез (G5): 10 Poison + 10 Burn + 10 Bleed → one explosion per target CD. */
+function synthesis(engine: TalentEngine, targetIds: readonly string[]) {
+  const n = engine.talents.params('rogue.b3.n04');
+  if (!n) return;
+  for (const id of targetIds) {
+    if (!engine.entity(id).alive) continue;
+    if (DOT_TYPES.some((t) => dotStacks(engine.statuses, id, t) < n.stacks)) continue;
+    const center = engine.enemyPosition(id);
+    if (!center || !engine.talents.tryCooldown(`rogue.b3.n04:${id}`, n.cooldown)) continue;
+    const hit = new Set<string>();
+    engine.talents.proc(() => {
+      for (const target of engine.enemiesInCircle(center, n.radius))
+        if (!hit.has(target)) {
+          hit.add(target); // at most one hit per enemy per explosion
+          engine.talentStrike('rogue.b3.n04', target, n.coefficient, 'physical');
+        }
+    });
+  }
+}
+
 export const ROGUE_HANDLERS: TalentClassHandlers = {
+  onBasicHit: superpowerProcs,
+  onStatusesApplied: synthesis,
+  // 3.3 Токсическая перегрузка rank I: +10% DoT damage taken with 3 DoT types (II/III blocked E2).
+  dotTakenMultiplier(engine, targetId) {
+    const n = engine.talents.params('rogue.b3.n03');
+    return n && distinctDotTypes(engine.statuses, targetId) >= 3 ? 1 + n.dotTaken / 100 : 1;
+  },
   direct,
   // 1.2 Скрытая точность rank I: dagger crit chance (ranks II/III are blocked, see gaps G-R1).
   critChance: (tags, params) =>

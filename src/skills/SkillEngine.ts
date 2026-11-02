@@ -675,6 +675,8 @@ export class SkillEngine {
     const basic = event.weaponId === this.host.basicWeaponId;
     if (!basic && !payload) return;
     const tags = basic ? new Set(BASIC_TAGS[this.host.characterClass]) : payload!.tags;
+    // Task 09.1: basic-weapon hit reactions (e.g. Rogue superpower Poison/Burn procs).
+    if (basic && event.result.status === 'hit') this.talentCombat.onBasicHit(event.targetId);
     const hit: HitInfo = Object.freeze({
       targetId: event.targetId,
       attack: event.attack,

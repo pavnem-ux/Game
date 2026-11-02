@@ -94,6 +94,8 @@ export class GameplayWorld {
   private viewport: ViewportSize;
   private readonly spawnRandom: () => number;
   private readonly history: WorldEvent[] = [];
+  /** Task 09.1: enemies that received statuses during the current boundary. */
+  private readonly statusTargets = new Set<string>();
   /** Task 09: this run's talent loadout (fixed for the run; allocation changes affect the next). */
   readonly talents: TalentLoadout;
   /** Task 08.5 run statistics: read-only consumer of every recorded event (new per world). */
@@ -181,6 +183,11 @@ export class GameplayWorld {
     const statusPolicies = createStatusSurvivalPolicies(this.survival, emit);
     this.statuses = new StatusEffects(this.core, {
       random: this.random,
+      // Task 09.1: talent «DoT damage taken» multipliers on enemies (1 when none apply).
+      damageMultiplier: (group) =>
+        group.targetId === this.playerId || !this.skills
+          ? 1
+          : this.skills.talentCombat.dotTakenMultiplier(group.targetId),
       ...statusPolicies,
       canDamage: (ctx) =>
         !(this.testingProtection && ctx.group.targetId === this.playerId) &&
@@ -423,6 +430,12 @@ export class GameplayWorld {
       else if (next.kind === 'skill') this.skills.resolveBoundary();
       else if (next.kind === 'campaign') this.resolveCampaignEvent();
       else if (next.kind === 'boss') this.resolveBossAbility();
+      // Task 09.1: status applications of this boundary (Rogue Deadly Synthesis check).
+      if (this.statusTargets.size) {
+        const targets = [...this.statusTargets];
+        this.statusTargets.clear();
+        this.skills.talentCombat.onStatusesApplied(targets);
+      }
       this.skills.endStep();
       this.cleanupTalentEntities();
       if (
@@ -1305,6 +1318,12 @@ export class GameplayWorld {
         event,
       });
       this.history.push(entry);
+      if (
+        channel === 'status' &&
+        event.type === 'status-applied' &&
+        event.group.targetId !== this.playerId
+      )
+        this.statusTargets.add(event.group.targetId);
       if (channel === 'combat' || channel === 'weapon' || channel === 'progression')
         this.runStats.consume(entry);
     }

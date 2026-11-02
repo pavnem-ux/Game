@@ -61,7 +61,7 @@ Spec: [task-09.1-talent-effects.md](task-09.1-talent-effects.md). Source: `docs/
 v1.2 (byte-identical to the owner's file; excluded from Prettier). Gap resolution:
 [talents-gaps.md](talents-gaps.md#resolution-table-catalog-v12-task-091).
 
-Current: 09.1 Phase 3 (Rogue b3)
+Current: 09.1 Phase 4 (Mage b1–b2)
 
 ### 09.1 steps
 
@@ -72,7 +72,7 @@ Current: 09.1 Phase 3 (Rogue b3)
 - [x] 1.1 Condition helpers · [x] 1.2 Cooldowns/refresh buffs · [x] 1.3 Secondary sources ·
       [x] 1.4 Talent entities · [x] Phase 1 tests
 - [x] Phase 2 Rogue b1–b2 (G3, G4, C8) — 28 ranks ready; `rogue.b1.n02` II–III blocked (E1)
-- [ ] Phase 3 Rogue b3 (G1, G2, G5, C5)
+- [x] Phase 3 Rogue b3 (G1, G2, G5, C5) — 10 ranks ready; `rogue.b3.n03` II–III blocked (E2)
 - [ ] Phase 4 Mage b1–b2 (C2)
 - [ ] Phase 5 Mage b3 (C1)
 - [ ] Phase 6 Warrior b1–b2 (C3, C6, G12)
@@ -87,7 +87,7 @@ Current: 09.1 Phase 3 (Rogue b3)
 All 168 ranks are `pending` at the start of 09.1 (Task 09 built only the stat pipeline; no rank
 had effect descriptors):
 
-- rogue: `rogue.b3.n01`–`n04` I–III pending; `rogue.b1.n02` II–III **blocked** (E1); all other Rogue b1–b2 ranks ready (Phase 2)
+- rogue: `rogue.b1.n02` II–III **blocked** (E1); `rogue.b3.n03` II–III **blocked** (E2); all other 38 Rogue ranks ready (Phases 2–3)
 - mage: `mage.b1.n01`, `mage.b1.n02`, `mage.b1.n03`, `mage.b1.n04`, `mage.b1.n05`, `mage.b2.n01`, `mage.b2.n02`, `mage.b2.n03`, `mage.b2.n04`, `mage.b2.n05`, `mage.b3.n01`, `mage.b3.n02`, `mage.b3.n03`, `mage.b3.n04` — I–III
 - warrior: `warrior.b1.n01`, `warrior.b1.n02`, `warrior.b1.n03`, `warrior.b1.n04`, `warrior.b1.n05`, `warrior.b2.n01`, `warrior.b2.n02`, `warrior.b2.n03`, `warrior.b2.n04`, `warrior.b2.n05`, `warrior.b3.n01`, `warrior.b3.n02`, `warrior.b3.n03`, `warrior.b3.n04` — I–III
 - archer: `archer.b1.n01`, `archer.b1.n02`, `archer.b1.n03`, `archer.b1.n04`, `archer.b1.n05`, `archer.b2.n01`, `archer.b2.n02`, `archer.b2.n03`, `archer.b2.n04`, `archer.b2.n05`, `archer.b3.n01`, `archer.b3.n02`, `archer.b3.n03`, `archer.b3.n04` — I–III
@@ -123,6 +123,14 @@ had effect descriptors):
   - The world forwards dodged enemy attacks.
   - Tests: `tests/talents/rogue.test.ts`.
 
+- **Phase 3:**
+  - Rogue handlers: `superpowerProcs` (3.1, `onBasicHit`), `rogue.b3.n02` in `direct`, `dotTakenMultiplier` (3.3 rank I), `synthesis` (3.4, `onStatusesApplied`).
+  - Engine hooks:
+    - `SkillEngine.handleImpact` calls `onBasicHit` for each basic weapon hit (`status === 'hit'`);
+    - Status Effects option `damageMultiplier(group)` (additive; scales every stack contribution and the tick total; default 1);
+    - the world collects enemies that received a status during a boundary and calls `onStatusesApplied` before `endStep`.
+  - Tests: `tests/talents/rogue-b3.test.ts`, `tests/status-effects/damage-lifecycle.test.ts` (multiplier).
+
 ### 09.1 decisions
 
 - 0.1: the owner asked to keep the catalog content exactly, so `docs/talents.md` is the uploaded
@@ -134,6 +142,11 @@ had effect descriptors):
   - The shadow copy's first strike comes one interval after it appears; G3 doesn't define an earlier one.
   - Counterattacks may crit (the catalog only forbids crits for the copy, in G4).
   - Movement percents add up and are applied once to the composed movement speed.
+- **Phase 3:**
+  - 3.1 rolls on every basic dagger hit that lands (one roll for Poison, one for Burn, on each enemy the strike hits); the new stacks carry `talent:rogue.b3.n01` as their origin, so run stats list them as that source.
+  - 3.2/3.3 count a DoT type as present when its group has at least one stack.
+  - 3.4 checks the 10/10/10 condition after each boundary in which the enemy received a status. The radius uses body overlap (`distance ≤ radius + body radius`), the same rule as every skill AoE.
+  - A blocked rank II/III of `rogue.b3.n03` is inert as a whole (ranks are totals), same as E1.
 - 0.1: status model per rule 7. `TALENT_CATALOG_APPROVED = true` (G0), but a rank is active only
   when `ready`, and a `ready` rank must carry effects; the loader enforces both. The UI marks
   pending ranks «пока не действует в бою».
@@ -252,6 +265,10 @@ Task 09 additions:
   `npm run build` ✓, `test:production` 2 PASS, `test:e2e` 3 PASS.
 - Phase 4: typecheck ✓, format ✓, `npm test` 1062 ✓, `npm run build` ✓, `test:production` 2 PASS
   (talent debug markers absent), QA build + `test:qa` PASS, `test:e2e` 3 PASS.
+
+- 09.1 Phase 3: typecheck ✓, format ✓, `npm test` 1090 ✓, `npm run build` ✓, `test:production`
+  PASS, `test:e2e` 3 PASS. The campaign browser test still asserted the pre-G0 banner «Каталог
+  талантов ещё не утверждён»; it now asserts the current one («Часть рангов пока не действует в бою»).
 
 ## Decisions / deviations
 

@@ -165,7 +165,8 @@ try {
   const talents = page.getByRole('region', { name: 'Таланты', exact: true });
   assert.equal(await page.getByRole('button', { name: 'Таланты — скоро' }).count(), 0);
   assert.match(await talents.innerText(), /Свободно очков: 1 из 1/);
-  assert.match(await talents.innerText(), /Каталог талантов ещё не утверждён/);
+  // Task 09.1 G0: the catalog is approved; not-yet-implemented ranks are flagged instead.
+  assert.match(await talents.innerText(), /Часть рангов пока не действует в бою/);
   const superBranch = talents.getByRole('region', { name: /^Ветка 3\./ });
   assert.match(await superBranch.innerText(), /доступно с 30 уровня/);
   assert.equal(

@@ -87,11 +87,32 @@ export const TALENT_RANK_EFFECTS: Readonly<Record<string, RankEffects>> = Object
     2: same({ speedPercent: 12, duration: 2.5 }),
     3: same({ speedPercent: 16, duration: 3, counterMultiplier: 1.15 }),
   },
+  // Rogue b3: G1 (tick 1.5/2/3), G2 (4 s), G5 (radius 80/100/130, CD 8 s).
+  'rogue.b3.n01': {
+    1: same({ chance: 15, tick: 1.5, duration: 4 }),
+    2: same({ chance: 25, tick: 2, duration: 4 }),
+    3: same({ chance: 35, tick: 3, duration: 4 }),
+  },
+  'rogue.b3.n02': {
+    1: same({ two: 8 }),
+    2: same({ two: 14, three: 20 }),
+    3: same({ two: 18, three: 28 }),
+  },
+  'rogue.b3.n03': {
+    1: same({ dotTaken: 10 }),
+  },
+  'rogue.b3.n04': {
+    1: same({ coefficient: 1.5, radius: 80, cooldown: 8, stacks: 10 }),
+    2: same({ coefficient: 2, radius: 100, cooldown: 8, stacks: 10 }),
+    3: same({ coefficient: 2.6, radius: 130, cooldown: 8, stacks: 10 }),
+  },
 });
 /** Ranks blocked by an engine conflict: node → ranks (reason in `docs/talents-gaps.md`). */
 export const TALENT_BLOCKED: Readonly<Record<string, readonly (1 | 2 | 3)[]>> = Object.freeze({
   // Per-target crit chance on multi-target dagger strikes (one crit roll per snapshot): E1.
   'rogue.b1.n02': [2, 3],
+  // Extra-stack trigger undefined + basic dagger Bleed exists without serrated_blades: E2.
+  'rogue.b3.n03': [2, 3],
 });
 
 /** Applies the effect data to the verbatim catalog: ready / blocked / pending per rank. */

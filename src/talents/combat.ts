@@ -38,6 +38,17 @@ export interface TalentEngine {
     options?: { noCritical?: boolean },
   ): unknown;
   enemiesInCircle(center: Point2, radius: number): string[];
+  applyStatus(
+    targetId: string,
+    definition: Readonly<{
+      effectType: EffectType;
+      rawDamagePerTick: number;
+      duration: number;
+      probabilityPercent: number;
+    }>,
+    stacks?: number,
+    originId?: string,
+  ): number;
   enemyPosition(id: string): Point2 | null;
   playerPosition(): Point2;
   facing(): Point2;
@@ -68,6 +79,12 @@ export interface TalentClassHandlers {
   /** Synergy proc damage multiplier (only where a node names the synergy). */
   synergyFactor?(synergyId: string, params: (id: string) => Params): number;
   onPlayerDodged?(engine: TalentEngine, attackerId: string): void;
+  /** A player basic-weapon hit landed on a living enemy. */
+  onBasicHit?(engine: TalentEngine, targetId: string): void;
+  /** Multiplier on DoT damage an enemy receives (per tick). */
+  dotTakenMultiplier?(engine: TalentEngine, targetId: string): number;
+  /** Statuses were applied to these enemies (end of a boundary). */
+  onStatusesApplied?(engine: TalentEngine, targetIds: readonly string[]): void;
 }
 export interface DotOrigin {
   /** Applied by a dagger (Rogue basic weapon or a `dagger` skill). */
@@ -114,5 +131,16 @@ export class TalentCombat {
   onPlayerDodged(attackerId: string): void {
     if (this.engine.talents.inProc) return;
     this.handlers.onPlayerDodged?.(this.engine, attackerId);
+  }
+  onBasicHit(targetId: string): void {
+    if (this.engine.talents.inProc || !this.engine.entity(targetId).alive) return;
+    this.handlers.onBasicHit?.(this.engine, targetId);
+  }
+  dotTakenMultiplier(targetId: string): number {
+    return this.handlers.dotTakenMultiplier?.(this.engine, targetId) ?? 1;
+  }
+  onStatusesApplied(targetIds: readonly string[]): void {
+    if (this.engine.talents.inProc || !targetIds.length) return;
+    this.handlers.onStatusesApplied?.(this.engine, targetIds);
   }
 }
