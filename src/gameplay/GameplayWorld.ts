@@ -1,3 +1,4 @@
+import { DEFAULT_SEED, createRunRandom } from './rng';
 import { RunStats } from './run-stats';
 import type { EnemyType } from './run-stats';
 import { calculateCharacterStats, scaleMovementSpeed } from '../character-stats';
@@ -134,22 +135,11 @@ export class GameplayWorld {
   ) {
     if (typeof createCore !== 'function') throw new TypeError('createCore must be a function.');
     this.character = calculateCharacterStats(options.characterClass, options.level ?? 1);
-    let seed = options.seed ?? 1337;
-    if (!Number.isSafeInteger(seed) || seed < 0) throw new RangeError('Invalid random seed.');
-    this.random = () => {
-      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-      return seed / 4294967296;
-    };
-    let skillSeed = ((options.seed ?? 1337) ^ 0x5bd1e995) >>> 0;
-    const skillRandom = () => {
-      skillSeed = (Math.imul(skillSeed, 1664525) + 1013904223) >>> 0;
-      return skillSeed / 4294967296;
-    };
-    let spawnSeed = (options.seed ?? 1337) ^ 0x9e3779b9;
-    this.spawnRandom = () => {
-      spawnSeed = (Math.imul(spawnSeed, 1664525) + 1013904223) >>> 0;
-      return spawnSeed / 4294967296;
-    };
+    // Task 08.5 §4.1: all gameplay randomness comes from the seeded run streams.
+    const rng = createRunRandom(options.seed ?? DEFAULT_SEED);
+    this.random = rng.combat;
+    const skillRandom = rng.skills;
+    this.spawnRandom = rng.spawn;
     this.campaignMap = options.campaign ? getCampaignMap(options.campaign.mapId) : null;
     this.director = this.campaignMap ? new CampaignDirector(this.campaignMap) : null;
     this.enemyStats = this.campaignMap
@@ -288,7 +278,7 @@ export class GameplayWorld {
   getSnapshot(): GameplaySnapshot {
     return Object.freeze({
       time: this.clock,
-      seed: this.options.seed ?? 1337,
+      seed: this.options.seed ?? DEFAULT_SEED,
       runStats: this.runStats.snapshot(this.clock),
       paused: this.paused,
       player: this.core.getEntity(this.playerId),

@@ -25,3 +25,12 @@ export type { SpawnSettings, ViewportSize } from './spawning';
 export type { RunProgression, XpCrystal, ExperienceEvent } from './experience';
 export { RUN_STATS_LIMITS, RunStats } from './run-stats';
 export type { DamageBySource, EnemyType, RunStatsSnapshot } from './run-stats';
+export {
+  DEFAULT_SEED,
+  MAX_UI_SEED,
+  STREAM_SALTS,
+  createRunRandom,
+  lcgStream,
+  validateSeed,
+} from './rng';
+export type { RunRandom } from './rng';

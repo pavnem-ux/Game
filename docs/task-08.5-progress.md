@@ -3,7 +3,7 @@
 Spec: [task-08.5.md](task-08.5.md) (owner's text, Prettier-formatted). Code map: reuse
 [task-08-progress.md](task-08-progress.md#code-map) (additions below).
 
-Current: Phase 3 done — waiting for "continue" (next: Phase 4, step 4.1)
+Current: Phase 4, step 4.2
 
 Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR targets
 `task-08-campaign` so its diff shows only Task 08.5; retarget after PR #3/#4 are merged.
@@ -37,7 +37,7 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
 
 ### Phase 4 — Reproducibility
 
-- [ ] 4.1 Seeded RNG for gameplay randomness (audit; record anything not converted)
+- [x] 4.1 Seeded RNG for gameplay randomness (audit; record anything not converted)
 - [ ] 4.2 Per-run seed: overlay, results, reports; debug start with a seed
 - [ ] Tests: same seed + inputs → identical spawn/card sequence for 2 min
 
@@ -94,6 +94,9 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
 - 3.4 `saveFromReport` + `campaignDebug.stageReport` (`campaign-debug.ts`), DEV panel file input
   «Загрузить отчёт → импорт сохранения»; tests `tests/persistence/report-import.test.ts`,
   download → load → confirm round-trip in `tests/campaign-browser.mjs`.
+- 4.1 `src/gameplay/rng.ts` (`createRunRandom` → `combat` / `skills` / `spawn` streams,
+  `DEFAULT_SEED`, `validateSeed`, `lcgStream`), used by `GameplayWorld`; golden test
+  `tests/gameplay/rng.test.ts`.
 
 - Existing pieces this task builds on (from Task 07.x/08):
   - Time scale: `AlphaScene.timeScale` + `time-scale` command (DEV/QA, 1–20, multiplies the
@@ -181,6 +184,21 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
   `save.ok`); the embedded save then goes through the normal `prepareImport` validation and the
   same confirm/cancel step on the Settings page. A tampered or invalid save is rejected and the
   current save stays unchanged.
+
+- 4.1 audit (gameplay randomness → seeded stream):
+  - spawn positions/angles → `spawn`; Combat Core crit/Dodge and status application chances →
+    `combat` (the world injects it into Core and Status Effects); level-up offers, rerolls and
+    skill procs → `skills`.
+  - No randomness needed: enemy kind choice (fixed ranged share sequence), XP crystal drops
+    (deterministic amounts/positions), elite schedule, boss ability choice (fixed rotation with
+    cooldowns), enemy AI decisions.
+  - Not converted, by design: the legacy prototype (`/?prototype`, `src/engine/systems/*`, not
+    part of the alpha); UI identifiers (run id, profile id, debug profile id) — they never
+    affect gameplay; default `Math.random` fallbacks in standalone `CombatCore`/`StatusEffects`
+    constructors (the world always injects its seeded streams). No visual-only randomness exists
+    in `AlphaScene`.
+  - The extracted formulas are byte-identical to the previous inline ones (golden test for 10
+    seeds × 3 streams × 500 draws), so every existing seed reproduces the same run.
 
 ## Blockers / known issues
 
