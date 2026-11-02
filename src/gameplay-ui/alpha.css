@@ -1607,3 +1607,129 @@ p.damage-note {
   width: 18px;
   height: 18px;
 }
+
+/* Task 09 §1.5 talent screen */
+.talents {
+  margin-top: 18px;
+  text-align: left;
+}
+.talents-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.talents-head h3 {
+  margin: 0;
+}
+.talents-classes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.talents-summary {
+  margin: 10px 0 4px;
+}
+.talents-note {
+  margin: 4px 0;
+  font-size: 13px;
+  color: #f2d27a;
+}
+.talents-note.faint {
+  color: #b9ad8c;
+}
+.talent-branches {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+@media (max-width: 900px) {
+  .talent-branches {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.talent-branch {
+  background: #13211c;
+  border: 1px solid #425443;
+  border-radius: 8px;
+  padding: 10px;
+  min-width: 0;
+}
+.talent-branch.superpower {
+  border-color: #c9a24a;
+}
+.talent-branch.locked {
+  opacity: 0.75;
+}
+.talent-branch h4 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+.talent-tag,
+.talent-lock {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #3a2f12;
+  color: #f2d27a;
+}
+.talent-lock {
+  background: #241d1d;
+  color: #d9b2a6;
+}
+.talent-branch ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.talent-node {
+  border: 1px solid #2d3d33;
+  border-radius: 6px;
+  padding: 8px;
+  background: #0f1a16;
+}
+.talent-node.rank-3 {
+  border-color: #8fbf84;
+}
+.talent-node-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.talent-rank {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #f2d27a;
+  white-space: nowrap;
+}
+.talent-ranks {
+  list-style: none;
+  margin: 6px 0;
+  padding: 0;
+  font-size: 12px;
+  color: #b9ad8c;
+}
+.talent-rank-line.owned {
+  color: #f1eddb;
+}
+.talent-gap {
+  color: #d9a07a;
+}
+.talent-requires,
+.talent-reason {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #b9ad8c;
+}
+.talent-buy {
+  margin-top: 6px;
+  width: 100%;
+}

@@ -161,6 +161,43 @@ try {
   assert.match(await page.locator('.progression-page').innerText(), /Пройдено карт: 1 \/ 10/);
   assert.match(await page.locator('.recent-runs').innerText(), /Победа · карта 1/);
   await page.screenshot({ path: 'artifacts/campaign-04-progression.png', fullPage: true });
+  // Task 09 §1.5: talent screen (selected class = archer, level 2 → 1 point).
+  const talents = page.getByRole('region', { name: 'Таланты', exact: true });
+  assert.equal(await page.getByRole('button', { name: 'Таланты — скоро' }).count(), 0);
+  assert.match(await talents.innerText(), /Свободно очков: 1 из 1/);
+  assert.match(await talents.innerText(), /Каталог талантов ещё не утверждён/);
+  const superBranch = talents.getByRole('region', { name: /^Ветка 3\./ });
+  assert.match(await superBranch.innerText(), /доступно с 30 уровня/);
+  assert.equal(
+    await superBranch
+      .getByRole('button', { name: /Изучить/ })
+      .first()
+      .isDisabled(),
+    true,
+  );
+  const eye = talents.getByRole('listitem', { name: /^Меткий глаз: Ранг 0$/ });
+  const next = talents.getByRole('listitem', { name: /^Слабая точка: Ранг 0$/ });
+  assert.equal(await next.getByRole('button', { name: 'Изучить ранг I' }).isDisabled(), true);
+  assert.match(await next.innerText(), /Сначала изучите предыдущий талант до ранга II/);
+  await eye.getByRole('button', { name: 'Изучить ранг I' }).click();
+  await talents.getByText(/Свободно очков: 0 из 1/).waitFor();
+  assert.deepEqual(
+    await page.evaluate(
+      () => JSON.parse(localStorage.getItem('skazki.profile')).classes.archer.talents,
+    ),
+    { 'archer.b1.n01': 1 },
+  );
+  assert.equal(
+    await talents
+      .getByRole('listitem', { name: /^Меткий глаз: Ранг I$/ })
+      .getByRole('button', { name: 'Изучить ранг II' })
+      .isDisabled(),
+    true,
+    'no points left',
+  );
+  await talents.getByRole('button', { name: /Маг/ }).click();
+  assert.match(await talents.innerText(), /Свободно очков: 0 из 0/);
+  await page.screenshot({ path: 'artifacts/campaign-12-talents.png', fullPage: true });
   await nav.getByRole('button', { name: 'Персонаж', exact: true }).click();
   await page.getByRole('article', { name: /Маг/ }).getByRole('button', { name: 'Выбрать' }).click();
   await nav.getByRole('button', { name: 'Карты', exact: true }).click();

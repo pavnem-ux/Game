@@ -10,6 +10,34 @@ import { TALENT_CONFIG } from '../talents';
  */
 export const RU = Object.freeze({
   build: Object.freeze({ label: 'Версия сборки' }),
+  talents: Object.freeze({
+    title: 'Таланты',
+    classSwitch: 'Класс дерева талантов',
+    points: (available: number, earned: number) => `Свободно очков: ${available} из ${earned}`,
+    level: (level: number) => `Уровень класса ${level}`,
+    superpower: 'Сверхспособность',
+    superpowerActive: 'Сверхспособность изучена',
+    superpowerReady: 'Сверхспособность доступна: изучите I ранг первого таланта ветки',
+    superpowerLocked: 'Сверхспособность доступна с 30 уровня',
+    branchLocked: 'доступно с 30 уровня',
+    rank: (rank: number) => `Ранг ${['0', 'I', 'II', 'III'][rank]}`,
+    rankOf: (rank: number) => `${['0', 'I', 'II', 'III'][rank]} / III`,
+    learn: (rank: number) => `Изучить ранг ${['', 'I', 'II', 'III'][rank]}`,
+    requires: (name: string) => `Требуется: «${name}» ранг II`,
+    reasons: Object.freeze({
+      'unknown-node': 'Неизвестный талант',
+      'wrong-class': 'Талант другого класса',
+      'max-rank': 'Максимальный ранг',
+      level: 'Доступно с 30 уровня',
+      prerequisite: 'Сначала изучите предыдущий талант до ранга II',
+      'no-points': 'Нет свободных очков',
+    } as Record<string, string>),
+    inert:
+      'Каталог талантов ещё не утверждён: изученные ранги сохраняются, но пока не влияют на бой.',
+    rankMissing: 'Параметр не определён в каталоге',
+    rankUnclear: 'Правило ждёт уточнения',
+    noRefund: 'Сброса талантов нет: выбор окончательный.',
+  }),
   seed: Object.freeze({ label: 'Сид забега' }),
   settings: Object.freeze({
     title: 'Игра',

@@ -5,7 +5,7 @@ Spec: [task-09-talents.md](task-09-talents.md) (owner's text, Prettier-formatted
 [talents-gaps.md](talents-gaps.md). Code map: reuse [task-08-progress.md](task-08-progress.md)
 and [task-08.5-progress.md](task-08.5-progress.md) (additions below).
 
-Current: Phase 4, step 4.1 (content gate: gaps found — build Phases 1–4, then stop and report)
+Current: Phase 4, step 4.2 (content gate: gaps found — build Phases 1–4, then stop and report)
 
 Branch `task-09-talents` from `task-08.5-playtest` (Task 08.5, PR #5): 08.5 is not merged into
 `main` yet (spec 0.1). The draft PR targets `task-08.5-playtest` so its diff shows only Task 09;
@@ -38,7 +38,7 @@ retarget after PR #3/#4/#5 are merged.
 
 ### Phase 4 — UI & debug
 
-- [ ] 4.1 Talent screen
+- [x] 4.1 Talent screen
 - [ ] 4.2 Debug controls
 
 ### Phase 5 — Standard branches
@@ -144,6 +144,14 @@ Task 09 additions:
 
   Tests `tests/talents/pipeline.test.ts`.
 
+- 4.1 talent screen:
+  - `src/gameplay-ui/TalentsPanel.tsx` sits in «Прогресс» (replacing the «Таланты — скоро» placeholder; «Снаряжение — скоро» stays) and has a class switcher;
+  - `RU.talents` strings;
+  - `campaignStore.purchaseTalent` autosaves and warns if the write fails;
+  - styles in `alpha.css`.
+
+  Browser check in `tests/campaign-browser.mjs` (screenshot `campaign-12-talents.png`).
+
 ## Verification log
 
 - Phase 1: typecheck ✓, format ✓, `npm test` 1044 Vitest tests + Node suites ✓ (talents 12).
@@ -187,6 +195,12 @@ Task 09 additions:
   - **Inertness:** with G0 open no effects are active in the shipped config. The pipeline is tested with a test-only approved fixture whose stat descriptors use catalog values of `ready` ranks, plus one absurd value to prove the cap. The loader refuses effects on `missing`/`unclear` ranks.
   - **Start stats:** the player entity is created with composed stats, so the run starts at full talent HP. With no active talents the stats are identical to before.
   - **Dodge:** `applyStats` now passes the composed `dodgeChance`, which equals the Core value without talents.
+
+- 4.1: the catalog has no separate node descriptions, so the screen shows the node name and the
+  verbatim rank texts.
+  - **Unapproved catalog:** a banner says the catalog is not approved and that learned ranks are stored but don't affect combat yet (G0).
+  - **Gap marking:** ranks with gaps are marked «Параметр не определён» / «Правило ждёт уточнения» with the gap ids.
+  - **Buttons:** only valid purchases are enabled; a locked node shows its reason.
 
 ## Blockers / known issues
 
