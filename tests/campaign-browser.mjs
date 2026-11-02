@@ -104,6 +104,10 @@ try {
   assert.match(await overlay.innerText(), /Урон по источникам[\s\S]*Лук/i);
   const overlayTotal = await overlay.innerText();
   assert.match(overlayTotal, /Всего урона\s+[1-9]/);
+  // Task 08.5 §4.2: each run has its own seed, shown in the overlay.
+  const runSeed = (await state()).world.seed;
+  assert.ok(Number.isSafeInteger(runSeed) && runSeed >= 0 && runSeed <= 4294967295);
+  assert.equal(await page.getByTestId('debug-seed').innerText(), String(runSeed));
   await fastForward(121);
   await page.waitForFunction(() =>
     document.querySelector('.campaign-alert')?.textContent?.includes('Элита: Свирепый громила'),
@@ -132,6 +136,7 @@ try {
   // Task 08.5 §2.2: compact run statistics on the results screen.
   const statsPanel = results.getByRole('region', { name: 'Статистика забега' });
   const statsText = await statsPanel.innerText();
+  assert.equal(await results.getByLabel(`Сид забега: ${runSeed}`).count(), 1);
   assert.match(statsText, /Главные источники урона[\s\S]*Лук[\s\S]*\d+%/i);
   assert.match(statsText, /Получено урона/);
   assert.match(statsText, /Гибель\s+не погибали/);
@@ -378,6 +383,16 @@ try {
   await page.getByRole('button', { name: /Выйти в меню · забег не засчитается/ }).click();
   await nav.waitFor();
   errors.length = expectedErrors; // drop the simulated crash from the unexpected-error list
+
+  // Task 08.5 §4.2 (DEV): start the selected map with a given seed.
+  await page.getByRole('button', { name: /DEV · Тестирование/ }).click();
+  await page.getByLabel('Debug сид').fill('424242');
+  await page.getByRole('button', { name: 'Начать выбранную карту с этим сидом' }).click();
+  await page.waitForFunction(() => window.__alpha.state().world?.seed === 424242);
+  await page.getByRole('button', { name: /DEV · Закрыть/ }).click();
+  await page.getByRole('button', { name: 'Пауза', exact: true }).click();
+  await page.getByRole('button', { name: /Выйти в меню · забег не засчитается/ }).click();
+  await nav.waitFor();
 
   // Task 08.5 §3.4 (DEV): load the earlier report → its save goes through the normal import.
   const saveBeforeReport = await stored();

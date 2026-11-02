@@ -8,6 +8,7 @@ import {
   createSaveStore,
 } from '../persistence';
 import { REPORT_FORMAT } from './bug-report';
+import { MAX_UI_SEED } from '../gameplay';
 import { NEW_CLASS_PROGRESS, addClassXp, createProfile } from '../profile';
 import type { PlayerProfile } from '../profile';
 import { campaignStore } from './campaign-state';
@@ -96,6 +97,17 @@ export const campaignDebug = {
     }
     campaignStore.stageImport(extracted.saveJson, fileName);
     return campaignStore.getSnapshot().pendingImport !== null;
+  },
+  /**
+   * Task 08.5 §4.2: start the selected map with a given seed (replays a reported run: same seed
+   * + same inputs → same spawns and level-up cards). Returns false for an invalid seed.
+   */
+  startWithSeed(text: string): boolean {
+    if (!/^\d{1,10}$/.test(text)) return false;
+    const seed = Number(text);
+    if (seed > MAX_UI_SEED) return false;
+    const ui = campaignStore.getSnapshot();
+    return campaignStore.startRun(ui.selectedMapId, undefined, seed);
   },
   /** Read-only view of the stored keys (inspection only). */
   inspectSave(): string {

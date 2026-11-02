@@ -42,6 +42,7 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
   const [debugLevel, setDebugLevel] = useState(10),
     [debugXp, setDebugXp] = useState(500),
     [debugGold, setDebugGold] = useState(100),
+    [debugSeed, setDebugSeed] = useState(String(w?.seed ?? 1)),
     [saveView, setSaveView] = useState('');
   const restart = () => {
     setProtection(false);
@@ -114,6 +115,23 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
           />
         </label>
         <button onClick={() => campaignDebug.grantGold(debugGold)}>Выдать золото</button>
+        <label>
+          Сид
+          <input
+            aria-label="Debug сид"
+            inputMode="numeric"
+            value={debugSeed}
+            onChange={(e) => setDebugSeed(e.target.value.trim())}
+          />
+        </label>
+        <button
+          onClick={() => {
+            if (!campaignDebug.startWithSeed(debugSeed))
+              window.alert('Сид: целое число 0–4294967295.');
+          }}
+        >
+          Начать выбранную карту с этим сидом
+        </button>
         <button onClick={() => setSaveView(saveView ? '' : campaignDebug.inspectSave())}>
           {saveView ? 'Скрыть сохранение' : 'Показать сохранение'}
         </button>

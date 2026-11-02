@@ -3,7 +3,7 @@
 Spec: [task-08.5.md](task-08.5.md) (owner's text, Prettier-formatted). Code map: reuse
 [task-08-progress.md](task-08-progress.md#code-map) (additions below).
 
-Current: Phase 4, step 4.2
+Current: Phase 4 done — waiting for "continue" (next: Phase 5, step 5.1)
 
 Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR targets
 `task-08-campaign` so its diff shows only Task 08.5; retarget after PR #3/#4 are merged.
@@ -38,8 +38,8 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
 ### Phase 4 — Reproducibility
 
 - [x] 4.1 Seeded RNG for gameplay randomness (audit; record anything not converted)
-- [ ] 4.2 Per-run seed: overlay, results, reports; debug start with a seed
-- [ ] Tests: same seed + inputs → identical spawn/card sequence for 2 min
+- [x] 4.2 Per-run seed: overlay, results, reports; debug start with a seed
+- [x] Tests: same seed + inputs → identical spawn/card sequence for 2 min
 
 ### Phase 5 — Game feel
 
@@ -97,6 +97,10 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
 - 4.1 `src/gameplay/rng.ts` (`createRunRandom` → `combat` / `skills` / `spawn` streams,
   `DEFAULT_SEED`, `validateSeed`, `lcgStream`), used by `GameplayWorld`; golden test
   `tests/gameplay/rng.test.ts`.
+- 4.2 `generateRunSeed` + `startRun(mapId, class, seed?)` (`campaign-state.ts`), seed on the
+  results screen (`RU.seed`) and in the debug overlay; DEV «Сид» + «Начать выбранную карту с
+  этим сидом» (`campaignDebug.startWithSeed`); reports already carry `run.seed` (3.3). Tests
+  `tests/gameplay/reproducibility.test.ts`, `tests/persistence/run-seed.test.ts`, browser checks.
 
 - Existing pieces this task builds on (from Task 07.x/08):
   - Time scale: `AlphaScene.timeScale` + `time-scale` command (DEV/QA, 1–20, multiplies the
@@ -199,6 +203,14 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
     in `AlphaScene`.
   - The extracted formulas are byte-identical to the previous inline ones (golden test for 10
     seeds × 3 streams × 500 draws), so every existing seed reproduces the same run.
+
+- 4.2: before 08.5 every campaign run used the default seed 1337 (identical spawn patterns and
+  card offers each time). Now the UI generates a fresh 32-bit seed per run with the browser
+  CSPRNG (outside the simulation); the simulation stays fully deterministic for a given seed.
+  This is the only player-visible change of Phase 4 (variety between runs), required by the
+  spec. The seed is not persisted in the save (it is in the report and on the results screen).
+  Reproducibility test: 2 classes/maps × 120 s with normal waves, scripted input and fixed card
+  choices; identical spawn positions/times, elite spawns, card offers and kill counts.
 
 ## Blockers / known issues
 

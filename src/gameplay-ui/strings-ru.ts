@@ -9,6 +9,7 @@ import { SKILL_CATALOG, SYNERGY_RULES } from '../skills';
  */
 export const RU = Object.freeze({
   build: Object.freeze({ label: 'Версия сборки' }),
+  seed: Object.freeze({ label: 'Сид забега' }),
   report: Object.freeze({
     button: 'Сообщить о проблеме',
     done: (file: string) => `Отчёт сохранён: ${file}. Отправьте этот файл разработчику.`,

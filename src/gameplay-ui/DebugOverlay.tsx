@@ -26,6 +26,8 @@ export default function DebugOverlay({ world }: { world: GameplaySnapshot }) {
         <button onClick={() => setOpen(false)}>{t.hide}</button>
       </header>
       <dl>
+        <dt>{t.seed}</dt>
+        <dd data-testid="debug-seed">{world.seed}</dd>
         <dt>{t.dps}</dt>
         <dd data-testid="debug-dps">{whole(stats.dps)}</dd>
         <dt>{t.total}</dt>
