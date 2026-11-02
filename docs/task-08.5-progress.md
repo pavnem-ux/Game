@@ -3,7 +3,7 @@
 Spec: [task-08.5.md](task-08.5.md) (owner's text, Prettier-formatted). Code map: reuse
 [task-08-progress.md](task-08-progress.md#code-map) (additions below).
 
-Current: Phase 6, step 6.3
+Current: Phase 6 done — PR #5 ready for review (do not merge)
 
 Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR targets
 `task-08-campaign` so its diff shows only Task 08.5; retarget after PR #3/#4 are merged.
@@ -52,7 +52,7 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
 
 - [x] 6.1 `docs/playtest.md` (Russian)
 - [x] 6.2 Full regression + production build; no debug in production
-- [ ] 6.3 PR description; mark ready (don't merge)
+- [x] 6.3 PR description; mark ready (don't merge)
 
 ## Code map (Task 08.5 additions)
 
