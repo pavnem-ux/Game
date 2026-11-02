@@ -3,7 +3,7 @@
 Spec: [task-08.5.md](task-08.5.md) (owner's text, Prettier-formatted). Code map: reuse
 [task-08-progress.md](task-08-progress.md#code-map) (additions below).
 
-Current: Phase 6, step 6.2
+Current: Phase 6, step 6.3
 
 Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR targets
 `task-08-campaign` so its diff shows only Task 08.5; retarget after PR #3/#4 are merged.
@@ -51,7 +51,7 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
 ### Phase 6 — Playtest kit & delivery
 
 - [x] 6.1 `docs/playtest.md` (Russian)
-- [ ] 6.2 Full regression + production build; no debug in production
+- [x] 6.2 Full regression + production build; no debug in production
 - [ ] 6.3 PR description; mark ready (don't merge)
 
 ## Code map (Task 08.5 additions)
@@ -238,6 +238,18 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
 - 6.1: `docs/playtest.md` notes that the standard Cloudflare Preview is a production build (no
   `/?debug`), so debug shortcuts need `npm run dev` or an explicitly configured QA Preview; the
   Definition of Done path itself needs no debug tools.
+
+## Verification log
+
+- 6.2 (clean `npm ci`): typecheck ✓, format ✓, `npm test` = build-policy 5 + build-info 3 + model 6
+  Node tests and 74 Vitest files / 1032 tests ✓ (combat, weapons, status, AI, survival, alpha,
+  skills/synergies, campaign, profile, persistence, engine, 08.5 suites), `npm run build` ✓,
+  `test:production` 2 PASS, QA build + `test:qa` PASS, `test:e2e` 3 PASS (prototype, alpha,
+  campaign incl. all 08.5 browser checks).
+- Production bundle scan (`dist/assets`, one JS chunk): 0 hits for 17 debug markers (DEV panel,
+  `__alpha`, QA, God Mode, campaign/08.5 debug controls and texts, overlay, crash trigger, report
+  loader, seed start); player features present (report button, stats panel, screen-shake
+  setting, crash screen, run seed).
 
 ## Blockers / known issues
 
