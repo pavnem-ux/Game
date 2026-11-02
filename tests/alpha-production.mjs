@@ -125,6 +125,8 @@ try {
         'Time scale must be',
         'kill-in-view',
         'Убить всех на экране',
+        'Debug Overlay',
+        'Урон в секунду (5 с)',
       ])
         assert.ok(
           !source.includes(marker),

@@ -21,8 +21,6 @@ export const RU = Object.freeze({
     reviveUnused: 'не использовано',
     lowHp: 'На грани (< 20% HP)',
     noDamage: 'Урон ещё не нанесён.',
-    dps: 'Урон в секунду (5 с)',
-    overlay: 'Урон по источникам',
   }),
 });
 

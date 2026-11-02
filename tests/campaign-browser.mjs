@@ -93,6 +93,12 @@ try {
     document.querySelector('.campaign-alert')?.textContent?.includes('Элита через'),
   );
   await page.screenshot({ path: 'artifacts/campaign-05-hud-elite.png' });
+  // Task 08.5 §2.3 debug overlay: live DPS and damage per source (?debug only).
+  const overlay = page.getByRole('complementary', { name: 'Debug Overlay' });
+  await overlay.waitFor();
+  assert.match(await overlay.innerText(), /Урон по источникам[\s\S]*Лук/i);
+  const overlayTotal = await overlay.innerText();
+  assert.match(overlayTotal, /Всего урона\s+[1-9]/);
   await fastForward(121);
   await page.waitForFunction(() =>
     document.querySelector('.campaign-alert')?.textContent?.includes('Элита: Свирепый громила'),

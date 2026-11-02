@@ -3,7 +3,7 @@
 Spec: [task-08.5.md](task-08.5.md) (owner's text, Prettier-formatted). Code map: reuse
 [task-08-progress.md](task-08-progress.md#code-map) (additions below).
 
-Current: Phase 2, step 2.3
+Current: Phase 2 done — waiting for "continue" (next: Phase 3, step 3.1)
 
 Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR targets
 `task-08-campaign` so its diff shows only Task 08.5; retarget after PR #3/#4 are merged.
@@ -24,8 +24,8 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
 
 - [x] 2.1 Run stats collector from existing combat events
 - [x] 2.2 Results screen stats panel
-- [ ] 2.3 Debug overlay: live DPS (5 s) + total damage per source
-- [ ] Tests: totals match damage events; stats reset between runs; summary in recentRuns
+- [x] 2.3 Debug overlay: live DPS (5 s) + total damage per source
+- [x] Tests: totals match damage events; stats reset between runs; summary in recentRuns
 
 ### Phase 3 — Bug reporting
 
@@ -73,6 +73,10 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
   persisted summary `RunStatsSummary` + `validateRunStatsSummary` (`src/profile/rewards.ts`),
   optional `RunResult.stats` / `RecentRun.stats`, parsed in `saveSchema.recentRun`; tests
   `tests/profile/run-stats-summary.test.ts`, results panel in `tests/campaign-browser.mjs`.
+- 2.3 `src/gameplay-ui/DebugOverlay.tsx` (lazy, DEV/QA, shown with `?debug` during a run;
+  collapsible), debug-only text `src/gameplay-ui/strings-ru-debug.ts`; Phase 4 (seed) and
+  Phase 5 (FPS) extend this overlay. Browser check in `tests/campaign-browser.mjs`; production
+  markers in `tests/alpha-production.mjs`.
 
 - Existing pieces this task builds on (from Task 07.x/08):
   - Time scale: `AlphaScene.timeScale` + `time-scale` command (DEV/QA, 1–20, multiplies the
@@ -132,6 +136,9 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
   in-memory stats of the current run (top 5 sources with share, damage taken + worst enemy type,
   death time, revive, low-HP moments). `.results-panel` got `max-height` + scroll so the longer
   panel fits small screens.
+
+- 2.3: debug-only labels live in `strings-ru-debug.ts` (imported only by lazy DEV/QA chunks) so
+  they never reach the production bundle; player-facing 08.5 text stays in `strings-ru.ts`.
 
 ## Blockers / known issues
 
