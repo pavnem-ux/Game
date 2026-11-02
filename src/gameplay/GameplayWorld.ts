@@ -1,3 +1,5 @@
+import { RunStats } from './run-stats';
+import type { EnemyType } from './run-stats';
 import { calculateCharacterStats, scaleMovementSpeed } from '../character-stats';
 import { CombatCore, calculateSuccessfulDamage } from '../combat-core';
 import type { CombatEvent, RandomSource } from '../combat-core';
@@ -88,6 +90,16 @@ export class GameplayWorld {
   private viewport: ViewportSize;
   private readonly spawnRandom: () => number;
   private readonly history: WorldEvent[] = [];
+  /** Task 08.5 run statistics: read-only consumer of every recorded event (new per world). */
+  private readonly runStats = new RunStats({
+    playerId: 'player',
+    attackSource: (attackId) => this.skills?.attackSource(attackId),
+    enemyType: (id) => this.enemyType(id),
+    playerHp: () => {
+      const p = this.core.getEntity(this.playerId);
+      return { hp: p.currentHp, maxHp: p.maxHp };
+    },
+  });
   private readonly enemyIds = new Set<string>();
   private adapter: WeaponStatusAdapter;
   private testingProtection = false;
@@ -276,6 +288,7 @@ export class GameplayWorld {
   getSnapshot(): GameplaySnapshot {
     return Object.freeze({
       time: this.clock,
+      runStats: this.runStats.snapshot(this.clock),
       paused: this.paused,
       player: this.core.getEntity(this.playerId),
       playerBody: this.body,
@@ -438,6 +451,14 @@ export class GameplayWorld {
       },
       profile,
     );
+  }
+  /** Task 08.5 stats: type of a registered enemy (null = not a registered enemy). */
+  private enemyType(id: string): EnemyType | null {
+    if (!this.enemyIds.has(id)) return null;
+    if (id === this.bossEnemyId) return 'boss';
+    const elite = this.eliteProfiles.get(id);
+    if (elite) return elite === 'melee' ? 'elite-melee' : 'elite-ranged';
+    return this.enemies.getEnemy(id).config.behavior;
   }
   private registerEnemy(
     kind: 'melee' | 'ranged',
@@ -1237,10 +1258,17 @@ export class GameplayWorld {
     }
   }
   protected record(channel: WorldEvent['channel'], events: readonly WorldEvent['event'][]) {
-    for (const event of events)
-      this.history.push(
-        Object.freeze({ sequence: ++this.eventSequence, time: this.clock, channel, event }),
-      );
+    for (const event of events) {
+      const entry: WorldEvent = Object.freeze({
+        sequence: ++this.eventSequence,
+        time: this.clock,
+        channel,
+        event,
+      });
+      this.history.push(entry);
+      if (channel === 'combat' || channel === 'weapon' || channel === 'progression')
+        this.runStats.consume(entry);
+    }
     if (this.history.length > ALPHA.eventHistoryLimit)
       this.history.splice(0, this.history.length - ALPHA.eventHistoryLimit);
   }

@@ -1,3 +1,4 @@
+import type { RunStatsSnapshot } from './run-stats';
 import type { ExperienceEvent, RunProgression, XpCrystal } from './experience';
 import type { SpawnSettings, ViewportSize } from './spawning';
 import type { CharacterClass, CharacterStatsSnapshot, CombatAttributes } from '../character-stats';
@@ -55,6 +56,8 @@ export interface WorldEvent {
 }
 export interface GameplaySnapshot {
   readonly time: number;
+  /** Task 08.5: in-memory statistics of this run (reset with every new world). */
+  readonly runStats: RunStatsSnapshot;
   readonly paused: boolean;
   readonly player: CombatEntity;
   readonly playerBody: CombatBody;

@@ -23,3 +23,5 @@ export { XP_RULES, runXpCost } from './experience';
 export { DEFAULT_SPAWNING } from './spawning';
 export type { SpawnSettings, ViewportSize } from './spawning';
 export type { RunProgression, XpCrystal, ExperienceEvent } from './experience';
+export { RUN_STATS_LIMITS, RunStats } from './run-stats';
+export type { DamageBySource, EnemyType, RunStatsSnapshot } from './run-stats';
