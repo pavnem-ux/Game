@@ -5,7 +5,7 @@ Spec: [task-09-talents.md](task-09-talents.md) (owner's text, Prettier-formatted
 [talents-gaps.md](talents-gaps.md). Code map: reuse [task-08-progress.md](task-08-progress.md)
 and [task-08.5-progress.md](task-08.5-progress.md) (additions below).
 
-Current: Phase 0, step 0.3
+Current: Phase 1, step 1.1 (content gate: gaps found — build Phases 1–4, then stop and report)
 
 Branch `task-09-talents` from `task-08.5-playtest` (Task 08.5, PR #5): 08.5 is not merged into
 `main` yet (spec 0.1). The draft PR targets `task-08.5-playtest` so its diff shows only Task 09;
@@ -17,7 +17,7 @@ retarget after PR #3/#4/#5 are merged.
 
 - [x] 0.1 Branch, progress file, draft PR; catalog + spec committed
 - [x] 0.2 Existing save/RNG/run-stats APIs recorded in the code map
-- [ ] 0.3 Content gate: `docs/talents-gaps.md`
+- [x] 0.3 Content gate: `docs/talents-gaps.md` — **gaps found** (G0 + 28 blocking + 26 clarification ranks)
 
 ### Phase 1 — Data model & rules
 
