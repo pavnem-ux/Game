@@ -928,3 +928,80 @@ p.damage-note {
 .pause-skills .skill-group li.damage-line span {
   color: inherit;
 }
+/* Task 08 — campaign menu shell. */
+.alpha-menu.campaign-menu {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 18px;
+  padding: 18px 5% 5%;
+}
+.campaign-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  border-bottom: 1px solid #425443;
+  padding-bottom: 10px;
+}
+.campaign-tab {
+  background: transparent;
+  color: #b6c4b5;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 8px 14px;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+}
+.campaign-tab:hover {
+  border-color: #425443;
+}
+.campaign-tab.active {
+  color: #f1eddb;
+  border-color: #c3e3b6;
+  background: #304536;
+}
+.campaign-gold {
+  margin-left: auto;
+  color: #f2d27a;
+  font-weight: 600;
+  font-size: 15px;
+}
+.campaign-play {
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  gap: 6%;
+  align-items: center;
+}
+.campaign-page h2 {
+  font-weight: 500;
+  margin: 0 0 12px;
+}
+.campaign-map-select {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 16px;
+  color: #b6c4b5;
+  font-size: 13px;
+}
+.campaign-map-select select {
+  background: #1a2a23;
+  color: #f1eddb;
+  border: 1px solid #425443;
+  border-radius: 4px;
+  padding: 8px;
+  font-size: 14px;
+}
+.class-choice:disabled {
+  opacity: 0.6;
+}
+@media (max-width: 760px) {
+  .campaign-play {
+    grid-template-columns: 1fr;
+  }
+  .campaign-tab {
+    padding: 6px 9px;
+    font-size: 13px;
+  }
+}

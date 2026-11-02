@@ -1,7 +1,7 @@
 # Task 08 progress
 
 Branch: task-08-campaign | PR: https://github.com/pavnem-ux/Game/pull/4 (draft)
-Current: Phase 5, step 5.1 (Phase 4 done; waiting for "continue")
+Current: Phase 5, step 5.2
 
 ## Steps
 
@@ -22,7 +22,7 @@ Current: Phase 5, step 5.1 (Phase 4 done; waiting for "continue")
 - [x] 4.2 saveStore: load/save, backup key, error handling
 - [x] 4.3 Wire autosave into progression; failure warning state
 - [x] 4.4 Export/import logic
-- [ ] 5.1 Main menu + navigation + Gold
+- [x] 5.1 Main menu + navigation + Gold
 - [ ] 5.2 Character and Map selection
 - [ ] 5.3 Results screen (wired to applyRunResult) + Progression screen
 - [ ] 5.4 HUD additions
@@ -74,7 +74,11 @@ Current: Phase 5, step 5.1 (Phase 4 done; waiting for "continue")
   not-persisted/error, `commitRun` one save per run, `selectClass`, `retrySave`,
   `replaceProfile`, `subscribe`; `generateRunId`), `transfer.ts` (`exportProfile` →
   `skazki-save-YYYY-MM-DD.json`, `prepareImport` size limit 1 MB + parse/validate/migrate, no
-  side effects). Tests `tests/persistence/` (`npm run test:persistence`). Tests `tests/campaign/` (`npm run test:campaign`).
+  side effects). Tests `tests/persistence/` (`npm run test:persistence`).
+- Campaign UI: `src/gameplay-ui/campaign-state.ts` (`campaignStore`: progression service
+  singleton, menu page, selected map, `startRun` → `start` command with `campaign {mapId, runId}`
+  and the class's permanent level), `CampaignMenu.tsx` (nav + Gold + pages; Play keeps the
+  class grid + «Начать забег» used by browser tests). Tests `tests/campaign/` (`npm run test:campaign`).
 - Node 24, `npm ci`. Unit: `npm test` (Vitest + Node prototype tests). Per module: `test:stats`,
   `test:combat`, `test:weapons`, `test:status`, `test:enemies`, `test:survival`, `test:alpha`
   (tests/gameplay), `test:skills`. Typecheck `npm run typecheck`; format `npm run format:check`
@@ -164,6 +168,9 @@ level)`, caps `COMBAT_ATTRIBUTE_CAPS`, `scaleCooldown`/`scaleCircularAoeRadius`)
 - 4.4: import keeps the file's own profileId; confirmation + "export current first" and the
   actual download/upload are UI (5.5). A confirmed import goes through `replaceProfile`, so the
   previous valid save becomes the backup.
+- 5.1: the menu now always starts campaign runs (map 1 by default); the DEV-only start-level
+  input was removed (Phase 6 adds a set-class-level debug tool). Non-campaign runs remain
+  available through DEV/QA restart commands.
 - Task 07.2 is on the PR #3 branch (`claude/stoic-carson-76vdrx`, `dde421a` + v2 `9e8aa93`), not
   on `main` (PR #3 unmerged). `task-08-campaign` is stacked on that branch; the draft PR targets it
   so its diff shows only Task 08. Retarget to `main` after PR #3 is merged.
