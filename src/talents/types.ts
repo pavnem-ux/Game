@@ -5,20 +5,20 @@ import type { TalentEffect } from './effects';
 export type TalentRankNumber = 1 | 2 | 3;
 export type TalentBranchNumber = 1 | 2 | 3;
 /**
- * `ready`: fully defined in the catalog (still subject to catalog approval, see
- * `TALENT_CATALOG_APPROVED`); `missing`: a parameter is not defined (gap G*); `unclear`: a rule
- * needs an owner decision (gap C*). Only `ready` ranks of an approved catalog may have effects.
+ * Task 09.1 rule 7: `pending` = defined in catalog v1.2 but not yet working in combat (inert);
+ * `ready` = its effect works in combat and is tested; `blocked` = engine conflict listed in
+ * `docs/talents-gaps.md`. Only `ready` ranks (of an approved catalog) are active.
  */
-export type TalentRankStatus = 'ready' | 'missing' | 'unclear';
+export type TalentRankStatus = 'pending' | 'ready' | 'blocked';
 export interface TalentRankData {
   /** Verbatim Russian rank text from `docs/talents.md`. */
   readonly text: string;
   readonly status: TalentRankStatus;
-  /** Gap ids from `docs/talents-gaps.md` (empty when ready). */
-  readonly gaps: readonly string[];
+  /** Catalog appendix decisions (G1–G12, C1–C8) giving this rank its exact parameters. */
+  readonly refs: readonly string[];
   /**
-   * Effect descriptors of this rank (its complete effect). Allowed only on `ready` ranks; added
-   * per rank in Phases 5–6. Absent = no effect yet.
+   * Effect descriptors of this rank (its complete effect). Allowed only on `ready` ranks; a
+   * `ready` rank must have at least one. Absent = no effect yet.
    */
   readonly effects?: readonly TalentEffect[];
 }

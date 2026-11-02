@@ -1,10 +1,10 @@
 /**
- * Task 09 talent catalog — generated once from `docs/talents.md` (the owner's catalog, converted
- * from `Skazki_Task08_Full_Talent_Catalog_Draft.docx`). Texts are copied verbatim; a test
- * (`tests/talents/catalog.test.ts`) re-parses the Markdown and fails on any difference, so nothing
- * here can be invented or drift. Rank status/gaps come from `docs/talents-gaps.md`:
- * `missing` = a parameter the catalog does not define (G*), `unclear` = a rule needing an owner
- * decision (C*). Both stay inert. Effect descriptors are added per rank once defined (Phases 3/5).
+ * Task 09 talent catalog — generated from `docs/talents.md` (catalog v1.2, alpha-approved
+ * 02.11.2026). Rank texts are copied verbatim; `tests/talents/catalog.test.ts` re-parses the
+ * Markdown and fails on any difference. `refs` = the appendix decisions (G1–G12, C1–C8) that
+ * give a rank its exact technical parameters (they override a shorter rank text).
+ * Status (Task 09.1 rule 7): `pending` = defined but not yet working in combat (inert);
+ * `ready` = implemented and tested; `blocked` = engine conflict listed in `talents-gaps.md`.
  */
 import type { TalentCatalogData } from './types';
 
@@ -32,16 +32,20 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       name: 'Кровавый клинок',
       superpower: false,
       ranks: [
-        { text: 'Урон прямых ударов кинжалами по врагам с Bleed +6%.', status: 'ready', gaps: [] },
+        {
+          text: 'Урон прямых ударов кинжалами по врагам с Bleed +6%.',
+          status: 'pending',
+          refs: [],
+        },
         {
           text: 'Бонус +10%; против целей с 5+ стаками Bleed дополнительно +5%.',
-          status: 'ready',
-          gaps: [],
+          status: 'pending',
+          refs: [],
         },
         {
           text: 'Бонус +15%; против 10 стаков Bleed дополнительно +10%.',
-          status: 'ready',
-          gaps: [],
+          status: 'pending',
+          refs: [],
         },
       ],
     },
@@ -53,13 +57,13 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       name: 'Скрытая точность',
       superpower: false,
       ranks: [
-        { text: 'Шанс критического удара кинжалом +3 п.п.', status: 'ready', gaps: [] },
+        { text: 'Шанс критического удара кинжалом +3 п.п.', status: 'pending', refs: [] },
         {
           text: 'Бонус +5 п.п.; по врагам с Bleed дополнительно +2 п.п.',
-          status: 'ready',
-          gaps: [],
+          status: 'pending',
+          refs: [],
         },
-        { text: 'Бонус +7 п.п.; по врагам с 5+ Bleed ещё +3 п.п.', status: 'ready', gaps: [] },
+        { text: 'Бонус +7 п.п.; по врагам с 5+ Bleed ещё +3 п.п.', status: 'pending', refs: [] },
       ],
     },
     {
@@ -70,9 +74,9 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       name: 'Жестокий порез',
       superpower: false,
       ranks: [
-        { text: 'Урон Bleed, наложенного кинжалами, +8%.', status: 'ready', gaps: [] },
-        { text: '+13%; при 5+ стаках Bleed прямой урон +4%.', status: 'ready', gaps: [] },
-        { text: '+20%; при 10 стаках Bleed прямой урон +8%.', status: 'ready', gaps: [] },
+        { text: 'Урон Bleed, наложенного кинжалами, +8%.', status: 'pending', refs: [] },
+        { text: '+13%; при 5+ стаках Bleed прямой урон +4%.', status: 'pending', refs: [] },
+        { text: '+20%; при 10 стаках Bleed прямой урон +8%.', status: 'pending', refs: [] },
       ],
     },
     {
@@ -83,9 +87,13 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       name: 'Охота на слабых',
       superpower: false,
       ranks: [
-        { text: 'Прямой урон по врагам с HP ниже 30% +8%.', status: 'ready', gaps: [] },
-        { text: '+12%; при Bleed на цели бонус ещё +5%.', status: 'ready', gaps: [] },
-        { text: '+18%; если открыт Final Cut, его бонусный урон +15%.', status: 'ready', gaps: [] },
+        { text: 'Прямой урон по врагам с HP ниже 30% +8%.', status: 'pending', refs: [] },
+        { text: '+12%; при Bleed на цели бонус ещё +5%.', status: 'pending', refs: [] },
+        {
+          text: '+18%; если открыт Final Cut, его бонусный урон +15%.',
+          status: 'pending',
+          refs: [],
+        },
       ],
     },
     {
@@ -96,9 +104,9 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       name: 'Последний удар',
       superpower: false,
       ranks: [
-        { text: 'Критический урон кинжалами +10 п.п.', status: 'ready', gaps: [] },
-        { text: '+18 п.п.; по кровоточащим целям ещё +7 п.п.', status: 'ready', gaps: [] },
-        { text: '+28 п.п.; по целям ниже 30% HP ещё +12 п.п.', status: 'ready', gaps: [] },
+        { text: 'Критический урон кинжалами +10 п.п.', status: 'pending', refs: [] },
+        { text: '+18 п.п.; по кровоточащим целям ещё +7 п.п.', status: 'pending', refs: [] },
+        { text: '+28 п.п.; по целям ниже 30% HP ещё +12 п.п.', status: 'pending', refs: [] },
       ],
     },
     {
@@ -111,11 +119,11 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       ranks: [
         {
           text: 'Уклонение от прямых ударов +2 п.п. (общий лимит сохраняется).',
-          status: 'ready',
-          gaps: [],
+          status: 'pending',
+          refs: [],
         },
-        { text: '+4 п.п.; скорость движения +3%.', status: 'ready', gaps: [] },
-        { text: '+6 п.п.; скорость движения +5%.', status: 'ready', gaps: [] },
+        { text: '+4 п.п.; скорость движения +3%.', status: 'pending', refs: [] },
+        { text: '+6 п.п.; скорость движения +5%.', status: 'pending', refs: [] },
       ],
     },
     {
@@ -128,14 +136,14 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       ranks: [
         {
           text: 'После успешного Dodge: ответный кинжальный удар ×0.45 физического урона; CD 3 с.',
-          status: 'ready',
-          gaps: [],
+          status: 'pending',
+          refs: [],
         },
-        { text: 'Удар ×0.65; CD 2.5 с.', status: 'ready', gaps: [] },
+        { text: 'Удар ×0.65; CD 2.5 с.', status: 'pending', refs: [] },
         {
           text: 'Удар ×0.85; CD 2 с; ответные удары не запускают новые ответные удары.',
-          status: 'ready',
-          gaps: [],
+          status: 'pending',
+          refs: [],
         },
       ],
     },
@@ -148,12 +156,12 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       superpower: false,
       ranks: [
         {
-          text: 'После Dodge шанс 15% создать одну теневую копию на 3 с; CD 12 с.',
-          status: 'missing',
-          gaps: ['G3'],
+          text: 'После Dodge шанс 15% создать одну теневую копию на 3 с; CD 12 с. Копия бьёт ×0.20 физического урона (G3).',
+          status: 'pending',
+          refs: ['G3'],
         },
-        { text: 'Шанс 25%; копия существует 4 с.', status: 'missing', gaps: ['G3'] },
-        { text: 'Шанс 35%; копия существует 5 с.', status: 'missing', gaps: ['G3'] },
+        { text: 'Шанс 25%; копия существует 4 с.', status: 'pending', refs: ['G3'] },
+        { text: 'Шанс 35%; копия существует 5 с.', status: 'pending', refs: ['G3'] },
       ],
     },
     {
@@ -165,12 +173,12 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       superpower: false,
       ranks: [
         {
-          text: 'Урон ударов копии ×0.35 от урона кинжала; не вызывает синергии.',
-          status: 'missing',
-          gaps: ['G4'],
+          text: 'Урон ударов копии ×0.35 физического урона игрока (заменяет ×0.20 из 2.3); не вызывает синергии.',
+          status: 'pending',
+          refs: ['G4'],
         },
-        { text: '×0.50; скорость ударов копии +10%.', status: 'missing', gaps: ['G4'] },
-        { text: '×0.65; скорость ударов копии +20%.', status: 'missing', gaps: ['G4'] },
+        { text: '×0.50; скорость ударов копии +10%.', status: 'pending', refs: ['G4'] },
+        { text: '×0.65; скорость ударов копии +20%.', status: 'pending', refs: ['G4'] },
       ],
     },
     {
@@ -183,11 +191,11 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       ranks: [
         {
           text: 'После Dodge скорость движения +8% на 2 с; обновляется, не складывается.',
-          status: 'ready',
-          gaps: [],
+          status: 'pending',
+          refs: [],
         },
-        { text: '+12% на 2.5 с.', status: 'ready', gaps: [] },
-        { text: '+16% на 3 с; ответный выпад +15% урона.', status: 'unclear', gaps: ['C8'] },
+        { text: '+12% на 2.5 с.', status: 'pending', refs: [] },
+        { text: '+16% на 3 с; ответный выпад +15% урона.', status: 'pending', refs: ['C8'] },
       ],
     },
     {
@@ -199,19 +207,19 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       superpower: true,
       ranks: [
         {
-          text: 'Сверхспособность: базовые удары кинжалом получают шанс 15% наложить Poison и отдельно 15% наложить Burn; Bleed сохраняется.',
-          status: 'missing',
-          gaps: ['G1', 'G2'],
+          text: 'Сверхспособность: базовые удары кинжалом получают шанс 15% наложить Poison и отдельно 15% наложить Burn (1.5 за тик, 4 с); Bleed сохраняется.',
+          status: 'pending',
+          refs: ['G1', 'G2'],
         },
         {
           text: 'Шансы Poison/Burn по 25%; базовый DoT каждого нового типа 2 за тик.',
-          status: 'missing',
-          gaps: ['G2'],
+          status: 'pending',
+          refs: ['G1', 'G2'],
         },
         {
           text: 'Шансы Poison/Burn по 35%; базовый DoT каждого типа 3 за тик.',
-          status: 'missing',
-          gaps: ['G2'],
+          status: 'pending',
+          refs: ['G1', 'G2'],
         },
       ],
     },
@@ -225,11 +233,11 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       ranks: [
         {
           text: 'Урон прямых ударов по целям с 2 разными типами DoT +8%.',
-          status: 'ready',
-          gaps: [],
+          status: 'pending',
+          refs: [],
         },
-        { text: '+14%; при 3 типах DoT вместо этого +20%.', status: 'ready', gaps: [] },
-        { text: '+18%; при 3 типах DoT вместо этого +28%.', status: 'ready', gaps: [] },
+        { text: '+14%; при 3 типах DoT вместо этого +20%.', status: 'pending', refs: [] },
+        { text: '+18%; при 3 типах DoT вместо этого +28%.', status: 'pending', refs: [] },
       ],
     },
     {
@@ -242,18 +250,18 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       ranks: [
         {
           text: 'При 3 разных DoT на цели её получаемый DoT-урон +10%.',
-          status: 'ready',
-          gaps: [],
+          status: 'pending',
+          refs: [],
         },
         {
           text: '+18%; вероятность 20% добавить 1 стак того DoT, которого меньше (CD цели 3 с).',
-          status: 'unclear',
-          gaps: ['C5'],
+          status: 'pending',
+          refs: ['C5'],
         },
         {
           text: '+25%; вероятность 30% добавить 1 стак (CD цели 2 с).',
-          status: 'unclear',
-          gaps: ['C5'],
+          status: 'pending',
+          refs: ['C5'],
         },
       ],
     },
@@ -266,15 +274,15 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       superpower: false,
       ranks: [
         {
-          text: 'При одновременных 10 Poison, 10 Burn и 10 Bleed: взрыв ×1.5 физического урона; CD цели 8 с.',
-          status: 'missing',
-          gaps: ['G5'],
+          text: 'При одновременных 10 Poison, 10 Burn и 10 Bleed: взрыв ×1.5 физического урона; радиус 80; CD цели 8 с.',
+          status: 'pending',
+          refs: ['G5'],
         },
-        { text: 'Взрыв ×2.0; радиус 100.', status: 'ready', gaps: [] },
+        { text: 'Взрыв ×2.0; радиус 100.', status: 'pending', refs: ['G5'] },
         {
           text: 'Взрыв ×2.6; радиус 130; ни взрыв, ни вторичный урон не создают цепочек.',
-          status: 'ready',
-          gaps: [],
+          status: 'pending',
+          refs: ['G5'],
         },
       ],
     },
@@ -286,9 +294,9 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       name: 'Стихийный резонанс',
       superpower: false,
       ranks: [
-        { text: 'Урон огненных и ледяных прямых навыков +5%.', status: 'ready', gaps: [] },
-        { text: '+9%; радиус их AoE +4%.', status: 'ready', gaps: [] },
-        { text: '+14%; радиус их AoE +8%.', status: 'ready', gaps: [] },
+        { text: 'Урон огненных и ледяных прямых навыков +5%.', status: 'pending', refs: [] },
+        { text: '+9%; радиус их AoE +4%.', status: 'pending', refs: [] },
+        { text: '+14%; радиус их AoE +8%.', status: 'pending', refs: [] },
       ],
     },
     {
@@ -299,9 +307,9 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       name: 'Жар пламени',
       superpower: false,
       ranks: [
-        { text: 'Burn, наложенный навыками Мага, наносит +8% урона.', status: 'ready', gaps: [] },
-        { text: '+15%; длительность групп Burn +10%.', status: 'ready', gaps: [] },
-        { text: '+24%; длительность групп Burn +15%.', status: 'ready', gaps: [] },
+        { text: 'Burn, наложенный навыками Мага, наносит +8% урона.', status: 'pending', refs: [] },
+        { text: '+15%; длительность групп Burn +10%.', status: 'pending', refs: [] },
+        { text: '+24%; длительность групп Burn +15%.', status: 'pending', refs: [] },
       ],
     },
     {
@@ -314,11 +322,19 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       ranks: [
         {
           text: 'Ледяные атаки наносят +6% урона по замедленным целям.',
-          status: 'ready',
-          gaps: [],
+          status: 'pending',
+          refs: [],
         },
-        { text: '+10%; Slow ледяных навыков +3 п.п. в рамках лимита.', status: 'ready', gaps: [] },
-        { text: '+16%; Slow ледяных навыков +5 п.п. в рамках лимита.', status: 'ready', gaps: [] },
+        {
+          text: '+10%; Slow ледяных навыков +3 п.п. в рамках лимита.',
+          status: 'pending',
+          refs: [],
+        },
+        {
+          text: '+16%; Slow ледяных навыков +5 п.п. в рамках лимита.',
+          status: 'pending',
+          refs: [],
+        },
       ],
     },
     {
@@ -331,18 +347,18 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       ranks: [
         {
           text: 'Если Thermal Shock уже открыт, его дополнительный урон +10%.',
-          status: 'ready',
-          gaps: [],
+          status: 'pending',
+          refs: [],
         },
         {
           text: 'Также Shattered Ice, если открыт: бонусный урон +12%.',
-          status: 'ready',
-          gaps: [],
+          status: 'pending',
+          refs: [],
         },
         {
           text: 'Бонус к Thermal Shock +20%, к Shattered Ice +22%. Новые синергии не открываются.',
-          status: 'ready',
-          gaps: [],
+          status: 'pending',
+          refs: [],
         },
       ],
     },
@@ -354,12 +370,12 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       name: 'Повеление стихиям',
       superpower: false,
       ranks: [
-        { text: 'Если Wildfire открыт, радиус распространения +10.', status: 'ready', gaps: [] },
-        { text: 'Радиус +20; число соседей +1 (не более 4).', status: 'ready', gaps: [] },
+        { text: 'Если Wildfire открыт, радиус распространения +10.', status: 'pending', refs: [] },
+        { text: 'Радиус +20; число соседей +1 (не более 4).', status: 'pending', refs: [] },
         {
           text: 'Радиус +30; число соседей +2 (не более 5); без каскада.',
-          status: 'ready',
-          gaps: [],
+          status: 'pending',
+          refs: [],
         },
       ],
     },
@@ -371,9 +387,9 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       name: 'Арканный поток',
       superpower: false,
       ranks: [
-        { text: 'Cooldown Reduction +3 п.п.', status: 'ready', gaps: [] },
-        { text: '+5 п.п.; магический урон +3%.', status: 'ready', gaps: [] },
-        { text: '+8 п.п.; магический урон +5%.', status: 'ready', gaps: [] },
+        { text: 'Cooldown Reduction +3 п.п.', status: 'pending', refs: [] },
+        { text: '+5 п.п.; магический урон +3%.', status: 'pending', refs: [] },
+        { text: '+8 п.п.; магический урон +5%.', status: 'pending', refs: [] },
       ],
     },
     {
@@ -384,9 +400,9 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       name: 'Магическая точность',
       superpower: false,
       ranks: [
-        { text: 'Шанс крита магическими навыками +3 п.п.', status: 'ready', gaps: [] },
-        { text: '+5 п.п.; критический урон +10 п.п.', status: 'ready', gaps: [] },
-        { text: '+8 п.п.; критический урон +20 п.п.', status: 'ready', gaps: [] },
+        { text: 'Шанс крита магическими навыками +3 п.п.', status: 'pending', refs: [] },
+        { text: '+5 п.п.; критический урон +10 п.п.', status: 'pending', refs: [] },
+        { text: '+8 п.п.; критический урон +20 п.п.', status: 'pending', refs: [] },
       ],
     },
     {
@@ -399,11 +415,11 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       ranks: [
         {
           text: 'При получении прямого урона барьер 10% Max HP на 3 с; CD 20 с.',
-          status: 'unclear',
-          gaps: ['C2'],
+          status: 'pending',
+          refs: ['C2'],
         },
-        { text: 'Барьер 15% Max HP; CD 18 с.', status: 'unclear', gaps: ['C2'] },
-        { text: 'Барьер 20% Max HP на 4 с; CD 15 с.', status: 'unclear', gaps: ['C2'] },
+        { text: 'Барьер 15% Max HP; CD 18 с.', status: 'pending', refs: ['C2'] },
+        { text: 'Барьер 20% Max HP на 4 с; CD 15 с.', status: 'pending', refs: ['C2'] },
       ],
     },
     {
@@ -416,11 +432,11 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       ranks: [
         {
           text: 'Если HP выше 70%, урон активных магических навыков +6%.',
-          status: 'ready',
-          gaps: [],
+          status: 'pending',
+          refs: [],
         },
-        { text: '+10%; при HP выше 70% ещё CDR +3 п.п.', status: 'ready', gaps: [] },
-        { text: '+15%; при HP выше 70% ещё CDR +5 п.п.', status: 'ready', gaps: [] },
+        { text: '+10%; при HP выше 70% ещё CDR +3 п.п.', status: 'pending', refs: [] },
+        { text: '+15%; при HP выше 70% ещё CDR +5 п.п.', status: 'pending', refs: [] },
       ],
     },
     {
@@ -433,11 +449,11 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       ranks: [
         {
           text: 'Криты магическими навыками уменьшают оставшийся CD этого навыка на 0.1 с, максимум раз в 1 с.',
-          status: 'ready',
-          gaps: [],
+          status: 'pending',
+          refs: [],
         },
-        { text: 'На 0.2 с.', status: 'ready', gaps: [] },
-        { text: 'На 0.3 с; внутренний CD 0.8 с.', status: 'ready', gaps: [] },
+        { text: 'На 0.2 с.', status: 'pending', refs: [] },
+        { text: 'На 0.3 с; внутренний CD 0.8 с.', status: 'pending', refs: [] },
       ],
     },
     {
@@ -450,11 +466,11 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       ranks: [
         {
           text: 'Сверхспособность: +1 реальный активный слот (итого 5), получаемый из существующего пула Task 07.',
-          status: 'ready',
-          gaps: [],
+          status: 'pending',
+          refs: ['C1'],
         },
-        { text: 'Навык, назначенный усиленным: прямой урон +8%.', status: 'unclear', gaps: ['C1'] },
-        { text: 'Усиленный навык: прямой урон +15%; его CD −5%.', status: 'unclear', gaps: ['C1'] },
+        { text: 'Навык, назначенный усиленным: прямой урон +8%.', status: 'pending', refs: ['C1'] },
+        { text: 'Усиленный навык: прямой урон +15%; его CD −5%.', status: 'pending', refs: ['C1'] },
       ],
     },
     {
@@ -467,15 +483,15 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       ranks: [
         {
           text: 'Усиленный навык: AoE-радиус +5% (если применимо).',
-          status: 'unclear',
-          gaps: ['C1'],
+          status: 'pending',
+          refs: ['C1'],
         },
         {
           text: 'AoE +10%; урон DoT этого навыка +8% (если применимо).',
-          status: 'unclear',
-          gaps: ['C1'],
+          status: 'pending',
+          refs: ['C1'],
         },
-        { text: 'AoE +15%; урон DoT этого навыка +15%.', status: 'unclear', gaps: ['C1'] },
+        { text: 'AoE +15%; урон DoT этого навыка +15%.', status: 'pending', refs: ['C1'] },
       ],
     },
     {
@@ -488,11 +504,11 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       ranks: [
         {
           text: 'Усиленный навык: CD −5% относительно уже рассчитанного CD.',
-          status: 'unclear',
-          gaps: ['C1'],
+          status: 'pending',
+          refs: ['C1'],
         },
-        { text: 'CD −10%.', status: 'unclear', gaps: ['C1'] },
-        { text: 'CD −15%; не влияет на другие навыки.', status: 'unclear', gaps: ['C1'] },
+        { text: 'CD −10%.', status: 'pending', refs: ['C1'] },
+        { text: 'CD −15%; не влияет на другие навыки.', status: 'pending', refs: ['C1'] },
       ],
     },
     {
@@ -505,14 +521,14 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       ranks: [
         {
           text: 'Усиленный навык: прямой урон +10% (сверх эффекта первого узла).',
-          status: 'unclear',
-          gaps: ['C1'],
+          status: 'pending',
+          refs: ['C1'],
         },
-        { text: '+18%; критический урон этого навыка +15 п.п.', status: 'unclear', gaps: ['C1'] },
+        { text: '+18%; критический урон этого навыка +15 п.п.', status: 'pending', refs: ['C1'] },
         {
           text: '+28%; критический урон +25 п.п.; капы сохраняются.',
-          status: 'unclear',
-          gaps: ['C1'],
+          status: 'pending',
+          refs: ['C1'],
         },
       ],
     },
@@ -524,9 +540,9 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       name: 'Стальная хватка',
       superpower: false,
       ranks: [
-        { text: 'Прямой урон меча +6%.', status: 'ready', gaps: [] },
-        { text: '+10%; атаки в ближнем бою по 2+ целям +4%.', status: 'ready', gaps: [] },
-        { text: '+16%; по 2+ целям +8%.', status: 'ready', gaps: [] },
+        { text: 'Прямой урон меча +6%.', status: 'pending', refs: [] },
+        { text: '+10%; атаки в ближнем бою по 2+ целям +4%.', status: 'pending', refs: [] },
+        { text: '+16%; по 2+ целям +8%.', status: 'pending', refs: [] },
       ],
     },
     {
@@ -537,9 +553,9 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       name: 'Кровь и сталь',
       superpower: false,
       ranks: [
-        { text: 'При потере HP ниже 60% физический урон +5%.', status: 'ready', gaps: [] },
-        { text: '+9%; при HP ниже 40% дополнительно +4%.', status: 'ready', gaps: [] },
-        { text: '+14%; при HP ниже 40% дополнительно +8%.', status: 'ready', gaps: [] },
+        { text: 'При потере HP ниже 60% физический урон +5%.', status: 'pending', refs: [] },
+        { text: '+9%; при HP ниже 40% дополнительно +4%.', status: 'pending', refs: [] },
+        { text: '+14%; при HP ниже 40% дополнительно +8%.', status: 'pending', refs: [] },
       ],
     },
     {
@@ -552,11 +568,11 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       ranks: [
         {
           text: 'Убийство melee-атакой даёт +3% физ. урона на 3 с; не стакается, обновляется.',
-          status: 'ready',
-          gaps: [],
+          status: 'pending',
+          refs: [],
         },
-        { text: '+5% на 4 с.', status: 'ready', gaps: [] },
-        { text: '+8% на 5 с; отдельно от Battle Fury.', status: 'ready', gaps: [] },
+        { text: '+5% на 4 с.', status: 'pending', refs: [] },
+        { text: '+8% на 5 с; отдельно от Battle Fury.', status: 'pending', refs: [] },
       ],
     },
     {
@@ -567,9 +583,9 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       name: 'Безжалостный натиск',
       superpower: false,
       ranks: [
-        { text: 'Скорость атаки в ближнем бою +5 п.', status: 'ready', gaps: [] },
-        { text: '+9 п.; урон по оглушённым целям +5%.', status: 'ready', gaps: [] },
-        { text: '+15 п.; урон по оглушённым целям +10%.', status: 'ready', gaps: [] },
+        { text: 'Скорость атаки в ближнем бою +5 п.', status: 'pending', refs: [] },
+        { text: '+9 п.; урон по оглушённым целям +5%.', status: 'pending', refs: [] },
+        { text: '+15 п.; урон по оглушённым целям +10%.', status: 'pending', refs: [] },
       ],
     },
     {
@@ -581,16 +597,20 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       superpower: false,
       ranks: [
         {
-          text: 'При наличии Battle Fury его урон за стак усиливается на +1 процентный пункт.',
-          status: 'unclear',
-          gaps: ['C6'],
+          text: 'При наличии Battle Fury его урон за стак усиливается на +1 процентный пункт (максимум = maxStacks Battle Fury × 1 п.п., C6).',
+          status: 'pending',
+          refs: ['C6'],
         },
         {
           text: '+2 п.п.; максимальный бонус физ. урона от таланта +16 п.п.',
-          status: 'ready',
-          gaps: [],
+          status: 'pending',
+          refs: ['C6'],
         },
-        { text: '+3 п.п.; максимальный бонус от таланта +24 п.п.', status: 'ready', gaps: [] },
+        {
+          text: '+3 п.п.; максимальный бонус от таланта +24 п.п.',
+          status: 'pending',
+          refs: ['C6'],
+        },
       ],
     },
     {
@@ -601,9 +621,9 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       name: 'Крепкое тело',
       superpower: false,
       ranks: [
-        { text: 'Max HP +8%.', status: 'ready', gaps: [] },
-        { text: '+14%; сопротивление +2 п.', status: 'ready', gaps: [] },
-        { text: '+22%; сопротивление +4 п.', status: 'ready', gaps: [] },
+        { text: 'Max HP +8%.', status: 'pending', refs: [] },
+        { text: '+14%; сопротивление +2 п.', status: 'pending', refs: [] },
+        { text: '+22%; сопротивление +4 п.', status: 'pending', refs: [] },
       ],
     },
     {
@@ -614,13 +634,13 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       name: 'Непробиваемость',
       superpower: false,
       ranks: [
-        { text: 'Resistance +4 п.', status: 'ready', gaps: [] },
+        { text: 'Resistance +4 п.', status: 'pending', refs: [] },
         {
           text: '+7 п.; снижение урона от прямых ударов дополнительно 2%.',
-          status: 'missing',
-          gaps: ['G12'],
+          status: 'pending',
+          refs: ['G12'],
         },
-        { text: '+11 п.; дополнительное снижение 4%.', status: 'missing', gaps: ['G12'] },
+        { text: '+11 п.; дополнительное снижение 4%.', status: 'pending', refs: ['G12'] },
       ],
     },
     {
@@ -633,14 +653,14 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       ranks: [
         {
           text: 'После прямого удара, получившего урон: ближайшему врагу ответный урон ×0.3; CD 4 с.',
-          status: 'ready',
-          gaps: [],
+          status: 'pending',
+          refs: [],
         },
-        { text: 'Урон ×0.45; CD 3.5 с.', status: 'ready', gaps: [] },
+        { text: 'Урон ×0.45; CD 3.5 с.', status: 'pending', refs: [] },
         {
           text: 'Урон ×0.6; CD 3 с; ответный удар не запускает новые ответные удары.',
-          status: 'ready',
-          gaps: [],
+          status: 'pending',
+          refs: [],
         },
       ],
     },
@@ -654,14 +674,14 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       ranks: [
         {
           text: 'Продолжительность Stun от собственных навыков +0.1 с в рамках лимита.',
-          status: 'ready',
-          gaps: [],
+          status: 'pending',
+          refs: [],
         },
-        { text: '+0.2 с; прямой урон по оглушённым +4%.', status: 'ready', gaps: [] },
+        { text: '+0.2 с; прямой урон по оглушённым +4%.', status: 'pending', refs: [] },
         {
           text: '+0.3 с; урон по оглушённым +8%; иммунитет цели сохраняется.',
-          status: 'ready',
-          gaps: [],
+          status: 'pending',
+          refs: [],
         },
       ],
     },
@@ -673,16 +693,16 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       name: 'Несокрушимый',
       superpower: false,
       ranks: [
-        { text: 'При HP ниже 30% Resistance +5 п.', status: 'ready', gaps: [] },
+        { text: 'При HP ниже 30% Resistance +5 п.', status: 'pending', refs: ['C3'] },
         {
           text: '+9 п.; восстановление 3% Max HP при срабатывании, CD 30 с.',
-          status: 'unclear',
-          gaps: ['C3'],
+          status: 'pending',
+          refs: ['C3'],
         },
         {
           text: '+14 п.; восстановление 6% Max HP при срабатывании, CD 30 с.',
-          status: 'unclear',
-          gaps: ['C3'],
+          status: 'pending',
+          refs: ['C3'],
         },
       ],
     },
@@ -695,19 +715,15 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       superpower: true,
       ranks: [
         {
-          text: 'Сверхспособность: второй совместимый одноручный меч; его удар ×0.45 базового коэффициента.',
-          status: 'missing',
-          gaps: ['G6'],
+          text: 'Сверхспособность: второй одноручный меч; его удар ×0.45 физического урона игрока (G6).',
+          status: 'pending',
+          refs: ['G6'],
         },
-        {
-          text: 'Второй меч наносит ×0.60 базового коэффициента.',
-          status: 'missing',
-          gaps: ['G6'],
-        },
+        { text: 'Второй меч наносит ×0.60 физического урона.', status: 'pending', refs: ['G6'] },
         {
           text: '×0.75; попадания рассчитываются отдельно, без двойного применения статов.',
-          status: 'missing',
-          gaps: ['G6'],
+          status: 'pending',
+          refs: ['G6'],
         },
       ],
     },
@@ -719,9 +735,9 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       name: 'Ритм двух клинков',
       superpower: false,
       ranks: [
-        { text: 'Скорость атак второго меча +8%.', status: 'missing', gaps: ['G7'] },
-        { text: '+15%; его критический шанс +3 п.п.', status: 'missing', gaps: ['G7'] },
-        { text: '+22%; его критический шанс +6 п.п.', status: 'missing', gaps: ['G7'] },
+        { text: 'Скорость атак второго меча +8%.', status: 'pending', refs: ['G7'] },
+        { text: '+15%; его критический шанс +3 п.п.', status: 'pending', refs: ['G7'] },
+        { text: '+22%; его критический шанс +6 п.п.', status: 'pending', refs: ['G7'] },
       ],
     },
     {
@@ -734,14 +750,14 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       ranks: [
         {
           text: 'После попаданий обоих мечей по одной цели за 2 с: доп. удар ×0.5, CD цели 4 с.',
-          status: 'unclear',
-          gaps: ['C4'],
+          status: 'pending',
+          refs: ['C4'],
         },
-        { text: 'Доп. удар ×0.75; CD цели 3.5 с.', status: 'unclear', gaps: ['C4'] },
+        { text: 'Доп. удар ×0.75; CD цели 3.5 с.', status: 'pending', refs: ['C4'] },
         {
           text: '×1.0; CD цели 3 с; нет рекурсивных срабатываний.',
-          status: 'unclear',
-          gaps: ['C4'],
+          status: 'pending',
+          refs: ['C4'],
         },
       ],
     },
@@ -753,12 +769,12 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       name: 'Безупречная пара',
       superpower: false,
       ranks: [
-        { text: 'Прямой урон второго меча +8%.', status: 'ready', gaps: [] },
-        { text: '+15%; оба меча против целей с HP \\<30% наносят +5%.', status: 'ready', gaps: [] },
+        { text: 'Прямой урон второго меча +8%.', status: 'pending', refs: [] },
+        { text: '+15%; оба меча против целей с HP <30% наносят +5%.', status: 'pending', refs: [] },
         {
-          text: '+25%; оба меча против целей с HP \\<30% наносят +10%.',
-          status: 'ready',
-          gaps: [],
+          text: '+25%; оба меча против целей с HP <30% наносят +10%.',
+          status: 'pending',
+          refs: [],
         },
       ],
     },
@@ -770,9 +786,9 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       name: 'Меткий глаз',
       superpower: false,
       ranks: [
-        { text: 'Критический шанс прямых стрел +3 п.п.', status: 'ready', gaps: [] },
-        { text: '+5 п.п.; критический урон стрел +8 п.п.', status: 'ready', gaps: [] },
-        { text: '+8 п.п.; критический урон +16 п.п.', status: 'ready', gaps: [] },
+        { text: 'Критический шанс прямых стрел +3 п.п.', status: 'pending', refs: [] },
+        { text: '+5 п.п.; критический урон стрел +8 п.п.', status: 'pending', refs: [] },
+        { text: '+8 п.п.; критический урон +16 п.п.', status: 'pending', refs: [] },
       ],
     },
     {
@@ -783,9 +799,9 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       name: 'Слабая точка',
       superpower: false,
       ranks: [
-        { text: 'Урон прямых стрел по цели с меткой +7%.', status: 'ready', gaps: [] },
-        { text: '+12%; по отравленным помеченным целям +4%.', status: 'ready', gaps: [] },
-        { text: '+18%; по отравленным помеченным целям +8%.', status: 'ready', gaps: [] },
+        { text: 'Урон прямых стрел по цели с меткой +7%.', status: 'pending', refs: [] },
+        { text: '+12%; по отравленным помеченным целям +4%.', status: 'pending', refs: [] },
+        { text: '+18%; по отравленным помеченным целям +8%.', status: 'pending', refs: [] },
       ],
     },
     {
@@ -797,19 +813,19 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       superpower: false,
       ranks: [
         {
-          text: 'Пробивающая стрела: +1 дополнительная цель (при наличии навыка).',
-          status: 'ready',
-          gaps: [],
+          text: 'Пробивающая стрела: +1 дополнительная цель (при наличии навыка); урон после каждого пробития −20% (G11).',
+          status: 'pending',
+          refs: ['G11'],
         },
         {
-          text: '+2 цели; урон после первого пробития снижается на 5% меньше.',
-          status: 'missing',
-          gaps: ['G11'],
+          text: '+2 цели; потеря урона за пробитие 15% вместо 20%.',
+          status: 'pending',
+          refs: ['G11'],
         },
         {
-          text: '+3 цели; урон после первого пробития снижается на 10% меньше.',
-          status: 'missing',
-          gaps: ['G11'],
+          text: '+3 цели; потеря урона за пробитие 10% вместо 20%.',
+          status: 'pending',
+          refs: ['G11'],
         },
       ],
     },
@@ -823,11 +839,11 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       ranks: [
         {
           text: 'Если одна цель получает 3 прямых выстрела за 3 с: следующий выстрел по ней +8% урона; CD 3 с.',
-          status: 'ready',
-          gaps: [],
+          status: 'pending',
+          refs: [],
         },
-        { text: '+14%; окно 3.5 с.', status: 'ready', gaps: [] },
-        { text: '+22%; окно 4 с; не открывает Deadly Precision.', status: 'ready', gaps: [] },
+        { text: '+14%; окно 3.5 с.', status: 'pending', refs: [] },
+        { text: '+22%; окно 4 с; не открывает Deadly Precision.', status: 'pending', refs: [] },
       ],
     },
     {
@@ -838,9 +854,9 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       name: 'Идеальный выстрел',
       superpower: false,
       ranks: [
-        { text: 'Критический урон по целям с HP ниже 30% +15 п.п.', status: 'ready', gaps: [] },
-        { text: '+25 п.п.; шанс крита по ним +3 п.п.', status: 'ready', gaps: [] },
-        { text: '+40 п.п.; шанс крита +5 п.п.', status: 'ready', gaps: [] },
+        { text: 'Критический урон по целям с HP ниже 30% +15 п.п.', status: 'pending', refs: [] },
+        { text: '+25 п.п.; шанс крита по ним +3 п.п.', status: 'pending', refs: [] },
+        { text: '+40 п.п.; шанс крита +5 п.п.', status: 'pending', refs: [] },
       ],
     },
     {
@@ -851,9 +867,9 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       name: 'Лёгкие ноги',
       superpower: false,
       ranks: [
-        { text: 'Скорость движения +5%.', status: 'ready', gaps: [] },
-        { text: '+8%; дальность базового лука +4%.', status: 'ready', gaps: [] },
-        { text: '+12%; дальность +7%.', status: 'ready', gaps: [] },
+        { text: 'Скорость движения +5%.', status: 'pending', refs: [] },
+        { text: '+8%; дальность базового лука +4%.', status: 'pending', refs: [] },
+        { text: '+12%; дальность +7%.', status: 'pending', refs: [] },
       ],
     },
     {
@@ -866,11 +882,11 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       ranks: [
         {
           text: 'Урон дополнительных стрел Multishot +5 п.п. от базовой стрелы (если навык получен).',
-          status: 'ready',
-          gaps: [],
+          status: 'pending',
+          refs: [],
         },
-        { text: '+10 п.п.', status: 'ready', gaps: [] },
-        { text: '+15 п.п.; лимиты попаданий по цели сохраняются.', status: 'ready', gaps: [] },
+        { text: '+10 п.п.', status: 'pending', refs: [] },
+        { text: '+15 п.п.; лимиты попаданий по цели сохраняются.', status: 'pending', refs: [] },
       ],
     },
     {
@@ -881,9 +897,9 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       name: 'Широкая зона',
       superpower: false,
       ranks: [
-        { text: 'Радиус AoE активных навыков лучника +6%.', status: 'ready', gaps: [] },
-        { text: '+10%; длительность зон +5%.', status: 'ready', gaps: [] },
-        { text: '+16%; длительность зон +10%.', status: 'ready', gaps: [] },
+        { text: 'Радиус AoE активных навыков лучника +6%.', status: 'pending', refs: [] },
+        { text: '+10%; длительность зон +5%.', status: 'pending', refs: [] },
+        { text: '+16%; длительность зон +10%.', status: 'pending', refs: [] },
       ],
     },
     {
@@ -894,9 +910,9 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       name: 'Манёвренная стрельба',
       superpower: false,
       ranks: [
-        { text: 'При движении физический урон стрел +4%.', status: 'ready', gaps: [] },
-        { text: '+7%; скорость движения +3%.', status: 'ready', gaps: [] },
-        { text: '+11%; скорость движения +5%.', status: 'ready', gaps: [] },
+        { text: 'При движении физический урон стрел +4%.', status: 'pending', refs: [] },
+        { text: '+7%; скорость движения +3%.', status: 'pending', refs: [] },
+        { text: '+11%; скорость движения +5%.', status: 'pending', refs: [] },
       ],
     },
     {
@@ -909,11 +925,11 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       ranks: [
         {
           text: 'После убийства стрелой следующая стрела +8% урона, 3 с, не стакается.',
-          status: 'ready',
-          gaps: [],
+          status: 'pending',
+          refs: [],
         },
-        { text: '+13%; 4 с.', status: 'ready', gaps: [] },
-        { text: '+20%; 5 с; бонусные стрелы не запускают повторно.', status: 'ready', gaps: [] },
+        { text: '+13%; 4 с.', status: 'pending', refs: [] },
+        { text: '+20%; 5 с; бонусные стрелы не запускают повторно.', status: 'pending', refs: [] },
       ],
     },
     {
@@ -926,18 +942,18 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       ranks: [
         {
           text: 'Сверхспособность: 1 баллиста на 20 с, базовый урон 20 + 15% физ. урона лучника за попадание; CD призыва 30 с.',
-          status: 'missing',
-          gaps: ['G8', 'C7'],
+          status: 'pending',
+          refs: ['G8', 'C7'],
         },
         {
           text: 'Базовый урон 20 + 25% физ. урона; длительность 20 с.',
-          status: 'missing',
-          gaps: ['G8', 'C7'],
+          status: 'pending',
+          refs: ['G8', 'C7'],
         },
         {
           text: 'Базовый урон 20 + 35%; длительность 24 с.',
-          status: 'missing',
-          gaps: ['G8', 'C7'],
+          status: 'pending',
+          refs: ['G8', 'C7'],
         },
       ],
     },
@@ -949,9 +965,9 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       name: 'Инженерный расчёт',
       superpower: false,
       ranks: [
-        { text: 'Скорость стрельбы баллисты +10%.', status: 'missing', gaps: ['G9', 'C7'] },
-        { text: '+18%; дальность +10%.', status: 'missing', gaps: ['G9', 'C7'] },
-        { text: '+28%; дальность +18%.', status: 'missing', gaps: ['G9', 'C7'] },
+        { text: 'Скорость стрельбы баллисты +10%.', status: 'pending', refs: ['G9', 'C7'] },
+        { text: '+18%; дальность +10%.', status: 'pending', refs: ['G9', 'C7'] },
+        { text: '+28%; дальность +18%.', status: 'pending', refs: ['G9', 'C7'] },
       ],
     },
     {
@@ -964,14 +980,14 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       ranks: [
         {
           text: 'Лимит одновременно активных баллист: 2 вместо 1; общий CD призыва 30 с.',
-          status: 'unclear',
-          gaps: ['C7'],
+          status: 'pending',
+          refs: ['C7'],
         },
-        { text: 'Длительность обеих +3 с.', status: 'unclear', gaps: ['C7'] },
+        { text: 'Длительность обеих +3 с.', status: 'pending', refs: ['C7'] },
         {
           text: 'Длительность обеих +6 с; отдельные независимые атаки.',
-          status: 'unclear',
-          gaps: ['C7'],
+          status: 'pending',
+          refs: ['C7'],
         },
       ],
     },
@@ -985,18 +1001,18 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       ranks: [
         {
           text: 'При попадании баллиста наносит +10% от собственного рассчитанного урона.',
-          status: 'ready',
-          gaps: [],
+          status: 'pending',
+          refs: [],
         },
         {
-          text: '+20%; копирует разрешённое свойство базовой стрелы с 25% силой (без синергий).',
-          status: 'missing',
-          gaps: ['G10'],
+          text: '+20%; накладывает Poison силой 25% от Poison навыка «Ядовитый залп», если он получен (G10, без синергий).',
+          status: 'pending',
+          refs: ['G10'],
         },
         {
-          text: '+30%; копирует свойство с 40% силой (без рекурсии и новых цепочек).',
-          status: 'missing',
-          gaps: ['G10'],
+          text: '+30%; тот же Poison силой 40% (без рекурсии и новых цепочек).',
+          status: 'pending',
+          refs: ['G10'],
         },
       ],
     },

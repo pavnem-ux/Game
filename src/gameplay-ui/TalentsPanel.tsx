@@ -52,7 +52,9 @@ export function TalentsPanel() {
       <p className="talents-summary">
         <b>{T.points(available, earned)}</b> · {T.level(progress.level)} · {superpower}
       </p>
-      {!TALENT_CONFIG.approved && <p className="talents-note">{T.inert}</p>}
+      {TALENT_CONFIG.branchesOf(cls).some((b) =>
+        b.nodes.some((n) => n.ranks.some((r) => !r.active)),
+      ) && <p className="talents-note">{T.inert}</p>}
       <p className="talents-note faint">{T.noRefund}</p>
       <div className="talent-branches">
         {TALENT_CONFIG.branchesOf(cls).map((branch) => {
@@ -118,7 +120,7 @@ function TalentNodeCard({
             {r.status !== 'ready' && (
               <small className={`talent-gap gap-${r.status}`}>
                 {' '}
-                ({r.status === 'missing' ? T.rankMissing : T.rankUnclear}: {r.gaps.join(', ')})
+                ({r.status === 'blocked' ? T.rankBlocked : T.rankPending})
               </small>
             )}
           </li>

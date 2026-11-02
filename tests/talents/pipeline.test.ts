@@ -24,7 +24,10 @@ function fixture(effects: Record<string, Partial<Record<1 | 2 | 3, TalentEffect[
       effects[n.id]
         ? {
             ...n,
-            ranks: n.ranks.map((r, i) => ({ ...r, effects: effects[n.id][(i + 1) as 1 | 2 | 3] })),
+            ranks: n.ranks.map((r, i) => {
+              const e = effects[n.id][(i + 1) as 1 | 2 | 3];
+              return e ? { ...r, status: 'ready' as const, effects: e } : r;
+            }),
           }
         : n,
     ),
@@ -62,10 +65,20 @@ function world(cls: CharacterClass, level: number, ranks: TalentRanks, config = 
 const base = (cls: CharacterClass, level: number) => calculateCharacterStats(cls, level);
 
 describe('Task 09 §1.2 modifier pipeline', () => {
-  it('the shipped catalog is inert (G0): talents change nothing until approved', () => {
+  it('pending ranks are inert (09.1 rule 7): they change nothing until implemented', () => {
+    const pending = loadTalentConfig(
+      {
+        ...TALENT_CATALOG_DATA,
+        nodes: TALENT_CATALOG_DATA.nodes.map((n) => ({
+          ...n,
+          ranks: n.ranks.map((r) => ({ ...r, status: 'pending' as const, effects: undefined })),
+        })),
+      },
+      true,
+    );
     const ranks = { 'warrior.b2.n01': 3, 'warrior.b1.n01': 2 };
-    const w = world('warrior', 20, ranks, TALENT_CONFIG);
-    const plain = world('warrior', 20, {}, TALENT_CONFIG);
+    const w = world('warrior', 20, ranks, pending);
+    const plain = world('warrior', 20, {}, pending);
     expect(w.getSnapshot().player).toEqual(plain.getSnapshot().player);
     expect(w.skills.effectiveStats).toEqual(plain.skills.effectiveStats);
     expect(w.getSnapshot().talents).toEqual({
@@ -161,12 +174,19 @@ describe('Task 09 §1.2 modifier pipeline', () => {
     expect(() => world('warrior', 29, { 'warrior.b3.n01': 1 })).toThrow(/Invalid talents/);
     expect(() => talentLoadout('warrior', 1, { 'warrior.b1.n01': 1 })).toThrow(RangeError);
   });
-  it('effects can only be attached to ready ranks (undefined content stays inert)', () => {
-    expect(() => fixture({ 'rogue.b3.n01': { 1: [stat('damagePercent', 1)] } })).toThrow(
-      /effects on a missing rank/,
+  it('effects can only sit on ready ranks, and a ready rank needs an effect', () => {
+    const withStatus = (status: 'pending' | 'ready', effects?: TalentEffect[]) =>
+      loadTalentConfig({
+        ...TALENT_CATALOG_DATA,
+        nodes: TALENT_CATALOG_DATA.nodes.map((n) =>
+          n.id === 'rogue.b1.n01'
+            ? { ...n, ranks: [{ ...n.ranks[0], status, effects }, n.ranks[1], n.ranks[2]] }
+            : n,
+        ),
+      });
+    expect(() => withStatus('pending', [stat('damagePercent', 1)])).toThrow(
+      /effects on a pending rank/,
     );
-    expect(() => fixture({ 'mage.b2.n03': { 1: [stat('damagePercent', 1)] } })).toThrow(
-      /effects on a unclear rank/,
-    );
+    expect(() => withStatus('ready')).toThrow(/ready without an effect/);
   });
 });

@@ -5,7 +5,7 @@ Spec: [task-09-talents.md](task-09-talents.md) (owner's text, Prettier-formatted
 [talents-gaps.md](talents-gaps.md). Code map: reuse [task-08-progress.md](task-08-progress.md)
 and [task-08.5-progress.md](task-08.5-progress.md) (additions below).
 
-Current: **stopped at the content gate** after Phases 0–4 (spec 0.3). Next: Phase 5 once G0 + gaps are answered (`docs/talents-gaps.md`)
+Current (Task 09): Phases 0–4 done; Phases 5–7 are carried out as Task 09.1 (below)
 
 Branch `task-09-talents` from `task-08.5-playtest` (Task 08.5, PR #5): 08.5 is not merged into
 `main` yet (spec 0.1). The draft PR targets `task-08.5-playtest` so its diff shows only Task 09;
@@ -54,6 +54,52 @@ retarget after PR #3/#4/#5 are merged.
 - [ ] 7.1 Full regression + production build
 - [ ] 7.2 Talent checks in `docs/playtest.md`
 - [ ] 7.3 PR description; ready only if no gaps remain (don't merge)
+
+## Task 09.1 — talent combat effects (catalog v1.2)
+
+Spec: [task-09.1-talent-effects.md](task-09.1-talent-effects.md). Source: `docs/talents.md` = catalog
+v1.2 (byte-identical to the owner's file; excluded from Prettier). Gap resolution:
+[talents-gaps.md](talents-gaps.md#resolution-table-catalog-v12-task-091).
+
+Current: 09.1 Phase 1, step 1.1
+
+### 09.1 steps
+
+- [x] 0.1 `docs/talents.md` = catalog v1.2 (56 nodes, 168 ranks, appendix G0–G12/C1–C8); config
+      regenerated (verbatim texts, `refs` per rank); status model `pending`/`ready`/`blocked`
+- [x] 0.2 Inert ranks listed below
+- [x] 0.3 Resolution table in `docs/talents-gaps.md` (original audit kept)
+- [ ] 1.1 Condition helpers · [ ] 1.2 Cooldowns/refresh buffs · [ ] 1.3 Secondary sources ·
+      [ ] 1.4 Talent entities · [ ] Phase 1 tests
+- [ ] Phase 2 Rogue b1–b2 (G3, G4, C8)
+- [ ] Phase 3 Rogue b3 (G1, G2, G5, C5)
+- [ ] Phase 4 Mage b1–b2 (C2)
+- [ ] Phase 5 Mage b3 (C1)
+- [ ] Phase 6 Warrior b1–b2 (C3, C6, G12)
+- [ ] Phase 7 Warrior b3 (G6, G7, C4)
+- [ ] Phase 8 Archer b1–b2 (G11)
+- [ ] Phase 9 Archer b3 (G8, G9, G10, C7)
+- [ ] 10.1 Coverage · [ ] 10.2 Regression · [ ] 10.3 Playtest smoke checks · [ ] 10.4 Docs ·
+      [ ] 10.5 PR description
+
+### 0.2 Inert ranks (status `pending`; updated as ranks become `ready`)
+
+All 168 ranks are `pending` at the start of 09.1 (Task 09 built only the stat pipeline; no rank
+had effect descriptors):
+
+- rogue: `rogue.b1.n01`, `rogue.b1.n02`, `rogue.b1.n03`, `rogue.b1.n04`, `rogue.b1.n05`, `rogue.b2.n01`, `rogue.b2.n02`, `rogue.b2.n03`, `rogue.b2.n04`, `rogue.b2.n05`, `rogue.b3.n01`, `rogue.b3.n02`, `rogue.b3.n03`, `rogue.b3.n04` — I–III
+- mage: `mage.b1.n01`, `mage.b1.n02`, `mage.b1.n03`, `mage.b1.n04`, `mage.b1.n05`, `mage.b2.n01`, `mage.b2.n02`, `mage.b2.n03`, `mage.b2.n04`, `mage.b2.n05`, `mage.b3.n01`, `mage.b3.n02`, `mage.b3.n03`, `mage.b3.n04` — I–III
+- warrior: `warrior.b1.n01`, `warrior.b1.n02`, `warrior.b1.n03`, `warrior.b1.n04`, `warrior.b1.n05`, `warrior.b2.n01`, `warrior.b2.n02`, `warrior.b2.n03`, `warrior.b2.n04`, `warrior.b2.n05`, `warrior.b3.n01`, `warrior.b3.n02`, `warrior.b3.n03`, `warrior.b3.n04` — I–III
+- archer: `archer.b1.n01`, `archer.b1.n02`, `archer.b1.n03`, `archer.b1.n04`, `archer.b1.n05`, `archer.b2.n01`, `archer.b2.n02`, `archer.b2.n03`, `archer.b2.n04`, `archer.b2.n05`, `archer.b3.n01`, `archer.b3.n02`, `archer.b3.n03`, `archer.b3.n04` — I–III
+
+### 09.1 decisions
+
+- 0.1: the owner asked to keep the catalog content exactly, so `docs/talents.md` is the uploaded
+  file byte-for-byte and listed in `.prettierignore` (Prettier would rewrite emphasis markers and
+  spacing). The config test parses the v1.2 layout.
+- 0.1: status model per rule 7. `TALENT_CATALOG_APPROVED = true` (G0), but a rank is active only
+  when `ready`, and a `ready` rank must carry effects; the loader enforces both. The UI marks
+  pending ranks «пока не действует в бою».
 
 ## Code map (Task 09)
 

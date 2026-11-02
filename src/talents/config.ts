@@ -26,10 +26,10 @@ export const TALENT_RULES = Object.freeze({
   totals: Object.freeze({ branches: 12, nodes: 56, ranks: 168 }),
 });
 /**
- * G0 (`docs/talents-gaps.md`): the catalog marks every number as an unapproved balancing
- * proposal. Until the owner approves it, no talent rank changes combat (all ranks inert).
+ * G0: catalog v1.2 — all 168 values approved by the owner for alpha testing (02.11.2026).
+ * A rank still only changes combat once it is `ready` (implemented and tested).
  */
-export const TALENT_CATALOG_APPROVED = false;
+export const TALENT_CATALOG_APPROVED = true;
 
 const ID = /^(warrior|mage|archer|rogue)\.b([1-3])\.n0([1-5])$/;
 
@@ -52,13 +52,13 @@ export function loadTalentConfig(
     if (n.ranks.length !== TALENT_RULES.maxRank) fail(`${n.id} needs ranks I–III`);
     for (const r of n.ranks) {
       if (!r.text.trim()) fail(`${n.id} has an empty rank`);
-      if (r.status === 'ready' && r.gaps.length) fail(`${n.id} is ready but lists gaps`);
-      if (r.status !== 'ready' && !r.gaps.length) fail(`${n.id} is ${r.status} without a gap id`);
-      if (r.status === 'missing' && !r.gaps.some((g) => g.startsWith('G')))
-        fail(`${n.id} is missing without a G gap`);
-      // Rule 6: an undefined or unclear rank can never carry an effect.
+      if (!['pending', 'ready', 'blocked'].includes(r.status)) fail(`${n.id} has a bad status`);
+      if (r.refs.some((ref) => !/^(G([1-9]|1[0-2])|C[1-8])$/.test(ref)))
+        fail(`${n.id} has an unknown G/C reference`);
+      // 09.1 rule 7: only a working (ready) rank carries effects, and it must carry some.
       if (r.effects?.length && r.status !== 'ready')
         fail(`${n.id} has effects on a ${r.status} rank`);
+      if (r.status === 'ready' && !r.effects?.length) fail(`${n.id} is ready without an effect`);
       r.effects?.forEach((e, i) => {
         try {
           validateTalentEffect(e, `${n.id} effect ${i}`);
@@ -91,7 +91,7 @@ export function loadTalentConfig(
             ranks: n.ranks.map((r, i) =>
               Object.freeze({
                 ...r,
-                gaps: Object.freeze([...r.gaps]),
+                refs: Object.freeze([...r.refs]),
                 effects: Object.freeze((r.effects ?? []).map((e) => Object.freeze({ ...e }))),
                 rank: (i + 1) as TalentRankNumber,
                 active: approved && r.status === 'ready',

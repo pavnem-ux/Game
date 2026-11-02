@@ -11,7 +11,7 @@ import {
 } from '../../src/talents';
 import type { TalentCatalogData } from '../../src/talents';
 
-/** Independent parse of docs/talents.md (the owner's catalog). */
+/** Independent parse of docs/talents.md (catalog v1.2, the owner's file). */
 function parseCatalog(md: string) {
   const classes: Record<string, string> = {
     Разбойник: 'rogue',
@@ -25,14 +25,17 @@ function parseCatalog(md: string) {
   for (const line of md.split('\n')) {
     let m = /^## (Разбойник|Маг|Воин|Лучник)$/.exec(line);
     if (m) cls = classes[m[1]];
+    else if (line.startsWith('## ')) cls = '';
+    if (!cls) continue;
     m = /^### Ветка (\d)\. (.+?) — (\d) узлов$/.exec(line);
     if (m) branches.push({ cls, branch: +m[1], name: m[2], count: +m[3] });
-    m = /^\*\*\d\.\d (.+?)\*\* · ID: (\S+?)( \*\*· СВЕРХСПОСОБНОСТЬ\*\*)?$/.exec(line);
+    m = /^\d\.\d\s+(.+?)\s+·\s+ID: (\S+?)(\s+·\s+СВЕРХСПОСОБНОСТЬ)?\s*$/.exec(line);
     if (m) nodes.push({ id: m[2], name: m[1], superpower: !!m[3], ranks: [] });
-    m = /^- \*\*Ранг (?:I|II|III):\*\* (.+)$/.exec(line);
+    m = /^- \*\*Ранг (?:I|II|III)\*\*: (.+)$/.exec(line);
     if (m && nodes.length) nodes[nodes.length - 1].ranks.push(m[1]);
   }
-  return { branches, nodes };
+  const appendix = [...md.matchAll(/^### (G\d+|C\d) — /gm)].map((x) => x[1]);
+  return { branches, nodes, appendix };
 }
 
 describe('Task 09 §1.1 talent catalog → config (verbatim, nothing invented)', () => {
@@ -69,26 +72,27 @@ describe('Task 09 §1.1 talent catalog → config (verbatim, nothing invented)',
         });
     }
   });
-  it('rank status matches docs/talents-gaps.md: 114 ready, 28 missing, 26 unclear', () => {
+  it('v1.2 is alpha-approved; every G/C reference exists in the appendix and is used', () => {
+    expect(catalogMarkdown).toMatch(/^Каталог талантов · Task 09 · v1\.2 Alpha Approved/);
+    expect(TALENT_CATALOG_APPROVED).toBe(true);
     const ranks = [...TALENT_CONFIG.nodes.values()].flatMap((n) => n.ranks);
-    const count = (s: string) => ranks.filter((r) => r.status === s).length;
-    expect([count('ready'), count('missing'), count('unclear')]).toEqual([114, 28, 26]);
-    expect(gapsMarkdown).toContain('**28** distinct ranks');
-    expect(gapsMarkdown).toContain('**26** further distinct ranks');
-    expect(gapsMarkdown).toContain('**114**');
-    // Every gap id used in the config is defined in the gaps document.
-    for (const id of new Set(ranks.flatMap((r) => r.gaps)))
-      expect(gapsMarkdown).toMatch(new RegExp(`\\| ${id} +\\|`));
+    const used = new Set(ranks.flatMap((r) => r.refs));
+    for (const ref of used) expect(parsed.appendix).toContain(ref);
+    const decisions = parsed.appendix.filter((id) => id !== 'G0');
+    expect(decisions).toHaveLength(20); // G1–G12, C1–C8
+    for (const id of decisions) expect(used.has(id), id).toBe(true);
+    // Every decision has a row in the resolution table of docs/talents-gaps.md.
+    for (const id of parsed.appendix) expect(gapsMarkdown).toMatch(new RegExp(`\\| ${id} +\\|`));
   });
-  it('G0: the catalog is not approved, so no rank is active; approval activates only ready ranks', () => {
-    expect(TALENT_CATALOG_APPROVED).toBe(false);
-    expect([...TALENT_CONFIG.nodes.values()].flatMap((n) => n.ranks).some((r) => r.active)).toBe(
-      false,
-    );
-    const approved = loadTalentConfig(TALENT_CATALOG_DATA, true);
-    const ranks = [...approved.nodes.values()].flatMap((n) => n.ranks);
-    expect(ranks.filter((r) => r.active)).toHaveLength(114);
+  it('rule 7: a rank is active only when ready (working + tested); pending/blocked stay inert', () => {
+    const ranks = [...TALENT_CONFIG.nodes.values()].flatMap((n) => n.ranks);
     expect(ranks.every((r) => r.active === (r.status === 'ready'))).toBe(true);
+    for (const r of ranks.filter((x) => x.status !== 'ready')) expect(r.effects).toEqual([]);
+    for (const r of ranks.filter((x) => x.status === 'ready'))
+      expect(r.effects.length).toBeGreaterThan(0);
+    // Every blocked rank is documented in talents-gaps.md.
+    for (const n of TALENT_CONFIG.nodes.values())
+      if (n.ranks.some((r) => r.status === 'blocked')) expect(gapsMarkdown).toContain(n.id);
   });
   it('the loader rejects malformed catalogs', () => {
     const base = TALENT_CATALOG_DATA;
@@ -103,8 +107,13 @@ describe('Task 09 §1.1 talent catalog → config (verbatim, nothing invented)',
       nodes(() => ({ id: 'rogue.b1.n09' })),
       nodes((n) => ({ ranks: n.ranks.slice(0, 2) })),
       nodes((n) => ({ ranks: [{ ...n.ranks[0], text: ' ' }, n.ranks[1], n.ranks[2]] })),
+      // ready without an effect
+      nodes((n) => ({ ranks: [{ ...n.ranks[0], status: 'ready' }, n.ranks[1], n.ranks[2]] })),
+      // unknown G/C reference
+      nodes((n) => ({ ranks: [{ ...n.ranks[0], refs: ['G99'] }, n.ranks[1], n.ranks[2]] })),
+      // unknown status
       nodes((n) => ({
-        ranks: [{ ...n.ranks[0], status: 'missing', gaps: [] }, n.ranks[1], n.ranks[2]],
+        ranks: [{ ...n.ranks[0], status: 'done' as never }, n.ranks[1], n.ranks[2]],
       })),
       nodes(() => ({ superpower: true })),
       { ...base, branches: base.branches.map((b, i) => (i === 0 ? { ...b, nodeCount: 4 } : b)) },
