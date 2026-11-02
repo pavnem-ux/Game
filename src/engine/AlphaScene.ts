@@ -357,6 +357,16 @@ export class AlphaScene extends Phaser.Scene {
       g.fillStyle(c, armed ? 0.12 : 0.05).fillCircle(z.center.x, z.center.y, z.radius);
       g.lineStyle(1, c, armed ? 0.55 : 0.3).strokeCircle(z.center.x, z.center.y, z.radius);
     }
+    // Task 09.1: talent entities (Rogue shadow copy, Archer ballistae) — original simple shapes.
+    for (const t of s.talentEntities ?? []) {
+      if (t.kind === 'ballista') {
+        g.fillStyle(0x8a6a3e, 0.9).fillRect(t.x - 10, t.y - 10, 20, 20);
+        g.lineStyle(2, 0xe8c36a, 0.9).strokeRect(t.x - 10, t.y - 10, 20, 20);
+      } else {
+        g.fillStyle(0x9a8cff, 0.35).fillCircle(t.x, t.y, 13);
+        g.lineStyle(1, 0xc9c0ff, 0.6).strokeCircle(t.x, t.y, 13);
+      }
+    }
     for (const crystal of s.crystals) {
       const { x, y } = crystal;
       g.fillStyle(0xb4f1aa, 0.13).fillCircle(x, y, 12);

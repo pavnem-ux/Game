@@ -99,6 +99,10 @@ export class TalentRuntime {
     const at = this.cooldowns.get(key);
     return at === undefined || at <= this.now + 1e-9;
   }
+  /** Time the cooldown ends (now when none is running). */
+  readyAt(key: string): number {
+    return Math.max(this.now, this.cooldowns.get(key) ?? this.now);
+  }
   startCooldown(key: string, seconds: number): void {
     if (!(seconds >= 0)) throw new RangeError('Cooldown must be ≥ 0.');
     this.cooldowns.set(key, this.now + seconds);

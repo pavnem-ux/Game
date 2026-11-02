@@ -13,6 +13,16 @@ const b = (params: Record<string, number>): TalentEffect =>
 const st = (stat: TalentStat, value: number): TalentEffect =>
   Object.freeze({ kind: 'stat', stat, value });
 const same = (params: Record<string, number>) => [b(params)];
+/** G8 ballista constants shared by all ranks of `archer.b3.n01`. */
+const BALLISTA = {
+  flat: 20,
+  cooldown: 30,
+  interval: 1.6,
+  range: 420,
+  offset: 60,
+  speed: 600,
+  radius: 5,
+};
 
 export const TALENT_RANK_EFFECTS: Readonly<Record<string, RankEffects>> = Object.freeze({
   // ── Rogue · Ассасин (Phase 2) ──
@@ -300,6 +310,29 @@ export const TALENT_RANK_EFFECTS: Readonly<Record<string, RankEffects>> = Object
     1: same({ bonus: 8, duration: 3 }),
     2: same({ bonus: 13, duration: 4 }),
     3: same({ bonus: 20, duration: 5 }),
+  },
+  // ── Archer · Осадный инженер (Phase 9; G8, G9, G10, C7) ──
+  'archer.b3.n01': {
+    // G8: 20 + 15/25/35% physicalDamage per hit; 20/20/24 s; summon CD 30 s; interval 1.6 s,
+    // range 420, 60 behind, bolt 600 u/s radius 5.
+    1: same({ ...BALLISTA, scale: 15, duration: 20 }),
+    2: same({ ...BALLISTA, scale: 25, duration: 20 }),
+    3: same({ ...BALLISTA, scale: 35, duration: 24 }),
+  },
+  'archer.b3.n02': {
+    1: same({ speed: 10 }),
+    2: same({ speed: 18, range: 10 }),
+    3: same({ speed: 28, range: 18 }),
+  },
+  'archer.b3.n03': {
+    1: same({ limit: 2 }),
+    2: same({ limit: 2, duration: 3 }),
+    3: same({ limit: 2, duration: 6 }),
+  },
+  'archer.b3.n04': {
+    1: same({ bonus: 10 }),
+    2: same({ bonus: 20, poison: 25 }),
+    3: same({ bonus: 30, poison: 40 }),
   },
 });
 /** Ranks blocked by an engine conflict: node → ranks (reason in `docs/talents-gaps.md`). */

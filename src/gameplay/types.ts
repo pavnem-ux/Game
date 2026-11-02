@@ -62,6 +62,14 @@ export interface WorldEvent {
 }
 export interface GameplaySnapshot {
   readonly time: number;
+  /** Task 09.1: talent-spawned entities for rendering (shadow copy, ballistae); positions only. */
+  readonly talentEntities?: readonly Readonly<{
+    id: string;
+    kind: string;
+    x: number;
+    y: number;
+    expiresAt: number;
+  }>[];
   /** Task 08.5: the run's base random seed (`options.seed`, default 1337). */
   readonly seed: number;
   /** Task 09: talents applied to this run (fixed for the run). */

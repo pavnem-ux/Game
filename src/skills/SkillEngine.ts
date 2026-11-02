@@ -246,8 +246,59 @@ export class SkillEngine {
   enhancedSkillId(): string | null {
     return this.run.enhancedSkillId;
   }
+  skillParams(skillId: string): Readonly<Record<string, number>> | null {
+    return this.rank(skillId) > 0 ? this.params(skillId) : null;
+  }
   nearestEnemy(from: Point): string | null {
     return this.nearest(Infinity, from);
+  }
+  private talentShots = 0;
+  /** Task 09.1: a talent projectile (ballista bolt), `procs=false`, attributed to the talent. */
+  talentProjectile(
+    nodeId: string,
+    origin: Point,
+    targetId: string,
+    spec: Readonly<{ speed: number; radius: number; range: number; baseDamage: number }>,
+    extraTags: readonly CombatTag[],
+    onHit?: (targetId: string) => void,
+  ): void {
+    const body = this.body(targetId);
+    const phys = this.host.core.getEntity(this.host.playerId).physicalDamage;
+    if (!body || !(phys > 0) || !(spec.baseDamage >= 0)) return;
+    const source = `talent:${nodeId}`;
+    const attack = this.host.core.createAttack({
+      attackerId: this.host.playerId,
+      damageType: 'physical',
+      coefficient: spec.baseDamage / phys,
+      noCritical: true,
+    });
+    this.tagAttack(attack.id, source);
+    const tags = new Set<CombatTag>([
+      'talent',
+      'secondary',
+      'physical',
+      'projectile',
+      ...extraTags,
+    ]);
+    const id = this.host.weapons.launchProjectile({
+      sourceId: this.host.playerId,
+      weaponId: `${source}#${++this.talentShots}`,
+      origin,
+      direction: this.directionTo(body, origin),
+      speed: spec.speed,
+      radius: spec.radius,
+      maxTravelDistance: spec.range,
+      attack,
+    });
+    this.projectiles.set(id, {
+      key: source,
+      tags,
+      procs: false,
+      hits: 0,
+      maxHits: 1,
+      source,
+      ...(onHit ? { onHit: (hit: HitInfo) => onHit(hit.targetId) } : {}),
+    });
   }
   /** Task 09.1: talent healing of the player through Combat Core (never revives). */
   healPlayer(amount: number): void {
@@ -1210,6 +1261,12 @@ export class SkillEngine {
     }
     for (const [id, b] of this.buffs) consider(b.expiresAt, 1, 1, () => this.expireBuff(id));
     for (const [id, m] of this.marks) consider(m.expiresAt, 1, 2, () => this.marks.delete(id));
+    // Task 09.1: talent automatic actions (ballista summon), same grid rule as automatic skills.
+    if (includeAutos && this.host.core.getEntity(this.host.playerId).alive)
+      for (const a of this.talentCombat.autoActions()) {
+        order++;
+        if (a.canAct()) consider(this.gridCeil(Math.max(this.clock, a.readyAt)), 0, order, a.run);
+      }
     // Task 09.1: talent entity actions/expirations and talent buff expirations.
     for (const t of this.talents.scheduled()) consider(t.at, t.priority, 3e9 + t.order, t.run);
     if (this.barrierUntil !== null)

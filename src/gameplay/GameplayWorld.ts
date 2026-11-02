@@ -365,6 +365,13 @@ export class GameplayWorld {
       stats: this.skills.effectiveStats,
       skills: this.run.getState(),
       skillCombat: this.skills.snapshot(),
+      talentEntities: Object.freeze(
+        this.skills.talents
+          .list()
+          .map((e) =>
+            Object.freeze({ id: e.id, kind: e.kind, x: e.x, y: e.y, expiresAt: e.expiresAt }),
+          ),
+      ),
       survival: this.survival.getState(),
       kills: this.kills,
       progression: this.experience.getState(),

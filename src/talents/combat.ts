@@ -28,7 +28,10 @@ export interface TalentEngine {
     readonly currentHp: number;
     readonly maxHp: number;
     readonly alive: boolean;
+    readonly physicalDamage: number;
   };
+  /** Current parameters of an acquired run skill (null when not acquired). */
+  skillParams(skillId: string): Readonly<Record<string, number>> | null;
   talentStrike(
     nodeId: string,
     targetId: string,
@@ -63,6 +66,19 @@ export interface TalentEngine {
   enhancedSkillId(): string | null;
   /** Nearest living enemy to a point (ties: id ascending), null when there is none. */
   nearestEnemy(from: Point2): string | null;
+  /**
+   * Fires a talent projectile from `origin` at the target's current position: player-owned,
+   * `procs=false`, attributed to `talent:<nodeId>`; `baseDamage` is the exact pre-resistance
+   * damage (no crit). `onHit` runs for a landed hit on a living target.
+   */
+  talentProjectile(
+    nodeId: string,
+    origin: Point2,
+    targetId: string,
+    spec: Readonly<{ speed: number; radius: number; range: number; baseDamage: number }>,
+    extraTags: readonly CombatTag[],
+    onHit?: (targetId: string) => void,
+  ): void;
   /** Heals the player through Combat Core (clamped; never revives). */
   healPlayer(amount: number): void;
   /** Shortens the remaining cooldown of an owned automatic skill (never below «ready now»). */
@@ -139,10 +155,15 @@ export interface TalentClassHandlers {
   offhand?(params: (id: string) => Params): Readonly<{ coefficient: number; speed: number }> | null;
   /** Crit-chance points of the off-hand's attacks (G7: added to the composed, capped stat). */
   offhandCritChance?(params: (id: string) => Params): number;
-  /** Talent damage % of an off-hand hit (its own bonuses only; general direct bonuses never apply). */
-  offhandDirect?(ctx: DirectHitContext): number;
+  /** Talent damage % of a talent-weapon hit (off-hand/ballista; general direct bonuses never apply). */
+  talentWeaponDirect?(ctx: DirectHitContext): number;
   /** A sword hit landed on a living enemy (`main` = basic sword, `offhand` = second sword). */
   onSwordHit?(engine: TalentEngine, hand: 'main' | 'offhand', targetId: string): void;
+  /**
+   * Talent automatic actions (e.g. the Archer's ballista summon) evaluated like automatic skills:
+   * at grid instants ≥ `readyAt`, only while `canAct()` holds at a real boundary.
+   */
+  autoActions?(engine: TalentEngine): readonly TalentAutoAction[];
   /** Additive bonus to a skill's own parameter (e.g. Piercing Arrow `pierce`, Multishot factor). */
   skillParamBonus?(skillId: string, param: string, params: (id: string) => Params): number;
   /** G11: damage falloff per pierced target of this skill's projectile (0 = none). */
@@ -181,6 +202,11 @@ export interface TalentClassHandlers {
   dotTakenMultiplier?(engine: TalentEngine, targetId: string): number;
   /** Statuses were applied to these enemies (end of a boundary). */
   onStatusesApplied?(engine: TalentEngine, targetIds: readonly string[]): void;
+}
+export interface TalentAutoAction {
+  readonly readyAt: number;
+  canAct(): boolean;
+  run(): void;
 }
 export interface DirectHitInfo {
   readonly targetId: string;
@@ -237,8 +263,9 @@ export class TalentCombat {
       talents: this.engine.talents,
       params: this.params,
     });
-    // G6: the off-hand sword is a talent hit with only its own talent bonuses.
-    if (tags.has('offhand')) return 1 + (this.handlers.offhandDirect?.(ctx()) ?? 0) / 100;
+    // G6/G8: talent weapons (off-hand sword, ballista) get only their own talent bonuses.
+    if (tags.has('offhand') || tags.has('ballista'))
+      return 1 + (this.handlers.talentWeaponDirect?.(ctx()) ?? 0) / 100;
     if (isSecondary(tags)) return 1;
     if (!this.handlers.direct) return 1;
     const bonus = this.handlers.direct(ctx());
@@ -306,6 +333,10 @@ export class TalentCombat {
     if (!this.engine.talents.anyActive || this.engine.talents.inProc || isSecondary(hit.tags))
       return;
     this.handlers.onDirectHit?.(this.engine, hit);
+  }
+  autoActions(): readonly TalentAutoAction[] {
+    if (!this.engine.talents.anyActive) return [];
+    return this.handlers.autoActions?.(this.engine) ?? [];
   }
   offhand(): Readonly<{ coefficient: number; speed: number }> | null {
     return this.handlers.offhand?.(this.params) ?? null;

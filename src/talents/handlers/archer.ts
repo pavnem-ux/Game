@@ -1,5 +1,11 @@
 import { hpBelow } from '../conditions';
-import type { DirectHitContext, TalentClassHandlers } from '../combat';
+import type {
+  DirectHitContext,
+  Point2,
+  TalentAutoAction,
+  TalentClassHandlers,
+  TalentEngine,
+} from '../combat';
 import type { CombatTag } from '../../skills/types';
 
 /**
@@ -41,8 +47,108 @@ function direct(ctx: DirectHitContext) {
   return { percent, critDamage };
 }
 
+// ── Branch 3 · Осадный инженер (G8, G9, G10, C7) ──
+const BALLISTA = 'ballista';
+const SUMMON = 'archer.b3.n01:summon';
+/** G8/G9 ballista numbers for the current ranks (null without the superpower). */
+function ballista(engine: TalentEngine) {
+  const n31 = engine.talents.params('archer.b3.n01');
+  if (!n31) return null;
+  const n32 = engine.talents.params('archer.b3.n02');
+  const n33 = engine.talents.params('archer.b3.n03');
+  return {
+    n31,
+    limit: n33?.limit ?? 1,
+    lifetime: n31.duration + (n33?.duration ?? 0),
+    range: n31.range * (1 + (n32?.range ?? 0) / 100),
+    interval: n31.interval / (1 + (n32?.speed ?? 0) / 100),
+  };
+}
+/** Nearest living enemy within `range` of a point (tie: id ascending). */
+function nearestFrom(engine: TalentEngine, from: Point2, range: number): string | null {
+  let best: { id: string; d: number } | null = null;
+  for (const id of engine.enemiesInCircle(from, range)) {
+    const p = engine.enemyPosition(id);
+    if (!p) continue;
+    const d = Math.hypot(p.x - from.x, p.y - from.y);
+    if (!best || d < best.d || (d === best.d && id < best.id)) best = { id, d };
+  }
+  return best?.id ?? null;
+}
+/** G8: 60 units behind the player, opposite the last non-zero movement (default facing right). */
+function behindPlayer(engine: TalentEngine, offset: number): Point2 {
+  const p = engine.playerPosition();
+  const f = engine.facing();
+  return { x: p.x - f.x * offset, y: p.y - f.y * offset };
+}
+function ballistaShot(engine: TalentEngine, at: Point2) {
+  const b = ballista(engine);
+  if (!b) return;
+  const target = nearestFrom(engine, at, b.range);
+  if (!target) return;
+  const phys = engine.entity(engine.playerId).physicalDamage;
+  const n34 = engine.talents.params('archer.b3.n04');
+  // G10: Poison scaled from the acquired Toxic Volley (none without it).
+  const poison = n34?.poison ? engine.skillParams('toxic_volley') : null;
+  engine.talents.proc(() =>
+    engine.talentProjectile(
+      'archer.b3.n01',
+      at,
+      target,
+      {
+        speed: b.n31.speed,
+        radius: b.n31.radius,
+        range: b.range,
+        baseDamage: b.n31.flat + (b.n31.scale / 100) * phys,
+      },
+      [BALLISTA],
+      poison
+        ? (id) =>
+            engine.applyStatus(
+              id,
+              {
+                effectType: 'poison',
+                rawDamagePerTick: poison.poisonDamage * (n34!.poison / 100),
+                duration: poison.poisonDuration,
+                probabilityPercent: 100,
+              },
+              1,
+              'talent:archer.b3.n04',
+            )
+        : undefined,
+    ),
+  );
+}
+
 export const ARCHER_HANDLERS: TalentClassHandlers = {
   direct,
+  // C7: automatic summon when a slot is free, the 30 s shared cooldown is ready and an enemy is
+  // within range of the ballista's position. A full limit skips without spending the cooldown.
+  autoActions(engine): readonly TalentAutoAction[] {
+    const b = ballista(engine);
+    if (!b) return [];
+    return [
+      {
+        readyAt: engine.talents.readyAt(SUMMON),
+        canAct: () =>
+          engine.talents.list(BALLISTA).length < b.limit &&
+          nearestFrom(engine, behindPlayer(engine, b.n31.offset), b.range) !== null,
+        run: () => {
+          if (!engine.talents.tryCooldown(SUMMON, b.n31.cooldown)) return;
+          const at = behindPlayer(engine, b.n31.offset);
+          const act = (e: { x: number; y: number; nextActionAt: number | null }) => {
+            ballistaShot(engine, e);
+            e.nextActionAt = engine.time + b.interval;
+          };
+          engine.talents.spawn(BALLISTA, 'archer.b3.n01', b.lifetime, at, act, b.interval);
+        },
+      },
+    ];
+  },
+  // 3.4 Осадный огонь: the ballista's own hits +10/20/30%.
+  talentWeaponDirect(ctx) {
+    return ctx.tags.has(BALLISTA) ? (ctx.params('archer.b3.n04')?.bonus ?? 0) : 0;
+  },
   // 1.1 Меткий глаз: crit chance of direct arrows.
   critChance: (tags, params) => (arrow(tags) ? (params('archer.b1.n01')?.critChance ?? 0) : 0),
   // 1.3 Сквозной выстрел (G11): Piercing Arrow +1/2/3 targets; 2.2: Multishot arrows +5/10/15 p.p.

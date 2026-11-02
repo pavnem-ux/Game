@@ -44,7 +44,7 @@ export const WARRIOR_HANDLERS: TalentClassHandlers = {
   // 3.2 II/III: off-hand crit chance (G7: on the composed, capped stat; Core keeps the cap).
   offhandCritChance: (params) => params('warrior.b3.n02')?.critChance ?? 0,
   // 3.4 Безупречная пара: off-hand direct damage (+ both swords below 30% HP at II/III).
-  offhandDirect(ctx) {
+  talentWeaponDirect(ctx) {
     const n = ctx.params('warrior.b3.n04');
     if (!n) return 0;
     return n.bonus + (n.lowHp && hpBelow(ctx.target, n.hpBelow) ? n.lowHp : 0);
