@@ -1,3 +1,6 @@
+import { talentLoadout } from '../talents';
+import type { TalentLoadout } from '../talents';
+import { composeRunStats } from '../skills/stats';
 import { DEFAULT_SEED, createRunRandom } from './rng';
 import { RunStats } from './run-stats';
 import type { EnemyType } from './run-stats';
@@ -91,6 +94,8 @@ export class GameplayWorld {
   private viewport: ViewportSize;
   private readonly spawnRandom: () => number;
   private readonly history: WorldEvent[] = [];
+  /** Task 09: this run's talent loadout (fixed for the run; allocation changes affect the next). */
+  readonly talents: TalentLoadout;
   /** Task 08.5 run statistics: read-only consumer of every recorded event (new per world). */
   private readonly runStats = new RunStats({
     playerId: 'player',
@@ -156,11 +161,20 @@ export class GameplayWorld {
     );
     this.viewport = viewportSize(options.viewport ?? { width: 1280, height: 720 });
     this.nextSpawnAt = this.spawnSettings.interval;
+    // Task 09: validated talent loadout for this class/level (inert while the catalog is not
+    // approved). Its stat layer is composed with the permanent stats once, caps included.
+    this.talents = talentLoadout(
+      options.characterClass,
+      options.level ?? 1,
+      options.talents?.ranks ?? {},
+      options.talents?.config,
+    );
+    const startStats = composeRunStats(this.character.primaryAttributes, this.talents.modifiers);
     this.core = createCore(this.random);
     this.core.addEntity({
       id: this.playerId,
       affiliation: 'player',
-      stats: this.character.combatAttributes,
+      stats: startStats,
     });
     this.survival = new PlayerSurvival(this.core, this.playerId);
     const emit = (events: readonly SurvivalEvent[]) => this.record('survival', events);
@@ -196,7 +210,7 @@ export class GameplayWorld {
       entityId: this.playerId,
       characterClass: options.characterClass,
       weapon,
-      attackSpeedPercent: this.character.combatAttributes.attackSpeed,
+      attackSpeedPercent: startStats.attackSpeed,
       fallbackDirection: { x: 1, y: 0 },
     });
     this.run = new RunSkills(options.characterClass, skillRandom);
@@ -210,6 +224,7 @@ export class GameplayWorld {
         playerId: this.playerId,
         characterClass: options.characterClass,
         primary: this.character.primaryAttributes,
+        talentModifiers: this.talents.modifiers,
         basicWeaponId: weapon.id,
         activationStep: ALPHA.controlStep,
         playerBody: () => world.body,
@@ -275,10 +290,20 @@ export class GameplayWorld {
     this.manualPause = paused;
     this.setMovement(0, 0);
   }
+  private talentSnapshotCache: GameplaySnapshot['talents'] | null = null;
+  private get talentSnapshot(): GameplaySnapshot['talents'] {
+    return (this.talentSnapshotCache ??= Object.freeze({
+      ranks: this.talents.ranks,
+      pointsSpent: this.talents.pointsSpent,
+      activeRanks: this.talents.activeRanks,
+      superpower: this.talents.superpower,
+    }));
+  }
   getSnapshot(): GameplaySnapshot {
     return Object.freeze({
       time: this.clock,
       seed: this.options.seed ?? DEFAULT_SEED,
+      talents: this.talentSnapshot,
       runStats: this.runStats.snapshot(this.clock),
       paused: this.paused,
       player: this.core.getEntity(this.playerId),
@@ -585,7 +610,7 @@ export class GameplayWorld {
       resistance: stats.resistance,
       criticalChance: stats.criticalChance,
       criticalDamage: stats.criticalDamage,
-      dodgeChance: player.dodgeChance,
+      dodgeChance: stats.dodgeChance,
     };
     // Only Core-owned fields go to Core; attack/movement speed stay with Weapons/World.
     if ((Object.keys(core) as (keyof typeof core)[]).some((k) => core[k] !== player[k]))

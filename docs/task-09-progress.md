@@ -5,7 +5,7 @@ Spec: [task-09-talents.md](task-09-talents.md) (owner's text, Prettier-formatted
 [talents-gaps.md](talents-gaps.md). Code map: reuse [task-08-progress.md](task-08-progress.md)
 and [task-08.5-progress.md](task-08.5-progress.md) (additions below).
 
-Current: Phase 3, step 3.1 (content gate: gaps found — build Phases 1–4, then stop and report)
+Current: Phase 4, step 4.1 (content gate: gaps found — build Phases 1–4, then stop and report)
 
 Branch `task-09-talents` from `task-08.5-playtest` (Task 08.5, PR #5): 08.5 is not merged into
 `main` yet (spec 0.1). The draft PR targets `task-08.5-playtest` so its diff shows only Task 09;
@@ -33,8 +33,8 @@ retarget after PR #3/#4/#5 are merged.
 
 ### Phase 3 — Modifier pipeline
 
-- [ ] 3.1 Talent effects → existing hooks; apply once; source ids; anti-recursion
-- [ ] Tests (applied once, caps, no synergy unlock, run reset keeps talents)
+- [x] 3.1 Talent effects → existing hooks; apply once; source ids; anti-recursion
+- [x] Tests (applied once, caps, no synergy unlock, run reset keeps talents)
 
 ### Phase 4 — UI & debug
 
@@ -132,11 +132,25 @@ Task 09 additions:
 
   Tests `tests/persistence/talents.test.ts`.
 
+- 3.1 pipeline:
+  - **`src/talents/effects.ts`:** `TalentEffect` descriptors (`stat` kind; more kinds arrive with their catalog effects).
+  - **`src/talents/pipeline.ts`:** `talentLoadout(class, level, ranks, config)` validates the tree, keeps only active current-rank effects, and builds the stat layer.
+  - **`RunStatModifiers`:** additive `magicalDamagePercent`, `dodgeChance`, `cooldownReduction`.
+  - **`SkillHost.talentModifiers`:** the base layer of `SkillEngine.modifiers()` (caps applied once in `composeRunStats`).
+  - **`GameplayOptions.talents {ranks, config?}`:** the world composes start stats with talents; snapshot `talents`; `applyStats` passes the composed dodge.
+  - **`SkillEngine.talentStrike(nodeId, …)`:** source `talent:<nodeId>`, tags `talent` + `secondary`, `procs: false` (anti-recursion).
+  - **Run stats / labels / summaries:** accept `talent:` sources.
+  - **`campaignStore.startRun`:** passes the class ranks.
+
+  Tests `tests/talents/pipeline.test.ts`.
+
 ## Verification log
 
 - Phase 1: typecheck ✓, format ✓, `npm test` 1044 Vitest tests + Node suites ✓ (talents 12).
 - Phase 2: typecheck ✓, format ✓, `npm test` 1050 ✓, `npm run build` ✓, `test:production` 2 PASS,
   `test:e2e` 3 PASS.
+- Phase 3: typecheck ✓, format ✓, `npm test` 1058 ✓ (unchanged behaviour: all talents inert),
+  `npm run build` ✓, `test:production` 2 PASS, `test:e2e` 3 PASS.
 
 ## Decisions / deviations
 
@@ -168,6 +182,11 @@ Task 09 additions:
   - A v2 save is unreadable by Task 08/08.5 builds (`newer-version` → quarantine; the documented behaviour).
   - A refused purchase writes nothing.
   - A failed write keeps the purchase in memory as «unsaved» (same as run results).
+
+- 3.1: catalog ranks are totals, so a node contributes only its current rank's effects.
+  - **Inertness:** with G0 open no effects are active in the shipped config. The pipeline is tested with a test-only approved fixture whose stat descriptors use catalog values of `ready` ranks, plus one absurd value to prove the cap. The loader refuses effects on `missing`/`unclear` ranks.
+  - **Start stats:** the player entity is created with composed stats, so the run starts at full talent HP. With no active talents the stats are identical to before.
+  - **Dodge:** `applyStats` now passes the composed `dodgeChance`, which equals the Core value without talents.
 
 ## Blockers / known issues
 

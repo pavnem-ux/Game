@@ -1,6 +1,7 @@
 import { CHARACTER_CLASSES } from '../character-stats';
 import type { CharacterClass } from '../character-stats';
 import { TALENT_CATALOG_DATA } from './catalog';
+import { validateTalentEffect } from './effects';
 import type {
   TalentBranch,
   TalentBranchNumber,
@@ -55,6 +56,16 @@ export function loadTalentConfig(
       if (r.status !== 'ready' && !r.gaps.length) fail(`${n.id} is ${r.status} without a gap id`);
       if (r.status === 'missing' && !r.gaps.some((g) => g.startsWith('G')))
         fail(`${n.id} is missing without a G gap`);
+      // Rule 6: an undefined or unclear rank can never carry an effect.
+      if (r.effects?.length && r.status !== 'ready')
+        fail(`${n.id} has effects on a ${r.status} rank`);
+      r.effects?.forEach((e, i) => {
+        try {
+          validateTalentEffect(e, `${n.id} effect ${i}`);
+        } catch (error) {
+          fail((error as Error).message);
+        }
+      });
     }
     const superpower = n.branch === TALENT_RULES.superpowerBranch && n.order === 1;
     if (n.superpower !== superpower) fail(`${n.id} superpower flag`);
@@ -81,6 +92,7 @@ export function loadTalentConfig(
               Object.freeze({
                 ...r,
                 gaps: Object.freeze([...r.gaps]),
+                effects: Object.freeze((r.effects ?? []).map((e) => Object.freeze({ ...e }))),
                 rank: (i + 1) as TalentRankNumber,
                 active: approved && r.status === 'ready',
               }),

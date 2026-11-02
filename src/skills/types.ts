@@ -22,7 +22,9 @@ export type CombatTag =
   | 'buff'
   | 'trap'
   | 'synergy'
-  | 'secondary';
+  | 'secondary'
+  /** Task 09: hits created by talents (secondary; never procs synergies/passives). */
+  | 'talent';
 export type TargetingRule =
   | 'nearest'
   | 'cluster'

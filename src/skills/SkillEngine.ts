@@ -48,6 +48,11 @@ export interface SkillHost {
   readonly playerId: string;
   readonly characterClass: CharacterClass;
   readonly primary: PrimaryAttributes;
+  /**
+   * Task 09: permanent talent stat layer for this run (optional; absent = none). It is the base
+   * of `modifiers()`, so talents combine with passives/buffs and are capped once.
+   */
+  readonly talentModifiers?: RunStatModifiers;
   readonly basicWeaponId: string;
   /**
    * Fixed simulation grid (the world's control step). Automatic activations happen only on this
@@ -201,7 +206,7 @@ export class SkillEngine {
     readonly run: RunSkills,
     private readonly random: () => number,
   ) {
-    this.stats = composeRunStats(host.primary, NO_MODIFIERS);
+    this.stats = composeRunStats(host.primary, host.talentModifiers ?? NO_MODIFIERS);
     this.synergies = new SynergyResolver(this);
   }
   get time() {
@@ -258,7 +263,9 @@ export class SkillEngine {
 
   // ───────────────────────────── stats and on-hit modifiers ─────────────────────────────
   private modifiers(): RunStatModifiers {
-    const m = { ...NO_MODIFIERS };
+    const m: Record<keyof RunStatModifiers, number> = {
+      ...(this.host.talentModifiers ?? NO_MODIFIERS),
+    };
     const add = (key: keyof RunStatModifiers, skillId: string, param: string) => {
       if (this.rank(skillId) > 0) m[key] += this.params(skillId)[param];
     };
@@ -473,6 +480,32 @@ export class SkillEngine {
     this.attackSources.set(attackId, source);
     if (this.attackSources.size > ATTACK_SOURCE_LIMIT)
       this.attackSources.delete(this.attackSources.keys().next().value!);
+  }
+  /**
+   * Task 09 §1.2 talent secondary attack (counterattacks, shadow copies, off-hand, ballistae).
+   * Attributed to `talent:<nodeId>` (separate in run stats/DPS), tagged `talent` + `secondary`
+   * and resolved with `procs: false`: it never triggers passives, synergies or kill reactions,
+   * so a talent hit can never start a chain. Core resolves all damage as usual.
+   */
+  talentStrike(
+    nodeId: string,
+    targetId: string,
+    coefficient: number,
+    damageType: DamageType,
+    extraTags: readonly CombatTag[] = [],
+  ): HitInfo | null {
+    if (!/^(warrior|mage|archer|rogue)\.b[1-3]\.n0[1-5]$/.test(nodeId))
+      throw new RangeError(`Unknown talent source ${nodeId}.`);
+    if (!Number.isFinite(coefficient) || coefficient < 0)
+      throw new RangeError('Talent strike coefficient must be ≥ 0.');
+    let hit: HitInfo | null = null;
+    this.withSource(`talent:${nodeId}`, () => {
+      const tags = new Set<CombatTag>(['talent', 'secondary', damageType, ...extraTags]);
+      hit = this.hit(targetId, this.attack(new Set(), coefficient, damageType), tags, {
+        procs: false,
+      });
+    });
+    return hit;
   }
   /** Task 08.5: which skill/synergy created this attack snapshot (undefined = not the engine). */
   attackSource(attackId: string): string | undefined {

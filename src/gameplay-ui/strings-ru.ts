@@ -2,6 +2,7 @@ import { CHARACTER_CLASSES } from '../character-stats';
 import { ALPHA_WEAPONS, WEAPON_LABELS } from '../gameplay';
 import type { EnemyType } from '../gameplay';
 import { SKILL_CATALOG, SYNERGY_RULES } from '../skills';
+import { TALENT_CONFIG } from '../talents';
 
 /**
  * Task 08.5 player-facing Russian text (one module for all new 08.5 strings; older screens keep
@@ -74,6 +75,8 @@ export function damageSourceLabel(source: string): string {
       return `Синергия «${SYNERGY_NAMES.get(id) ?? id}»`;
     case 'status':
       return EFFECT_LABELS[id] ?? 'Эффект';
+    case 'talent':
+      return `Талант «${TALENT_CONFIG.nodes.get(source.slice('talent:'.length))?.name ?? 'талант'}»`;
     case 'debug':
       return 'Отладка';
     default:

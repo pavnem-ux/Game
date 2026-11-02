@@ -23,7 +23,7 @@ export interface DamageBySource {
 }
 export interface RunStatsSnapshot {
   readonly damageDealt: number;
-  /** Highest first. Source ids: `weapon:<id>`, `skill:<id>`, `synergy:<id>`, `status:<effect>`, `debug`. */
+  /** Highest first. Source ids: `weapon:<id>`, `skill:<id>`, `synergy:<id>`, `talent:<nodeId>`, `status:<effect>`, `debug`. */
   readonly bySource: readonly DamageBySource[];
   readonly damageTaken: number;
   readonly takenByType: readonly Readonly<{ type: EnemyType | 'unknown'; damage: number }>[];
@@ -213,7 +213,9 @@ export class RunStats {
   }
   private originSource(originId: string | undefined, effectId: string) {
     if (!originId) return `status:${effectId}`;
-    return originId.startsWith('skill:') || originId.startsWith('synergy:')
+    return originId.startsWith('skill:') ||
+      originId.startsWith('synergy:') ||
+      originId.startsWith('talent:')
       ? originId
       : `weapon:${originId}`;
   }

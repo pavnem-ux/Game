@@ -14,3 +14,7 @@ export {
   validateTalentRanks,
 } from './rules';
 export type { PurchaseCheck, TalentBlockReason, TalentValidation } from './rules';
+export { TALENT_STATS, validateTalentEffect } from './effects';
+export type { TalentEffect, TalentStat, TalentStatEffect } from './effects';
+export { activeTalentEffects, talentLoadout, talentStatModifiers } from './pipeline';
+export type { ResolvedTalentEffect, TalentLoadout } from './pipeline';

@@ -298,6 +298,8 @@ export const campaignStore = {
         characterClass: cls,
         level: profile.classes[cls].level,
         seed,
+        // Task 09: the class's talents apply from run start; changes affect the next run.
+        talents: { ranks: profile.classes[cls].talents },
         campaign: { mapId, runId: generateRunId() },
       },
     });

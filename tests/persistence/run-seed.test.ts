@@ -40,6 +40,9 @@ describe('Task 08.5 §4.2 per-run seed', () => {
   it('every campaign run gets a fresh 32-bit seed from the UI', () => {
     expect(campaign.campaignStore.startRun(1)).toBe(true);
     expect(lastSeed()).toBe(123456789);
+    // Task 09: the class's talent ranks go into the run options at run start.
+    const start = sent.at(-1);
+    expect(start?.type === 'start' && start.options.talents).toEqual({ ranks: {} });
     campaign.campaignStore.startRun(1);
     expect(lastSeed()).toBe(4294967295);
     campaign.campaignStore.startRun(1);

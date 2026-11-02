@@ -1,4 +1,5 @@
 import type { CharacterClass } from '../character-stats';
+import type { TalentEffect } from './effects';
 
 /** Task 09 permanent talent trees: catalog data (verbatim) and validated config types. */
 export type TalentRankNumber = 1 | 2 | 3;
@@ -15,6 +16,11 @@ export interface TalentRankData {
   readonly status: TalentRankStatus;
   /** Gap ids from `docs/talents-gaps.md` (empty when ready). */
   readonly gaps: readonly string[];
+  /**
+   * Effect descriptors of this rank (its complete effect). Allowed only on `ready` ranks; added
+   * per rank in Phases 5–6. Absent = no effect yet.
+   */
+  readonly effects?: readonly TalentEffect[];
 }
 export interface TalentNodeData {
   readonly id: string;
@@ -40,6 +46,7 @@ export interface TalentRank extends TalentRankData {
   readonly rank: TalentRankNumber;
   /** True only when the rank may change combat (ready + catalog approved). */
   readonly active: boolean;
+  readonly effects: readonly TalentEffect[];
 }
 export interface TalentNode extends Omit<TalentNodeData, 'ranks'> {
   readonly ranks: readonly [TalentRank, TalentRank, TalentRank];

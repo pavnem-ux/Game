@@ -11,6 +11,10 @@ export interface RunStatModifiers {
   readonly criticalChance: number;
   readonly criticalDamage: number;
   readonly movementSpeed: number;
+  /** Task 09 (additive; 0 for every Task 07 source): talent stat modifiers. */
+  readonly magicalDamagePercent: number;
+  readonly dodgeChance: number;
+  readonly cooldownReduction: number;
 }
 export const NO_MODIFIERS: RunStatModifiers = Object.freeze({
   damagePercent: 0,
@@ -21,6 +25,9 @@ export const NO_MODIFIERS: RunStatModifiers = Object.freeze({
   criticalChance: 0,
   criticalDamage: 0,
   movementSpeed: 0,
+  magicalDamagePercent: 0,
+  dodgeChance: 0,
+  cooldownReduction: 0,
 });
 
 /**
@@ -33,11 +40,13 @@ export function composeRunStats(primary: PrimaryAttributes, m: RunStatModifiers)
     ...base,
     maxHp: base.maxHp * (1 + m.maxHpPercent / 100),
     physicalDamage: base.physicalDamage * (1 + (m.damagePercent + m.physicalDamagePercent) / 100),
-    magicalDamage: base.magicalDamage * (1 + m.damagePercent / 100),
+    magicalDamage: base.magicalDamage * (1 + (m.damagePercent + m.magicalDamagePercent) / 100),
     resistance: base.resistance + m.resistance,
     attackSpeed: base.attackSpeed + m.attackSpeed,
     criticalChance: base.criticalChance + m.criticalChance,
     criticalDamage: base.criticalDamage + m.criticalDamage,
     movementSpeed: base.movementSpeed + m.movementSpeed,
+    dodgeChance: base.dodgeChance + m.dodgeChance,
+    cooldownReduction: base.cooldownReduction + m.cooldownReduction,
   });
 }
