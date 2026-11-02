@@ -16,3 +16,10 @@ export type {
   SaveStoreOptions,
   StorageLike,
 } from './saveStore';
+export { createProgressionService, generateRunId } from './progressionService';
+export type {
+  CommitResult,
+  ProgressionService,
+  ProgressionState,
+  SaveStatus,
+} from './progressionService';
