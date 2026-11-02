@@ -176,7 +176,8 @@ try {
     page.getByRole('button', { name: 'Сообщить о проблеме' }).click(),
   ]);
   assert.match(reportDownload.suggestedFilename(), /^skazki-report-\d{4}-\d\d-\d\d-\d{4}\.json$/);
-  const report = JSON.parse(await readFile(await reportDownload.path(), 'utf8'));
+  const reportPath = await reportDownload.path();
+  const report = JSON.parse(await readFile(reportPath, 'utf8'));
   assert.equal(report.format, 'skazki-report');
   assert.match(report.build.label, /^v\d+\.\d+\.\d+ · /);
   assert.equal(report.run.mapId, 2);
@@ -378,6 +379,20 @@ try {
   await nav.waitFor();
   errors.length = expectedErrors; // drop the simulated crash from the unexpected-error list
 
+  // Task 08.5 §3.4 (DEV): load the earlier report → its save goes through the normal import.
+  const saveBeforeReport = await stored();
+  await page.getByRole('button', { name: /DEV · Тестирование/ }).click();
+  await page.getByLabel('Debug файл отчёта').setInputFiles(reportPath);
+  const replace = page.getByRole('button', { name: 'Заменить сохранение' });
+  await replace.waitFor();
+  assert.equal(await stored(), saveBeforeReport, 'nothing changes before confirmation');
+  await replace.click();
+  await page.getByText('Сохранение импортировано.').waitFor();
+  const imported = JSON.parse(await stored());
+  assert.equal(imported.profileId, report.save.profile.profileId);
+  assert.equal(imported.gold, 75);
+  await page.getByRole('button', { name: /DEV · Закрыть/ }).click();
+
   // Phone width: every menu page fits without horizontal scrolling.
   await page.setViewportSize({ width: 390, height: 844 });
   for (const tab of ['Играть', 'Персонаж', 'Карты', 'Прогресс', 'Настройки']) {
@@ -392,7 +407,7 @@ try {
 
   if (errors.length) throw new Error(errors.join('\n'));
   console.log(
-    'PASS campaign: menu/Gold, Character, Maps (lock/boss reveal), Map 1 win → results/rewards/unlock/save, reload keeps progress, Map 2 with another class (separate XP, shared Gold), quit/reload = abandoned without rewards, Save Management (export, invalid/newer import unchanged, confirm/cancel/replace, round-trip), write-failure warning + retry, DEV campaign tools (unlock/level/Gold, boss, forced Map 10 win, reset).',
+    'PASS campaign: menu/Gold, Character, Maps (lock/boss reveal), Map 1 win → results/rewards/unlock/save, reload keeps progress, Map 2 with another class (separate XP, shared Gold), quit/reload = abandoned without rewards, Save Management (export, invalid/newer import unchanged, confirm/cancel/replace, round-trip), write-failure warning + retry, DEV campaign tools (unlock/level/Gold, boss, forced Map 10 win, reset); 08.5: time scale, kill-all, stats panel, debug overlay, build label, report download, crash recovery (save untouched), report → save import.',
   );
 } finally {
   await browser.close();

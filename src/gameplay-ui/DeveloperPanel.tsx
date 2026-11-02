@@ -126,6 +126,23 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
           Сбросить тестовый прогресс
         </button>
         <button onClick={() => setCrashNow(true)}>Сымитировать сбой</button>
+        <label className="debug-file">
+          Загрузить отчёт → импорт сохранения
+          <input
+            type="file"
+            accept="application/json,.json"
+            aria-label="Debug файл отчёта"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              e.target.value = '';
+              if (!f) return;
+              void f.text().then(
+                (text) => campaignDebug.stageReport(text, f.name),
+                () => campaignDebug.stageReport('', f.name),
+              );
+            }}
+          />
+        </label>
         {saveView && <textarea aria-label="Debug сохранение" readOnly rows={10} value={saveView} />}
       </fieldset>
       {w?.campaign && (

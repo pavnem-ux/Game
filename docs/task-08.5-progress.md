@@ -3,7 +3,7 @@
 Spec: [task-08.5.md](task-08.5.md) (owner's text, Prettier-formatted). Code map: reuse
 [task-08-progress.md](task-08-progress.md#code-map) (additions below).
 
-Current: Phase 3, step 3.4
+Current: Phase 3 done — waiting for "continue" (next: Phase 4, step 4.1)
 
 Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR targets
 `task-08-campaign` so its diff shows only Task 08.5; retarget after PR #3/#4 are merged.
@@ -32,8 +32,8 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
 - [x] 3.1 Build version label on main menu + pause (build-time injection)
 - [x] 3.2 Error boundary + global handlers, last 5 errors in a separate key
 - [x] 3.3 «Сообщить о проблеме» report download (pause + results)
-- [ ] 3.4 Debug: load a report → import its save (validated import)
-- [ ] Tests: report fields; crash path leaves save intact
+- [x] 3.4 Debug: load a report → import its save (validated import)
+- [x] Tests: report fields; crash path leaves save intact
 
 ### Phase 4 — Reproducibility
 
@@ -91,6 +91,9 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
   `ReportButton.tsx` on pause, results and crash screens; snapshot `seed`; tests
   `tests/persistence/bug-report.test.ts`, pause download in `tests/campaign-browser.mjs`,
   production presence in `tests/alpha-production.mjs`.
+- 3.4 `saveFromReport` + `campaignDebug.stageReport` (`campaign-debug.ts`), DEV panel file input
+  «Загрузить отчёт → импорт сохранения»; tests `tests/persistence/report-import.test.ts`,
+  download → load → confirm round-trip in `tests/campaign-browser.mjs`.
 
 - Existing pieces this task builds on (from Task 07.x/08):
   - Time scale: `AlphaScene.timeScale` + `time-scale` command (DEV/QA, 1–20, multiplies the
@@ -173,6 +176,11 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
   like the save export. The button is a player feature (present in production). Also on the crash
   screen, whose text points players to it. `GameplaySnapshot.seed` (additive) = the run's base
   seed (`options.seed`, default 1337 until Phase 4.2 generates per-run seeds).
+
+- 3.4: only the report envelope is checked by the debug tool (format `skazki-report`,
+  `save.ok`); the embedded save then goes through the normal `prepareImport` validation and the
+  same confirm/cancel step on the Settings page. A tampered or invalid save is rejected and the
+  current save stays unchanged.
 
 ## Blockers / known issues
 
