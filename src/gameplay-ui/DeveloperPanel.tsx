@@ -1,3 +1,4 @@
+import { TALENT_CONFIG } from '../talents';
 import { useState } from 'react';
 import { DEBUG_TIME_SCALES } from '../engine/time-scale';
 import { CHARACTER_CLASSES } from '../character-stats';
@@ -43,7 +44,12 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
     [debugXp, setDebugXp] = useState(500),
     [debugGold, setDebugGold] = useState(100),
     [debugSeed, setDebugSeed] = useState(String(w?.seed ?? 1)),
+    [talentNodeChoice, setTalentNode] = useState(''),
+    [talentRank, setTalentRank] = useState(1),
     [saveView, setSaveView] = useState('');
+  const talentNode = talentNodeChoice.startsWith(`${characterClass}.`)
+    ? talentNodeChoice
+    : `${characterClass}.b1.n01`;
   const restart = () => {
     setProtection(false);
     send({
@@ -88,9 +94,15 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
             onChange={(e) => setDebugLevel(Number(e.target.value))}
           />
         </label>
-        <button onClick={() => campaignDebug.setClassLevel(characterClass, debugLevel)}>
+        <button
+          onClick={() => {
+            const r = campaignDebug.setClassLevel(characterClass, debugLevel);
+            if (r?.talentsReset) window.alert('Дерево талантов сброшено: не помещается в уровень.');
+          }}
+        >
           Установить уровень ({CLASS_LABELS[characterClass]})
         </button>
+
         <label>
           XP
           <input
@@ -162,6 +174,53 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
           />
         </label>
         {saveView && <textarea aria-label="Debug сохранение" readOnly rows={10} value={saveView} />}
+      </fieldset>
+      <fieldset aria-label="Talent Debug">
+        <legend>Таланты · {CLASS_LABELS[characterClass]}</legend>
+        <label>
+          Талант
+          <select
+            aria-label="Debug талант"
+            value={talentNode}
+            onChange={(e) => setTalentNode(e.target.value)}
+          >
+            {TALENT_CONFIG.branchesOf(characterClass).flatMap((b) =>
+              b.nodes.map((n) => (
+                <option key={n.id} value={n.id}>
+                  {b.branch}.{n.order} {n.name}
+                </option>
+              )),
+            )}
+          </select>
+        </label>
+        <label>
+          Ранг
+          <select
+            aria-label="Debug ранг таланта"
+            value={talentRank}
+            onChange={(e) => setTalentRank(Number(e.target.value))}
+          >
+            {[0, 1, 2, 3].map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          onClick={() => {
+            if (!campaignDebug.setTalentRank(characterClass, talentNode, talentRank))
+              window.alert('Ранг не установлен (нужно больше 26 очков?).');
+          }}
+        >
+          Установить ранг таланта
+        </button>
+        <button onClick={() => campaignDebug.resetTalents(characterClass)}>
+          Сбросить дерево талантов
+        </button>
+        <button onClick={() => campaignDebug.toggleSuperpowerPreset(characterClass)}>
+          Пресет сверхспособности вкл/выкл
+        </button>
       </fieldset>
       {w?.campaign && (
         <fieldset aria-label="Campaign Run Debug">

@@ -5,7 +5,7 @@ Spec: [task-09-talents.md](task-09-talents.md) (owner's text, Prettier-formatted
 [talents-gaps.md](talents-gaps.md). Code map: reuse [task-08-progress.md](task-08-progress.md)
 and [task-08.5-progress.md](task-08.5-progress.md) (additions below).
 
-Current: Phase 4, step 4.2 (content gate: gaps found — build Phases 1–4, then stop and report)
+Current: **stopped at the content gate** after Phases 0–4 (spec 0.3). Next: Phase 5 once G0 + gaps are answered (`docs/talents-gaps.md`)
 
 Branch `task-09-talents` from `task-08.5-playtest` (Task 08.5, PR #5): 08.5 is not merged into
 `main` yet (spec 0.1). The draft PR targets `task-08.5-playtest` so its diff shows only Task 09;
@@ -39,7 +39,7 @@ retarget after PR #3/#4/#5 are merged.
 ### Phase 4 — UI & debug
 
 - [x] 4.1 Talent screen
-- [ ] 4.2 Debug controls
+- [x] 4.2 Debug controls
 
 ### Phase 5 — Standard branches
 
@@ -152,6 +152,14 @@ Task 09 additions:
 
   Browser check in `tests/campaign-browser.mjs` (screenshot `campaign-12-talents.png`).
 
+- 4.2 debug (`campaign-debug.ts`, DEV panel fieldset «Таланты», aria-label "Talent Debug"):
+  - `setClassLevel` grants/removes points via level and keeps the tree, or resets it if it no longer fits;
+  - `setTalentRank(class, node, 0–3)` fills prerequisites to II, clears dependents below II, and raises the level only if needed;
+  - `resetTalents`;
+  - `toggleSuperpowerPreset`.
+
+  Tests `tests/persistence/talents-debug.test.ts`, browser DEV check, production markers.
+
 ## Verification log
 
 - Phase 1: typecheck ✓, format ✓, `npm test` 1044 Vitest tests + Node suites ✓ (talents 12).
@@ -159,6 +167,8 @@ Task 09 additions:
   `test:e2e` 3 PASS.
 - Phase 3: typecheck ✓, format ✓, `npm test` 1058 ✓ (unchanged behaviour: all talents inert),
   `npm run build` ✓, `test:production` 2 PASS, `test:e2e` 3 PASS.
+- Phase 4: typecheck ✓, format ✓, `npm test` 1062 ✓, `npm run build` ✓, `test:production` 2 PASS
+  (talent debug markers absent), QA build + `test:qa` PASS, `test:e2e` 3 PASS.
 
 ## Decisions / deviations
 
@@ -201,6 +211,10 @@ Task 09 additions:
   - **Unapproved catalog:** a banner says the catalog is not approved and that learned ranks are stored but don't affect combat yet (G0).
   - **Gap marking:** ranks with gaps are marked «Параметр не определён» / «Правило ждёт уточнения» with the gap ids.
   - **Buttons:** only valid purchases are enabled; a locked node shows its reason.
+
+- 4.2: the superpower preset = class level ≥ 30 plus rank I of the branch-3 first node (the
+  activation rule). The catalog defines no preset; nothing else is assumed. All debug edits go
+  through the validated `replaceProfile`.
 
 ## Blockers / known issues
 

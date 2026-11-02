@@ -390,6 +390,37 @@ try {
   await devProfile.getByRole('button', { name: 'Сбросить тестовый прогресс' }).click();
   await page.getByLabel('Золото: 0').waitFor();
   assert.equal(JSON.parse(await stored()).highestUnlockedMap, 1);
+  // Task 09 §1.6 (DEV): talent debug — superpower preset, set a rank, reset the tree.
+  const talentDebug = page.getByRole('group', { name: 'Talent Debug' });
+  await talentDebug.getByRole('button', { name: 'Пресет сверхспособности вкл/выкл' }).click();
+  await page.waitForFunction(
+    () =>
+      JSON.parse(localStorage.getItem('skazki.profile')).classes.warrior.talents[
+        'warrior.b3.n01'
+      ] === 1,
+  );
+  assert.equal(JSON.parse(await stored()).classes.warrior.level, 30);
+  await talentDebug.getByLabel('Debug талант').selectOption('warrior.b1.n03');
+  await talentDebug.getByLabel('Debug ранг таланта').selectOption('3');
+  await talentDebug.getByRole('button', { name: 'Установить ранг таланта' }).click();
+  await page.waitForFunction(
+    () =>
+      JSON.parse(localStorage.getItem('skazki.profile')).classes.warrior.talents[
+        'warrior.b1.n03'
+      ] === 3,
+  );
+  assert.deepEqual(JSON.parse(await stored()).classes.warrior.talents, {
+    'warrior.b3.n01': 1,
+    'warrior.b1.n01': 2,
+    'warrior.b1.n02': 2,
+    'warrior.b1.n03': 3,
+  });
+  await talentDebug.getByRole('button', { name: 'Сбросить дерево талантов' }).click();
+  await page.waitForFunction(
+    () =>
+      Object.keys(JSON.parse(localStorage.getItem('skazki.profile')).classes.warrior.talents)
+        .length === 0,
+  );
   await page.getByRole('button', { name: /DEV · Закрыть/ }).click();
 
   // Task 08.5 §3.2: a crash mid-run shows the friendly screen, logs the error in its own key,
