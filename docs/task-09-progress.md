@@ -61,7 +61,7 @@ Spec: [task-09.1-talent-effects.md](task-09.1-talent-effects.md). Source: `docs/
 v1.2 (byte-identical to the owner's file; excluded from Prettier). Gap resolution:
 [talents-gaps.md](talents-gaps.md#resolution-table-catalog-v12-task-091).
 
-Current: 09.1 Phase 10 (verification and delivery)
+Current: 09.1 done — 162/168 ranks ready, 6 blocked (E1–E3), awaiting owner review
 
 ### 09.1 steps
 
@@ -79,8 +79,9 @@ Current: 09.1 Phase 10 (verification and delivery)
 - [x] Phase 7 Warrior b3 (G6, G7, C4) — 12 ranks ready, none blocked
 - [x] Phase 8 Archer b1–b2 (G11) — 28 ranks ready; `archer.b1.n05` II–III blocked (E3)
 - [x] Phase 9 Archer b3 (G8, G9, G10, C7) — 12 ranks ready, none blocked
-- [ ] 10.1 Coverage · [ ] 10.2 Regression · [ ] 10.3 Playtest smoke checks · [ ] 10.4 Docs ·
-      [ ] 10.5 PR description
+- [x] 10.1 Coverage (`tests/talents/coverage.test.ts`) · [x] 10.2 Regression (every
+      `package.json` script) · [x] 10.3 Playtest smoke checks (`docs/playtest.md` §5.1, live
+      browser smoke) · [x] 10.4 Docs (`docs/TALENT_EFFECTS.md`, README) · [x] 10.5 PR description
 
 ### 0.2 Inert ranks (status `pending`; updated as ranks become `ready`)
 
@@ -389,6 +390,15 @@ Task 09 additions:
 
 - 09.1 Phase 9: typecheck ✓, format ✓, `npm test` 1150 ✓, `npm run build` ✓, `test:production`
   2 PASS, `test:e2e` 3 PASS.
+
+- 09.1 Phase 10: typecheck ✓, format ✓, `npm test` 1154 ✓; per-module suites stats 90, combat 89,
+  weapons 110, status 114, enemies 92, survival 65, alpha 125, skills 216, campaign 52, profile 22,
+  persistence 58, talents 110 ✓; `test:build-policy` ✓; `npm run build` ✓; `test:production` 2 PASS;
+  `GAME_LOCAL_QA=1 npm run build:qa` + `test:qa` PASS; `test:e2e` 3 PASS. Live browser smoke
+  (DEV preset per class, Map 1): Warrior off-hand source present, Mage 5/5 slots + enhanced dialog
+  (5 cards) + choice, Archer ballista entity + source, pause works for all; no page errors. Rogue
+  procs not observable live at level 30 on Maps 1/10 (enemies die in one hit; 33 kills from 37
+  hits); covered by the world test with real dagger hits.
 
 ## Decisions / deviations
 
