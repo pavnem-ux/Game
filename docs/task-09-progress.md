@@ -61,7 +61,7 @@ Spec: [task-09.1-talent-effects.md](task-09.1-talent-effects.md). Source: `docs/
 v1.2 (byte-identical to the owner's file; excluded from Prettier). Gap resolution:
 [talents-gaps.md](talents-gaps.md#resolution-table-catalog-v12-task-091).
 
-Current: 09.1 Phase 8 (Archer b1–b2)
+Current: 09.1 Phase 9 (Archer b3)
 
 ### 09.1 steps
 
@@ -77,7 +77,7 @@ Current: 09.1 Phase 8 (Archer b1–b2)
 - [x] Phase 5 Mage b3 (C1) — 12 ranks ready, none blocked
 - [x] Phase 6 Warrior b1–b2 (C3, C6, G12) — 30 ranks ready, none blocked
 - [x] Phase 7 Warrior b3 (G6, G7, C4) — 12 ranks ready, none blocked
-- [ ] Phase 8 Archer b1–b2 (G11)
+- [x] Phase 8 Archer b1–b2 (G11) — 28 ranks ready; `archer.b1.n05` II–III blocked (E3)
 - [ ] Phase 9 Archer b3 (G8, G9, G10, C7)
 - [ ] 10.1 Coverage · [ ] 10.2 Regression · [ ] 10.3 Playtest smoke checks · [ ] 10.4 Docs ·
       [ ] 10.5 PR description
@@ -90,7 +90,7 @@ had effect descriptors):
 - rogue: `rogue.b1.n02` II–III **blocked** (E1); `rogue.b3.n03` II–III **blocked** (E2); all other 38 Rogue ranks ready (Phases 2–3)
 - mage: all 42 Mage ranks ready (Phases 4–5)
 - warrior: all 42 Warrior ranks ready (Phases 6–7)
-- archer: `archer.b1.n01`, `archer.b1.n02`, `archer.b1.n03`, `archer.b1.n04`, `archer.b1.n05`, `archer.b2.n01`, `archer.b2.n02`, `archer.b2.n03`, `archer.b2.n04`, `archer.b2.n05`, `archer.b3.n01`, `archer.b3.n02`, `archer.b3.n03`, `archer.b3.n04` — I–III
+- archer: `archer.b3.n01`–`n04` I–III pending; `archer.b1.n05` II–III **blocked** (E3); all other Archer b1–b2 ranks ready (Phase 8)
 
 ### 09.1 code map
 
@@ -172,6 +172,14 @@ had effect descriptors):
   - Scene: off-hand swings are drawn with their own range/arc.
   - Tests: `tests/talents/warrior-b3.test.ts`.
 
+- **Phase 8:**
+  - `src/talents/handlers/archer.ts`, registered in `handlers/index.ts`.
+  - New hooks: `skillParamBonus` (Piercing Arrow `pierce`, Multishot `coefficientFactor`), `pierceFalloff` (G11), `zoneDurationFactor`, `weaponRangeFactor` (read before the bow is equipped via `talentWeaponRangeFactor`), `onDirectHit` (called from `afterHit` for every landed hit; secondary hits ignored). `DirectHitContext` gains `marked`, `moving` and the read-only `talents` runtime.
+  - `ProjectilePayload.falloff`: `damageModifier` multiplies by `(1 − falloff)^hits` (Piercing Arrow only, only with the talent).
+  - `SkillHost.playerMoving` (world: non-zero input while the player can act); `SkillEngine.zone` applies the executing skill's zone-duration factor.
+  - `TalentRuntime`: `count(key, window)` / `forget`, `clearStamp`, `clearBuff`, and `anyActive` — every talent hook returns immediately when no allocated rank is active (keeps talent-free runs at their old cost).
+  - Tests: `tests/talents/archer.test.ts`.
+
 ### 09.1 decisions
 
 - 0.1: the owner asked to keep the catalog content exactly, so `docs/talents.md` is the uploaded
@@ -217,6 +225,15 @@ had effect descriptors):
   - G7: the crit bonus is added to the composed, capped Crit Chance at attack creation; Combat Core still clamps to the 75% cap.
   - C4: the window and per-target cooldown use simulation time; the cross strike is `procs=false` and applies no status.
   - 3.4 «оба меча против целей с HP <30%»: the main sword = the basic sword hit; Warrior skills are not swords.
+- **Phase 8:**
+  - «Стрелы» = the player's physical projectile hits (basic bow, arrow skills, Multishot arrows); traps, marks and zones without the `projectile` tag are not arrows. Arrow Rain's ticks carry `projectile` and count.
+  - 1.3 / G11: falloff only with the talent (rank I already brings the 20% step); without it Piercing Arrow is unchanged. The step applies per target already hit by that arrow (1.0, 0.8, 0.64 …).
+  - 1.4: a «direct shot» is a landed arrow hit; the primed bonus applies to the next arrow hit on that target and is then consumed; the 3 s cooldown starts when a shot is primed.
+  - 1.5 rank I applies to any player direct hit on a target below 30% HP (the text names no weapon); ranks II/III are blocked (E3).
+  - 2.1 the range bonus changes the bow's targeting range only (projectile travel distance 720 already exceeds 580 × 1.07).
+  - 2.3 «активных навыков лучника»: areas and zones created by Archer skills (synergy areas excluded).
+  - 2.4 «При движении» = non-zero movement input at the moment of the hit.
+  - 2.5 «следующая стрела» = the next landed arrow hit within the duration; an arrow kill while the bonus is unused re-arms it, the boosted arrow's own kill does not.
 - 0.1: status model per rule 7. `TALENT_CATALOG_APPROVED = true` (G0), but a rank is active only
   when `ready`, and a `ready` rank must carry effects; the loader enforces both. The UI marks
   pending ranks «пока не действует в бою».
@@ -353,6 +370,11 @@ Task 09 additions:
 
 - 09.1 Phase 7: typecheck ✓, format ✓, `npm test` 1132 ✓, `npm run build` ✓, `test:production`
   2 PASS, `test:e2e` 3 PASS.
+
+- 09.1 Phase 8: typecheck ✓, format ✓, `npm test` 1143 ✓, `npm run build` ✓, `test:production`
+  2 PASS, `test:e2e` 3 PASS. One full-suite run hit the boss-world test's 5 s timeout; the talent
+  hooks had made talent-free runs ~10% slower, fixed with the `anyActive` fast path (4.56 s → 3.93 s
+  for that test, back to its pre-09.1 time).
 
 ## Decisions / deviations
 

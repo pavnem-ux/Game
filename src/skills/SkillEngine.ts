@@ -65,6 +65,8 @@ export interface SkillHost {
     random?: () => number;
   }>;
   readonly basicWeaponId: string;
+  /** Task 09.1 (optional): the player has a non-zero movement input this step. */
+  playerMoving?(): boolean;
   /**
    * Fixed simulation grid (the world's control step). Automatic activations happen only on this
    * grid, so frame endpoints never decide when a moving target became eligible.
@@ -123,6 +125,8 @@ export interface ProjectilePayload {
   readonly onEnd?: (position: Point, engine: SkillEngine) => void;
   /** Task 08.5: damage attribution of the skill/synergy that launched it. */
   readonly source?: string;
+  /** Task 09.1 G11: damage falloff per previous hit of this projectile (0–1; default none). */
+  readonly falloff?: number;
 }
 export interface MarkState {
   readonly kind: 'hunter' | 'death';
@@ -263,6 +267,7 @@ export class SkillEngine {
     const now = p.maxHp > 0 ? (p.currentHp / p.maxHp) * 100 : 0;
     const before = this.playerHpSeen;
     this.playerHpSeen = now;
+    if (!this.talents.anyActive) return;
     if (now !== before) this.talentCombat.onPlayerHpChanged(before, now, damage);
     const key = JSON.stringify(this.talentCombat.conditionalStats());
     if (key !== this.conditionalKey) {
@@ -281,9 +286,16 @@ export class SkillEngine {
       this.targetCount = previous;
     }
   }
-  controlState(id: string): { readonly slowed: boolean; readonly stunned: boolean } {
+  controlState(id: string): {
+    readonly slowed: boolean;
+    readonly stunned: boolean;
+    readonly marked: boolean;
+  } {
     const pre = this.preHit(id);
-    return { slowed: pre.slowed, stunned: pre.stunned };
+    return { slowed: pre.slowed, stunned: pre.stunned, marked: pre.mark !== null };
+  }
+  playerMoving(): boolean {
+    return this.host.playerMoving?.() ?? false;
   }
   /** Task 09.1: shortens an owned automatic skill's remaining cooldown (not below ready now). */
   reduceSkillCooldown(skillId: string, seconds: number): void {
@@ -500,12 +512,16 @@ export class SkillEngine {
         : context.weaponId === OFFHAND_WEAPON.id
           ? new Set<CombatTag>(OFFHAND_TAGS)
           : payload?.tags;
-    return this.targetMultiplier(
-      context.attack,
-      context.targetId,
-      payload?.limit,
-      tags,
-      context.targetCount ?? 1,
+    // G11: a piercing projectile loses `falloff` per target it already hit (1, 0.8, 0.64 …).
+    const falloff = payload?.falloff ? (1 - payload.falloff) ** payload.hits : 1;
+    return (
+      this.targetMultiplier(
+        context.attack,
+        context.targetId,
+        payload?.limit,
+        tags,
+        context.targetCount ?? 1,
+      ) * falloff
     );
   }
   /** Short-lived per-activation counters (hit limits); pruned after a few seconds. */
@@ -638,6 +654,10 @@ export class SkillEngine {
     const tags = this.sourceSkillTags();
     const factor = tags ? this.talentCombat.skillAreaFactor(tags, this.source!.slice(6)) : 1;
     return scaleCircularAoeRadius(radius * factor, this.stats.areaSize);
+  }
+  private zoneDurationFactor(): number {
+    const tags = this.sourceSkillTags();
+    return tags ? this.talentCombat.zoneDurationFactor(tags) : 1;
   }
   /** Tags of the skill whose code is executing (null outside a skill). */
   private sourceSkillTags(): ReadonlySet<CombatTag> | null {
@@ -833,6 +853,9 @@ export class SkillEngine {
   }
   private afterHit(hit: HitInfo) {
     const killed = hit.result.events.some((e) => e.type === 'death' && e.entityId === hit.targetId);
+    // Task 09.1: direct-hit reactions (Archer focus/kill rules); secondary hits are ignored.
+    if (hit.result.status === 'hit')
+      this.talentCombat.onDirectHit({ targetId: hit.targetId, tags: hit.tags, killed });
     // Task 09.1: a critical direct hit of an executing skill (e.g. Mage Arcane Supremacy).
     if (
       hit.result.status === 'hit' &&
@@ -1090,7 +1113,8 @@ export class SkillEngine {
       ...spec,
       id,
       createdAt: this.clock,
-      expiresAt: this.clock + spec.duration,
+      // Task 09.1: talent zone-duration bonus of the executing skill.
+      expiresAt: this.clock + spec.duration * this.zoneDurationFactor(),
       firstTickAt,
       ...(this.source ? { source: this.source } : {}),
       tickIndex: 1,

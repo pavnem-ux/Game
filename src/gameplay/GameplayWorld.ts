@@ -1,4 +1,5 @@
 import { OFFHAND_WEAPON, talentLoadout } from '../talents';
+import { talentWeaponRangeFactor } from '../talents/handlers';
 import type { TalentLoadout } from '../talents';
 import { composeRunStats } from '../skills/stats';
 import { DEFAULT_SEED, createRunRandom } from './rng';
@@ -217,7 +218,17 @@ export class GameplayWorld {
         context.entityId === this.playerId ? this.skills.weaponAttackBonus(context.weaponId) : {},
     });
     this.weapons.setBody(this.playerId, this.body);
-    const weapon = ALPHA_WEAPONS[options.characterClass];
+    // Task 09.1: a talent may extend the basic weapon's range for this run (Archer 2.1).
+    const rangeFactor = talentWeaponRangeFactor(
+      options.characterClass,
+      this.talents.ranks,
+      options.talents?.config,
+    );
+    const baseWeapon = ALPHA_WEAPONS[options.characterClass];
+    const weapon =
+      rangeFactor === 1
+        ? baseWeapon
+        : { ...baseWeapon, attackRange: baseWeapon.attackRange * rangeFactor };
     this.weapons.equipWeapon({
       entityId: this.playerId,
       characterClass: options.characterClass,
@@ -243,6 +254,8 @@ export class GameplayWorld {
           random: rng.talents,
         },
         basicWeaponId: weapon.id,
+        playerMoving: () =>
+          Math.hypot(world.input.x, world.input.y) > 0 && world.survival.getState().canPlayerAct,
         activationStep: ALPHA.controlStep,
         playerBody: () => world.body,
         facing: () => world.facing,

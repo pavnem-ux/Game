@@ -51,7 +51,13 @@ export interface TalentEngine {
   ): number;
   enemyPosition(id: string): Point2 | null;
   /** Control state of an enemy right now (Slow/Stun as the Skill Engine tracks them). */
-  controlState(id: string): { readonly slowed: boolean; readonly stunned: boolean };
+  controlState(id: string): {
+    readonly slowed: boolean;
+    readonly stunned: boolean;
+    readonly marked: boolean;
+  };
+  /** The player has a non-zero movement input this step. */
+  playerMoving(): boolean;
   readonly playerId: string;
   /** Task 09.1 C1: the Mage's enhanced (5th-slot) skill, null while that slot is empty. */
   enhancedSkillId(): string | null;
@@ -80,11 +86,17 @@ export interface DirectHitContext {
   /** Target slowed / stunned at the moment of the hit. */
   readonly slowed: boolean;
   readonly stunned: boolean;
+  /** Target carries a mark (Hunter's Mark / Death Mark) at the moment of the hit. */
+  readonly marked: boolean;
+  /** The player is moving at the moment of the hit. */
+  readonly moving: boolean;
   /** Targets the same attack hits (melee sector / skill area; 1 for single-target hits). */
   readonly targets: number;
   /** Player HP at the moment of the hit. */
   readonly player: { readonly currentHp: number; readonly maxHp: number };
   readonly statuses: DotReader;
+  /** Talent state (stamps, buffs) for conditions such as «the next shot». Read-only here. */
+  readonly talents: TalentRuntime;
   params(nodeId: string): Params;
 }
 export interface DirectBonus {
@@ -131,6 +143,16 @@ export interface TalentClassHandlers {
   offhandDirect?(ctx: DirectHitContext): number;
   /** A sword hit landed on a living enemy (`main` = basic sword, `offhand` = second sword). */
   onSwordHit?(engine: TalentEngine, hand: 'main' | 'offhand', targetId: string): void;
+  /** Additive bonus to a skill's own parameter (e.g. Piercing Arrow `pierce`, Multishot factor). */
+  skillParamBonus?(skillId: string, param: string, params: (id: string) => Params): number;
+  /** G11: damage falloff per pierced target of this skill's projectile (0 = none). */
+  pierceFalloff?(skillId: string, params: (id: string) => Params): number;
+  /** Duration multiplier of a zone created by a skill with these tags. */
+  zoneDurationFactor?(tags: ReadonlySet<CombatTag>, params: (id: string) => Params): number;
+  /** Range multiplier of the class's basic weapon (fixed for the run). */
+  weaponRangeFactor?(params: (id: string) => Params): number;
+  /** A player direct hit landed (after Core; `killed` = the target died from it). */
+  onDirectHit?(engine: TalentEngine, hit: DirectHitInfo): void;
   /** A direct hit of a skill landed as a critical hit. */
   onSkillCrit?(engine: TalentEngine, skillId: string, tags: ReadonlySet<CombatTag>): void;
   /** The player took real direct damage (after mitigation and barrier absorption). */
@@ -159,6 +181,11 @@ export interface TalentClassHandlers {
   dotTakenMultiplier?(engine: TalentEngine, targetId: string): number;
   /** Statuses were applied to these enemies (end of a boundary). */
   onStatusesApplied?(engine: TalentEngine, targetIds: readonly string[]): void;
+}
+export interface DirectHitInfo {
+  readonly targetId: string;
+  readonly tags: ReadonlySet<CombatTag>;
+  readonly killed: boolean;
 }
 export interface KillCause {
   readonly targetId: string;
@@ -190,7 +217,7 @@ export class TalentCombat {
     tags?: ReadonlySet<CombatTag>,
     targets = 1,
   ): number {
-    if (!tags) return 1;
+    if (!tags || !this.engine.talents.anyActive) return 1;
     const source = this.engine.currentSource();
     if (source?.startsWith('synergy:') && this.handlers.synergyFactor)
       return this.handlers.synergyFactor(source.slice('synergy:'.length), this.params);
@@ -204,8 +231,10 @@ export class TalentCombat {
       enhanced: !!source && source === `skill:${this.engine.enhancedSkillId()}`,
       ...this.engine.controlState(targetId),
       targets,
+      moving: this.engine.playerMoving(),
       player: this.engine.entity(this.engine.playerId),
       statuses: this.engine.statuses,
+      talents: this.engine.talents,
       params: this.params,
     });
     // G6: the off-hand sword is a talent hit with only its own talent bonuses.
@@ -261,6 +290,23 @@ export class TalentCombat {
     if (this.engine.talents.inProc || !this.engine.entity(this.engine.playerId).alive) return;
     this.handlers.onPlayerDirectDamage?.(this.engine, attackerId);
   }
+  skillParamBonus(skillId: string, param: string): number {
+    return this.handlers.skillParamBonus?.(skillId, param, this.params) ?? 0;
+  }
+  pierceFalloff(skillId: string): number {
+    return this.handlers.pierceFalloff?.(skillId, this.params) ?? 0;
+  }
+  zoneDurationFactor(tags: ReadonlySet<CombatTag>): number {
+    return this.handlers.zoneDurationFactor?.(tags, this.params) ?? 1;
+  }
+  weaponRangeFactor(): number {
+    return this.handlers.weaponRangeFactor?.(this.params) ?? 1;
+  }
+  onDirectHit(hit: DirectHitInfo): void {
+    if (!this.engine.talents.anyActive || this.engine.talents.inProc || isSecondary(hit.tags))
+      return;
+    this.handlers.onDirectHit?.(this.engine, hit);
+  }
   offhand(): Readonly<{ coefficient: number; speed: number }> | null {
     return this.handlers.offhand?.(this.params) ?? null;
   }
@@ -268,7 +314,12 @@ export class TalentCombat {
     return this.handlers.offhandCritChance?.(this.params) ?? 0;
   }
   onSwordHit(hand: 'main' | 'offhand', targetId: string): void {
-    if (this.engine.talents.inProc || !this.engine.entity(targetId).alive) return;
+    if (
+      !this.engine.talents.anyActive ||
+      this.engine.talents.inProc ||
+      !this.engine.entity(targetId).alive
+    )
+      return;
     this.handlers.onSwordHit?.(this.engine, hand, targetId);
   }
   onKill(cause: KillCause): void {

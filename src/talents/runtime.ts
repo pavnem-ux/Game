@@ -63,7 +63,10 @@ export class TalentRuntime {
   constructor(private readonly options: TalentRuntimeOptions) {
     this.config = options.config ?? TALENT_CONFIG;
     this.ranks = options.ranks ?? {};
+    this.anyActive = Object.keys(this.ranks).some((id) => this.rank(id) > 0);
   }
+  /** False when no allocated rank is active: every talent hook can return immediately. */
+  readonly anyActive: boolean;
   get now(): number {
     return this.options.now();
   }
@@ -118,6 +121,13 @@ export class TalentRuntime {
     for (const [id, b] of this.buffs)
       if (b.stat && this.buffValue(id)) out[b.stat] = (out[b.stat] ?? 0) + b.value;
     return out;
+  }
+  /** Ends a buff now (e.g. a one-shot «next arrow» bonus that was used). */
+  clearBuff(id: string): void {
+    const b = this.buffs.get(id);
+    if (!b) return;
+    this.buffs.delete(id);
+    if (b.stat) this.onBuffsChanged();
   }
   buffValue(id: string): number {
     const b = this.buffs.get(id);
@@ -214,12 +224,28 @@ export class TalentRuntime {
   prune(): void {
     for (const [k, at] of this.cooldowns) if (at <= this.now) this.cooldowns.delete(k);
     for (const [k, at] of this.stamps) if (this.now - at > STAMP_TTL) this.stamps.delete(k);
+    for (const [k, list] of this.history)
+      if (!list.length || this.now - list[list.length - 1] > STAMP_TTL) this.history.delete(k);
   }
   // ── time stamps (e.g. «hits of both swords on one target within 2 s») ──
   private readonly stamps = new Map<string, number>();
   stamp(key: string): void {
     this.stamps.set(key, this.now);
   }
+  clearStamp(key: string): void {
+    this.stamps.delete(key);
+  }
+  /** Records an occurrence now and returns how many occurred within the last `window` seconds. */
+  count(key: string, window: number): number {
+    const kept = (this.history.get(key) ?? []).filter((t) => this.now - t <= window);
+    kept.push(this.now);
+    this.history.set(key, kept.slice(-16));
+    return kept.length;
+  }
+  forget(key: string): void {
+    this.history.delete(key);
+  }
+  private readonly history = new Map<string, number[]>();
   /** Simulation time of the last stamp, or null (stamps older than 60 s are pruned). */
   stampedAt(key: string): number | null {
     return this.stamps.get(key) ?? null;

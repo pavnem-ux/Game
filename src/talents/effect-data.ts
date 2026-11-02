@@ -251,6 +251,56 @@ export const TALENT_RANK_EFFECTS: Readonly<Record<string, RankEffects>> = Object
     2: same({ bonus: 15, hpBelow: 30, lowHp: 5 }),
     3: same({ bonus: 25, hpBelow: 30, lowHp: 10 }),
   },
+  // ── Archer · Снайпер / Следопыт (Phase 8; G11) ──
+  'archer.b1.n01': {
+    1: same({ critChance: 3 }),
+    2: same({ critChance: 5, critDamage: 8 }),
+    3: same({ critChance: 8, critDamage: 16 }),
+  },
+  'archer.b1.n02': {
+    1: same({ bonus: 7 }),
+    2: same({ bonus: 12, poisoned: 4 }),
+    3: same({ bonus: 18, poisoned: 8 }),
+  },
+  'archer.b1.n03': {
+    // G11: Piercing Arrow only; falloff per later target 20 / 15 / 10%.
+    1: same({ pierce: 1, falloff: 20 }),
+    2: same({ pierce: 2, falloff: 15 }),
+    3: same({ pierce: 3, falloff: 10 }),
+  },
+  'archer.b1.n04': {
+    1: same({ bonus: 8, window: 3, cooldown: 3 }),
+    2: same({ bonus: 14, window: 3.5, cooldown: 3 }),
+    3: same({ bonus: 22, window: 4, cooldown: 3 }),
+  },
+  'archer.b1.n05': {
+    1: same({ hpBelow: 30, critDamage: 15 }),
+  },
+  'archer.b2.n01': {
+    1: [st('movementSpeedPercent', 5)],
+    2: [st('movementSpeedPercent', 8), b({ range: 4 })],
+    3: [st('movementSpeedPercent', 12), b({ range: 7 })],
+  },
+  'archer.b2.n02': {
+    1: same({ factor: 5 }),
+    2: same({ factor: 10 }),
+    3: same({ factor: 15 }),
+  },
+  'archer.b2.n03': {
+    1: same({ area: 6 }),
+    2: same({ area: 10, zone: 5 }),
+    3: same({ area: 16, zone: 10 }),
+  },
+  'archer.b2.n04': {
+    1: same({ bonus: 4 }),
+    2: [b({ bonus: 7 }), st('movementSpeedPercent', 3)],
+    3: [b({ bonus: 11 }), st('movementSpeedPercent', 5)],
+  },
+  'archer.b2.n05': {
+    1: same({ bonus: 8, duration: 3 }),
+    2: same({ bonus: 13, duration: 4 }),
+    3: same({ bonus: 20, duration: 5 }),
+  },
 });
 /** Ranks blocked by an engine conflict: node → ranks (reason in `docs/talents-gaps.md`). */
 export const TALENT_BLOCKED: Readonly<Record<string, readonly (1 | 2 | 3)[]>> = Object.freeze({
@@ -258,6 +308,8 @@ export const TALENT_BLOCKED: Readonly<Record<string, readonly (1 | 2 | 3)[]>> = 
   'rogue.b1.n02': [2, 3],
   // Extra-stack trigger undefined + basic dagger Bleed exists without serrated_blades: E2.
   'rogue.b3.n03': [2, 3],
+  // Per-target crit chance vs targets below 30% HP (one crit roll per snapshot): E3.
+  'archer.b1.n05': [2, 3],
 });
 
 /** Applies the effect data to the verbatim catalog: ready / blocked / pending per rank. */
