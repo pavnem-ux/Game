@@ -12,7 +12,10 @@ const browser = await chromium.launch({
 });
 const errors = [];
 try {
-  const context = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+  const context = await browser.newContext({
+    viewport: { width: 1280, height: 860 },
+    acceptDownloads: true,
+  });
   const page = await context.newPage();
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(base + '/');
@@ -164,9 +167,109 @@ try {
   assert.equal(afterReload.stats.runs, 3);
   assert.equal(afterReload.gold, 75);
 
+  // 5.5 Save Management: status, warning, export download, import (invalid → unchanged; valid →
+  // confirm → replace), visible warning on a write failure.
+  await nav.getByRole('button', { name: 'Настройки', exact: true }).click();
+  const mgmt = page.getByRole('region', { name: 'Управление сохранением' });
+  assert.match(await mgmt.innerText(), /Прогресс сохранён/);
+  assert.match(await mgmt.innerText(), /Очистка данных сайта или браузера удалит его/);
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    mgmt.getByRole('button', { name: 'Экспорт сохранения' }).click(),
+  ]);
+  assert.match(download.suggestedFilename(), /^skazki-save-\d{4}-\d{2}-\d{2}\.json$/);
+  const exported = JSON.parse(
+    await (await import('node:fs/promises')).readFile(await download.path(), 'utf8'),
+  );
+  assert.equal(exported.gold, 75);
+  const stored = () => page.evaluate(() => localStorage.getItem('skazki.profile'));
+  const before = await stored();
+  await page.getByLabel('Файл сохранения').setInputFiles({
+    name: 'broken.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from('{"schemaVersion": 1, oops'),
+  });
+  await page.getByText(/Файл не импортирован: Файл сохранения повреждён/).waitFor();
+  assert.equal(await stored(), before, 'invalid import leaves the save unchanged');
+  await page.getByLabel('Файл сохранения').setInputFiles({
+    name: 'newer.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify({ ...exported, schemaVersion: 9 })),
+  });
+  await page.getByText(/более новой версией игры/).waitFor();
+  assert.equal(await stored(), before);
+  await page.getByLabel('Файл сохранения').setInputFiles({
+    name: 'rich.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify({ ...exported, gold: 999 })),
+  });
+  const confirm = page.getByRole('dialog', { name: 'Заменить сохранение?' });
+  await confirm.waitFor();
+  assert.match(await confirm.innerText(), /золото 999/);
+  assert.equal(
+    await confirm.getByRole('button', { name: 'Сначала экспортировать текущее' }).count(),
+    1,
+  );
+  await confirm.getByRole('button', { name: 'Отмена' }).click();
+  assert.equal(await stored(), before, 'cancel changes nothing');
+  await page.getByLabel('Файл сохранения').setInputFiles({
+    name: 'rich.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify({ ...exported, gold: 999 })),
+  });
+  await confirm.getByRole('button', { name: 'Заменить сохранение' }).click();
+  await page.getByText('Сохранение импортировано.').waitFor();
+  assert.equal(JSON.parse(await stored()).gold, 999);
+  assert.equal(await page.getByLabel('Золото: 999').count(), 1);
+  // Import the original export back (round-trip).
+  await page.getByLabel('Файл сохранения').setInputFiles({
+    name: download.suggestedFilename(),
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(exported)),
+  });
+  await confirm.getByRole('button', { name: 'Заменить сохранение' }).click();
+  await page.getByText('Сохранение импортировано.').waitFor();
+  assert.equal(JSON.parse(await stored()).gold, 75);
+  await page.screenshot({ path: 'artifacts/campaign-07-settings.png', fullPage: true });
+  // Write failure: storage refuses writes → visible warning, nothing claimed as saved.
+  await page.evaluate(() => {
+    const original = Storage.prototype.setItem;
+    window.__restoreStorage = () => (Storage.prototype.setItem = original);
+    Storage.prototype.setItem = function () {
+      throw new DOMException('full', 'QuotaExceededError');
+    };
+  });
+  await nav.getByRole('button', { name: 'Персонаж', exact: true }).click();
+  await page
+    .getByRole('article', { name: /Воин/ })
+    .getByRole('button', { name: 'Выбрать' })
+    .click();
+  const banner = page.locator('.save-banner');
+  await banner.waitFor();
+  assert.match(await banner.innerText(), /НЕ сохранены[\s\S]*закончилось место/);
+  await page.screenshot({ path: 'artifacts/campaign-08-save-warning.png' });
+  await page.evaluate(() => window.__restoreStorage());
+  await nav.getByRole('button', { name: 'Настройки', exact: true }).click();
+  await page.getByRole('button', { name: 'Повторить сохранение' }).click();
+  await page.getByText('Прогресс сохранён.', { exact: true }).first().waitFor();
+  assert.equal(JSON.parse(await stored()).selectedClass, 'warrior');
+  assert.equal(await banner.count(), 0);
+
+  // Phone width: every menu page fits without horizontal scrolling.
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (const tab of ['Играть', 'Персонаж', 'Карты', 'Прогресс', 'Настройки']) {
+    await nav.getByRole('button', { name: tab, exact: true }).click();
+    assert.ok(
+      await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+      `${tab} fits a phone`,
+    );
+  }
+  await nav.getByRole('button', { name: 'Карты', exact: true }).click();
+  await page.screenshot({ path: 'artifacts/campaign-09-maps-mobile.png', fullPage: true });
+
   if (errors.length) throw new Error(errors.join('\n'));
   console.log(
-    'PASS campaign: menu/Gold, Character, Maps (lock/boss reveal), Map 1 win → results/rewards/unlock/save, reload keeps progress, Map 2 with another class (separate XP, shared Gold), quit/reload = abandoned without rewards.',
+    'PASS campaign: menu/Gold, Character, Maps (lock/boss reveal), Map 1 win → results/rewards/unlock/save, reload keeps progress, Map 2 with another class (separate XP, shared Gold), quit/reload = abandoned without rewards, Save Management (export, invalid/newer import unchanged, confirm/cancel/replace, round-trip), write-failure warning + retry.',
   );
 } finally {
   await browser.close();

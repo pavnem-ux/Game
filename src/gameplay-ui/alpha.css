@@ -1051,14 +1051,14 @@ p.damage-note {
   height: 100%;
   background: #c3e3b6;
 }
-.character-stats {
+.class-stats {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 3px 10px;
   margin: 10px 0;
   font-size: 12px;
 }
-.character-stats dd {
+.class-stats dd {
   margin: 0;
   color: #f1eddb;
   text-align: right;
@@ -1303,4 +1303,50 @@ p.damage-note {
   .campaign-alert {
     top: 112px;
   }
+}
+/* Task 08 — save management. */
+.save-management {
+  background: #1a2a23d9;
+  border: 1px solid #425443;
+  border-radius: 6px;
+  padding: 16px;
+  color: #b6c4b5;
+  max-width: 680px;
+}
+.save-management h3 {
+  margin: 0 0 8px;
+  color: #f1eddb;
+  font-weight: 500;
+}
+.save-status.save-saved,
+.tone-ok {
+  color: #c3e3b6;
+}
+.save-status.save-unsaved,
+.save-status.save-not-persisted,
+.save-status.save-error,
+.tone-error {
+  color: #ffb199;
+}
+.save-warning {
+  color: #d8c08a;
+  font-size: 13px;
+}
+.save-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.save-banner {
+  background: #3a1f12e6;
+  border: 1px solid #ff8a3d;
+  color: #ffd0a8;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+.import-confirm .button {
+  width: 100%;
+  margin-top: 8px;
 }

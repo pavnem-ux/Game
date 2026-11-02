@@ -8,6 +8,7 @@ import type { MenuPage } from './campaign-state';
 import { displayHp } from './format';
 import { CLASS_SYMBOLS, minutes } from './campaign-format';
 import { CharacterPage, MapsPage, ProgressionPage } from './CampaignPages';
+import { SaveWarning, SettingsPage } from './SaveManagement';
 
 const PAGES: readonly { id: MenuPage; label: string }[] = [
   { id: 'play', label: 'Играть' },
@@ -38,15 +39,12 @@ export function CampaignMenu() {
           ◎ {profile?.gold ?? 0}
         </span>
       </nav>
+      <SaveWarning />
       {ui.page === 'play' && <PlayPage />}
       {ui.page === 'character' && <CharacterPage />}
       {ui.page === 'maps' && <MapsPage />}
       {ui.page === 'progression' && <ProgressionPage />}
-      {ui.page === 'settings' && (
-        <div className="campaign-page">
-          <h2>{PAGES.find((p) => p.id === ui.page)!.label}</h2>
-        </div>
-      )}
+      {ui.page === 'settings' && <SettingsPage />}
     </section>
   );
 }

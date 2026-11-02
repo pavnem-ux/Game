@@ -1,7 +1,15 @@
 import type { CharacterClass } from '../character-stats';
 import { getCampaignMap } from '../campaign';
 import { isMapUnlocked } from '../profile';
-import { createProgressionService, createSaveStore, generateRunId } from '../persistence';
+import {
+  createProgressionService,
+  createSaveStore,
+  exportProfile,
+  generateRunId,
+  prepareImport,
+} from '../persistence';
+import type { PlayerProfile } from '../profile';
+import { LOAD_ERROR_TEXT, SAVE_FAILURE_TEXT } from './save-messages';
 import type { CommitResult, ProgressionService, ProgressionState } from '../persistence';
 import type { GameplaySnapshot } from '../gameplay';
 import type { RunResult } from '../profile';
@@ -17,6 +25,10 @@ export interface CampaignUiState {
   readonly page: MenuPage;
   readonly selectedMapId: number;
   readonly progression: ProgressionState;
+  /** Validated import waiting for the player's confirmation (nothing replaced yet). */
+  readonly pendingImport: Readonly<{ profile: PlayerProfile; fileName: string }> | null;
+  /** Last save-management message for the player (null = none). */
+  readonly saveMessage: Readonly<{ tone: 'ok' | 'error'; text: string }> | null;
   /** Commit result of the latest finished campaign run (results screen). */
   readonly lastResult: Readonly<{ runId: string; result: RunResult; commit: CommitResult }> | null;
 }
@@ -56,6 +68,8 @@ function ensure(): CampaignUiState {
       selectedMapId: initial.profile?.highestUnlockedMap ?? 1,
       progression: initial,
       lastResult: null,
+      pendingImport: null,
+      saveMessage: null,
     });
     service.subscribe((progression) => update({ progression }));
     // Commit each resolved campaign run exactly once (also idempotent in applyRunResult).
@@ -117,6 +131,71 @@ export const campaignStore = {
     if (world?.campaign?.status === 'active') alphaBridge.send({ type: 'abandon' });
     update({ page: 'play' });
     alphaBridge.send({ type: 'menu' });
+  },
+  /** Export: validated profile → JSON download. Read-only; nothing is changed. */
+  exportSave(): boolean {
+    const profile = ensure().progression.profile;
+    if (!profile) return false;
+    const out = exportProfile(profile, new Date().toISOString());
+    if (!out.ok) {
+      update({ saveMessage: { tone: 'error', text: LOAD_ERROR_TEXT[out.error.code] } });
+      return false;
+    }
+    try {
+      const url = URL.createObjectURL(new Blob([out.json], { type: 'application/json' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = out.filename;
+      document.body.append(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 0);
+    } catch {
+      update({ saveMessage: { tone: 'error', text: 'Не удалось скачать файл.' } });
+      return false;
+    }
+    update({ saveMessage: { tone: 'ok', text: `Сохранение экспортировано: ${out.filename}` } });
+    return true;
+  },
+  /** Import step 1: parse → validate → migrate. Nothing is replaced until confirmImport(). */
+  stageImport(text: string, fileName: string) {
+    const parsed = prepareImport(text);
+    if (!parsed.ok)
+      update({
+        pendingImport: null,
+        saveMessage: {
+          tone: 'error',
+          text: `Файл не импортирован: ${LOAD_ERROR_TEXT[parsed.error.code]} Текущее сохранение не изменено.`,
+        },
+      });
+    else update({ pendingImport: { profile: parsed.profile, fileName }, saveMessage: null });
+  },
+  cancelImport() {
+    update({ pendingImport: null, saveMessage: null });
+  },
+  /** Import step 2 (after confirmation): replace the profile; any failure changes nothing. */
+  confirmImport() {
+    const pending = ensure().pendingImport;
+    if (!pending) return;
+    const r = campaignStore.service().replaceProfile(pending.profile);
+    update({
+      pendingImport: null,
+      selectedMapId: r.ok ? pending.profile.highestUnlockedMap : ensure().selectedMapId,
+      saveMessage: r.ok
+        ? { tone: 'ok', text: 'Сохранение импортировано.' }
+        : {
+            tone: 'error',
+            text: `Импорт не выполнен: ${r.failure ? SAVE_FAILURE_TEXT[r.failure] : ''} Текущее сохранение не изменено.`,
+          },
+    });
+  },
+  retrySave() {
+    const ok = campaignStore.service().retrySave();
+    update({
+      saveMessage: ok
+        ? { tone: 'ok', text: 'Прогресс сохранён.' }
+        : { tone: 'error', text: 'Сохранить всё ещё не удаётся.' },
+    });
   },
   /** Starts a campaign run on an unlocked map with the class's permanent level. */
   startRun(mapId = ensure().selectedMapId, characterClass?: CharacterClass): boolean {

@@ -50,7 +50,7 @@ export function CharacterPage() {
               >
                 <div style={{ width: `${next === null ? 100 : (p.xp / next) * 100}%` }} />
               </div>
-              <dl className="character-stats">
+              <dl className="class-stats">
                 <dt>HP</dt>
                 <dd>{hp}</dd>
                 <dt>Физ. урон</dt>

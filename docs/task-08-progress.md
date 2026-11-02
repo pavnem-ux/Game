@@ -1,7 +1,7 @@
 # Task 08 progress
 
 Branch: task-08-campaign | PR: https://github.com/pavnem-ux/Game/pull/4 (draft)
-Current: Phase 5, step 5.5
+Current: Phase 6, step 6.1 (Phase 5 done; waiting for "continue")
 
 ## Steps
 
@@ -26,7 +26,7 @@ Current: Phase 5, step 5.5
 - [x] 5.2 Character and Map selection
 - [x] 5.3 Results screen (wired to applyRunResult) + Progression screen
 - [x] 5.4 HUD additions
-- [ ] 5.5 Save Management screen + save-failure warning + mid-run-forfeit notice
+- [x] 5.5 Save Management screen + save-failure warning + mid-run-forfeit notice
 - [ ] 6.1 `/?debug` tools (absent in production)
 - [ ] 6.2 Full regression + production build
 - [ ] 6.3 Manual test path walkthrough; record results
@@ -81,7 +81,10 @@ Current: Phase 5, step 5.5
   class grid + «Начать забег» used by browser tests), `CampaignPages.tsx` (Character, Maps),
   `campaign-format.ts`, `ResultsScreen.tsx`; `campaignStore` commits resolved runs once
   (`runResultFrom`, `lastResult`), `quitToMenu` (→ `abandon` command), `pagehide` abandon.
-  `CampaignHud.tsx` (map/stage/time left/boss countdown/elite alert/boss HP bar).
+  `CampaignHud.tsx` (map/stage/time left/boss countdown/elite alert/boss HP bar),
+  `SaveManagement.tsx` (Settings → export/import with confirmation/retry; `SaveWarning` banner),
+  `save-messages.ts` (friendly texts); `campaignStore.exportSave/stageImport/confirmImport/
+cancelImport/retrySave`.
   Scene screen `results` (campaign victory/defeat). Browser test `tests/campaign-browser.mjs`
   (part of `npm run test:e2e`). Tests `tests/campaign/` (`npm run test:campaign`).
 - Node 24, `npm ci`. Unit: `npm test` (Vitest + Node prototype tests). Per module: `test:stats`,
@@ -181,6 +184,9 @@ level)`, caps `COMBAT_ATTRIBUTE_CAPS`, `scaleCooldown`/`scaleCircularAoeRadius`)
   Results show «Прогресс сохранён» only when the commit reached storage.
 - 5.4: elite alert 10 s before each elite and 5 s after it spawns; HUD reads the snapshot only.
   Run level/XP relabelled «Уровень забега · опыт забега» (blue), permanent «ур. класса».
+- 5.5: Settings has no pre-existing options in the alpha, so it holds Save Management only.
+  The forfeit notice is on the Play page and in the campaign Pause dialog. CSS class
+  `class-stats` (not `character-stats`, which the prototype stylesheet already uses).
 - Task 07.2 is on the PR #3 branch (`claude/stoic-carson-76vdrx`, `dde421a` + v2 `9e8aa93`), not
   on `main` (PR #3 unmerged). `task-08-campaign` is stacked on that branch; the draft PR targets it
   so its diff shows only Task 08. Retarget to `main` after PR #3 is merged.

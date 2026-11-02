@@ -4,6 +4,7 @@ import { CLASS_LABELS } from '../gameplay';
 import type { GameplaySnapshot } from '../gameplay';
 import { campaignStore } from './campaign-state';
 import { clock } from './campaign-format';
+import { SaveWarning } from './SaveManagement';
 
 /** Results of a finished campaign run. Rewards come from the committed summary only. */
 export function ResultsScreen({ world }: { world: GameplaySnapshot }) {
@@ -68,6 +69,7 @@ export function ResultsScreen({ world }: { world: GameplaySnapshot }) {
                 ? 'Не удалось сохранить прогресс. Он остаётся в этой сессии — попробуйте сохранить в «Настройках».'
                 : 'Сохранение…'}
         </p>
+        <SaveWarning />
         <div className="results-actions">
           <button
             className="button primary"
