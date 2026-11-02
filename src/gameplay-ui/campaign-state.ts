@@ -2,7 +2,9 @@ import type { CharacterClass } from '../character-stats';
 import { getCampaignMap } from '../campaign';
 import { isMapUnlocked } from '../profile';
 import { createProgressionService, createSaveStore, generateRunId } from '../persistence';
-import type { ProgressionService, ProgressionState } from '../persistence';
+import type { CommitResult, ProgressionService, ProgressionState } from '../persistence';
+import type { GameplaySnapshot } from '../gameplay';
+import type { RunResult } from '../profile';
 import { alphaBridge } from './store';
 
 /**
@@ -15,6 +17,30 @@ export interface CampaignUiState {
   readonly page: MenuPage;
   readonly selectedMapId: number;
   readonly progression: ProgressionState;
+  /** Commit result of the latest finished campaign run (results screen). */
+  readonly lastResult: Readonly<{ runId: string; result: RunResult; commit: CommitResult }> | null;
+}
+
+/** World snapshot → profile run result (elapsed capped at the map duration). */
+export function runResultFrom(
+  world: GameplaySnapshot,
+  outcome?: RunResult['outcome'],
+): RunResult | null {
+  const c = world.campaign;
+  if (!c || !c.runId) return null;
+  const status = outcome ?? c.status;
+  if (status === 'active') return null;
+  return Object.freeze({
+    runId: c.runId,
+    mapId: c.mapId,
+    characterClass: world.character.characterClass,
+    outcome: status,
+    elapsed: Math.min(c.resolvedAt ?? world.time, c.duration),
+    kills: world.kills,
+    eliteKills: c.eliteKills,
+    bossKilled: c.bossKilled,
+    runLevel: world.progression.level,
+  });
 }
 
 let service: ProgressionService | null = null;
@@ -29,10 +55,30 @@ function ensure(): CampaignUiState {
       page: 'play',
       selectedMapId: initial.profile?.highestUnlockedMap ?? 1,
       progression: initial,
+      lastResult: null,
     });
     service.subscribe((progression) => update({ progression }));
+    // Commit each resolved campaign run exactly once (also idempotent in applyRunResult).
+    alphaBridge.subscribe(() => {
+      const world = alphaBridge.getSnapshot().world;
+      if (world) commitResolved(world);
+    });
+    // Reload/close during a run abandons it; commit that synchronously before the page goes away.
+    globalThis.addEventListener?.('pagehide', () => {
+      const world = alphaBridge.getSnapshot().world;
+      if (world?.campaign?.status === 'active') commitResolved(world, 'abandoned');
+    });
   }
   return state!;
+}
+const committed = new Set<string>();
+function commitResolved(world: GameplaySnapshot, outcome?: RunResult['outcome']) {
+  const result = runResultFrom(world, outcome);
+  if (!result || committed.has(result.runId) || !service) return;
+  if (!service.getState().profile) return; // load error: nothing may change
+  committed.add(result.runId);
+  const commit = service.commitRun(result, new Date().toISOString());
+  update({ lastResult: Object.freeze({ runId: result.runId, result, commit }) });
 }
 function update(patch: Partial<CampaignUiState>) {
   state = Object.freeze({ ...ensure(), ...patch });
@@ -61,6 +107,16 @@ export const campaignStore = {
   },
   selectClass(characterClass: CharacterClass) {
     campaignStore.service().selectClass(characterClass);
+  },
+  /**
+   * Quit to the menu. An active campaign run is resolved as abandoned (no rewards) first; the
+   * world, not the UI, decides the outcome. Finished runs just return to the menu.
+   */
+  quitToMenu() {
+    const world = alphaBridge.getSnapshot().world;
+    if (world?.campaign?.status === 'active') alphaBridge.send({ type: 'abandon' });
+    update({ page: 'play' });
+    alphaBridge.send({ type: 'menu' });
   },
   /** Starts a campaign run on an unlocked map with the class's permanent level. */
   startRun(mapId = ensure().selectedMapId, characterClass?: CharacterClass): boolean {

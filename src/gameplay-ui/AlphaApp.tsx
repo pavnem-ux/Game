@@ -13,6 +13,7 @@ import { alphaBridge } from './store';
 import { AlphaCanvas } from './AlphaCanvas';
 import { LevelUpDialog, PauseDialog, SkillBar } from './SkillPanels';
 import { CampaignMenu } from './CampaignMenu';
+import { ResultsScreen } from './ResultsScreen';
 import { displayHp } from './format';
 import './alpha.css';
 const DeveloperPanel =
@@ -191,6 +192,7 @@ export function AlphaApp() {
           <LevelUpDialog world={s} onOpenSkills={openSkills} hiddenBehindSkills={skillsOpen} />
         )}
         {state.screen === 'paused' && s && <PauseDialog world={s} />}
+        {state.screen === 'results' && s?.campaign && <ResultsScreen world={s} />}
         {(state.screen === 'revival' || state.screen === 'ended') && (
           <section
             className="overlay modal-overlay"

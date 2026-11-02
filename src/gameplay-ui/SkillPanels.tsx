@@ -16,6 +16,7 @@ import {
 } from '../skills';
 import { useEffect, useRef } from 'react';
 import { alphaBridge } from './store';
+import { campaignStore } from './campaign-state';
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
 /** Force monochrome text presentation so symbols never render as colour emoji. */
@@ -475,9 +476,14 @@ export function PauseDialog({ world }: { world: GameplaySnapshot }) {
             >
               Продолжить →
             </button>
-            <button className="text-button" onClick={() => alphaBridge.send({ type: 'menu' })}>
-              Выбрать класс
+            <button className="text-button" onClick={() => campaignStore.quitToMenu()}>
+              {world.campaign ? 'Выйти в меню · забег не засчитается' : 'Выбрать класс'}
             </button>
+            {world.campaign && (
+              <p className="faint pause-forfeit-note">
+                Сохранения внутри забега нет: выход или перезагрузка страницы — отказ без награды.
+              </p>
+            )}
           </div>
         </div>
         <section className="pause-skills" aria-label="Обзор навыков">

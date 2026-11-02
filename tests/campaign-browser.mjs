@@ -64,9 +64,85 @@ try {
   assert.equal(s.world.character.characterClass, 'archer');
   assert.match(s.world.campaign.runId, /^run-/);
 
+  // 5.3 Win Map 1: protected fast-forward to the boss (same simulation), then defeat it.
+  const command = (action) => page.evaluate((a) => window.__alpha.command(a), action);
+  await command({ type: 'protection', enabled: true });
+  await command({ type: 'spawning', settings: { enabled: false } });
+  const fastForward = async (until) => {
+    for (let i = 0; i < 400 && (await state()).world.time < until; i++) {
+      if ((await state()).screen === 'level-up') await page.locator('.skill-card').first().click();
+      else await page.evaluate(() => window.__alpha.advance(15));
+    }
+  };
+  await fastForward(600);
+  s = await state();
+  assert.equal(s.world.campaign.durationReached, true);
+  assert.ok(s.world.campaign.boss?.alive, 'the boss spawned at 10:00 and is alive');
+  await command({ type: 'clear-enemies' });
+  await page.getByRole('dialog', { name: 'Победа.' }).waitFor();
+  const results = page.getByRole('dialog', { name: 'Победа.' });
+  await page.waitForFunction(() =>
+    document.querySelector('.results-save')?.textContent?.includes('Прогресс сохранён'),
+  );
+  const text = await results.innerText();
+  assert.match(text, /\+150 XP/);
+  assert.match(text, /Золото\s+\+75/);
+  assert.match(text, /1 → 2 \(\+1\)/);
+  assert.match(text, /Очки талантов\s+\+1/);
+  assert.match(text, /Открыта карта 2: Туманные болота/);
+  assert.match(text, /Терновый страж повержен/);
+  await page.screenshot({ path: 'artifacts/campaign-03-victory.png' });
+  const afterWin = await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.profile')));
+  assert.equal(afterWin.gold, 75);
+  assert.equal(afterWin.highestUnlockedMap, 2);
+  assert.equal(afterWin.classes.archer.level, 2);
+  assert.equal(afterWin.stats.wins, 1);
+  await results.getByRole('button', { name: 'В меню' }).click();
+  await nav.waitFor();
+  assert.equal(await page.getByLabel('Золото: 75').count(), 1);
+
+  // Restart browser (reload): progress intact; Map 2 with another class; shared Gold, separate XP.
+  await page.reload();
+  await page.waitForFunction(() => !!window.__alpha);
+  await nav.waitFor();
+  assert.equal(await page.getByLabel('Золото: 75').count(), 1);
+  await nav.getByRole('button', { name: 'Прогресс', exact: true }).click();
+  assert.match(await page.locator('.progression-page').innerText(), /Пройдено карт: 1 \/ 10/);
+  assert.match(await page.locator('.recent-runs').innerText(), /Победа · карта 1/);
+  await page.screenshot({ path: 'artifacts/campaign-04-progression.png', fullPage: true });
+  await nav.getByRole('button', { name: 'Персонаж', exact: true }).click();
+  await page.getByRole('article', { name: /Маг/ }).getByRole('button', { name: 'Выбрать' }).click();
+  await nav.getByRole('button', { name: 'Карты', exact: true }).click();
+  await page.getByRole('button', { name: 'Играть: карта 2', exact: true }).click();
+  await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
+  s = await state();
+  assert.equal(s.world.campaign.mapId, 2);
+  assert.equal(s.world.character.characterClass, 'mage');
+  assert.equal(s.world.character.permanentLevel, 1, 'mage XP is separate from archer XP');
+
+  // Quit mid-run: abandoned, no rewards, recorded once.
+  await page.getByRole('button', { name: 'Пауза', exact: true }).click();
+  await page.getByRole('button', { name: /Выйти в меню · забег не засчитается/ }).click();
+  await nav.waitFor();
+  const afterQuit = await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.profile')));
+  assert.equal(afterQuit.gold, 75);
+  assert.equal(afterQuit.classes.mage.lifetimeXp, 0);
+  assert.equal(afterQuit.recentRuns[0].outcome, 'abandoned');
+  assert.equal(afterQuit.stats.runs, 2);
+
+  // Reload during a run abandons it as well (committed on pagehide).
+  await page.getByRole('button', { name: 'Начать забег' }).click();
+  await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
+  await page.reload();
+  await page.waitForFunction(() => !!window.__alpha);
+  const afterReload = await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.profile')));
+  assert.equal(afterReload.recentRuns[0].outcome, 'abandoned');
+  assert.equal(afterReload.stats.runs, 3);
+  assert.equal(afterReload.gold, 75);
+
   if (errors.length) throw new Error(errors.join('\n'));
   console.log(
-    'PASS campaign: menu/Gold, Character page, Maps page (lock, boss reveal), campaign start.',
+    'PASS campaign: menu/Gold, Character, Maps (lock/boss reveal), Map 1 win → results/rewards/unlock/save, reload keeps progress, Map 2 with another class (separate XP, shared Gold), quit/reload = abandoned without rewards.',
   );
 } finally {
   await browser.close();

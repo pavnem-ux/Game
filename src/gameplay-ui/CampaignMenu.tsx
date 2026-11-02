@@ -7,7 +7,7 @@ import { campaignStore } from './campaign-state';
 import type { MenuPage } from './campaign-state';
 import { displayHp } from './format';
 import { CLASS_SYMBOLS, minutes } from './campaign-format';
-import { CharacterPage, MapsPage } from './CampaignPages';
+import { CharacterPage, MapsPage, ProgressionPage } from './CampaignPages';
 
 const PAGES: readonly { id: MenuPage; label: string }[] = [
   { id: 'play', label: 'Играть' },
@@ -41,7 +41,8 @@ export function CampaignMenu() {
       {ui.page === 'play' && <PlayPage />}
       {ui.page === 'character' && <CharacterPage />}
       {ui.page === 'maps' && <MapsPage />}
-      {(ui.page === 'progression' || ui.page === 'settings') && (
+      {ui.page === 'progression' && <ProgressionPage />}
+      {ui.page === 'settings' && (
         <div className="campaign-page">
           <h2>{PAGES.find((p) => p.id === ui.page)!.label}</h2>
         </div>

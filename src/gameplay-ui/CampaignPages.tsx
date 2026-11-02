@@ -149,3 +149,100 @@ export function MapsPage() {
     </div>
   );
 }
+
+/** Selected class progress, Gold, campaign progress, stats, recent runs, future placeholders. */
+export function ProgressionPage() {
+  const { progression } = useCampaign();
+  const profile = progression.profile;
+  if (!profile) return <p className="campaign-empty">Профиль недоступен.</p>;
+  const cls = profile.selectedClass;
+  const p = profile.classes[cls];
+  const next = xpToNextLevel(p.level);
+  return (
+    <div className="campaign-page progression-page">
+      <h2>Прогресс</h2>
+      <div className="progression-grid">
+        <section className="progression-card" aria-label="Класс">
+          <h3>
+            {CLASS_SYMBOLS[cls]} {CLASS_LABELS[cls]}
+          </h3>
+          <p>
+            Уровень <b>{p.level}</b> / 50 · {next === null ? 'максимум' : `XP ${p.xp} / ${next}`}
+          </p>
+          <div
+            className="campaign-bar"
+            role="progressbar"
+            aria-label="Опыт класса"
+            aria-valuemin={0}
+            aria-valuemax={next ?? 1}
+            aria-valuenow={next === null ? 1 : p.xp}
+          >
+            <div style={{ width: `${next === null ? 100 : (p.xp / next) * 100}%` }} />
+          </div>
+          <p>
+            Очки талантов: <b>{talentPoints(p.level)}</b> · Всего опыта: {p.lifetimeXp}
+          </p>
+          <p>
+            Золото: <b>◎ {profile.gold}</b>
+          </p>
+        </section>
+        <section className="progression-card" aria-label="Кампания">
+          <h3>Кампания</h3>
+          <p>
+            Пройдено карт: <b>{profile.completedMaps.length}</b> / {CAMPAIGN_MAPS.length} · открыта
+            до карты {profile.highestUnlockedMap}
+          </p>
+          <div
+            className="campaign-bar"
+            role="progressbar"
+            aria-label="Прогресс кампании"
+            aria-valuemin={0}
+            aria-valuemax={CAMPAIGN_MAPS.length}
+            aria-valuenow={profile.completedMaps.length}
+          >
+            <div
+              style={{ width: `${(profile.completedMaps.length / CAMPAIGN_MAPS.length) * 100}%` }}
+            />
+          </div>
+          <p>
+            Забегов {profile.stats.runs} · побед {profile.stats.wins} · поражений{' '}
+            {profile.stats.defeats} · повержено {profile.stats.enemiesKilled} · лучшее время{' '}
+            {clock(profile.stats.bestSurvivalTime)}
+          </p>
+        </section>
+        <section className="progression-card coming-soon" aria-label="Скоро">
+          <h3>Таланты · Снаряжение</h3>
+          <p>Скоро. Очки талантов уже копятся с уровнем класса.</p>
+          <button className="button" disabled>
+            Таланты — скоро
+          </button>
+          <button className="button" disabled>
+            Снаряжение — скоро
+          </button>
+        </section>
+      </div>
+      <section className="recent-runs" aria-label="Последние забеги">
+        <h3>Последние забеги</h3>
+        {profile.recentRuns.length === 0 ? (
+          <p>Пока нет забегов.</p>
+        ) : (
+          <ol>
+            {profile.recentRuns.map((r) => (
+              <li key={r.runId} className={`recent-run outcome-${r.outcome}`}>
+                <b>{OUTCOME_LABELS[r.outcome]}</b> · карта {r.mapId} ·{' '}
+                {CLASS_LABELS[r.characterClass]} · {clock(r.elapsed)} · {r.kills} повержено · +
+                {r.xp} XP · +{r.gold} золота
+                {r.unlockedMap ? ` · открыта карта ${r.unlockedMap}` : ''}
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
+    </div>
+  );
+}
+export const OUTCOME_LABELS = {
+  victory: 'Победа',
+  defeat: 'Поражение',
+  abandoned: 'Отказ',
+} as const;

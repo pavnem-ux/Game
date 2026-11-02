@@ -186,6 +186,11 @@ export class AlphaScene extends Phaser.Scene {
         case 'finish':
           this.world?.decide('finish-run');
           break;
+        case 'abandon':
+          // Task 08: quitting a campaign run resolves it as abandoned (no rewards).
+          this.world?.abandonRun();
+          this.clearInput();
+          break;
         case 'choose-skill':
           this.world?.chooseSkill(command.card);
           this.clearInput();
@@ -565,18 +570,21 @@ export class AlphaScene extends Phaser.Scene {
   private publish() {
     const world = this.world?.getSnapshot() ?? null;
     const run = world?.survival.runState;
+    const outcome = world?.campaign?.status;
     const screen = !world
       ? 'menu'
-      : run === 'awaiting-revival-choice'
-        ? 'revival'
-        : run === 'ended'
-          ? 'ended'
-          : world.skills.offer
-            ? 'level-up'
-            : world.paused
-              ? 'paused'
-              : 'playing';
-    if (screen === 'ended' && this.recordedRun !== this.runId) {
+      : outcome === 'victory' || outcome === 'defeat'
+        ? 'results'
+        : run === 'awaiting-revival-choice'
+          ? 'revival'
+          : run === 'ended'
+            ? 'ended'
+            : world.skills.offer
+              ? 'level-up'
+              : world.paused
+                ? 'paused'
+                : 'playing';
+    if (screen === 'ended' && !world?.campaign && this.recordedRun !== this.runId) {
       this.record = saveRun(world!.time, world!.kills).bestSeconds;
       this.recordedRun = this.runId;
     }

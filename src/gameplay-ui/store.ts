@@ -3,11 +3,11 @@ import type { GameplayOptions, GameplaySnapshot, WorldEvent } from '../gameplay'
 import type { QaSnapshot } from '../gameplay/qa';
 export type AlphaCommand =
   | { type: 'start'; options: GameplayOptions }
-  | { type: 'pause' | 'resume' | 'menu' | 'revive' | 'finish' | 'reroll' }
+  | { type: 'pause' | 'resume' | 'menu' | 'revive' | 'finish' | 'reroll' | 'abandon' }
   | { type: 'choose-skill'; card: string }
   | { type: 'testing'; action: unknown };
 export interface AlphaState {
-  readonly screen: 'menu' | 'playing' | 'paused' | 'revival' | 'ended' | 'level-up';
+  readonly screen: 'menu' | 'playing' | 'paused' | 'revival' | 'ended' | 'level-up' | 'results';
   readonly world: GameplaySnapshot | null;
   readonly events: readonly WorldEvent[];
   readonly runId: number;

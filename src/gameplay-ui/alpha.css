@@ -1114,3 +1114,106 @@ p.damage-note {
 .campaign-empty {
   color: #d9b48a;
 }
+/* Task 08 — results and progression. */
+.results-overlay {
+  overflow: auto;
+}
+.results-panel {
+  width: min(560px, 94vw);
+  margin: auto;
+  background: #13211c;
+  border: 1px solid #425443;
+  border-radius: 8px;
+  padding: 26px;
+  color: #d9d0b6;
+  text-align: center;
+}
+.results-panel.is-victory {
+  border-color: #c3e3b6;
+}
+.results-panel.is-defeat {
+  border-color: #b97a6a;
+}
+.results-panel h2 {
+  font-size: 40px;
+  font-weight: 500;
+  margin: 10px 0 18px;
+}
+.results-grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 16px;
+  text-align: left;
+  font-size: 14px;
+}
+.results-grid dd {
+  margin: 0;
+  color: #f1eddb;
+  text-align: right;
+}
+.results-unlock {
+  color: #f2d27a;
+  font-weight: 600;
+}
+.results-note {
+  color: #b9ad8c;
+  font-size: 13px;
+}
+.results-save {
+  font-size: 13px;
+  margin-top: 14px;
+}
+.results-save.save-unsaved,
+.results-save.save-not-persisted,
+.results-save.save-error {
+  color: #ffb199;
+}
+.results-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+}
+.progression-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+.progression-card,
+.recent-runs {
+  background: #1a2a23d9;
+  border: 1px solid #425443;
+  border-radius: 6px;
+  padding: 14px;
+  color: #b6c4b5;
+  font-size: 13px;
+}
+.progression-card h3,
+.recent-runs h3 {
+  margin: 0 0 8px;
+  color: #f1eddb;
+  font-weight: 500;
+}
+.coming-soon .button {
+  width: 100%;
+  margin-top: 6px;
+}
+.recent-runs {
+  margin-top: 12px;
+}
+.recent-runs ol {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+}
+.recent-run.outcome-victory b {
+  color: #c3e3b6;
+}
+.recent-run.outcome-defeat b {
+  color: #e7a08d;
+}
+.pause-forfeit-note {
+  font-size: 12px;
+  margin-top: 6px;
+}

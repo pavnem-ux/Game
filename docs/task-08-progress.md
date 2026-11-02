@@ -1,7 +1,7 @@
 # Task 08 progress
 
 Branch: task-08-campaign | PR: https://github.com/pavnem-ux/Game/pull/4 (draft)
-Current: Phase 5, step 5.3
+Current: Phase 5, step 5.4
 
 ## Steps
 
@@ -24,7 +24,7 @@ Current: Phase 5, step 5.3
 - [x] 4.4 Export/import logic
 - [x] 5.1 Main menu + navigation + Gold
 - [x] 5.2 Character and Map selection
-- [ ] 5.3 Results screen (wired to applyRunResult) + Progression screen
+- [x] 5.3 Results screen (wired to applyRunResult) + Progression screen
 - [ ] 5.4 HUD additions
 - [ ] 5.5 Save Management screen + save-failure warning + mid-run-forfeit notice
 - [ ] 6.1 `/?debug` tools (absent in production)
@@ -79,7 +79,10 @@ Current: Phase 5, step 5.3
   singleton, menu page, selected map, `startRun` → `start` command with `campaign {mapId, runId}`
   and the class's permanent level), `CampaignMenu.tsx` (nav + Gold + pages; Play keeps the
   class grid + «Начать забег» used by browser tests), `CampaignPages.tsx` (Character, Maps),
-  `campaign-format.ts`. Browser test `tests/campaign-browser.mjs` (part of `npm run test:e2e`). Tests `tests/campaign/` (`npm run test:campaign`).
+  `campaign-format.ts`, `ResultsScreen.tsx`; `campaignStore` commits resolved runs once
+  (`runResultFrom`, `lastResult`), `quitToMenu` (→ `abandon` command), `pagehide` abandon.
+  Scene screen `results` (campaign victory/defeat). Browser test `tests/campaign-browser.mjs`
+  (part of `npm run test:e2e`). Tests `tests/campaign/` (`npm run test:campaign`).
 - Node 24, `npm ci`. Unit: `npm test` (Vitest + Node prototype tests). Per module: `test:stats`,
   `test:combat`, `test:weapons`, `test:status`, `test:enemies`, `test:survival`, `test:alpha`
   (tests/gameplay), `test:skills`. Typecheck `npm run typecheck`; format `npm run format:check`
@@ -172,6 +175,9 @@ level)`, caps `COMBAT_ATTRIBUTE_CAPS`, `scaleCooldown`/`scaleCircularAoeRadius`)
 - 5.1: the menu now always starts campaign runs (map 1 by default); the DEV-only start-level
   input was removed (Phase 6 adds a set-class-level debug tool). Non-campaign runs remain
   available through DEV/QA restart commands.
+- 5.3: results are committed by the campaign UI state module (not components), once per runId;
+  reload/close during a run commits an abandoned result on `pagehide` (sync localStorage).
+  Results show «Прогресс сохранён» only when the commit reached storage.
 - Task 07.2 is on the PR #3 branch (`claude/stoic-carson-76vdrx`, `dde421a` + v2 `9e8aa93`), not
   on `main` (PR #3 unmerged). `task-08-campaign` is stacked on that branch; the draft PR targets it
   so its diff shows only Task 08. Retarget to `main` after PR #3 is merged.
