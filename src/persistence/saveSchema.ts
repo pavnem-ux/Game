@@ -1,0 +1,245 @@
+import { CHARACTER_CLASSES } from '../character-stats';
+import type { CharacterClass } from '../character-stats';
+import { CAMPAIGN_MAPS } from '../campaign';
+import {
+  MAX_CLASS_LEVEL,
+  MAX_PROCESSED_RUN_IDS,
+  MAX_RECENT_RUNS,
+  NEW_CLASS_PROGRESS,
+  PROFILE_SCHEMA_VERSION,
+  talentPoints,
+  xpToNextLevel,
+} from '../profile';
+import type { ClassProgress, MapBest, PlayerProfile, RecentRun } from '../profile';
+
+/**
+ * Task 08 `saveSchema`: validation, defaults and migrations for the persisted profile.
+ * - `migrations` is keyed by the version a migration upgrades FROM (empty: v1 is current).
+ * - Missing fields added in later versions get defaults; a profile is never reset because a field
+ *   was added. Unknown fields are dropped (imported data is data only).
+ * - Anything structurally wrong, out of range or from a newer version is rejected, never "fixed".
+ */
+export const SAVE_SCHEMA_VERSION = PROFILE_SCHEMA_VERSION;
+type Json = Record<string, unknown>;
+export type Migration = (data: Json) => Json;
+export const migrations: Readonly<Record<number, Migration>> = Object.freeze({});
+
+export type SaveErrorCode =
+  | 'malformed-json'
+  | 'not-an-object'
+  | 'newer-version'
+  | 'unsupported-version'
+  | 'invalid';
+export class SaveDataError extends Error {
+  constructor(
+    readonly code: SaveErrorCode,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'SaveDataError';
+  }
+}
+export type ParseResult =
+  | { readonly ok: true; readonly profile: PlayerProfile; readonly migratedFrom: number | null }
+  | { readonly ok: false; readonly error: SaveDataError };
+
+const MAP_COUNT = CAMPAIGN_MAPS.length;
+const isObject = (v: unknown): v is Json => !!v && typeof v === 'object' && !Array.isArray(v);
+const invalid = (what: string): never => {
+  throw new SaveDataError('invalid', `Invalid save field: ${what}.`);
+};
+function int(v: unknown, what: string, min = 0, max = Number.MAX_SAFE_INTEGER): number {
+  if (!Number.isSafeInteger(v) || (v as number) < min || (v as number) > max) invalid(what);
+  return v as number;
+}
+function num(v: unknown, what: string, min = 0, max = 1e9): number {
+  if (typeof v !== 'number' || !Number.isFinite(v) || v < min || v > max) invalid(what);
+  return v as number;
+}
+function str(v: unknown, what: string, max = 200): string {
+  if (typeof v !== 'string' || !v.trim() || v.length > max) invalid(what);
+  return v as string;
+}
+function iso(v: unknown, what: string): string {
+  const s = str(v, what, 64);
+  if (Number.isNaN(Date.parse(s))) invalid(what);
+  return s;
+}
+const cls = (v: unknown, what: string): CharacterClass =>
+  CHARACTER_CLASSES.includes(v as CharacterClass) ? (v as CharacterClass) : invalid(what);
+const mapId = (v: unknown, what: string) => int(v, what, 1, MAP_COUNT);
+const or = <T>(v: unknown, fallback: T): unknown => (v === undefined ? fallback : v);
+
+function classProgress(raw: unknown, c: string): ClassProgress {
+  const v = isObject(raw) ? raw : raw === undefined ? {} : invalid(`classes.${c}`);
+  const level = int(
+    or(v.level, NEW_CLASS_PROGRESS.level),
+    `classes.${c}.level`,
+    1,
+    MAX_CLASS_LEVEL,
+  );
+  const cost = xpToNextLevel(level);
+  const xp = int(or(v.xp, 0), `classes.${c}.xp`, 0, cost === null ? 0 : cost - 1);
+  return Object.freeze({
+    xp,
+    level,
+    lifetimeXp: int(or(v.lifetimeXp, 0), `classes.${c}.lifetimeXp`),
+    talentsSpent: int(or(v.talentsSpent, 0), `classes.${c}.talentsSpent`, 0, talentPoints(level)),
+  });
+}
+function mapBest(raw: unknown, key: string): MapBest {
+  if (!isObject(raw)) invalid(`bestResults.${key}`);
+  const v = raw as Json;
+  const clear = or(v.bestClearTime, null);
+  return Object.freeze({
+    victories: int(or(v.victories, 0), `bestResults.${key}.victories`),
+    bestClearTime: clear === null ? null : num(clear, `bestResults.${key}.bestClearTime`),
+    bestSurvivalTime: num(or(v.bestSurvivalTime, 0), `bestResults.${key}.bestSurvivalTime`),
+    bestKills: int(or(v.bestKills, 0), `bestResults.${key}.bestKills`),
+  });
+}
+function recentRun(raw: unknown, i: number): RecentRun {
+  if (!isObject(raw)) invalid(`recentRuns[${i}]`);
+  const v = raw as Json,
+    p = `recentRuns[${i}]`;
+  const outcome = v.outcome;
+  if (outcome !== 'victory' && outcome !== 'defeat' && outcome !== 'abandoned')
+    invalid(`${p}.outcome`);
+  const levelBefore = int(v.levelBefore, `${p}.levelBefore`, 1, MAX_CLASS_LEVEL);
+  const levelAfter = int(v.levelAfter, `${p}.levelAfter`, levelBefore, MAX_CLASS_LEVEL);
+  const unlocked = or(v.unlockedMap, null);
+  const finishedAt = or(v.finishedAt, null);
+  return Object.freeze({
+    runId: str(v.runId, `${p}.runId`, 100),
+    mapId: mapId(v.mapId, `${p}.mapId`),
+    characterClass: cls(v.characterClass, `${p}.characterClass`),
+    outcome: outcome as RecentRun['outcome'],
+    elapsed: num(v.elapsed, `${p}.elapsed`),
+    kills: int(v.kills, `${p}.kills`),
+    eliteKills: int(or(v.eliteKills, 0), `${p}.eliteKills`),
+    bossKilled: typeof v.bossKilled === 'boolean' ? v.bossKilled : invalid(`${p}.bossKilled`),
+    xp: int(v.xp, `${p}.xp`),
+    gold: int(v.gold, `${p}.gold`),
+    levelBefore,
+    levelAfter,
+    levelsGained: int(or(v.levelsGained, levelAfter - levelBefore), `${p}.levelsGained`),
+    unlockedMap: unlocked === null ? null : mapId(unlocked, `${p}.unlockedMap`),
+    finishedAt: finishedAt === null ? null : iso(finishedAt, `${p}.finishedAt`),
+  });
+}
+
+/** Validates current-version data, filling defaults for missing fields. Throws SaveDataError. */
+export function normalizeProfile(data: Json, version = SAVE_SCHEMA_VERSION): PlayerProfile {
+  if (data.schemaVersion !== version) invalid('schemaVersion');
+  const classesRaw = or(data.classes, {});
+  if (!isObject(classesRaw)) invalid('classes');
+  const classes = Object.freeze(
+    Object.fromEntries(
+      CHARACTER_CLASSES.map((c) => [c, classProgress((classesRaw as Json)[c], c)]),
+    ) as Record<CharacterClass, ClassProgress>,
+  );
+  const highestUnlockedMap = mapId(or(data.highestUnlockedMap, 1), 'highestUnlockedMap');
+  const completedRaw = or(data.completedMaps, []);
+  if (!Array.isArray(completedRaw)) invalid('completedMaps');
+  const completedMaps = [
+    ...new Set((completedRaw as unknown[]).map((m, i) => mapId(m, `completedMaps[${i}]`))),
+  ].sort((a, b) => a - b);
+  // A completed map always unlocks the next one: the data must be consistent.
+  for (const m of completedMaps)
+    if (m > highestUnlockedMap || Math.min(MAP_COUNT, m + 1) > highestUnlockedMap)
+      invalid('completedMaps/highestUnlockedMap');
+  const bestRaw = or(data.bestResults, {});
+  if (!isObject(bestRaw)) invalid('bestResults');
+  const bestResults: Record<string, MapBest> = {};
+  for (const [key, value] of Object.entries(bestRaw as Json)) {
+    if (String(mapId(Number(key), `bestResults.${key}`)) !== key) invalid(`bestResults.${key}`);
+    bestResults[key] = mapBest(value, key);
+  }
+  const statsRaw = or(data.stats, {});
+  if (!isObject(statsRaw)) invalid('stats');
+  const st = statsRaw as Json;
+  const recentRaw = or(data.recentRuns, []);
+  if (!Array.isArray(recentRaw) || recentRaw.length > MAX_RECENT_RUNS) invalid('recentRuns');
+  const idsRaw = or(data.processedRunIds, []);
+  if (!Array.isArray(idsRaw) || idsRaw.length > MAX_PROCESSED_RUN_IDS) invalid('processedRunIds');
+  const processedRunIds = (idsRaw as unknown[]).map((id, i) =>
+    str(id, `processedRunIds[${i}]`, 100),
+  );
+  if (new Set(processedRunIds).size !== processedRunIds.length)
+    invalid('processedRunIds (duplicates)');
+  const lastSavedAt = or(data.lastSavedAt, null);
+  return Object.freeze({
+    schemaVersion: version,
+    profileId: str(data.profileId, 'profileId', 100),
+    createdAt: iso(data.createdAt, 'createdAt'),
+    lastSavedAt: lastSavedAt === null ? null : iso(lastSavedAt, 'lastSavedAt'),
+    selectedClass: cls(or(data.selectedClass, 'warrior'), 'selectedClass'),
+    classes,
+    gold: int(or(data.gold, 0), 'gold'),
+    highestUnlockedMap,
+    completedMaps: Object.freeze(completedMaps),
+    bestResults: Object.freeze(bestResults),
+    stats: Object.freeze({
+      runs: int(or(st.runs, 0), 'stats.runs'),
+      wins: int(or(st.wins, 0), 'stats.wins'),
+      defeats: int(or(st.defeats, 0), 'stats.defeats'),
+      enemiesKilled: int(or(st.enemiesKilled, 0), 'stats.enemiesKilled'),
+      bestSurvivalTime: num(or(st.bestSurvivalTime, 0), 'stats.bestSurvivalTime'),
+    }),
+    recentRuns: Object.freeze((recentRaw as unknown[]).map(recentRun)),
+    processedRunIds: Object.freeze(processedRunIds),
+  });
+}
+
+/** Parse → version check → migrate → normalize/validate. Never throws; never mutates input. */
+export interface ParseOptions {
+  /** Test seam: migration table and target version (defaults: the shipped schema). */
+  readonly migrations?: Readonly<Record<number, Migration>>;
+  readonly targetVersion?: number;
+}
+export function parseProfile(raw: unknown, options: ParseOptions = {}): ParseResult {
+  const table = options.migrations ?? migrations;
+  const target = options.targetVersion ?? SAVE_SCHEMA_VERSION;
+  try {
+    if (!isObject(raw)) throw new SaveDataError('not-an-object', 'Save data is not an object.');
+    let data: Json = structuredClone(raw);
+    const version = data.schemaVersion;
+    if (!Number.isSafeInteger(version) || (version as number) < 1)
+      throw new SaveDataError('invalid', 'Save data has no valid schemaVersion.');
+    if ((version as number) > target)
+      throw new SaveDataError(
+        'newer-version',
+        `Save was made by a newer version (v${version}; this game supports v${target}).`,
+      );
+    const from = version as number;
+    for (let v = from; v < target; v++) {
+      const step = table[v];
+      if (!step) throw new SaveDataError('unsupported-version', `No migration from v${v}.`);
+      data = { ...step(data), schemaVersion: v + 1 };
+    }
+    return Object.freeze({
+      ok: true,
+      profile: normalizeProfile(data, target),
+      migratedFrom: from < target ? from : null,
+    });
+  } catch (error) {
+    if (error instanceof SaveDataError) return Object.freeze({ ok: false, error });
+    return Object.freeze({
+      ok: false,
+      error: new SaveDataError('invalid', 'Save data could not be read.'),
+    });
+  }
+}
+/** JSON text → profile. Never throws. */
+export function parseProfileJson(text: string, options: ParseOptions = {}): ParseResult {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text);
+  } catch {
+    return Object.freeze({
+      ok: false,
+      error: new SaveDataError('malformed-json', 'Save file is not valid JSON.'),
+    });
+  }
+  return parseProfile(raw, options);
+}
