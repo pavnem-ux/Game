@@ -1242,7 +1242,11 @@ export class GameplayWorld {
   private forwardCombat(events: readonly CombatEvent[]) {
     this.record('combat', events);
     for (const event of events)
-      if (
+      if (event.type === 'damage' && event.targetId === this.playerId) {
+        // Task 09.1: real direct damage taken (after mitigation/barrier), e.g. Mage Protective Seal.
+        if (event.appliedDamage > 0 && this.skills)
+          this.skills.onPlayerDirectDamage(event.sourceId);
+      } else if (
         event.type === 'death' &&
         event.entityId !== this.playerId &&
         this.enemyIds.has(event.entityId)

@@ -106,6 +106,57 @@ export const TALENT_RANK_EFFECTS: Readonly<Record<string, RankEffects>> = Object
     2: same({ coefficient: 2, radius: 100, cooldown: 8, stacks: 10 }),
     3: same({ coefficient: 2.6, radius: 130, cooldown: 8, stacks: 10 }),
   },
+  // ── Mage · Повелитель стихий / Арканист (Phase 4; C2) ──
+  'mage.b1.n01': {
+    1: same({ bonus: 5 }),
+    2: same({ bonus: 9, area: 4 }),
+    3: same({ bonus: 14, area: 8 }),
+  },
+  'mage.b1.n02': {
+    1: same({ burnDamage: 8 }),
+    2: same({ burnDamage: 15, burnDuration: 10 }),
+    3: same({ burnDamage: 24, burnDuration: 15 }),
+  },
+  'mage.b1.n03': {
+    1: same({ bonus: 6 }),
+    2: same({ bonus: 10, slow: 3 }),
+    3: same({ bonus: 16, slow: 5 }),
+  },
+  'mage.b1.n04': {
+    1: same({ thermalShock: 10 }),
+    2: same({ thermalShock: 10, shatteredIce: 12 }),
+    3: same({ thermalShock: 20, shatteredIce: 22 }),
+  },
+  'mage.b1.n05': {
+    1: same({ radius: 10 }),
+    2: same({ radius: 20, neighbours: 1, maxNeighbours: 4 }),
+    3: same({ radius: 30, neighbours: 2, maxNeighbours: 5 }),
+  },
+  'mage.b2.n01': {
+    1: [st('cooldownReduction', 3)],
+    2: [st('cooldownReduction', 5), st('magicalDamagePercent', 3)],
+    3: [st('cooldownReduction', 8), st('magicalDamagePercent', 5)],
+  },
+  'mage.b2.n02': {
+    1: same({ critChance: 3 }),
+    2: same({ critChance: 5, critDamage: 10 }),
+    3: same({ critChance: 8, critDamage: 20 }),
+  },
+  'mage.b2.n03': {
+    1: same({ barrier: 10, duration: 3, cooldown: 20 }),
+    2: same({ barrier: 15, duration: 3, cooldown: 18 }),
+    3: same({ barrier: 20, duration: 4, cooldown: 15 }),
+  },
+  'mage.b2.n04': {
+    1: same({ bonus: 6, hpAbove: 70 }),
+    2: same({ bonus: 10, hpAbove: 70, cdr: 3 }),
+    3: same({ bonus: 15, hpAbove: 70, cdr: 5 }),
+  },
+  'mage.b2.n05': {
+    1: same({ reduce: 0.1, icd: 1 }),
+    2: same({ reduce: 0.2, icd: 1 }),
+    3: same({ reduce: 0.3, icd: 0.8 }),
+  },
 });
 /** Ranks blocked by an engine conflict: node → ranks (reason in `docs/talents-gaps.md`). */
 export const TALENT_BLOCKED: Readonly<Record<string, readonly (1 | 2 | 3)[]>> = Object.freeze({

@@ -235,6 +235,37 @@ export class SkillEngine {
   facing(): Point {
     return this.host.facing();
   }
+  get playerId(): string {
+    return this.host.playerId;
+  }
+  controlState(id: string): { readonly slowed: boolean; readonly stunned: boolean } {
+    const pre = this.preHit(id);
+    return { slowed: pre.slowed, stunned: pre.stunned };
+  }
+  /** Task 09.1: shortens an owned automatic skill's remaining cooldown (not below ready now). */
+  reduceSkillCooldown(skillId: string, seconds: number): void {
+    const state = this.autos.get(skillId);
+    if (!state || !(seconds > 0) || state.readyAt <= this.clock) return;
+    state.readyAt = Math.max(this.clock, state.readyAt - seconds);
+  }
+  /**
+   * Task 09.1 C2: the one barrier slot shared by the bonus Barrier and talent barriers. A stronger
+   * (or equal) new barrier replaces strength and expiry; a weaker one never lowers the active
+   * barrier's HP and only extends its expiry to max(existing, new).
+   */
+  grantBarrier(amount: number, duration: number): void {
+    const current = this.barrierUntil === null ? 0 : this.host.core.getBarrier(this.host.playerId);
+    const until = this.clock + duration;
+    if (current > amount) this.barrierUntil = Math.max(this.barrierUntil!, until);
+    else {
+      this.host.core.setBarrier(this.host.playerId, amount);
+      this.barrierUntil = until;
+    }
+  }
+  /** Task 09.1: the player took real direct damage (world forwards Core damage events). */
+  onPlayerDirectDamage(attackerId: string): void {
+    this.talentCombat.onPlayerDirectDamage(attackerId);
+  }
   /** Task 09.1: a dodge by the player (enemy direct attack missed). */
   onPlayerDodged(attackerId: string): void {
     this.talentCombat.onPlayerDodged(attackerId);
@@ -310,9 +341,8 @@ export class SkillEngine {
       this.host.forwardCombat(healed.events);
     } else if (bonusId === 'barrier') {
       amount = (player.maxHp * BONUS_TUNING.barrierMaxHpPercent) / 100;
-      // A new barrier replaces the old one; it never stacks without limit.
-      this.host.core.setBarrier(this.host.playerId, amount);
-      this.barrierUntil = this.clock + BONUS_TUNING.barrierDuration;
+      // One shared slot (Task 09.1 C2): never stacks; a weaker barrier only extends the expiry.
+      this.grantBarrier(amount, BONUS_TUNING.barrierDuration);
     } else {
       amount = BONUS_TUNING.gold;
       this.run.addGold(amount);
@@ -370,10 +400,16 @@ export class SkillEngine {
     const dagger =
       (origin?.basic && BASIC_TAGS[this.host.characterClass].includes('dagger')) ||
       (!!skillId && getSkill(skillId).tags.includes('dagger'));
-    const factor = this.talentCombat.dotFactor(base.effectType, { dagger });
-    return factor === 1
+    const origin2 = { dagger, skillId };
+    const factor = this.talentCombat.dotFactor(base.effectType, origin2);
+    const duration = this.talentCombat.dotDuration(base.effectType, origin2);
+    return factor === 1 && duration === 1
       ? base
-      : Object.freeze({ ...base, rawDamagePerTick: base.rawDamagePerTick * factor });
+      : Object.freeze({
+          ...base,
+          rawDamagePerTick: base.rawDamagePerTick * factor,
+          duration: base.duration * duration,
+        });
   }
   private readonly rankOf = (skillId: string) => this.rank(skillId);
   /** Target multiplier for every player hit: marks, focus bonus and per-enemy hit limits. Pure. */
@@ -530,7 +566,15 @@ export class SkillEngine {
     return d > 1e-9 ? { x: dx / d, y: dy / d } : this.host.facing();
   }
   area(radius: number): number {
-    return scaleCircularAoeRadius(radius, this.stats.areaSize);
+    // Task 09.1: a talent radius bonus for the executing skill's AoE (never synergy/talent areas).
+    const tags = this.sourceSkillTags();
+    const factor = tags ? this.talentCombat.skillAreaFactor(tags) : 1;
+    return scaleCircularAoeRadius(radius * factor, this.stats.areaSize);
+  }
+  /** Tags of the skill whose code is executing (null outside a skill). */
+  private sourceSkillTags(): ReadonlySet<CombatTag> | null {
+    if (!this.source?.startsWith('skill:')) return null;
+    return new Set(getSkill(this.source.slice(6)).tags);
   }
 
   // ───────────────────────────── attacks and hits ─────────────────────────────
@@ -712,6 +756,14 @@ export class SkillEngine {
   }
   private afterHit(hit: HitInfo) {
     const killed = hit.result.events.some((e) => e.type === 'death' && e.entityId === hit.targetId);
+    // Task 09.1: a critical direct hit of an executing skill (e.g. Mage Arcane Supremacy).
+    if (
+      hit.result.status === 'hit' &&
+      hit.attack.critical &&
+      hit.procs &&
+      this.source?.startsWith('skill:')
+    )
+      this.talentCombat.onSkillCrit(this.source.slice(6), hit.tags);
     // Secondary hits and synergy procs never re-enter passive reactions or synergies.
     if (hit.result.status === 'hit' && hit.procs) {
       for (const id of this.run.ownedIds()) {
@@ -820,8 +872,10 @@ export class SkillEngine {
   }
   slow(targetId: string, strength: number, duration: number): void {
     if (!this.host.core.getEntity(targetId).alive || duration <= 0 || strength <= 0) return;
+    const tags = this.sourceSkillTags();
     const bonus =
-      this.rank('elemental_mastery') > 0 ? this.params('elemental_mastery').slowBonus : 0;
+      (this.rank('elemental_mastery') > 0 ? this.params('elemental_mastery').slowBonus : 0) +
+      (tags ? this.talentCombat.slowBonus(tags) : 0);
     const limits = this.host.controlLimits?.(targetId) ?? null;
     const cap = limits ? Math.min(CONTROL_RULES.maxSlow, limits.maxSlow) : CONTROL_RULES.maxSlow;
     const s = Math.min(cap, strength + bonus);
@@ -1097,7 +1151,7 @@ export class SkillEngine {
     const before = this.clock;
     if (!behavior?.activate) throw new Error(`No behavior for ${skillId}.`);
     state.activationCount++;
-    state.readyAt = before + scaleCooldown(p.cooldown, this.stats.cooldownReduction);
+    state.readyAt = before + scaleCooldown(p.cooldown, this.cooldownReduction());
     this.host.recordSkill([
       Object.freeze({
         type: 'skill-activated',
@@ -1109,6 +1163,16 @@ export class SkillEngine {
     this.withSource(`skill:${skillId}`, () =>
       behavior.activate!(this, p, `${skillId}#${state.activationCount}`),
     );
+  }
+  /** CDR for a cooldown starting now: conditional talent CDR is composed with the stats (caps once). */
+  private cooldownReduction(): number {
+    const bonus = this.talentCombat.cooldownReductionBonus();
+    if (!bonus) return this.stats.cooldownReduction;
+    const m = this.modifiers();
+    return composeRunStats(this.host.primary, {
+      ...m,
+      cooldownReduction: m.cooldownReduction + bonus,
+    }).cooldownReduction;
   }
   private expireControl(id: string) {
     const c = this.controls.get(id)!;

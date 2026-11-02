@@ -50,6 +50,13 @@ export interface TalentEngine {
     originId?: string,
   ): number;
   enemyPosition(id: string): Point2 | null;
+  /** Control state of an enemy right now (Slow/Stun as the Skill Engine tracks them). */
+  controlState(id: string): { readonly slowed: boolean; readonly stunned: boolean };
+  readonly playerId: string;
+  /** Shortens the remaining cooldown of an owned automatic skill (never below «ready now»). */
+  reduceSkillCooldown(skillId: string, seconds: number): void;
+  /** Grants a barrier through the single shared barrier slot (C2 rules). */
+  grantBarrier(amount: number, duration: number): void;
   playerPosition(): Point2;
   facing(): Point2;
   currentSource(): string | null;
@@ -61,6 +68,10 @@ export interface DirectHitContext {
   readonly attack: AttackSnapshot;
   readonly tags: ReadonlySet<CombatTag>;
   readonly dagger: boolean;
+  /** Target slowed at the moment of the hit. */
+  readonly slowed: boolean;
+  /** Player HP at the moment of the hit. */
+  readonly player: { readonly currentHp: number; readonly maxHp: number };
   readonly statuses: DotReader;
   params(nodeId: string): Params;
 }
@@ -76,8 +87,26 @@ export interface TalentClassHandlers {
   critChance?(tags: ReadonlySet<CombatTag>, params: (id: string) => Params): number;
   /** Multiplier on a player DoT application's damage per tick. */
   dotFactor?(effectType: EffectType, origin: DotOrigin, params: (id: string) => Params): number;
+  /** Multiplier on a player DoT application's group duration. */
+  dotDuration?(effectType: EffectType, origin: DotOrigin, params: (id: string) => Params): number;
   /** Synergy proc damage multiplier (only where a node names the synergy). */
   synergyFactor?(synergyId: string, params: (id: string) => Params): number;
+  /** Status-spread synergy geometry (radius bonus, neighbour count) where a node names it. */
+  synergySpread?(
+    synergyId: string,
+    base: Readonly<{ radius: number; maxTargets: number }>,
+    params: (id: string) => Params,
+  ): Readonly<{ radius: number; maxTargets: number }>;
+  /** Radius multiplier for the AoE of a skill with these tags. */
+  skillAreaFactor?(tags: ReadonlySet<CombatTag>, params: (id: string) => Params): number;
+  /** Slow fraction added to a Slow applied by a skill with these tags (before the cap). */
+  slowBonus?(tags: ReadonlySet<CombatTag>, params: (id: string) => Params): number;
+  /** Extra CDR points at the moment an automatic skill starts its cooldown (before caps). */
+  cooldownReductionBonus?(engine: TalentEngine): number;
+  /** A direct hit of a skill landed as a critical hit. */
+  onSkillCrit?(engine: TalentEngine, skillId: string, tags: ReadonlySet<CombatTag>): void;
+  /** The player took real direct damage (after mitigation and barrier absorption). */
+  onPlayerDirectDamage?(engine: TalentEngine, attackerId: string): void;
   onPlayerDodged?(engine: TalentEngine, attackerId: string): void;
   /** A player basic-weapon hit landed on a living enemy. */
   onBasicHit?(engine: TalentEngine, targetId: string): void;
@@ -89,7 +118,11 @@ export interface TalentClassHandlers {
 export interface DotOrigin {
   /** Applied by a dagger (Rogue basic weapon or a `dagger` skill). */
   readonly dagger: boolean;
+  /** The skill whose code applied it (null = basic weapon, synergy, talent or other). */
+  readonly skillId?: string | null;
 }
+const SECONDARY: readonly CombatTag[] = ['talent', 'secondary', 'synergy'];
+const isSecondary = (tags: ReadonlySet<CombatTag>) => SECONDARY.some((t) => tags.has(t));
 
 export class TalentCombat {
   constructor(
@@ -104,7 +137,7 @@ export class TalentCombat {
     const source = this.engine.currentSource();
     if (source?.startsWith('synergy:') && this.handlers.synergyFactor)
       return this.handlers.synergyFactor(source.slice('synergy:'.length), this.params);
-    if (tags.has('talent') || tags.has('secondary') || tags.has('synergy')) return 1;
+    if (isSecondary(tags)) return 1;
     if (!this.handlers.direct) return 1;
     const bonus = this.handlers.direct({
       targetId,
@@ -112,6 +145,8 @@ export class TalentCombat {
       attack,
       tags,
       dagger: tags.has('dagger'),
+      slowed: this.engine.controlState(targetId).slowed,
+      player: this.engine.entity(this.engine.playerId),
       statuses: this.engine.statuses,
       params: this.params,
     });
@@ -127,6 +162,32 @@ export class TalentCombat {
   }
   dotFactor(effectType: EffectType, origin: DotOrigin): number {
     return this.handlers.dotFactor?.(effectType, origin, this.params) ?? 1;
+  }
+  dotDuration(effectType: EffectType, origin: DotOrigin): number {
+    return this.handlers.dotDuration?.(effectType, origin, this.params) ?? 1;
+  }
+  synergySpread(
+    synergyId: string,
+    base: Readonly<{ radius: number; maxTargets: number }>,
+  ): Readonly<{ radius: number; maxTargets: number }> {
+    return this.handlers.synergySpread?.(synergyId, base, this.params) ?? base;
+  }
+  skillAreaFactor(tags: ReadonlySet<CombatTag>): number {
+    return this.handlers.skillAreaFactor?.(tags, this.params) ?? 1;
+  }
+  slowBonus(tags: ReadonlySet<CombatTag>): number {
+    return this.handlers.slowBonus?.(tags, this.params) ?? 0;
+  }
+  cooldownReductionBonus(): number {
+    return this.handlers.cooldownReductionBonus?.(this.engine) ?? 0;
+  }
+  onSkillCrit(skillId: string, tags: ReadonlySet<CombatTag>): void {
+    if (this.engine.talents.inProc || isSecondary(tags)) return;
+    this.handlers.onSkillCrit?.(this.engine, skillId, tags);
+  }
+  onPlayerDirectDamage(attackerId: string): void {
+    if (this.engine.talents.inProc || !this.engine.entity(this.engine.playerId).alive) return;
+    this.handlers.onPlayerDirectDamage?.(this.engine, attackerId);
   }
   onPlayerDodged(attackerId: string): void {
     if (this.engine.talents.inProc) return;
