@@ -1,7 +1,7 @@
 # Task 08 progress
 
 Branch: task-08-campaign | PR: https://github.com/pavnem-ux/Game/pull/4 (draft)
-Current: Phase 6, step 6.4 (6.3 done)
+Current: Phase 6 done — waiting for Codex review and owner approval (do not merge)
 
 ## Steps
 
@@ -30,7 +30,7 @@ Current: Phase 6, step 6.4 (6.3 done)
 - [x] 6.1 `/?debug` tools (absent in production)
 - [x] 6.2 Full regression + production build
 - [x] 6.3 Manual test path walkthrough; record results
-- [ ] 6.4 PR description; mark PR ready (don't merge)
+- [x] 6.4 PR description; mark PR ready (don't merge)
 
 ## Code map
 
