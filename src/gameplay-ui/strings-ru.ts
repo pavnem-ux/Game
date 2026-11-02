@@ -10,6 +10,11 @@ import { SKILL_CATALOG, SYNERGY_RULES } from '../skills';
 export const RU = Object.freeze({
   build: Object.freeze({ label: 'Версия сборки' }),
   seed: Object.freeze({ label: 'Сид забега' }),
+  settings: Object.freeze({
+    title: 'Игра',
+    screenShake: 'Тряска экрана',
+    screenShakeHint: 'Лёгкая тряска при получении урона и тяжёлых атаках босса.',
+  }),
   report: Object.freeze({
     button: 'Сообщить о проблеме',
     done: (file: string) => `Отчёт сохранён: ${file}. Отправьте этот файл разработчику.`,

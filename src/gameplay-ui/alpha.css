@@ -1589,3 +1589,21 @@ p.damage-note {
 .results-seed code {
   color: #d9d0b6;
 }
+
+/* Task 08.5 §5.3 gameplay settings */
+.gameplay-settings {
+  margin-bottom: 16px;
+}
+.gameplay-settings h3 {
+  margin: 0 0 8px;
+}
+.settings-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.settings-toggle input {
+  width: 18px;
+  height: 18px;
+}

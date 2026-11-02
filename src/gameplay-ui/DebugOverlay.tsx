@@ -9,7 +9,7 @@ const whole = (n: number) => Math.round(n).toLocaleString('ru-RU');
  * Task 08.5 §2.3 debug overlay (`/?debug`, DEV/QA builds only; lazy-loaded). Reads the throttled
  * world snapshot only: live DPS over the last 5 s and total damage per source.
  */
-export default function DebugOverlay({ world }: { world: GameplaySnapshot }) {
+export default function DebugOverlay({ world, fps }: { world: GameplaySnapshot; fps?: number }) {
   const [open, setOpen] = useState(true);
   const t = RU_DEBUG.overlay;
   const stats = world.runStats;
@@ -26,6 +26,10 @@ export default function DebugOverlay({ world }: { world: GameplaySnapshot }) {
         <button onClick={() => setOpen(false)}>{t.hide}</button>
       </header>
       <dl>
+        <dt>{t.fps}</dt>
+        <dd data-testid="debug-fps">{fps ?? '—'}</dd>
+        <dt>{t.enemies}</dt>
+        <dd data-testid="debug-enemies">{world.enemies.filter((e) => e.alive).length}</dd>
         <dt>{t.seed}</dt>
         <dd data-testid="debug-seed">{world.seed}</dd>
         <dt>{t.dps}</dt>

@@ -408,6 +408,22 @@ try {
   assert.equal(imported.gold, 75);
   await page.getByRole('button', { name: /DEV · Закрыть/ }).click();
 
+  // Task 08.5 §5.3: «Тряска экрана» (on by default) lives in its own settings key.
+  await nav.getByRole('button', { name: 'Настройки', exact: true }).click();
+  const shake = page.getByRole('checkbox', { name: 'Тряска экрана' });
+  assert.equal(await shake.isChecked(), true);
+  const saveBeforeSetting = await stored();
+  await shake.uncheck();
+  assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.settings'))), {
+    screenShake: false,
+  });
+  assert.equal(await stored(), saveBeforeSetting, 'settings never touch the save');
+  await page.reload();
+  await page.waitForFunction(() => !!window.__alpha);
+  await nav.getByRole('button', { name: 'Настройки', exact: true }).click();
+  assert.equal(await page.getByRole('checkbox', { name: 'Тряска экрана' }).isChecked(), false);
+  await page.getByRole('checkbox', { name: 'Тряска экрана' }).check();
+
   // Phone width: every menu page fits without horizontal scrolling.
   await page.setViewportSize({ width: 390, height: 844 });
   for (const tab of ['Играть', 'Персонаж', 'Карты', 'Прогресс', 'Настройки']) {

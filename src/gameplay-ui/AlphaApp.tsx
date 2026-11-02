@@ -277,7 +277,7 @@ export function AlphaApp() {
         )}
         {debug && s && DebugOverlay && (
           <Suspense fallback={null}>
-            <DebugOverlay world={s} />
+            <DebugOverlay world={s} fps={state.fps} />
           </Suspense>
         )}
         {debug && debugOpen && DeveloperPanel && (

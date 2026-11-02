@@ -27,6 +27,8 @@ export interface AlphaState {
   readonly qa?: QaSnapshot | null;
   /** DEV/QA only: current debug time scale (×1/×2/×4/×8). */
   readonly timeScale?: number;
+  /** DEV/QA only: measured frames per second (debug overlay). */
+  readonly fps?: number;
 }
 const INITIAL_STATE: AlphaState = Object.freeze({
   screen: 'menu',

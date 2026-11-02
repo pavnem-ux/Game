@@ -7,6 +7,8 @@ export const RU_DEBUG = Object.freeze({
     label: 'Debug Overlay',
     title: 'Отладка забега',
     seed: 'Сид',
+    fps: 'FPS',
+    enemies: 'Врагов',
     dps: 'Урон в секунду (5 с)',
     total: 'Всего урона',
     bySource: 'Урон по источникам',

@@ -3,7 +3,7 @@
 Spec: [task-08.5.md](task-08.5.md) (owner's text, Prettier-formatted). Code map: reuse
 [task-08-progress.md](task-08-progress.md#code-map) (additions below).
 
-Current: Phase 4 done — waiting for "continue" (next: Phase 5, step 5.1)
+Current: Phase 5 done — waiting for "continue" (next: Phase 6, step 6.1)
 
 Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR targets
 `task-08-campaign` so its diff shows only Task 08.5; retarget after PR #3/#4 are merged.
@@ -43,10 +43,10 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
 
 ### Phase 5 — Game feel
 
-- [ ] 5.1 Floating damage numbers (crit style), pooled, capped
-- [ ] 5.2 Enemy hit flash; player damage red vignette/flash
-- [ ] 5.3 Screen shake (player damage, boss heavy attacks) + «Тряска экрана» setting
-- [ ] Check: FPS with max enemies on Map 10 (debug overlay)
+- [x] 5.1 Floating damage numbers (crit style), pooled, capped
+- [x] 5.2 Enemy hit flash; player damage red vignette/flash
+- [x] 5.3 Screen shake (player damage, boss heavy attacks) + «Тряска экрана» setting
+- [x] Check: FPS with max enemies on Map 10 (debug overlay)
 
 ### Phase 6 — Playtest kit & delivery
 
@@ -101,6 +101,12 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
   results screen (`RU.seed`) and in the debug overlay; DEV «Сид» + «Начать выбранную карту с
   этим сидом» (`campaignDebug.startWithSeed`); reports already carry `run.seed` (3.3). Tests
   `tests/gameplay/reproducibility.test.ts`, `tests/persistence/run-seed.test.ts`, browser checks.
+- 5.1–5.3 `src/engine/game-feel.ts` (`FloatingNumbers` ring pool, `HitFlashes`, `shakeFor`,
+  `SHAKES`), scene `drawFeel`/`resetFeel` + `FLOAT_STYLES` (`AlphaScene.ts`);
+  `src/gameplay-ui/ui-settings.ts` (key `skazki.settings`, «Тряска экрана») on the Settings page
+  (`SaveManagement.tsx` `GameplaySettings`); FPS + enemy count in the debug overlay
+  (`AlphaState.fps`, DEV/QA). Tests `tests/engine/game-feel.test.ts`, settings in
+  `tests/campaign-browser.mjs`.
 
 - Existing pieces this task builds on (from Task 07.x/08):
   - Time scale: `AlphaScene.timeScale` + `time-scale` command (DEV/QA, 1–20, multiplies the
@@ -211,6 +217,23 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
   spec. The seed is not persisted in the save (it is in the report and on the results screen).
   Reproducibility test: 2 classes/maps × 120 s with normal waves, scripted input and fixed card
   choices; identical spawn positions/times, elite spawns, card offers and kill counts.
+
+- 5.1: the ad-hoc damage text effects were replaced by a 40-slot ring pool (oldest reused when
+  full, entries preallocated, text built once per spawn). Styles: normal pale, crit gold +
+  larger + pop + `!`, damage to the player red `−N`, dodge grey «Уклон» (was "DODGE"). Zero-HP
+  hits (fully absorbed) show nothing. Sideways drift uses a golden-ratio sequence, not a random
+  source. Numbers use simulation time, so they freeze in pause and speed up with the debug scale.
+- 5.2: enemy hit flash = white overlay of the body shape for 0.12 s; player HP loss = red edge
+  vignette for 0.3 s (scene graphics, no DOM). 5.3: shake on direct hits that cost the player HP
+  (90 ms, 0.0025) and on boss `circle_aoe`/`charge` executions (220 ms, 0.006); DoT ticks do not
+  shake. «Тряска экрана» (default on) is stored in its own key `skazki.settings` — not in the
+  progress save (no schema change); storage errors keep it for the session.
+- 5 FPS check (headless Chromium, software rendering, Map 10, 108 enemies — the alpha cap minus
+  reserved slots): the debug overlay showed 54–55 FPS right after spawning. A before/after
+  comparison with an independent rAF counter gave the same curve with and without the 5.x
+  changes (56/37/17/18 vs 58/42/17/18 fps over 8 s), so game feel adds no measurable cost. The
+  drop to ~17 fps once 108 enemies crowd around the player exists before 08.5 as well (software
+  rendering + crowding); it needs a check on real devices (owner Preview playtest).
 
 ## Blockers / known issues
 
