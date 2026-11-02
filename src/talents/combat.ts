@@ -55,6 +55,10 @@ export interface TalentEngine {
   readonly playerId: string;
   /** Task 09.1 C1: the Mage's enhanced (5th-slot) skill, null while that slot is empty. */
   enhancedSkillId(): string | null;
+  /** Nearest living enemy to a point (ties: id ascending), null when there is none. */
+  nearestEnemy(from: Point2): string | null;
+  /** Heals the player through Combat Core (clamped; never revives). */
+  healPlayer(amount: number): void;
   /** Shortens the remaining cooldown of an owned automatic skill (never below «ready now»). */
   reduceSkillCooldown(skillId: string, seconds: number): void;
   /** Grants a barrier through the single shared barrier slot (C2 rules). */
@@ -73,8 +77,11 @@ export interface DirectHitContext {
   /** The skill whose code made this hit (null = basic weapon or other) and whether it is enhanced. */
   readonly skillId: string | null;
   readonly enhanced: boolean;
-  /** Target slowed at the moment of the hit. */
+  /** Target slowed / stunned at the moment of the hit. */
   readonly slowed: boolean;
+  readonly stunned: boolean;
+  /** Targets the same attack hits (melee sector / skill area; 1 for single-target hits). */
+  readonly targets: number;
   /** Player HP at the moment of the hit. */
   readonly player: { readonly currentHp: number; readonly maxHp: number };
   readonly statuses: DotReader;
@@ -120,6 +127,23 @@ export interface TalentClassHandlers {
   onSkillCrit?(engine: TalentEngine, skillId: string, tags: ReadonlySet<CombatTag>): void;
   /** The player took real direct damage (after mitigation and barrier absorption). */
   onPlayerDirectDamage?(engine: TalentEngine, attackerId: string): void;
+  /** A player hit (direct or periodic) killed an enemy. */
+  onKill?(engine: TalentEngine, cause: KillCause): void;
+  /** Extra damage % points of a stacking skill buff (e.g. Battle Fury), given its stacks. */
+  buffStackBonus?(
+    buffId: string,
+    stacks: number,
+    maxStacks: number,
+    params: (id: string) => Params,
+  ): number;
+  /** Seconds added to a Stun applied by a skill with these tags (before the duration limit). */
+  stunBonus?(tags: ReadonlySet<CombatTag>, params: (id: string) => Params): number;
+  /** Multiplier on enemy direct hits against the player (before resistance and rounding). */
+  playerDamageTakenMultiplier?(params: (id: string) => Params): number;
+  /** Stat modifiers that hold only while a condition on the player is true (e.g. HP < 30%). */
+  conditionalStats?(engine: TalentEngine): Readonly<Record<string, number>>;
+  /** The player's HP percentage changed (from → to); `damage` = caused by damage. */
+  onPlayerHpChanged?(engine: TalentEngine, from: number, to: number, damage: boolean): void;
   onPlayerDodged?(engine: TalentEngine, attackerId: string): void;
   /** A player basic-weapon hit landed on a living enemy. */
   onBasicHit?(engine: TalentEngine, targetId: string): void;
@@ -127,6 +151,11 @@ export interface TalentClassHandlers {
   dotTakenMultiplier?(engine: TalentEngine, targetId: string): number;
   /** Statuses were applied to these enemies (end of a boundary). */
   onStatusesApplied?(engine: TalentEngine, targetIds: readonly string[]): void;
+}
+export interface KillCause {
+  readonly targetId: string;
+  readonly direct: boolean;
+  readonly tags: ReadonlySet<CombatTag>;
 }
 export interface DotOrigin {
   /** Applied by a dagger (Rogue basic weapon or a `dagger` skill). */
@@ -147,7 +176,12 @@ export class TalentCombat {
   ) {}
   private readonly params = (id: string) => this.engine.talents.params(id);
   /** Multiplier for one player hit on `targetId` (1 = no talent effect). */
-  hitMultiplier(attack: AttackSnapshot, targetId: string, tags?: ReadonlySet<CombatTag>): number {
+  hitMultiplier(
+    attack: AttackSnapshot,
+    targetId: string,
+    tags?: ReadonlySet<CombatTag>,
+    targets = 1,
+  ): number {
     if (!tags) return 1;
     const source = this.engine.currentSource();
     if (source?.startsWith('synergy:') && this.handlers.synergyFactor)
@@ -162,7 +196,8 @@ export class TalentCombat {
       dagger: tags.has('dagger'),
       skillId: source?.startsWith('skill:') ? source.slice(6) : null,
       enhanced: !!source && source === `skill:${this.engine.enhancedSkillId()}`,
-      slowed: this.engine.controlState(targetId).slowed,
+      ...this.engine.controlState(targetId),
+      targets,
       player: this.engine.entity(this.engine.playerId),
       statuses: this.engine.statuses,
       params: this.params,
@@ -214,6 +249,26 @@ export class TalentCombat {
   onPlayerDirectDamage(attackerId: string): void {
     if (this.engine.talents.inProc || !this.engine.entity(this.engine.playerId).alive) return;
     this.handlers.onPlayerDirectDamage?.(this.engine, attackerId);
+  }
+  onKill(cause: KillCause): void {
+    if (this.engine.talents.inProc || isSecondary(cause.tags)) return;
+    this.handlers.onKill?.(this.engine, cause);
+  }
+  buffStackBonus(buffId: string, stacks: number, maxStacks: number): number {
+    return this.handlers.buffStackBonus?.(buffId, stacks, maxStacks, this.params) ?? 0;
+  }
+  stunBonus(tags: ReadonlySet<CombatTag>): number {
+    return this.handlers.stunBonus?.(tags, this.params) ?? 0;
+  }
+  playerDamageTakenMultiplier(): number {
+    return this.handlers.playerDamageTakenMultiplier?.(this.params) ?? 1;
+  }
+  conditionalStats(): Readonly<Record<string, number>> | null {
+    return this.handlers.conditionalStats?.(this.engine) ?? null;
+  }
+  onPlayerHpChanged(from: number, to: number, damage: boolean): void {
+    if (this.engine.talents.inProc) return;
+    this.handlers.onPlayerHpChanged?.(this.engine, from, to, damage);
   }
   onPlayerDodged(attackerId: string): void {
     if (this.engine.talents.inProc) return;

@@ -407,10 +407,11 @@ export class WeaponAttacks {
         origin,
         direction,
       });
-      const hitIds = new Set<string>();
+      // Targets are selected first (same filter and order), so each hit knows the strike's count.
+      const hitIds: string[] = [];
       for (const id of [...this.bodies.keys()].sort(compareIds)) {
         if (
-          hitIds.has(id) ||
+          hitIds.includes(id) ||
           !validTarget(this.core, w.entityId, this.core.getEntity(w.entityId).affiliation, id)
         )
           continue;
@@ -424,8 +425,15 @@ export class WeaponAttacks {
           )
         )
           continue;
-        hitIds.add(id);
-        const result = this.resolveHit({ attack, weaponId: w.weapon.id, targetId: id });
+        hitIds.push(id);
+      }
+      for (const id of hitIds) {
+        const result = this.resolveHit({
+          attack,
+          weaponId: w.weapon.id,
+          targetId: id,
+          targetCount: hitIds.length,
+        });
         output.push({
           type: 'impact',
           time: this.clock,

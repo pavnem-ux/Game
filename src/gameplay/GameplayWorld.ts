@@ -207,6 +207,8 @@ export class GameplayWorld {
       movementStep: 1 / 30,
       separation: { cellSize: 64, padding: 8, strength: 0.8 },
       ...this.hostilePolicies,
+      // Task 09.1 G12: talent-only reduction of enemy direct hits on the player.
+      playerDamageMultiplier: () => this.skills?.talentCombat.playerDamageTakenMultiplier() ?? 1,
     });
     this.weapons = new WeaponAttacks(this.core, {
       damageModifier: (context) => this.skills.damageModifier(context),
@@ -1256,6 +1258,20 @@ export class GameplayWorld {
   }
   private forwardCombat(events: readonly CombatEvent[]) {
     this.record('combat', events);
+    // Task 09.1: player HP changes feed HP-threshold talents (after Core resolved them).
+    if (this.skills)
+      for (const event of events)
+        if (
+          ((event.type === 'damage' || event.type === 'periodic-damage') &&
+            event.targetId === this.playerId) ||
+          ((event.type === 'healing' ||
+            event.type === 'revived' ||
+            event.type === 'max-hp-changed') &&
+            event.entityId === this.playerId)
+        )
+          this.skills.onPlayerHpChanged(
+            event.type === 'damage' || event.type === 'periodic-damage',
+          );
     for (const event of events)
       if (event.type === 'damage' && event.targetId === this.playerId) {
         // Task 09.1: real direct damage taken (after mitigation/barrier), e.g. Mage Protective Seal.

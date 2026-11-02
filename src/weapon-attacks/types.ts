@@ -116,6 +116,8 @@ export interface DamageModifierContext {
   readonly weaponId: string;
   readonly targetId: string;
   readonly projectileId?: string;
+  /** Task 09.1 (additive): number of targets this melee strike hits (known before resolution). */
+  readonly targetCount?: number;
 }
 export interface WeaponAttacksOptions {
   /** Must be pure for the given context: no HP, RNG or scheduling side effects. */

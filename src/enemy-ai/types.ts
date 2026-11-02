@@ -44,6 +44,11 @@ export interface EnemyAIOptions {
   readonly separation: SeparationConfig;
   readonly canResolveDirectDamage?: DirectDamagePolicy;
   readonly onDirectDamageResolved?: DirectDamageObserver;
+  /**
+   * Task 09.1 (additive): multiplier on enemy direct hits (contact and projectiles) against the
+   * player, applied by Combat Core before resistance and its single rounding. Pure, ≥ 0; default 1.
+   */
+  readonly playerDamageMultiplier?: (attack: AttackSnapshot) => number;
 }
 export interface EnemySnapshot {
   readonly entityId: string;

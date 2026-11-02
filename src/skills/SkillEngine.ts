@@ -241,6 +241,45 @@ export class SkillEngine {
   enhancedSkillId(): string | null {
     return this.run.enhancedSkillId;
   }
+  nearestEnemy(from: Point): string | null {
+    return this.nearest(Infinity, from);
+  }
+  /** Task 09.1: talent healing of the player through Combat Core (never revives). */
+  healPlayer(amount: number): void {
+    if (!(amount > 0) || !this.host.core.getEntity(this.host.playerId).alive) return;
+    this.host.forwardCombat(this.host.core.heal(this.host.playerId, amount).events);
+  }
+  /** Task 09.1: player HP last seen by talent threshold rules (percent of Max HP). */
+  private playerHpSeen = 100;
+  private conditionalKey = '';
+  /**
+   * Task 09.1: the world reports every change of the player's HP. Threshold talents react
+   * (e.g. heal on crossing below 30%), and HP-conditional stats are recomposed once when their
+   * condition flips (caps still applied once by composeRunStats).
+   */
+  onPlayerHpChanged(damage: boolean): void {
+    const p = this.host.core.getEntity(this.host.playerId);
+    const now = p.maxHp > 0 ? (p.currentHp / p.maxHp) * 100 : 0;
+    const before = this.playerHpSeen;
+    this.playerHpSeen = now;
+    if (now !== before) this.talentCombat.onPlayerHpChanged(before, now, damage);
+    const key = JSON.stringify(this.talentCombat.conditionalStats());
+    if (key !== this.conditionalKey) {
+      this.conditionalKey = key;
+      this.refreshStats();
+    }
+  }
+  /** Targets of the area/melee attack currently being resolved (talent «2+ targets» rules). */
+  private targetCount = 1;
+  withTargetCount<T>(count: number, run: () => T): T {
+    const previous = this.targetCount;
+    this.targetCount = Math.max(1, count);
+    try {
+      return run();
+    } finally {
+      this.targetCount = previous;
+    }
+  }
   controlState(id: string): { readonly slowed: boolean; readonly stunned: boolean } {
     const pre = this.preHit(id);
     return { slowed: pre.slowed, stunned: pre.stunned };
@@ -361,6 +400,9 @@ export class SkillEngine {
     // Task 09.1: timed talent stat buffs (refresh, don't stack) join the same composition.
     for (const [stat, value] of Object.entries(this.talents.statBuffs()))
       m[stat as keyof RunStatModifiers] += value ?? 0;
+    // Task 09.1: HP-conditional talent stats (e.g. Resistance while HP < 30%).
+    for (const [stat, value] of Object.entries(this.talentCombat?.conditionalStats() ?? {}))
+      m[stat as keyof RunStatModifiers] += value;
     const add = (key: keyof RunStatModifiers, skillId: string, param: string) => {
       if (this.rank(skillId) > 0) m[key] += this.params(skillId)[param];
     };
@@ -378,7 +420,13 @@ export class SkillEngine {
         m.attackSpeed += p.attackSpeed;
         m.resistance += p.resistance;
       } else if (id === 'battle_fury')
-        m.physicalDamagePercent += buff.stacks * this.params('battle_fury').damagePerStack;
+        m.physicalDamagePercent +=
+          buff.stacks * this.params('battle_fury').damagePerStack +
+          this.talentCombat.buffStackBonus(
+            'battle_fury',
+            buff.stacks,
+            this.params('battle_fury').maxStacks,
+          );
       else if (id === 'battle_momentum' || id === 'blood_frenzy') m.attackSpeed += buff.value;
     }
     return m;
@@ -421,6 +469,7 @@ export class SkillEngine {
     targetId: string,
     limit?: Readonly<{ key: string; max: number }>,
     tags?: ReadonlySet<CombatTag>,
+    targets = this.targetCount,
   ): number {
     if (attack.attackerId !== this.host.playerId) return 1;
     if (limit && this.counted(limit.key, targetId) >= limit.max) return 0;
@@ -432,7 +481,7 @@ export class SkillEngine {
       multiplier *= 1 + getSkill('death_mark').ranks[mark.rank - 1].bonusPercent / 100;
     multiplier *= this.synergies.focusMultiplier(targetId);
     // Task 09.1: talent direct-hit / crit-damage bonuses (never on talent or secondary hits).
-    multiplier *= this.talentCombat.hitMultiplier(attack, targetId, tags);
+    multiplier *= this.talentCombat.hitMultiplier(attack, targetId, tags, targets);
     return multiplier;
   }
   damageModifier(context: DamageModifierContext): number {
@@ -441,7 +490,13 @@ export class SkillEngine {
       context.weaponId === this.host.basicWeaponId
         ? new Set<CombatTag>(BASIC_TAGS[this.host.characterClass])
         : payload?.tags;
-    return this.targetMultiplier(context.attack, context.targetId, payload?.limit, tags);
+    return this.targetMultiplier(
+      context.attack,
+      context.targetId,
+      payload?.limit,
+      tags,
+      context.targetCount ?? 1,
+    );
   }
   /** Short-lived per-activation counters (hit limits); pruned after a few seconds. */
   count(key: string, targetId: string): number {
@@ -833,6 +888,7 @@ export class SkillEngine {
       );
     this.marks.delete(targetId);
     if (!cause.procs) return;
+    this.talentCombat.onKill({ targetId, direct: cause.direct, tags: cause.tags });
     if (cause.direct && cause.tags.has('melee') && this.rank('battle_fury') > 0)
       ABILITIES.battle_fury?.onMeleeKill?.(this);
     this.synergies.onKill(targetId, pre, cause);
@@ -897,9 +953,13 @@ export class SkillEngine {
     const c = this.control(targetId);
     if (c.stunUntil > this.clock || c.stunImmuneUntil > this.clock) return false;
     const limits = this.host.controlLimits?.(targetId) ?? null;
+    // Task 09.1: talent Stun bonus of the executing skill, inside the existing duration limit.
+    const tags = this.sourceSkillTags();
     const d =
-      Math.min(CONTROL_RULES.maxStunDuration, duration) *
-      (limits ? Math.min(1, limits.stunScale) : 1);
+      Math.min(
+        CONTROL_RULES.maxStunDuration,
+        duration + (tags ? this.talentCombat.stunBonus(tags) : 0),
+      ) * (limits ? Math.min(1, limits.stunScale) : 1);
     if (d <= 0) return false;
     c.stunUntil = this.clock + d;
     c.stunImmuneUntil =

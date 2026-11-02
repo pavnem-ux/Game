@@ -61,7 +61,7 @@ Spec: [task-09.1-talent-effects.md](task-09.1-talent-effects.md). Source: `docs/
 v1.2 (byte-identical to the owner's file; excluded from Prettier). Gap resolution:
 [talents-gaps.md](talents-gaps.md#resolution-table-catalog-v12-task-091).
 
-Current: 09.1 Phase 6 (Warrior b1–b2)
+Current: 09.1 Phase 7 (Warrior b3)
 
 ### 09.1 steps
 
@@ -75,7 +75,7 @@ Current: 09.1 Phase 6 (Warrior b1–b2)
 - [x] Phase 3 Rogue b3 (G1, G2, G5, C5) — 10 ranks ready; `rogue.b3.n03` II–III blocked (E2)
 - [x] Phase 4 Mage b1–b2 (C2) — 30 ranks ready, none blocked
 - [x] Phase 5 Mage b3 (C1) — 12 ranks ready, none blocked
-- [ ] Phase 6 Warrior b1–b2 (C3, C6, G12)
+- [x] Phase 6 Warrior b1–b2 (C3, C6, G12) — 30 ranks ready, none blocked
 - [ ] Phase 7 Warrior b3 (G6, G7, C4)
 - [ ] Phase 8 Archer b1–b2 (G11)
 - [ ] Phase 9 Archer b3 (G8, G9, G10, C7)
@@ -89,7 +89,7 @@ had effect descriptors):
 
 - rogue: `rogue.b1.n02` II–III **blocked** (E1); `rogue.b3.n03` II–III **blocked** (E2); all other 38 Rogue ranks ready (Phases 2–3)
 - mage: all 42 Mage ranks ready (Phases 4–5)
-- warrior: `warrior.b1.n01`, `warrior.b1.n02`, `warrior.b1.n03`, `warrior.b1.n04`, `warrior.b1.n05`, `warrior.b2.n01`, `warrior.b2.n02`, `warrior.b2.n03`, `warrior.b2.n04`, `warrior.b2.n05`, `warrior.b3.n01`, `warrior.b3.n02`, `warrior.b3.n03`, `warrior.b3.n04` — I–III
+- warrior: `warrior.b3.n01`–`n04` I–III pending; all Warrior b1–b2 ranks ready (Phase 6)
 - archer: `archer.b1.n01`, `archer.b1.n02`, `archer.b1.n03`, `archer.b1.n04`, `archer.b1.n05`, `archer.b2.n01`, `archer.b2.n02`, `archer.b2.n03`, `archer.b2.n04`, `archer.b2.n05`, `archer.b3.n01`, `archer.b3.n02`, `archer.b3.n03`, `archer.b3.n04` — I–III
 
 ### 09.1 code map
@@ -153,6 +153,16 @@ had effect descriptors):
   - UI: `EnhancedSkillDialog` (screen `enhanced-skill`, bridge command `choose-enhanced`), enhanced chip marker in the skill bar; P/Esc does not unpause while the choice is open.
   - Tests: `tests/talents/mage-b3.test.ts`.
 
+- **Phase 6:**
+  - `src/talents/handlers/warrior.ts`, registered in `handlers/index.ts`.
+  - New hooks: `onKill`, `buffStackBonus` (Battle Fury), `stunBonus`, `playerDamageTakenMultiplier`, `conditionalStats`, `onPlayerHpChanged`; `DirectHitContext` gains `stunned` and `targets`; the engine view gains `nearestEnemy` and `healPlayer`.
+  - Additive module APIs:
+    - EnemyAI option `playerDamageMultiplier(attack)` for contact and projectile hits on the player (G12; Core applies it before resistance and its single rounding);
+    - `DamageModifierContext.targetCount`: a melee strike selects its targets first (same filter and order), then resolves them;
+    - `SkillEngine.withTargetCount` used by `areaHit`.
+  - `SkillEngine.onPlayerHpChanged(damage)` (world forwards every player damage/heal/revive/Max HP event): threshold reactions and one recomposition when a conditional stat flips.
+  - Tests: `tests/talents/warrior.test.ts`.
+
 ### 09.1 decisions
 
 - 0.1: the owner asked to keep the catalog content exactly, so `docs/talents.md` is the uploaded
@@ -184,6 +194,15 @@ had effect descriptors):
   - Enhanced-skill % bonuses (3.1, 3.2, 3.4) are summed with the other talent bonuses of the same hit/area/DoT, then applied once. The enhanced skill's cooldown reductions (3.1 III −5%, 3.3 −5/10/15%) are summed and multiply the already CDR-scaled cooldown; they never touch other skills.
   - 3.2 «урон DoT этого навыка»: DoT applied while the enhanced skill's own code runs (not a passive reacting to its hit).
   - 3.4 «капы сохраняются»: crit chance and CDR caps stay central; Character Stats has no crit-damage cap, so the extra crit damage is not capped.
+- **Phase 6:**
+  - 1.1 «Прямой урон меча» = the basic sword (tags `basic` + `melee`); Warrior skills carry no sword tag. «Атаки в ближнем бою по 2+ целям» = any melee direct hit whose attack hits 2+ targets (sword sector or skill area).
+  - 1.2 «физический урон» is applied as a direct-hit bonus to physical hits (no DoT, per the shared rule); thresholds are strict («ниже»).
+  - 1.3 counts direct melee kills by the player's own hits (talent/secondary kills excluded); the buff is a separate timed `physicalDamagePercent` buff, never merged with Battle Fury.
+  - 1.4 «Скорость атаки в ближнем бою» = the attack speed stat (the Warrior's weapon is melee).
+  - 2.2 G12 applies to enemy contact attacks and enemy projectiles (including boss radial projectiles). Boss scripted contact abilities are «special scripted damage» and are not reduced.
+  - 2.3 «ближайшему врагу»: nearest living enemy with no range limit (the catalog names none); retaliation can crit.
+  - 2.4 the Stun bonus applies to Stuns applied by the Warrior's skills (not synergies), before the 1.5 s limit; Stun immunity is unchanged.
+  - C3: the heal reacts to the player's HP percentage seen before/after each Combat Core damage event; the run starts at full HP, so starting «below» never heals.
 - 0.1: status model per rule 7. `TALENT_CATALOG_APPROVED = true` (G0), but a rank is active only
   when `ready`, and a `ready` rank must carry effects; the loader enforces both. The UI marks
   pending ranks «пока не действует в бою».
@@ -314,6 +333,9 @@ Task 09 additions:
 
 - 09.1 Phase 5: typecheck ✓, format ✓, `npm test` 1111 ✓, `npm run build` ✓, `test:production`
   2 PASS (static artifact + production browser check, with `CHROMIUM_PATH`), `test:e2e` 3 PASS.
+
+- 09.1 Phase 6: typecheck ✓, format ✓, `npm test` 1125 ✓, `npm run build` ✓, `test:production`
+  2 PASS, `test:e2e` 3 PASS.
 
 ## Decisions / deviations
 

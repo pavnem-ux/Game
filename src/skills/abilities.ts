@@ -72,11 +72,17 @@ function areaHit(
   if (coefficient <= 0) return hitIds;
   const t = tags(skillId, ...(options.extraTags ?? []));
   const attack = e.attack(t, coefficient, type(skillId));
-  for (const id of ids) {
-    if (options.filter && !options.filter(id)) continue;
-    const hit = e.hit(id, attack, t, { procs: options.procs ?? true, onHit: options.onHit });
-    if (hit) hitIds.push(id);
-  }
+  // Task 09.1: the hit count of this area attack is known before resolution («2+ targets»).
+  const targets = ids.filter(
+    (id) => (!options.filter || options.filter(id)) && e.host.core.getEntity(id).alive,
+  );
+  e.withTargetCount(targets.length, () => {
+    for (const id of ids) {
+      if (options.filter && !options.filter(id)) continue;
+      const hit = e.hit(id, attack, t, { procs: options.procs ?? true, onHit: options.onHit });
+      if (hit) hitIds.push(id);
+    }
+  });
   return hitIds;
 }
 function fan(base: Point, count: number, spread: number): Point[] {

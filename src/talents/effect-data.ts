@@ -178,6 +178,58 @@ export const TALENT_RANK_EFFECTS: Readonly<Record<string, RankEffects>> = Object
     2: same({ bonus: 18, critDamage: 15 }),
     3: same({ bonus: 28, critDamage: 25 }),
   },
+  // ── Warrior · Берсерк / Страж (Phase 6; C3, C6, G12) ──
+  'warrior.b1.n01': {
+    1: same({ bonus: 6 }),
+    2: same({ bonus: 10, multi: 4 }),
+    3: same({ bonus: 16, multi: 8 }),
+  },
+  'warrior.b1.n02': {
+    1: same({ hpBelow: 60, bonus: 5 }),
+    2: same({ hpBelow: 60, bonus: 9, lowHpBelow: 40, lowExtra: 4 }),
+    3: same({ hpBelow: 60, bonus: 14, lowHpBelow: 40, lowExtra: 8 }),
+  },
+  'warrior.b1.n03': {
+    1: same({ bonus: 3, duration: 3 }),
+    2: same({ bonus: 5, duration: 4 }),
+    3: same({ bonus: 8, duration: 5 }),
+  },
+  'warrior.b1.n04': {
+    1: [st('attackSpeed', 5)],
+    2: [st('attackSpeed', 9), b({ stunned: 5 })],
+    3: [st('attackSpeed', 15), b({ stunned: 10 })],
+  },
+  'warrior.b1.n05': {
+    // C6: rank I cap = Battle Fury maxStacks × 1 p.p. (cap 0 = derived); II/III caps 16/24.
+    1: same({ perStack: 1, cap: 0 }),
+    2: same({ perStack: 2, cap: 16 }),
+    3: same({ perStack: 3, cap: 24 }),
+  },
+  'warrior.b2.n01': {
+    1: [st('maxHpPercent', 8)],
+    2: [st('maxHpPercent', 14), st('resistance', 2)],
+    3: [st('maxHpPercent', 22), st('resistance', 4)],
+  },
+  'warrior.b2.n02': {
+    1: [st('resistance', 4)],
+    2: [st('resistance', 7), b({ reduction: 2 })],
+    3: [st('resistance', 11), b({ reduction: 4 })],
+  },
+  'warrior.b2.n03': {
+    1: same({ coefficient: 0.3, cooldown: 4 }),
+    2: same({ coefficient: 0.45, cooldown: 3.5 }),
+    3: same({ coefficient: 0.6, cooldown: 3 }),
+  },
+  'warrior.b2.n04': {
+    1: same({ stun: 0.1 }),
+    2: same({ stun: 0.2, stunned: 4 }),
+    3: same({ stun: 0.3, stunned: 8 }),
+  },
+  'warrior.b2.n05': {
+    1: same({ hpBelow: 30, resistance: 5 }),
+    2: same({ hpBelow: 30, resistance: 9, heal: 3, cooldown: 30 }),
+    3: same({ hpBelow: 30, resistance: 14, heal: 6, cooldown: 30 }),
+  },
 });
 /** Ranks blocked by an engine conflict: node → ranks (reason in `docs/talents-gaps.md`). */
 export const TALENT_BLOCKED: Readonly<Record<string, readonly (1 | 2 | 3)[]>> = Object.freeze({

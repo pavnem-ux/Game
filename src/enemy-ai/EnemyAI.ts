@@ -86,6 +86,11 @@ export class EnemyAI {
       typeof input.onDirectDamageResolved !== 'function'
     )
       throw new TypeError('Direct damage observer must be a function.');
+    if (
+      input.playerDamageMultiplier !== undefined &&
+      typeof input.playerDamageMultiplier !== 'function'
+    )
+      throw new TypeError('Player damage multiplier must be a function.');
     this.options = Object.freeze({ ...input, separation: separationConfig(input.separation) });
     this.grid = new SpatialGrid(this.options.separation.cellSize);
     this.flights = new EnemyProjectiles(
@@ -93,6 +98,7 @@ export class EnemyAI {
       input.playerId,
       input.canResolveDirectDamage,
       input.onDirectDamageResolved,
+      input.playerDamageMultiplier,
     );
   }
   get time() {
@@ -585,7 +591,11 @@ export class EnemyAI {
           damageType: actor.config.damageType,
           coefficient: actor.config.attackCoefficient,
         });
-    const result = attack ? this.core.resolveAttack(attack, this.options.playerId) : null;
+    const result = attack
+      ? this.core.resolveAttack(attack, this.options.playerId, {
+          damageMultiplier: this.options.playerDamageMultiplier?.(attack) ?? 1,
+        })
+      : null;
     actor.nextAttackAt = next;
     if (result)
       this.options.onDirectDamageResolved?.(
