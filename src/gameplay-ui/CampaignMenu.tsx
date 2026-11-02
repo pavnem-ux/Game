@@ -1,5 +1,4 @@
 import { useSyncExternalStore } from 'react';
-import type { CharacterClass } from '../character-stats';
 import { CHARACTER_CLASSES, calculateCharacterStats } from '../character-stats';
 import { CAMPAIGN_MAPS } from '../campaign';
 import { CLASS_LABELS, WEAPON_LABELS } from '../gameplay';
@@ -7,13 +6,9 @@ import { isMapUnlocked } from '../profile';
 import { campaignStore } from './campaign-state';
 import type { MenuPage } from './campaign-state';
 import { displayHp } from './format';
+import { CLASS_SYMBOLS, minutes } from './campaign-format';
+import { CharacterPage, MapsPage } from './CampaignPages';
 
-export const CLASS_SYMBOLS: Record<CharacterClass, string> = {
-  warrior: '⚔',
-  mage: '✦',
-  archer: '➶',
-  rogue: '⟐',
-};
 const PAGES: readonly { id: MenuPage; label: string }[] = [
   { id: 'play', label: 'Играть' },
   { id: 'character', label: 'Персонаж' },
@@ -21,7 +16,6 @@ const PAGES: readonly { id: MenuPage; label: string }[] = [
   { id: 'progression', label: 'Прогресс' },
   { id: 'settings', label: 'Настройки' },
 ];
-export const minutes = (seconds: number) => `${Math.round(seconds / 60)} мин`;
 
 /** Main menu: navigation, Gold and the campaign pages. Reads state; calls store actions only. */
 export function CampaignMenu() {
@@ -45,7 +39,9 @@ export function CampaignMenu() {
         </span>
       </nav>
       {ui.page === 'play' && <PlayPage />}
-      {ui.page !== 'play' && (
+      {ui.page === 'character' && <CharacterPage />}
+      {ui.page === 'maps' && <MapsPage />}
+      {(ui.page === 'progression' || ui.page === 'settings') && (
         <div className="campaign-page">
           <h2>{PAGES.find((p) => p.id === ui.page)!.label}</h2>
         </div>

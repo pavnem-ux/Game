@@ -1,7 +1,7 @@
 # Task 08 progress
 
 Branch: task-08-campaign | PR: https://github.com/pavnem-ux/Game/pull/4 (draft)
-Current: Phase 5, step 5.2
+Current: Phase 5, step 5.3
 
 ## Steps
 
@@ -23,7 +23,7 @@ Current: Phase 5, step 5.2
 - [x] 4.3 Wire autosave into progression; failure warning state
 - [x] 4.4 Export/import logic
 - [x] 5.1 Main menu + navigation + Gold
-- [ ] 5.2 Character and Map selection
+- [x] 5.2 Character and Map selection
 - [ ] 5.3 Results screen (wired to applyRunResult) + Progression screen
 - [ ] 5.4 HUD additions
 - [ ] 5.5 Save Management screen + save-failure warning + mid-run-forfeit notice
@@ -78,7 +78,8 @@ Current: Phase 5, step 5.2
 - Campaign UI: `src/gameplay-ui/campaign-state.ts` (`campaignStore`: progression service
   singleton, menu page, selected map, `startRun` → `start` command with `campaign {mapId, runId}`
   and the class's permanent level), `CampaignMenu.tsx` (nav + Gold + pages; Play keeps the
-  class grid + «Начать забег» used by browser tests). Tests `tests/campaign/` (`npm run test:campaign`).
+  class grid + «Начать забег» used by browser tests), `CampaignPages.tsx` (Character, Maps),
+  `campaign-format.ts`. Browser test `tests/campaign-browser.mjs` (part of `npm run test:e2e`). Tests `tests/campaign/` (`npm run test:campaign`).
 - Node 24, `npm ci`. Unit: `npm test` (Vitest + Node prototype tests). Per module: `test:stats`,
   `test:combat`, `test:weapons`, `test:status`, `test:enemies`, `test:survival`, `test:alpha`
   (tests/gameplay), `test:skills`. Typecheck `npm run typecheck`; format `npm run format:check`
