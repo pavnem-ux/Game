@@ -16,6 +16,7 @@ import {
 } from '../skills';
 import { useEffect, useRef } from 'react';
 import { alphaBridge } from './store';
+import { BuildLabel } from './BuildLabel';
 import { campaignStore } from './campaign-state';
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
@@ -484,6 +485,7 @@ export function PauseDialog({ world }: { world: GameplaySnapshot }) {
                 Сохранения внутри забега нет: выход или перезагрузка страницы — отказ без награды.
               </p>
             )}
+            <BuildLabel />
           </div>
         </div>
         <section className="pause-skills" aria-label="Обзор навыков">

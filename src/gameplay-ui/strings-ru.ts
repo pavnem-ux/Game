@@ -8,6 +8,7 @@ import { SKILL_CATALOG, SYNERGY_RULES } from '../skills';
  * their inline text). Presentation only.
  */
 export const RU = Object.freeze({
+  build: Object.freeze({ label: 'Версия сборки' }),
   stats: Object.freeze({
     title: 'Статистика забега',
     topSources: 'Главные источники урона',

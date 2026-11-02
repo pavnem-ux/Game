@@ -96,6 +96,8 @@ try {
   assert.equal(await page.locator('.synergy-entry').count(), 3);
   await page.waitForTimeout(100);
   assert.equal(await page.getByTestId('alpha-timer').innerText(), pauseTime);
+  // Task 08.5 §3.1: production build label on the pause screen.
+  await page.getByLabel(/^Версия сборки: v\d+\.\d+\.\d+ · ([0-9a-f]{7}|unknown)$/).waitFor();
   await page.getByRole('button', { name: 'Продолжить' }).click();
   await page.screenshot({ path: 'artifacts/alpha-09-production.png' });
   for (const file of await readdir('dist/assets'))

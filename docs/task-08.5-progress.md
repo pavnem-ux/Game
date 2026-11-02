@@ -3,7 +3,7 @@
 Spec: [task-08.5.md](task-08.5.md) (owner's text, Prettier-formatted). Code map: reuse
 [task-08-progress.md](task-08-progress.md#code-map) (additions below).
 
-Current: Phase 2 done — waiting for "continue" (next: Phase 3, step 3.1)
+Current: Phase 3, step 3.2
 
 Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR targets
 `task-08-campaign` so its diff shows only Task 08.5; retarget after PR #3/#4 are merged.
@@ -29,7 +29,7 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
 
 ### Phase 3 — Bug reporting
 
-- [ ] 3.1 Build version label on main menu + pause (build-time injection)
+- [x] 3.1 Build version label on main menu + pause (build-time injection)
 - [ ] 3.2 Error boundary + global handlers, last 5 errors in a separate key
 - [ ] 3.3 «Сообщить о проблеме» report download (pause + results)
 - [ ] 3.4 Debug: load a report → import its save (validated import)
@@ -77,6 +77,10 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
   collapsible), debug-only text `src/gameplay-ui/strings-ru-debug.ts`; Phase 4 (seed) and
   Phase 5 (FPS) extend this overlay. Browser check in `tests/campaign-browser.mjs`; production
   markers in `tests/alpha-production.mjs`.
+- 3.1 `config/build-info.mjs` (+ `.d.mts`) → Vite/Vitest `define` `__APP_VERSION__`,
+  `__APP_COMMIT__` (`src/build-env.d.ts`); `src/gameplay-ui/BuildLabel.tsx` on the main menu
+  (`CampaignMenu`) and pause (`PauseDialog`); tests `tests/build-info.test.mjs` (in
+  `test:build-policy`), browser/production label checks.
 
 - Existing pieces this task builds on (from Task 07.x/08):
   - Time scale: `AlphaScene.timeScale` + `time-scale` command (DEV/QA, 1–20, multiplies the
@@ -139,6 +143,9 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
 
 - 2.3: debug-only labels live in `strings-ru-debug.ts` (imported only by lazy DEV/QA chunks) so
   they never reach the production bundle; player-facing 08.5 text stays in `strings-ru.ts`.
+
+- 3.1: commit = Workers Builds `WORKERS_CI_COMMIT_SHA` → `GITHUB_SHA` → local `git rev-parse`
+  → `unknown` (the label never fails a build). Version = `package.json` (`0.1.0`, unchanged).
 
 ## Blockers / known issues
 

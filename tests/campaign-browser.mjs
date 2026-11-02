@@ -30,6 +30,11 @@ try {
   for (const tab of ['Играть', 'Персонаж', 'Карты', 'Прогресс', 'Настройки'])
     assert.equal(await nav.getByRole('button', { name: tab, exact: true }).count(), 1, tab);
   assert.equal(await page.getByLabel('Золото: 0').count(), 1);
+  assert.equal(
+    await page.getByLabel(/^Версия сборки: v\d+\.\d+\.\d+ · ([0-9a-f]{7}|unknown)$/).count(),
+    1,
+    'build label on the main menu',
+  );
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.profile')));
   assert.equal(saved.highestUnlockedMap, 1, 'a new profile is persisted on first launch');
 
@@ -163,6 +168,8 @@ try {
 
   // Quit mid-run: abandoned, no rewards, recorded once.
   await page.getByRole('button', { name: 'Пауза', exact: true }).click();
+  const buildLabel = /^Версия сборки: v\d+\.\d+\.\d+ · ([0-9a-f]{7}|unknown)$/;
+  await page.getByRole('dialog').getByLabel(buildLabel).waitFor(); // 3.1 pause screen
   await page.getByRole('button', { name: /Выйти в меню · забег не засчитается/ }).click();
   await nav.waitFor();
   const afterQuit = await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.profile')));
