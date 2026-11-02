@@ -11,8 +11,9 @@ import {
 import type { PlayerProfile } from '../profile';
 import { LOAD_ERROR_TEXT, SAVE_FAILURE_TEXT } from './save-messages';
 import type { CommitResult, ProgressionService, ProgressionState } from '../persistence';
-import type { GameplaySnapshot } from '../gameplay';
-import type { RunResult } from '../profile';
+import type { GameplaySnapshot, RunStatsSnapshot } from '../gameplay';
+import type { RunResult, RunStatsSummary } from '../profile';
+import { RUN_STATS_SUMMARY_LIMITS } from '../profile';
 import { alphaBridge } from './store';
 
 /**
@@ -33,6 +34,21 @@ export interface CampaignUiState {
   readonly lastResult: Readonly<{ runId: string; result: RunResult; commit: CommitResult }> | null;
 }
 
+/** Task 08.5: the persisted part of the in-memory run statistics (whole-number damage). */
+export function summarizeRunStats(stats: RunStatsSnapshot): RunStatsSummary {
+  return Object.freeze({
+    damageDealt: Math.round(stats.damageDealt),
+    damageTaken: Math.round(stats.damageTaken),
+    topSources: Object.freeze(
+      stats.bySource
+        .slice(0, RUN_STATS_SUMMARY_LIMITS.topSources)
+        .map((s) => Object.freeze({ source: s.source, damage: Math.round(s.damage) })),
+    ),
+    deathTime: stats.deathTime,
+    reviveUsed: stats.reviveUsed,
+    lowHpMoments: stats.lowHpMoments,
+  });
+}
 /** World snapshot → profile run result (elapsed capped at the map duration). */
 export function runResultFrom(
   world: GameplaySnapshot,
@@ -52,6 +68,7 @@ export function runResultFrom(
     eliteKills: c.eliteKills,
     bossKilled: c.bossKilled,
     runLevel: world.progression.level,
+    stats: summarizeRunStats(world.runStats),
   });
 }
 

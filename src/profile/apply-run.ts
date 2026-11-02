@@ -3,7 +3,7 @@ import { CAMPAIGN_MAPS, getCampaignMap } from '../campaign';
 import { addClassXp, talentPoints } from './class-xp';
 import { MAX_PROCESSED_RUN_IDS, MAX_RECENT_RUNS } from './profile';
 import type { MapBest, PlayerProfile, RecentRun } from './profile';
-import { runRewards } from './rewards';
+import { runRewards, validateRunStatsSummary } from './rewards';
 import type { RunResult } from './rewards';
 
 /**
@@ -53,6 +53,7 @@ export function validateRunResult(result: RunResult): void {
   if (typeof result.bossKilled !== 'boolean') throw new TypeError('bossKilled must be boolean.');
   if (result.outcome === 'victory' && !result.bossKilled)
     throw new RangeError('A victory requires the boss to be killed.');
+  if (result.stats !== undefined) validateRunStatsSummary(result.stats);
 }
 
 function summaryFromRecent(run: RecentRun): RunSummary {
@@ -153,6 +154,7 @@ export function applyRunResult(
     levelsGained,
     unlockedMap: newlyUnlockedMap,
     finishedAt,
+    ...(result.stats ? { stats: validateRunStatsSummary(result.stats) } : {}),
   });
   const s = profile.stats;
   const next_: PlayerProfile = Object.freeze({

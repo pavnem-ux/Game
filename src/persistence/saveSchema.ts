@@ -8,9 +8,10 @@ import {
   NEW_CLASS_PROGRESS,
   PROFILE_SCHEMA_VERSION,
   talentPoints,
+  validateRunStatsSummary,
   xpToNextLevel,
 } from '../profile';
-import type { ClassProgress, MapBest, PlayerProfile, RecentRun } from '../profile';
+import type { ClassProgress, MapBest, PlayerProfile, RecentRun, RunStatsSummary } from '../profile';
 
 /**
  * Task 08 `saveSchema`: validation, defaults and migrations for the persisted profile.
@@ -98,6 +99,13 @@ function mapBest(raw: unknown, key: string): MapBest {
     bestKills: int(or(v.bestKills, 0), `bestResults.${key}.bestKills`),
   });
 }
+function runStats(raw: unknown, what: string): RunStatsSummary {
+  try {
+    return validateRunStatsSummary(raw, what);
+  } catch {
+    return invalid(what);
+  }
+}
 function recentRun(raw: unknown, i: number): RecentRun {
   if (!isObject(raw)) invalid(`recentRuns[${i}]`);
   const v = raw as Json,
@@ -125,6 +133,8 @@ function recentRun(raw: unknown, i: number): RecentRun {
     levelsGained: int(or(v.levelsGained, levelAfter - levelBefore), `${p}.levelsGained`),
     unlockedMap: unlocked === null ? null : mapId(unlocked, `${p}.unlockedMap`),
     finishedAt: finishedAt === null ? null : iso(finishedAt, `${p}.finishedAt`),
+    // Task 08.5: optional additive field (older saves have none; schema version unchanged).
+    ...(v.stats === undefined ? {} : { stats: runStats(v.stats, `${p}.stats`) }),
   });
 }
 

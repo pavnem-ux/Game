@@ -2,7 +2,7 @@ import { CHARACTER_CLASSES } from '../character-stats';
 import type { CharacterClass } from '../character-stats';
 import type { ClassProgress } from './class-xp';
 import { NEW_CLASS_PROGRESS } from './class-xp';
-import type { RunOutcome } from './rewards';
+import type { RunOutcome, RunStatsSummary } from './rewards';
 
 /**
  * Task 08 player profile (persisted as one JSON document by the save store in Phase 4).
@@ -36,6 +36,8 @@ export interface RecentRun {
   readonly unlockedMap: number | null;
   /** ISO timestamp supplied by the caller (null when unknown). */
   readonly finishedAt: string | null;
+  /** Task 08.5 (additive, optional): run-statistics summary; absent in older saves. */
+  readonly stats?: RunStatsSummary;
 }
 export interface ProfileStats {
   readonly runs: number;

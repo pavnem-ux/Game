@@ -118,12 +118,20 @@ try {
   assert.match(text, /Очки талантов\s+\+1/);
   assert.match(text, /Открыта карта 2: Туманные болота/);
   assert.match(text, /Терновый страж повержен/);
+  // Task 08.5 §2.2: compact run statistics on the results screen.
+  const statsPanel = results.getByRole('region', { name: 'Статистика забега' });
+  const statsText = await statsPanel.innerText();
+  assert.match(statsText, /Главные источники урона[\s\S]*Лук[\s\S]*\d+%/i);
+  assert.match(statsText, /Получено урона/);
+  assert.match(statsText, /Гибель\s+не погибали/);
   await page.screenshot({ path: 'artifacts/campaign-03-victory.png' });
   const afterWin = await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.profile')));
   assert.equal(afterWin.gold, 75);
   assert.equal(afterWin.highestUnlockedMap, 2);
   assert.equal(afterWin.classes.archer.level, 2);
   assert.equal(afterWin.stats.wins, 1);
+  assert.ok(afterWin.recentRuns[0].stats.damageDealt > 0, 'recent run keeps the stats summary');
+  assert.ok(afterWin.recentRuns[0].stats.topSources.length >= 1);
   await results.getByRole('button', { name: 'В меню' }).click();
   await nav.waitFor();
   assert.equal(await page.getByLabel('Золото: 75').count(), 1);

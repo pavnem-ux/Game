@@ -1151,6 +1151,80 @@ p.damage-note {
   color: #f1eddb;
   text-align: right;
 }
+/* Task 08.5 §2.2 run statistics */
+.results-panel {
+  max-height: 94vh;
+  overflow-y: auto;
+}
+.run-stats {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #2d3d33;
+  text-align: left;
+  font-size: 13px;
+}
+.run-stats h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #f1eddb;
+}
+.run-stats h4 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #b9ad8c;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.run-stats-sources ol {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+.run-stats-sources li {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(40px, 1fr) 5.5em 3em;
+  gap: 8px;
+  align-items: center;
+}
+.run-stats-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.run-stats-bar {
+  height: 6px;
+  background: #0e1c17;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.run-stats-bar i {
+  display: block;
+  height: 100%;
+  background: #f2d27a;
+}
+.run-stats-sources b {
+  text-align: right;
+}
+.run-stats-sources small {
+  color: #b9ad8c;
+  min-width: 3ch;
+  text-align: right;
+}
+.run-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 16px;
+  margin: 0;
+}
+.run-stats-grid dd {
+  margin: 0;
+  color: #f1eddb;
+  text-align: right;
+}
 .results-unlock {
   color: #f2d27a;
   font-weight: 600;

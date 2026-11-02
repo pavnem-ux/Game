@@ -3,7 +3,7 @@
 Spec: [task-08.5.md](task-08.5.md) (owner's text, Prettier-formatted). Code map: reuse
 [task-08-progress.md](task-08-progress.md#code-map) (additions below).
 
-Current: Phase 2, step 2.2
+Current: Phase 2, step 2.3
 
 Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR targets
 `task-08-campaign` so its diff shows only Task 08.5; retarget after PR #3/#4 are merged.
@@ -23,7 +23,7 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
 ### Phase 2 — Run statistics
 
 - [x] 2.1 Run stats collector from existing combat events
-- [ ] 2.2 Results screen stats panel
+- [x] 2.2 Results screen stats panel
 - [ ] 2.3 Debug overlay: live DPS (5 s) + total damage per source
 - [ ] Tests: totals match damage events; stats reset between runs; summary in recentRuns
 
@@ -68,6 +68,11 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
   (`attackSource`, `currentSource`/`setSource`, `withSource` around activations, zones,
   scheduled actions, projectiles, passives) and `SynergyResolver.announce`; tests
   `tests/gameplay/run-stats.test.ts`.
+- 2.2 `src/gameplay-ui/RunStatsPanel.tsx` (results), `src/gameplay-ui/strings-ru.ts` (new 08.5
+  text, `damageSourceLabel`, `enemyTypeLabel`), `summarizeRunStats` in `campaign-state.ts`;
+  persisted summary `RunStatsSummary` + `validateRunStatsSummary` (`src/profile/rewards.ts`),
+  optional `RunResult.stats` / `RecentRun.stats`, parsed in `saveSchema.recentRun`; tests
+  `tests/profile/run-stats-summary.test.ts`, results panel in `tests/campaign-browser.mjs`.
 
 - Existing pieces this task builds on (from Task 07.x/08):
   - Time scale: `AlphaScene.timeScale` + `time-scale` command (DEV/QA, 1–20, multiplies the
@@ -118,6 +123,15 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
   while alive, counted once until HP is back at ≥ 20%. DPS = damage in the last 5 s (0.25 s
   buckets) / 5 (or elapsed time in the first 5 s). Bounded: 512 recent weapon attacks, 1024
   known enemies, 1024 attack tags, 100 timeline entries, 50 low-HP times.
+
+- 2.2: persisted summary = damage dealt/taken (whole numbers), top 3 sources, death time,
+  revive used, low-HP moments — added as an optional field on each recent run. Schema version
+  stays 1: the field is additive and optional, older saves load unchanged, and older builds drop
+  unknown fields (the documented parser rule), so no migration is needed. Invalid summaries are
+  rejected (never repaired), like every other field. The results screen shows the full
+  in-memory stats of the current run (top 5 sources with share, damage taken + worst enemy type,
+  death time, revive, low-HP moments). `.results-panel` got `max-height` + scroll so the longer
+  panel fits small screens.
 
 ## Blockers / known issues
 

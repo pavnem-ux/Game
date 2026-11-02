@@ -5,6 +5,7 @@ import type { GameplaySnapshot } from '../gameplay';
 import { campaignStore } from './campaign-state';
 import { clock } from './campaign-format';
 import { SaveWarning } from './SaveManagement';
+import { RunStatsPanel } from './RunStatsPanel';
 
 /** Results of a finished campaign run. Rewards come from the committed summary only. */
 export function ResultsScreen({ world }: { world: GameplaySnapshot }) {
@@ -60,6 +61,7 @@ export function ResultsScreen({ world }: { world: GameplaySnapshot }) {
           </p>
         )}
         {!victory && <p className="results-note">Поражение не открывает следующую карту.</p>}
+        <RunStatsPanel stats={world.runStats} />
         <p className={`results-save save-${saveState}`} role="status">
           {last?.commit.saved
             ? 'Прогресс сохранён.'
