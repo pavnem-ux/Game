@@ -15,6 +15,8 @@ export interface AlphaState {
   readonly record: number;
   readonly error: string;
   readonly qa?: QaSnapshot | null;
+  /** DEV/QA only: current debug time scale (×1/×2/×4/×8). */
+  readonly timeScale?: number;
 }
 let snapshot: AlphaState = {
   screen: 'menu',

@@ -3,7 +3,7 @@
 Spec: [task-08.5.md](task-08.5.md) (owner's text, Prettier-formatted). Code map: reuse
 [task-08-progress.md](task-08-progress.md#code-map) (additions below).
 
-Current: Phase 0 done — waiting for "continue" (next: Phase 1, step 1.1)
+Current: Phase 1, step 1.2
 
 Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR targets
 `task-08-campaign` so its diff shows only Task 08.5; retarget after PR #3/#4 are merged.
@@ -16,7 +16,7 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
 
 ### Phase 1 — Debug speed
 
-- [ ] 1.1 Time scale ×1/×2/×4/×8 on simulation time (same logic, same event order)
+- [x] 1.1 Time scale ×1/×2/×4/×8 on simulation time (same logic, same event order)
 - [ ] 1.2 God mode (no damage taken) + "kill all on screen" (normal deaths, drops, kill counts)
 - [ ] Tests: scheduled events fire once and in order at ×8; kill-all updates run stats
 
@@ -56,6 +56,10 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
 
 ## Code map (Task 08.5 additions)
 
+- 1.1 `src/engine/time-scale.ts` (`DEBUG_TIME_SCALES`, `frameStep`), scene `time-scale` command
+  (presets only), `AlphaState.timeScale` (DEV/QA), panel group «Ускорение забега» ×1/×2/×4/×8;
+  tests `tests/engine/time-scale.test.ts`.
+
 - Existing pieces this task builds on (from Task 07.x/08):
   - Time scale: `AlphaScene.timeScale` + `time-scale` command (DEV/QA, 1–20, multiplies the
     frame delta of the same `GameplayWorld.update`) — 1.1 restricts/presets it to ×1/2/4/8.
@@ -75,6 +79,13 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
   inline in components, plus `src/gameplay-ui/save-messages.ts`. Proposal: new Task 08.5 player
   text goes into one new module `src/gameplay-ui/strings-ru.ts`; existing strings stay where they
   are (no unrequested refactor). Owner may redirect.
+
+- 1.1: the scale multiplies the capped frame step (0.05 s × scale), so ×8 = 8× fewer, larger
+  `GameplayWorld.update` calls through the same boundaries. Scheduled campaign events fire once,
+  in order, at the same instants (up to float accumulation: ×1 may log 239.99999999999997 for
+  240). Pre-existing and unchanged: enemy steering is sampled per update, so individual contact
+  times/positions differ by a few ms between frame sizes (the same happens with real FPS jitter);
+  rewards/deadlines are unaffected. Replaced the Task 08 1–20 slider (owner's ×1/2/4/8 spec).
 
 ## Blockers / known issues
 

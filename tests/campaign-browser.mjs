@@ -275,7 +275,13 @@ try {
   await devRun.getByRole('button', { name: 'Призвать босса' }).click();
   await page.getByRole('progressbar', { name: 'Здоровье босса' }).waitFor();
   await devRun.getByRole('button', { name: 'HP босса → 10%' }).click();
-  await page.getByLabel('Ускорение забега').fill('5');
+  const speed = page.getByRole('group', { name: 'Ускорение забега' });
+  await speed.getByRole('button', { name: '×8' }).click();
+  await page.waitForFunction(() => window.__alpha.state().timeScale === 8);
+  assert.equal(
+    await speed.getByRole('button', { name: '×8' }).getAttribute('aria-pressed'),
+    'true',
+  );
   await devRun.getByRole('button', { name: 'Победа', exact: true }).click();
   const devResults = page.getByRole('dialog', { name: 'Победа.' });
   await devResults.waitFor();

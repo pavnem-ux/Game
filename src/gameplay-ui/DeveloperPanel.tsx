@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { DEBUG_TIME_SCALES } from '../engine/time-scale';
 import { CHARACTER_CLASSES } from '../character-stats';
 import type { CharacterClass } from '../character-stats';
 import { CLASS_LABELS, DEFAULT_SPAWNING } from '../gameplay';
@@ -38,7 +39,6 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
   const [debugLevel, setDebugLevel] = useState(10),
     [debugXp, setDebugXp] = useState(500),
     [debugGold, setDebugGold] = useState(100),
-    [timeScale, setTimeScale] = useState(1),
     [saveView, setSaveView] = useState('');
   const restart = () => {
     setProtection(false);
@@ -140,20 +140,18 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
           <button onClick={() => send({ type: 'campaign-force', outcome: 'defeat' })}>
             Поражение
           </button>
-          <label>
-            Ускорение ×{timeScale}
-            <input
-              aria-label="Ускорение забега"
-              type="range"
-              min="1"
-              max="20"
-              value={timeScale}
-              onChange={(e) => {
-                setTimeScale(Number(e.target.value));
-                alphaBridge.send({ type: 'time-scale', scale: Number(e.target.value) });
-              }}
-            />
-          </label>
+          <div role="group" aria-label="Ускорение забега">
+            Ускорение
+            {DEBUG_TIME_SCALES.map((scale) => (
+              <button
+                key={scale}
+                aria-pressed={(state.timeScale ?? 1) === scale}
+                onClick={() => alphaBridge.send({ type: 'time-scale', scale })}
+              >
+                ×{scale}
+              </button>
+            ))}
+          </div>
         </fieldset>
       )}
       {w && state.qa && (

@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import { frameStep, isDebugTimeScale } from './time-scale';
+import type { DebugTimeScale } from './time-scale';
 import { GameplayWorld, ALPHA, CLASS_LABELS } from '../gameplay';
 import type { GameplayOptions, GameplaySnapshot, WorldEvent } from '../gameplay';
 import { alphaBridge, CLASS_COLORS } from '../gameplay-ui/store';
@@ -28,7 +30,7 @@ export class AlphaScene extends Phaser.Scene {
   /** Task 08: name tags of elites/bosses (pooled). */
   private nameLabels: Phaser.GameObjects.Text[] = [];
   /** Task 08 debug accelerated mode (DEV/QA only): frame time multiplier for the same simulation. */
-  private timeScale = 1;
+  private timeScale: DebugTimeScale = 1;
   private testing?: TestingController;
   private testingWorld?: (options: GameplayOptions) => GameplayWorld;
   private testingReady: Promise<void> = Promise.resolve();
@@ -202,8 +204,8 @@ export class AlphaScene extends Phaser.Scene {
           break;
         case 'time-scale':
           if (import.meta.env.DEV || __QA_BUILD__) {
-            if (!Number.isFinite(command.scale) || command.scale < 1 || command.scale > 20)
-              throw new RangeError('Time scale must be 1–20.');
+            if (!isDebugTimeScale(command.scale))
+              throw new RangeError('Time scale must be ×1, ×2, ×4 or ×8.');
             this.timeScale = command.scale;
           }
           break;
@@ -223,8 +225,7 @@ export class AlphaScene extends Phaser.Scene {
     this.input.keyboard?.resetKeys();
   }
   update(_time: number, delta: number) {
-    const dt =
-      Math.min(0.05, delta / 1000) * (import.meta.env.DEV || __QA_BUILD__ ? this.timeScale : 1);
+    const dt = frameStep(delta, import.meta.env.DEV || __QA_BUILD__ ? this.timeScale : 1);
     if (this.world) {
       let dx =
         Number(this.keys.D.isDown || this.keys.RIGHT.isDown) -
@@ -599,7 +600,9 @@ export class AlphaScene extends Phaser.Scene {
       this.recordedRun = this.runId;
     }
     alphaBridge.publish({
-      ...(import.meta.env.DEV || __QA_BUILD__ ? { qa: this.testing?.snapshot() ?? null } : {}),
+      ...(import.meta.env.DEV || __QA_BUILD__
+        ? { qa: this.testing?.snapshot() ?? null, timeScale: this.timeScale }
+        : {}),
       screen,
       world,
       runId: this.runId,
