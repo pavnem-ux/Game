@@ -5,7 +5,7 @@ Spec: [task-09-talents.md](task-09-talents.md) (owner's text, Prettier-formatted
 [talents-gaps.md](talents-gaps.md). Code map: reuse [task-08-progress.md](task-08-progress.md)
 and [task-08.5-progress.md](task-08.5-progress.md) (additions below).
 
-Current: Phase 1, step 1.2 (content gate: gaps found — build Phases 1–4, then stop and report)
+Current: Phase 2, step 2.1 (content gate: gaps found — build Phases 1–4, then stop and report)
 
 Branch `task-09-talents` from `task-08.5-playtest` (Task 08.5, PR #5): 08.5 is not merged into
 `main` yet (spec 0.1). The draft PR targets `task-08.5-playtest` so its diff shows only Task 09;
@@ -22,8 +22,8 @@ retarget after PR #3/#4/#5 are merged.
 ### Phase 1 — Data model & rules
 
 - [x] 1.1 Talent config schema + loader (missing entries marked, inert)
-- [ ] 1.2 Purchase/validation, points derivation, prerequisites, level-30 gate
-- [ ] Tests (4 × 3 × 14 × 3, prereq rank II, rank III optional, ≤ III, points ≥ 0, gate,
+- [x] 1.2 Purchase/validation, points derivation, prerequisites, level-30 gate
+- [x] Tests (4 × 3 × 14 × 3, prereq rank II, rank III optional, ≤ III, points ≥ 0, gate,
       superpower inactive before b3.n01 rank I, independent trees)
 
 ### Phase 2 — Persistence
@@ -113,6 +113,17 @@ Task 09 additions:
 
   Test `tests/talents/catalog.test.ts` re-parses the Markdown (`?raw`) and fails on any difference. `tsconfig.stats.json` now typechecks `src/talents` and `tests/talents`; `npm run test:talents`.
 
+- 1.2 `src/talents/rules.ts`:
+  - `earnedTalentPoints` (= Task 08 `talentPoints`), `spentTalentPoints`, `availableTalentPoints` (never negative);
+  - `checkPurchase` (reasons: unknown-node, wrong-class, max-rank, level, prerequisite, no-points) and `purchaseRank`;
+  - `validateTalentRanks` (for saves/imports), `superpowerActive`, `talentNodeState`.
+
+  Tests `tests/talents/rules.test.ts`.
+
+## Verification log
+
+- Phase 1: typecheck ✓, format ✓, `npm test` 1044 Vitest tests + Node suites ✓ (talents 12).
+
 ## Decisions / deviations
 
 - `docs/talents.md`: pandoc conversion of `Skazki_Task08_Full_Talent_Catalog_Draft.docx`.
@@ -127,6 +138,9 @@ Task 09 additions:
   are added per rank only when it is `ready` and the catalog is approved (Phases 3/5). Inert
   ranks (`missing`/`unclear`, and every rank while G0 is open) are still purchasable — the tree
   rules are fully defined — but have no effect (`active: false`).
+
+- 1.2: one rank costs one point (spec: «available = earned − spent ranks»). Purchase check order:
+  class/id → max rank → level gate → prerequisite → points (first failing reason is shown).
 
 ## Blockers / known issues
 
