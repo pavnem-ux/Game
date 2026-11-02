@@ -43,6 +43,7 @@ export interface TalentRuntimeOptions {
   readonly random: () => number;
 }
 type EntityAction = (entity: TalentEntity) => void;
+const STAMP_TTL = 60;
 
 export class TalentRuntime {
   private readonly config: TalentConfig;
@@ -212,5 +213,15 @@ export class TalentRuntime {
   /** Drops expired cooldown entries (bounded memory on long runs). */
   prune(): void {
     for (const [k, at] of this.cooldowns) if (at <= this.now) this.cooldowns.delete(k);
+    for (const [k, at] of this.stamps) if (this.now - at > STAMP_TTL) this.stamps.delete(k);
+  }
+  // ── time stamps (e.g. «hits of both swords on one target within 2 s») ──
+  private readonly stamps = new Map<string, number>();
+  stamp(key: string): void {
+    this.stamps.set(key, this.now);
+  }
+  /** Simulation time of the last stamp, or null (stamps older than 60 s are pruned). */
+  stampedAt(key: string): number | null {
+    return this.stamps.get(key) ?? null;
   }
 }

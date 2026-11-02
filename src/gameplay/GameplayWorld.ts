@@ -1,4 +1,4 @@
-import { talentLoadout } from '../talents';
+import { OFFHAND_WEAPON, talentLoadout } from '../talents';
 import type { TalentLoadout } from '../talents';
 import { composeRunStats } from '../skills/stats';
 import { DEFAULT_SEED, createRunRandom } from './rng';
@@ -214,7 +214,7 @@ export class GameplayWorld {
       damageModifier: (context) => this.skills.damageModifier(context),
       // Task 09.1: talent crit-chance bonus for the player's weapon (category, at strike start).
       attackModifier: (context) =>
-        context.entityId === this.playerId ? this.skills.weaponAttackBonus() : {},
+        context.entityId === this.playerId ? this.skills.weaponAttackBonus(context.weaponId) : {},
     });
     this.weapons.setBody(this.playerId, this.body);
     const weapon = ALPHA_WEAPONS[options.characterClass];
@@ -261,6 +261,26 @@ export class GameplayWorld {
     );
     // Task 09.1 C1: a talent may add a real automatic slot (Mage superpower) for this run.
     if (this.skills.talentCombat.extraAutoSlots() > 0) this.run.enableExtraAutoSlot();
+    // Task 09.1 G6/G7: the Warrior superpower's off-hand sword (own timer from run start).
+    const offhand = this.skills.talentCombat.offhand();
+    if (offhand)
+      this.weapons.equipSecondaryWeapon({
+        entityId: this.playerId,
+        characterClass: options.characterClass,
+        weapon: {
+          id: OFFHAND_WEAPON.id,
+          category: 'sword',
+          allowedClass: 'warrior',
+          damageType: 'physical',
+          pattern: 'melee_arc',
+          damageCoefficient: offhand.coefficient,
+          baseAttackInterval: OFFHAND_WEAPON.baseAttackInterval / (1 + offhand.speed / 100),
+          attackRange: OFFHAND_WEAPON.attackRange,
+          arcDegrees: OFFHAND_WEAPON.arcDegrees,
+        },
+        attackSpeedPercent: startStats.attackSpeed,
+        fallbackDirection: { x: 1, y: 0 },
+      });
     this.baseOnHit = Object.freeze([...(options.onHit ?? defaultOnHit(options.characterClass))]);
     this.onHitDefinitions = this.baseOnHit;
     this.adapter = this.makeAdapter(this.baseOnHit);
@@ -1206,8 +1226,12 @@ export class GameplayWorld {
         this.record('status', this.adapter.consumeImpact(event).events);
         this.forwardCombat(event.result.events);
         if (pre) this.skills.handleImpact(event, pre);
-      } else if (event.type === 'attack-started') this.skills.onBasicAttack(event);
-      else if (event.type === 'projectile-expired') this.skills.handleProjectileExpired(event);
+      } else if (event.type === 'attack-started') {
+        // Task 09.1: off-hand damage is its own talent source in run stats.
+        if (event.weaponId === OFFHAND_WEAPON.id)
+          this.skills.tagTalentAttack(event.attack.id, 'warrior.b3.n01');
+        this.skills.onBasicAttack(event);
+      } else if (event.type === 'projectile-expired') this.skills.handleProjectileExpired(event);
   }
   private consumeEnemies(events: readonly EnemyEvent[]) {
     this.record('enemy', events);

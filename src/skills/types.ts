@@ -24,7 +24,9 @@ export type CombatTag =
   | 'synergy'
   | 'secondary'
   /** Task 09: hits created by talents (secondary; never procs synergies/passives). */
-  | 'talent';
+  | 'talent'
+  /** Task 09.1 G6: the Warrior's off-hand sword (a talent secondary weapon). */
+  | 'offhand';
 export type TargetingRule =
   | 'nearest'
   | 'cluster'

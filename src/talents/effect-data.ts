@@ -230,6 +230,27 @@ export const TALENT_RANK_EFFECTS: Readonly<Record<string, RankEffects>> = Object
     2: same({ hpBelow: 30, resistance: 9, heal: 3, cooldown: 30 }),
     3: same({ hpBelow: 30, resistance: 14, heal: 6, cooldown: 30 }),
   },
+  // ── Warrior · Мастер двух клинков (Phase 7; G6, G7, C4) ──
+  'warrior.b3.n01': {
+    1: same({ coefficient: 0.45 }),
+    2: same({ coefficient: 0.6 }),
+    3: same({ coefficient: 0.75 }),
+  },
+  'warrior.b3.n02': {
+    1: same({ speed: 8 }),
+    2: same({ speed: 15, critChance: 3 }),
+    3: same({ speed: 22, critChance: 6 }),
+  },
+  'warrior.b3.n03': {
+    1: same({ coefficient: 0.5, cooldown: 4, window: 2 }),
+    2: same({ coefficient: 0.75, cooldown: 3.5, window: 2 }),
+    3: same({ coefficient: 1, cooldown: 3, window: 2 }),
+  },
+  'warrior.b3.n04': {
+    1: same({ bonus: 8 }),
+    2: same({ bonus: 15, hpBelow: 30, lowHp: 5 }),
+    3: same({ bonus: 25, hpBelow: 30, lowHp: 10 }),
+  },
 });
 /** Ranks blocked by an engine conflict: node → ranks (reason in `docs/talents-gaps.md`). */
 export const TALENT_BLOCKED: Readonly<Record<string, readonly (1 | 2 | 3)[]>> = Object.freeze({

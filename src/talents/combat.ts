@@ -123,6 +123,14 @@ export interface TalentClassHandlers {
   extraAutoSlots?(params: (id: string) => Params): number;
   /** Multiplier on the final (already CDR-scaled) cooldown of this automatic skill. */
   cooldownMultiplier?(skillId: string, enhanced: boolean, params: (id: string) => Params): number;
+  /** Off-hand sword (Warrior superpower, G6/G7): its coefficient and talent speed bonus (%). */
+  offhand?(params: (id: string) => Params): Readonly<{ coefficient: number; speed: number }> | null;
+  /** Crit-chance points of the off-hand's attacks (G7: added to the composed, capped stat). */
+  offhandCritChance?(params: (id: string) => Params): number;
+  /** Talent damage % of an off-hand hit (its own bonuses only; general direct bonuses never apply). */
+  offhandDirect?(ctx: DirectHitContext): number;
+  /** A sword hit landed on a living enemy (`main` = basic sword, `offhand` = second sword). */
+  onSwordHit?(engine: TalentEngine, hand: 'main' | 'offhand', targetId: string): void;
   /** A direct hit of a skill landed as a critical hit. */
   onSkillCrit?(engine: TalentEngine, skillId: string, tags: ReadonlySet<CombatTag>): void;
   /** The player took real direct damage (after mitigation and barrier absorption). */
@@ -186,9 +194,7 @@ export class TalentCombat {
     const source = this.engine.currentSource();
     if (source?.startsWith('synergy:') && this.handlers.synergyFactor)
       return this.handlers.synergyFactor(source.slice('synergy:'.length), this.params);
-    if (isSecondary(tags)) return 1;
-    if (!this.handlers.direct) return 1;
-    const bonus = this.handlers.direct({
+    const ctx = (): DirectHitContext => ({
       targetId,
       target: this.engine.entity(targetId),
       attack,
@@ -202,6 +208,11 @@ export class TalentCombat {
       statuses: this.engine.statuses,
       params: this.params,
     });
+    // G6: the off-hand sword is a talent hit with only its own talent bonuses.
+    if (tags.has('offhand')) return 1 + (this.handlers.offhandDirect?.(ctx()) ?? 0) / 100;
+    if (isSecondary(tags)) return 1;
+    if (!this.handlers.direct) return 1;
+    const bonus = this.handlers.direct(ctx());
     let m = 1 + bonus.percent / 100;
     if (attack.critical && bonus.critDamage > 0 && attack.baseDamage > 0) {
       const k = attack.rawDamage / attack.baseDamage;
@@ -249,6 +260,16 @@ export class TalentCombat {
   onPlayerDirectDamage(attackerId: string): void {
     if (this.engine.talents.inProc || !this.engine.entity(this.engine.playerId).alive) return;
     this.handlers.onPlayerDirectDamage?.(this.engine, attackerId);
+  }
+  offhand(): Readonly<{ coefficient: number; speed: number }> | null {
+    return this.handlers.offhand?.(this.params) ?? null;
+  }
+  offhandCritChance(): number {
+    return this.handlers.offhandCritChance?.(this.params) ?? 0;
+  }
+  onSwordHit(hand: 'main' | 'offhand', targetId: string): void {
+    if (this.engine.talents.inProc || !this.engine.entity(targetId).alive) return;
+    this.handlers.onSwordHit?.(this.engine, hand, targetId);
   }
   onKill(cause: KillCause): void {
     if (this.engine.talents.inProc || isSecondary(cause.tags)) return;

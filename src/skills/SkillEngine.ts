@@ -1,6 +1,7 @@
 import { TalentCombat } from '../talents/combat';
 import { TALENT_HANDLERS } from '../talents/handlers';
 import { TalentRuntime } from '../talents/runtime';
+import { OFFHAND_TAGS, OFFHAND_WEAPON } from '../talents/offhand';
 import type { TalentConfig, TalentRanks } from '../talents/types';
 import { scaleCircularAoeRadius, scaleCooldown } from '../character-stats';
 import type { CharacterClass, CombatAttributes, PrimaryAttributes } from '../character-stats';
@@ -313,9 +314,16 @@ export class SkillEngine {
     this.talentCombat.onPlayerDodged(attackerId);
   }
   /** Task 09.1: crit-chance bonus for the player's equipped weapon at strike creation. */
-  weaponAttackBonus(): { criticalChanceBonus?: number } {
-    const bonus = this.talentCombat.critChance(new Set(BASIC_TAGS[this.host.characterClass]));
+  weaponAttackBonus(weaponId?: string): { criticalChanceBonus?: number } {
+    const bonus =
+      weaponId === OFFHAND_WEAPON.id
+        ? this.talentCombat.offhandCritChance()
+        : this.talentCombat.critChance(new Set(BASIC_TAGS[this.host.characterClass]));
     return bonus > 0 ? { criticalChanceBonus: bonus } : {};
+  }
+  /** Task 09.1: attributes an attack snapshot to a talent (run stats source `talent:<node>`). */
+  tagTalentAttack(attackId: string, nodeId: string): void {
+    this.tagAttack(attackId, `talent:${nodeId}`);
   }
   constructor(
     readonly host: SkillHost,
@@ -489,7 +497,9 @@ export class SkillEngine {
     const tags =
       context.weaponId === this.host.basicWeaponId
         ? new Set<CombatTag>(BASIC_TAGS[this.host.characterClass])
-        : payload?.tags;
+        : context.weaponId === OFFHAND_WEAPON.id
+          ? new Set<CombatTag>(OFFHAND_TAGS)
+          : payload?.tags;
     return this.targetMultiplier(
       context.attack,
       context.targetId,
@@ -775,6 +785,15 @@ export class SkillEngine {
   handleImpact(event: WeaponImpactEvent, pre: PreHit): void {
     const payload = event.projectileId ? this.projectiles.get(event.projectileId) : undefined;
     const basic = event.weaponId === this.host.basicWeaponId;
+    // Task 09.1: sword hits for the off-hand rules (C4); the off-hand itself never procs.
+    if (event.result.status === 'hit') {
+      if (event.weaponId === OFFHAND_WEAPON.id) {
+        this.talentCombat.onSwordHit('offhand', event.targetId);
+        return;
+      }
+      if (basic && this.host.characterClass === 'warrior')
+        this.talentCombat.onSwordHit('main', event.targetId);
+    }
     if (!basic && !payload) return;
     const tags = basic ? new Set(BASIC_TAGS[this.host.characterClass]) : payload!.tags;
     // Task 09.1: basic-weapon hit reactions (e.g. Rogue superpower Poison/Burn procs).

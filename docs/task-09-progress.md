@@ -61,7 +61,7 @@ Spec: [task-09.1-talent-effects.md](task-09.1-talent-effects.md). Source: `docs/
 v1.2 (byte-identical to the owner's file; excluded from Prettier). Gap resolution:
 [talents-gaps.md](talents-gaps.md#resolution-table-catalog-v12-task-091).
 
-Current: 09.1 Phase 7 (Warrior b3)
+Current: 09.1 Phase 8 (Archer b1–b2)
 
 ### 09.1 steps
 
@@ -76,7 +76,7 @@ Current: 09.1 Phase 7 (Warrior b3)
 - [x] Phase 4 Mage b1–b2 (C2) — 30 ranks ready, none blocked
 - [x] Phase 5 Mage b3 (C1) — 12 ranks ready, none blocked
 - [x] Phase 6 Warrior b1–b2 (C3, C6, G12) — 30 ranks ready, none blocked
-- [ ] Phase 7 Warrior b3 (G6, G7, C4)
+- [x] Phase 7 Warrior b3 (G6, G7, C4) — 12 ranks ready, none blocked
 - [ ] Phase 8 Archer b1–b2 (G11)
 - [ ] Phase 9 Archer b3 (G8, G9, G10, C7)
 - [ ] 10.1 Coverage · [ ] 10.2 Regression · [ ] 10.3 Playtest smoke checks · [ ] 10.4 Docs ·
@@ -89,7 +89,7 @@ had effect descriptors):
 
 - rogue: `rogue.b1.n02` II–III **blocked** (E1); `rogue.b3.n03` II–III **blocked** (E2); all other 38 Rogue ranks ready (Phases 2–3)
 - mage: all 42 Mage ranks ready (Phases 4–5)
-- warrior: `warrior.b3.n01`–`n04` I–III pending; all Warrior b1–b2 ranks ready (Phase 6)
+- warrior: all 42 Warrior ranks ready (Phases 6–7)
 - archer: `archer.b1.n01`, `archer.b1.n02`, `archer.b1.n03`, `archer.b1.n04`, `archer.b1.n05`, `archer.b2.n01`, `archer.b2.n02`, `archer.b2.n03`, `archer.b2.n04`, `archer.b2.n05`, `archer.b3.n01`, `archer.b3.n02`, `archer.b3.n03`, `archer.b3.n04` — I–III
 
 ### 09.1 code map
@@ -163,6 +163,15 @@ had effect descriptors):
   - `SkillEngine.onPlayerHpChanged(damage)` (world forwards every player damage/heal/revive/Max HP event): threshold reactions and one recomposition when a conditional stat flips.
   - Tests: `tests/talents/warrior.test.ts`.
 
+- **Phase 7:**
+  - Additive `WeaponAttacks.equipSecondaryWeapon` / `getSecondaryWeaponState`: a second `melee_arc` weapon on an entity with a primary weapon (own cycle timer from equip time, own range/arc/targeting, entity attack speed applied to both by `setAttackSpeed`; ties after the primary).
+  - `src/talents/offhand.ts`: `OFFHAND_WEAPON` (G6 geometry, 1.4 s base) and `OFFHAND_TAGS` (`talent`, `secondary`, `offhand`, `physical`, `melee`).
+  - World equips the off-hand when the handler returns `offhand()`; its attacks are tagged `talent:warrior.b3.n01` for run stats; `weaponAttackBonus(weaponId)` gives the off-hand only its own crit bonus.
+  - SkillEngine: off-hand impacts report `onSwordHit('offhand')` and stop (no passives, synergies, kill reactions); Warrior basic sword hits report `onSwordHit('main')`. `hitMultiplier` routes `offhand` hits to `offhandDirect` only.
+  - `TalentRuntime.stamp/stampedAt` (pruned after 60 s) for the C4 2-second window.
+  - Scene: off-hand swings are drawn with their own range/arc.
+  - Tests: `tests/talents/warrior-b3.test.ts`.
+
 ### 09.1 decisions
 
 - 0.1: the owner asked to keep the catalog content exactly, so `docs/talents.md` is the uploaded
@@ -203,6 +212,11 @@ had effect descriptors):
   - 2.3 «ближайшему врагу»: nearest living enemy with no range limit (the catalog names none); retaliation can crit.
   - 2.4 the Stun bonus applies to Stuns applied by the Warrior's skills (not synergies), before the 1.5 s limit; Stun immunity is unchanged.
   - C3: the heal reacts to the player's HP percentage seen before/after each Combat Core damage event; the run starts at full HP, so starting «below» never heals.
+- **Phase 7:**
+  - G6: the off-hand is a real virtual weapon on the existing weapon scheduler (no new scheduler): nearest enemy in range 100, direction fixed at swing start, one hit per enemy per swing; its first swing can happen at run start. Its hits are talent hits: general direct bonuses (e.g. 1.1 sword +%) and procs do not apply; only 3.4 does («без двойного применения статов»). The off-hand can crit (G6 «отдельные Crit события»; only G4's shadow copy forbids crits).
+  - G7: the crit bonus is added to the composed, capped Crit Chance at attack creation; Combat Core still clamps to the 75% cap.
+  - C4: the window and per-target cooldown use simulation time; the cross strike is `procs=false` and applies no status.
+  - 3.4 «оба меча против целей с HP <30%»: the main sword = the basic sword hit; Warrior skills are not swords.
 - 0.1: status model per rule 7. `TALENT_CATALOG_APPROVED = true` (G0), but a rank is active only
   when `ready`, and a `ready` rank must carry effects; the loader enforces both. The UI marks
   pending ranks «пока не действует в бою».
@@ -335,6 +349,9 @@ Task 09 additions:
   2 PASS (static artifact + production browser check, with `CHROMIUM_PATH`), `test:e2e` 3 PASS.
 
 - 09.1 Phase 6: typecheck ✓, format ✓, `npm test` 1125 ✓, `npm run build` ✓, `test:production`
+  2 PASS, `test:e2e` 3 PASS.
+
+- 09.1 Phase 7: typecheck ✓, format ✓, `npm test` 1132 ✓, `npm run build` ✓, `test:production`
   2 PASS, `test:e2e` 3 PASS.
 
 ## Decisions / deviations

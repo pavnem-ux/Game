@@ -20,6 +20,10 @@ function direct(ctx: DirectHitContext) {
     percent += n12.bonus;
     if (n12.lowExtra && hpBelow(ctx.player, n12.lowHpBelow)) percent += n12.lowExtra;
   }
+  // 3.4 Безупречная пара II/III: both swords against targets below 30% HP (the main sword here).
+  const n34 = ctx.params('warrior.b3.n04');
+  if (n34?.lowHp && tags.has('basic') && tags.has('melee') && hpBelow(ctx.target, n34.hpBelow))
+    percent += n34.lowHp;
   // 1.4 II/III and 2.4 II/III: damage against stunned targets.
   if (ctx.stunned) {
     percent += ctx.params('warrior.b1.n04')?.stunned ?? 0;
@@ -30,6 +34,35 @@ function direct(ctx: DirectHitContext) {
 
 export const WARRIOR_HANDLERS: TalentClassHandlers = {
   direct,
+  // 3.1 Вторая рука (superpower, G6) with 3.2 Ритм двух клинков (G7 speed bonus).
+  offhand(params) {
+    const n31 = params('warrior.b3.n01');
+    return n31
+      ? { coefficient: n31.coefficient, speed: params('warrior.b3.n02')?.speed ?? 0 }
+      : null;
+  },
+  // 3.2 II/III: off-hand crit chance (G7: on the composed, capped stat; Core keeps the cap).
+  offhandCritChance: (params) => params('warrior.b3.n02')?.critChance ?? 0,
+  // 3.4 Безупречная пара: off-hand direct damage (+ both swords below 30% HP at II/III).
+  offhandDirect(ctx) {
+    const n = ctx.params('warrior.b3.n04');
+    if (!n) return 0;
+    return n.bonus + (n.lowHp && hpBelow(ctx.target, n.hpBelow) ? n.lowHp : 0);
+  },
+  // 3.3 Перекрёстный удар (C4): main + off-hand direct hits on one living target within 2 s.
+  onSwordHit(engine, hand, targetId) {
+    const n = engine.talents.params('warrior.b3.n03');
+    if (!n || !engine.talents.params('warrior.b3.n01')) return;
+    engine.talents.stamp(`warrior.b3.n03:${hand}:${targetId}`);
+    const other = engine.talents.stampedAt(
+      `warrior.b3.n03:${hand === 'main' ? 'offhand' : 'main'}:${targetId}`,
+    );
+    if (other === null || engine.time - other > n.window) return;
+    if (!engine.talents.tryCooldown(`warrior.b3.n03:${targetId}`, n.cooldown)) return;
+    engine.talents.proc(() =>
+      engine.talentStrike('warrior.b3.n03', targetId, n.coefficient, 'physical'),
+    );
+  },
   // 1.3 Жажда боя: a melee kill gives physical damage for a few seconds (refresh, no stacking;
   // a separate buff from Battle Fury).
   onKill(engine, cause) {

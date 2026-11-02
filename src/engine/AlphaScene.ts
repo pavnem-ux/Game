@@ -13,6 +13,7 @@ import { createWorld } from './World';
 import type { TestingController } from '../gameplay/testing';
 import { stunIndicator } from './stun-indicator';
 import { oncePerKeyEvent } from './key-event-once';
+import { OFFHAND_WEAPON } from '../talents';
 
 /** Task 08.5 §5.1: floating-number styles (crit larger and gold, player damage red). */
 const FLOAT_STYLES: Record<FloatingKind, { color: string; size: number }> = {
@@ -560,7 +561,11 @@ export class AlphaScene extends Phaser.Scene {
     for (const f of this.fx) {
       const e = f.event.event;
       if (e.type === 'attack-started' && !e.projectileId) {
-        const w = s.weapon.weapon;
+        // Task 09.1 G6: the off-hand sword draws its own (shorter, narrower) swing.
+        const w =
+          e.weaponId === OFFHAND_WEAPON.id
+            ? { ...OFFHAND_WEAPON, pattern: 'melee_arc' as const }
+            : s.weapon.weapon;
         if (w.pattern !== 'projectile') {
           const a = Math.atan2(e.direction.y, e.direction.x),
             half = (w.arcDegrees * Math.PI) / 360;

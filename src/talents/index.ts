@@ -21,3 +21,4 @@ export type { ResolvedTalentEffect, TalentLoadout } from './pipeline';
 export { TALENT_BLOCKED, TALENT_RANK_EFFECTS, withEffectData } from './effect-data';
 export type { RankEffects } from './effect-data';
 export type { TalentBehaviorEffect } from './effects';
+export { OFFHAND_TAGS, OFFHAND_WEAPON } from './offhand';
