@@ -65,6 +65,13 @@ export class CampaignDirector {
     this.fired.set(next.id, time);
     return next;
   }
+  /** Debug only: fires a specific pending event now (still exactly once). */
+  fireNow(id: string, time: number): ScheduledEvent | null {
+    const event = this.events.find((e) => e.id === id);
+    if (!event || this.fired.has(id)) return null;
+    this.fired.set(id, time);
+    return event;
+  }
   hasFired(id: string): boolean {
     return this.fired.has(id);
   }

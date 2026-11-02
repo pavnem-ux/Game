@@ -1,7 +1,7 @@
 # Task 08 progress
 
 Branch: task-08-campaign | PR: https://github.com/pavnem-ux/Game/pull/4 (draft)
-Current: Phase 6, step 6.1 (Phase 5 done; waiting for "continue")
+Current: Phase 6, step 6.2 (6.1 done)
 
 ## Steps
 
@@ -27,7 +27,7 @@ Current: Phase 6, step 6.1 (Phase 5 done; waiting for "continue")
 - [x] 5.3 Results screen (wired to applyRunResult) + Progression screen
 - [x] 5.4 HUD additions
 - [x] 5.5 Save Management screen + save-failure warning + mid-run-forfeit notice
-- [ ] 6.1 `/?debug` tools (absent in production)
+- [x] 6.1 `/?debug` tools (absent in production)
 - [ ] 6.2 Full regression + production build
 - [ ] 6.3 Manual test path walkthrough; record results
 - [ ] 6.4 PR description; mark PR ready (don't merge)
@@ -122,6 +122,10 @@ level)`, caps `COMBAT_ATTRIBUTE_CAPS`, `scaleCooldown`/`scaleCircularAoeRadius`)
   `src/gameplay/qa.ts` (`QaGameplayWorld`: God Mode, synergy diagnostics),
   `src/gameplay-ui/DeveloperPanel.tsx`, gating `import.meta.env.DEV || __QA_BUILD__`,
   `config/qa-build.mjs`, `window.__alpha` (state/command/advance/presentation).
+- Campaign debug (6.1): world `debugFireCampaignEvent` / `debugSetBossHpFraction` /
+  `debugForceOutcome`, director `fireNow`; testing actions `campaign-skip|boss-now|boss-hp|force`;
+  scene `time-scale` command; profile tools `src/gameplay-ui/campaign-debug.ts`; DeveloperPanel
+  fieldsets «Кампания · профиль/забег»; tests `tests/campaign/debug.test.ts`.
 - Existing storage: `src/progression/save.ts` — localStorage key `fantasy-survivors.progression`
   (v1: bestSeconds, bestKills, runs); `loadSave`/`saveRun` used by `AlphaScene` and the prototype.
   No other persistence.
@@ -187,6 +191,13 @@ level)`, caps `COMBAT_ATTRIBUTE_CAPS`, `scaleCooldown`/`scaleCircularAoeRadius`)
 - 5.5: Settings has no pre-existing options in the alpha, so it holds Save Management only.
   The forfeit notice is on the Play page and in the campaign Pause dialog. CSS class
   `class-stats` (not `character-stats`, which the prototype stylesheet already uses).
+- 6.1: debug tools reuse the normal pipelines: early boss/elite = director `fireNow` (marked
+  fired, never spawns again); boss HP cut = periodic damage through Combat Core (pre-scaled by
+  Resistance, never heals); forced victory = boss death + firing 'end' (snapshot
+  `durationReached` also reflects the run state); forced defeat = HP 0 + finish run (no
+  revival). Profile edits go through validated `replaceProfile`; reset needs confirmation.
+  Acceleration multiplies the scene frame delta (1–20×, DEV/QA only), same simulation steps.
+  Production markers asserted absent in `tests/alpha-production.mjs`.
 - Task 07.2 is on the PR #3 branch (`claude/stoic-carson-76vdrx`, `dde421a` + v2 `9e8aa93`), not
   on `main` (PR #3 unmerged). `task-08-campaign` is stacked on that branch; the draft PR targets it
   so its diff shows only Task 08. Retarget to `main` after PR #3 is merged.
@@ -196,5 +207,4 @@ level)`, caps `COMBAT_ATTRIBUTE_CAPS`, `scaleCooldown`/`scaleCircularAoeRadius`)
 
 ## Blockers / known issues
 
-- Campaign visuals (elite/boss looks, telegraphs, notifications) are not yet visible in the
-  browser: no UI can start a campaign run until Phase 5; verified by unit tests only so far.
+- Cloudflare Preview not checked by the agent (sandbox cannot open `*.workers.dev`).

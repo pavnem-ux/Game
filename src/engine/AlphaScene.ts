@@ -27,6 +27,8 @@ export class AlphaScene extends Phaser.Scene {
   private stunLabels: Phaser.GameObjects.Text[] = [];
   /** Task 08: name tags of elites/bosses (pooled). */
   private nameLabels: Phaser.GameObjects.Text[] = [];
+  /** Task 08 debug accelerated mode (DEV/QA only): frame time multiplier for the same simulation. */
+  private timeScale = 1;
   private testing?: TestingController;
   private testingWorld?: (options: GameplayOptions) => GameplayWorld;
   private testingReady: Promise<void> = Promise.resolve();
@@ -198,6 +200,13 @@ export class AlphaScene extends Phaser.Scene {
         case 'reroll':
           this.world?.rerollSkillOffer();
           break;
+        case 'time-scale':
+          if (import.meta.env.DEV || __QA_BUILD__) {
+            if (!Number.isFinite(command.scale) || command.scale < 1 || command.scale > 20)
+              throw new RangeError('Time scale must be 1–20.');
+            this.timeScale = command.scale;
+          }
+          break;
         case 'testing':
           if (import.meta.env.DEV || __QA_BUILD__) this.testing?.(command.action);
           break;
@@ -214,7 +223,8 @@ export class AlphaScene extends Phaser.Scene {
     this.input.keyboard?.resetKeys();
   }
   update(_time: number, delta: number) {
-    const dt = Math.min(0.05, delta / 1000);
+    const dt =
+      Math.min(0.05, delta / 1000) * (import.meta.env.DEV || __QA_BUILD__ ? this.timeScale : 1);
     if (this.world) {
       let dx =
         Number(this.keys.D.isDown || this.keys.RIGHT.isDown) -

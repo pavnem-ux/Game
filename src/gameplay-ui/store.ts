@@ -5,6 +5,7 @@ export type AlphaCommand =
   | { type: 'start'; options: GameplayOptions }
   | { type: 'pause' | 'resume' | 'menu' | 'revive' | 'finish' | 'reroll' | 'abandon' }
   | { type: 'choose-skill'; card: string }
+  | { type: 'time-scale'; scale: number }
   | { type: 'testing'; action: unknown };
 export interface AlphaState {
   readonly screen: 'menu' | 'playing' | 'paused' | 'revival' | 'ended' | 'level-up' | 'results';

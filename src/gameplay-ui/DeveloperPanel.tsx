@@ -4,6 +4,7 @@ import type { CharacterClass } from '../character-stats';
 import { CLASS_LABELS, DEFAULT_SPAWNING } from '../gameplay';
 import { skillsForClass } from '../skills';
 import { alphaBridge } from './store';
+import { campaignDebug } from './campaign-debug';
 import type { AlphaState } from './store';
 export default function DeveloperPanel({ state }: { state: AlphaState }) {
   const w = state.world;
@@ -34,6 +35,11 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
     w?.spawning.settings.maxActive ?? DEFAULT_SPAWNING.maxActive,
   );
   const send = (action: unknown) => alphaBridge.send({ type: 'testing', action });
+  const [debugLevel, setDebugLevel] = useState(10),
+    [debugXp, setDebugXp] = useState(500),
+    [debugGold, setDebugGold] = useState(100),
+    [timeScale, setTimeScale] = useState(1),
+    [saveView, setSaveView] = useState('');
   const restart = () => {
     setProtection(false);
     send({
@@ -64,6 +70,92 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
     <aside className="developer-panel" aria-label="Developer Testing Mode">
       <h2>Developer Testing Mode</h2>
       <p>Временный баланс · изменения класса/уровня начинают новый мир.</p>
+      <fieldset aria-label="Campaign Debug">
+        <legend>Кампания · профиль</legend>
+        <button onClick={() => campaignDebug.unlockMaps()}>Открыть все карты</button>
+        <label>
+          Уровень класса
+          <input
+            aria-label="Debug уровень класса"
+            type="number"
+            min="1"
+            max="50"
+            value={debugLevel}
+            onChange={(e) => setDebugLevel(Number(e.target.value))}
+          />
+        </label>
+        <button onClick={() => campaignDebug.setClassLevel(characterClass, debugLevel)}>
+          Установить уровень ({CLASS_LABELS[characterClass]})
+        </button>
+        <label>
+          XP
+          <input
+            aria-label="Debug XP класса"
+            type="number"
+            min="0"
+            value={debugXp}
+            onChange={(e) => setDebugXp(Number(e.target.value))}
+          />
+        </label>
+        <button onClick={() => campaignDebug.grantXp(characterClass, debugXp)}>
+          Выдать XP классу
+        </button>
+        <label>
+          Золото
+          <input
+            aria-label="Debug золото"
+            type="number"
+            min="0"
+            value={debugGold}
+            onChange={(e) => setDebugGold(Number(e.target.value))}
+          />
+        </label>
+        <button onClick={() => campaignDebug.grantGold(debugGold)}>Выдать золото</button>
+        <button onClick={() => setSaveView(saveView ? '' : campaignDebug.inspectSave())}>
+          {saveView ? 'Скрыть сохранение' : 'Показать сохранение'}
+        </button>
+        <button
+          onClick={() => {
+            if (window.confirm('Сбросить тестовый прогресс кампании?'))
+              campaignDebug.resetProgress();
+          }}
+        >
+          Сбросить тестовый прогресс
+        </button>
+        {saveView && <textarea aria-label="Debug сохранение" readOnly rows={10} value={saveView} />}
+      </fieldset>
+      {w?.campaign && (
+        <fieldset aria-label="Campaign Run Debug">
+          <legend>Кампания · забег</legend>
+          <button onClick={() => send({ type: 'campaign-skip' })}>
+            К следующему событию ({w.campaign.nextEvent?.id ?? '—'})
+          </button>
+          <button onClick={() => send({ type: 'campaign-boss-now' })}>Призвать босса</button>
+          <button onClick={() => send({ type: 'campaign-boss-hp', fraction: 0.1 })}>
+            HP босса → 10%
+          </button>
+          <button onClick={() => send({ type: 'campaign-force', outcome: 'victory' })}>
+            Победа
+          </button>
+          <button onClick={() => send({ type: 'campaign-force', outcome: 'defeat' })}>
+            Поражение
+          </button>
+          <label>
+            Ускорение ×{timeScale}
+            <input
+              aria-label="Ускорение забега"
+              type="range"
+              min="1"
+              max="20"
+              value={timeScale}
+              onChange={(e) => {
+                setTimeScale(Number(e.target.value));
+                alphaBridge.send({ type: 'time-scale', scale: Number(e.target.value) });
+              }}
+            />
+          </label>
+        </fieldset>
+      )}
       {w && state.qa && (
         <fieldset>
           <legend>God Mode</legend>

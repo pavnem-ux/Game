@@ -55,6 +55,7 @@ import { BossController } from '../campaign';
 import type {
   BossAbilityOutcome,
   BossDefinition,
+  ScheduledEvent,
   BossHost,
   CampaignMap,
   CampaignRunState,
@@ -315,7 +316,7 @@ export class GameplayWorld {
       duration: clock.duration,
       elapsed: clock.elapsed,
       remaining: clock.remaining,
-      durationReached: clock.durationReached,
+      durationReached: clock.durationReached || this.campaignRun.durationReached,
       nextEvent: (() => {
         const next = this.director!.peek();
         return next ? Object.freeze({ id: next.id, kind: next.kind, time: next.time }) : null;
@@ -718,8 +719,11 @@ export class GameplayWorld {
   /** Fires exactly one due scheduled event (state-based; see CampaignDirector). */
   private resolveCampaignEvent() {
     const event = this.director?.fire(this.clock);
+    if (event) this.applyCampaignEvent(event);
+  }
+  private applyCampaignEvent(event: ScheduledEvent) {
     const map = this.campaignMap;
-    if (!event || !map) return;
+    if (!map) return;
     if (event.kind === 'elite') {
       const { hpMultiplier, damageMultiplier } = CAMPAIGN_BALANCE.elite;
       const enemyId = this.spawnScheduled(
@@ -783,6 +787,59 @@ export class GameplayWorld {
           elapsed: Math.min(this.clock, this.campaignMap.durationSeconds),
         }),
       ]);
+    }
+  }
+  // ── Task 08 debug helpers (reachable only through the DEV/QA testing controller) ──
+  /** Fires a pending scheduled campaign event now ('boss', 'elite-N', 'end'); exactly once. */
+  debugFireCampaignEvent(id: string): boolean {
+    if (!this.director || this.campaignRun.status !== 'active') return false;
+    const event = this.director.fireNow(id, this.clock);
+    if (!event) return false;
+    this.applyCampaignEvent(event);
+    this.prepare();
+    return true;
+  }
+  /** Lowers the boss to `fraction` of its max HP through Combat Core (never heals). */
+  debugSetBossHpFraction(fraction: number): boolean {
+    if (!Number.isFinite(fraction) || fraction < 0 || fraction > 1)
+      throw new RangeError('fraction must be 0–1.');
+    const id = this.bossEnemyId;
+    if (!id || !this.core.getEntity(id).alive) return false;
+    const boss = this.core.getEntity(id);
+    const loss = boss.currentHp - boss.maxHp * fraction;
+    if (loss <= 0) return true;
+    // Core applies Resistance to periodic damage: pre-scale so the boss lands at the target HP.
+    const raw = fraction === 0 ? Number.MAX_SAFE_INTEGER : (loss * (100 + boss.resistance)) / 100;
+    this.forwardCombat(
+      this.core.applyPeriodicDamage({
+        operationId: `debug-boss-${this.clock}`,
+        targetId: id,
+        effectId: 'debug',
+        rawDamage: raw,
+        sources: [{ applicationId: 'debug-boss', sourceId: this.playerId, rawDamage: raw }],
+      }).events,
+    );
+    return true;
+  }
+  /**
+   * Forces a campaign outcome through the normal pipeline: victory = the boss dies (spawned first
+   * if needed) and the duration is marked reached; defeat = the player dies and the run is
+   * finished without revival. The run then resolves exactly once as usual.
+   */
+  debugForceOutcome(outcome: 'victory' | 'defeat'): void {
+    if (!this.campaignMap || this.campaignRun.status !== 'active') return;
+    if (outcome === 'defeat') {
+      if (this.core.getEntity(this.playerId).alive) this.setPlayerHp(0);
+      if (this.survival.getState().runState === 'awaiting-revival-choice')
+        this.decide('finish-run');
+      return;
+    }
+    if (!this.bossEnemyId) this.debugFireCampaignEvent('boss');
+    this.debugSetBossHpFraction(0);
+    if (this.campaignRun.status === 'active' && !this.campaignRun.durationReached) {
+      this.director?.fireNow('end', this.clock);
+      this.record('campaign', [Object.freeze({ type: 'duration-reached', eventId: 'end' })]);
+      this.campaignInput({ type: 'duration-reached', time: this.clock });
     }
   }
   /** Quit/reload during a campaign run: resolves as abandoned (no rewards); false if not active. */

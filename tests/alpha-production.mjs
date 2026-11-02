@@ -118,6 +118,11 @@ try {
         'QaGameplayWorld',
         'reset-synergy-counters',
         'Synergy Diagnostics',
+        'Campaign Debug',
+        'Campaign Run Debug',
+        'campaign-force',
+        'campaign-boss-now',
+        'Time scale must be',
       ])
         assert.ok(
           !source.includes(marker),

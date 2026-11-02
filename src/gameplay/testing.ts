@@ -54,6 +54,22 @@ export function createTestingController(
         if (w instanceof QaGameplayWorld) w.setQaHp(0);
         else w.setPlayerHp(0);
         break;
+      case 'campaign-skip': {
+        // Accelerate to the next scheduled campaign event with the normal simulation.
+        const next = w.getSnapshot().campaign?.nextEvent;
+        if (!next) throw new Error('No pending campaign event.');
+        w.update(Math.max(0, next.time - w.time));
+        break;
+      }
+      case 'campaign-boss-now':
+        if (!w.debugFireCampaignEvent('boss')) throw new Error('The boss is already spawned.');
+        break;
+      case 'campaign-boss-hp':
+        if (!w.debugSetBossHpFraction(a.fraction as number)) throw new Error('No living boss.');
+        break;
+      case 'campaign-force':
+        w.debugForceOutcome(a.outcome as 'victory' | 'defeat');
+        break;
       case 'protection':
         w.setTestProtection(a.enabled as boolean);
         break;
