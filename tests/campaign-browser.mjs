@@ -1,6 +1,6 @@
 import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, readFile } from 'node:fs/promises';
 
 /** Task 08 campaign UI (dev server): menu, pages, campaign runs, results, persistence. */
 const base = process.env.GAME_URL || 'http://127.0.0.1:5173';
@@ -170,6 +170,25 @@ try {
   await page.getByRole('button', { name: 'Пауза', exact: true }).click();
   const buildLabel = /^Версия сборки: v\d+\.\d+\.\d+ · ([0-9a-f]{7}|unknown)$/;
   await page.getByRole('dialog').getByLabel(buildLabel).waitFor(); // 3.1 pause screen
+  // 3.3 «Сообщить о проблеме» from the pause screen: a JSON report with every field.
+  const [reportDownload] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Сообщить о проблеме' }).click(),
+  ]);
+  assert.match(reportDownload.suggestedFilename(), /^skazki-report-\d{4}-\d\d-\d\d-\d{4}\.json$/);
+  const report = JSON.parse(await readFile(await reportDownload.path(), 'utf8'));
+  assert.equal(report.format, 'skazki-report');
+  assert.match(report.build.label, /^v\d+\.\d+\.\d+ · /);
+  assert.equal(report.run.mapId, 2);
+  assert.equal(report.run.characterClass, 'mage');
+  assert.equal(typeof report.run.seed, 'number');
+  assert.ok(report.run.time > 0);
+  assert.ok(report.run.stats && Array.isArray(report.run.stats.bySource));
+  assert.ok(Array.isArray(report.errors));
+  assert.equal(report.save.ok, true);
+  assert.equal(report.save.profile.gold, 75);
+  assert.match(report.userAgent, /Chrome/);
+  await page.getByRole('status').filter({ hasText: 'Отчёт сохранён' }).waitFor();
   await page.getByRole('button', { name: /Выйти в меню · забег не засчитается/ }).click();
   await nav.waitFor();
   const afterQuit = await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.profile')));

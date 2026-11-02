@@ -98,6 +98,11 @@ try {
   assert.equal(await page.getByTestId('alpha-timer').innerText(), pauseTime);
   // Task 08.5 §3.1: production build label on the pause screen.
   await page.getByLabel(/^Версия сборки: v\d+\.\d+\.\d+ · ([0-9a-f]{7}|unknown)$/).waitFor();
+  assert.equal(
+    await page.getByRole('button', { name: 'Сообщить о проблеме' }).count(),
+    1,
+    'bug report is a player feature: present in production',
+  );
   await page.getByRole('button', { name: 'Продолжить' }).click();
   await page.screenshot({ path: 'artifacts/alpha-09-production.png' });
   for (const file of await readdir('dist/assets'))

@@ -6,6 +6,7 @@ import { campaignStore } from './campaign-state';
 import { clock } from './campaign-format';
 import { SaveWarning } from './SaveManagement';
 import { RunStatsPanel } from './RunStatsPanel';
+import { ReportButton } from './ReportButton';
 
 /** Results of a finished campaign run. Rewards come from the committed summary only. */
 export function ResultsScreen({ world }: { world: GameplaySnapshot }) {
@@ -83,6 +84,7 @@ export function ResultsScreen({ world }: { world: GameplaySnapshot }) {
           <button className="text-button" onClick={() => campaignStore.quitToMenu()}>
             В меню
           </button>
+          <ReportButton />
         </div>
       </div>
     </section>

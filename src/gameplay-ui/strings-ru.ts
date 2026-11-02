@@ -9,6 +9,11 @@ import { SKILL_CATALOG, SYNERGY_RULES } from '../skills';
  */
 export const RU = Object.freeze({
   build: Object.freeze({ label: 'Версия сборки' }),
+  report: Object.freeze({
+    button: 'Сообщить о проблеме',
+    done: (file: string) => `Отчёт сохранён: ${file}. Отправьте этот файл разработчику.`,
+    failed: 'Не удалось скачать отчёт.',
+  }),
   crash: Object.freeze({
     eyebrow: 'НЕПРЕДВИДЕННАЯ ОШИБКА',
     title: 'Что-то пошло не так.',

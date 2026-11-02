@@ -1565,3 +1565,17 @@ p.damage-note {
   border-radius: 4px;
   word-break: break-word;
 }
+
+/* Task 08.5 §3.3 report button */
+.report-action {
+  text-align: center;
+}
+.report-button {
+  font-size: 13px;
+}
+.report-status {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #b9ad8c;
+  word-break: break-word;
+}

@@ -17,6 +17,7 @@ import {
 import { useEffect, useRef } from 'react';
 import { alphaBridge } from './store';
 import { BuildLabel } from './BuildLabel';
+import { ReportButton } from './ReportButton';
 import { campaignStore } from './campaign-state';
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
@@ -485,6 +486,7 @@ export function PauseDialog({ world }: { world: GameplaySnapshot }) {
                 Сохранения внутри забега нет: выход или перезагрузка страницы — отказ без награды.
               </p>
             )}
+            <ReportButton />
             <BuildLabel />
           </div>
         </div>

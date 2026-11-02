@@ -3,7 +3,7 @@
 Spec: [task-08.5.md](task-08.5.md) (owner's text, Prettier-formatted). Code map: reuse
 [task-08-progress.md](task-08-progress.md#code-map) (additions below).
 
-Current: Phase 3, step 3.3
+Current: Phase 3, step 3.4
 
 Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR targets
 `task-08-campaign` so its diff shows only Task 08.5; retarget after PR #3/#4 are merged.
@@ -31,7 +31,7 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
 
 - [x] 3.1 Build version label on main menu + pause (build-time injection)
 - [x] 3.2 Error boundary + global handlers, last 5 errors in a separate key
-- [ ] 3.3 «Сообщить о проблеме» report download (pause + results)
+- [x] 3.3 «Сообщить о проблеме» report download (pause + results)
 - [ ] 3.4 Debug: load a report → import its save (validated import)
 - [ ] Tests: report fields; crash path leaves save intact
 
@@ -86,6 +86,11 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
   boundary + crash screen, wraps `AlphaApp` in `src/main.tsx`; prototype untouched),
   `alphaBridge.reset`, `campaignStore.discardActiveRun`; DEV panel «Сымитировать сбой»; tests
   `tests/persistence/crash-safety.test.ts`, crash path in `tests/campaign-browser.mjs`.
+- 3.3 `src/gameplay-ui/bug-report.ts` (`buildBugReport`, `reportFilename`, format
+  `skazki-report` v1), `campaignStore.downloadReport` (+ shared `downloadJson`),
+  `ReportButton.tsx` on pause, results and crash screens; snapshot `seed`; tests
+  `tests/persistence/bug-report.test.ts`, pause download in `tests/campaign-browser.mjs`,
+  production presence in `tests/alpha-production.mjs`.
 
 - Existing pieces this task builds on (from Task 07.x/08):
   - Time scale: `AlphaScene.timeScale` + `time-scale` command (DEV/QA, 1–20, multiplies the
@@ -160,6 +165,14 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
 - 3.2 fix (Task 08 bug found by the crash test): after the debug progress reset or an import that
   locks the selected map, «Начать забег» silently did nothing. The UI selection now falls back to
   the highest unlocked map whenever the profile changes (`tests/persistence/campaign-selection`).
+
+- 3.3: report = format/version, createdAt, build {version, commit, label}, user agent, run
+  {runId, seed, map id/name, class, permanent/run level, simulation time, status, screen,
+  kills, full in-memory run stats} (null outside a run), last ≤ 5 errors, and the save — only
+  after the normal save validation (`parseProfile`), else `{ok:false, error}`. File name uses UTC
+  like the save export. The button is a player feature (present in production). Also on the crash
+  screen, whose text points players to it. `GameplaySnapshot.seed` (additive) = the run's base
+  seed (`options.seed`, default 1337 until Phase 4.2 generates per-run seeds).
 
 ## Blockers / known issues
 

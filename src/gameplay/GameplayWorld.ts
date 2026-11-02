@@ -288,6 +288,7 @@ export class GameplayWorld {
   getSnapshot(): GameplaySnapshot {
     return Object.freeze({
       time: this.clock,
+      seed: this.options.seed ?? 1337,
       runStats: this.runStats.snapshot(this.clock),
       paused: this.paused,
       player: this.core.getEntity(this.playerId),

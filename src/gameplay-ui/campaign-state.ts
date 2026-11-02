@@ -15,6 +15,9 @@ import type { GameplaySnapshot, RunStatsSnapshot } from '../gameplay';
 import type { RunResult, RunStatsSummary } from '../profile';
 import { RUN_STATS_SUMMARY_LIMITS } from '../profile';
 import { alphaBridge } from './store';
+import { BUILD_LABEL } from './build-label';
+import { buildBugReport, reportFilename } from './bug-report';
+import { readErrors } from './error-log';
 
 /**
  * Task 08 campaign UI state (framework-free). Owns the progression service, menu navigation and
@@ -72,6 +75,22 @@ export function runResultFrom(
   });
 }
 
+/** Browser download of a JSON text file; false if the browser refused. */
+export function downloadJson(filename: string, json: string): boolean {
+  try {
+    const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
 let service: ProgressionService | null = null;
 let state: CampaignUiState | null = null;
 const listeners = new Set<() => void>();
@@ -167,6 +186,25 @@ export const campaignStore = {
     const runId = alphaBridge.getSnapshot().world?.campaign?.runId;
     if (runId) committed.add(runId);
   },
+  /**
+   * Task 08.5 §3.3 «Сообщить о проблеме»: downloads a report (build, seed, run, stats, recent
+   * errors, validated save, user agent). Read-only: nothing in the save changes.
+   */
+  downloadReport(): string | null {
+    const now = new Date().toISOString();
+    const bridge = alphaBridge.getSnapshot();
+    const report = buildBugReport({
+      createdAt: now,
+      build: { version: __APP_VERSION__, commit: __APP_COMMIT__, label: BUILD_LABEL },
+      userAgent: globalThis.navigator?.userAgent ?? 'unknown',
+      world: bridge.world,
+      screen: bridge.screen,
+      profile: ensure().progression.profile,
+      errors: readErrors(),
+    });
+    const filename = reportFilename(now);
+    return downloadJson(filename, JSON.stringify(report, null, 2)) ? filename : null;
+  },
   /** Export: validated profile → JSON download. Read-only; nothing is changed. */
   exportSave(): boolean {
     const profile = ensure().progression.profile;
@@ -176,16 +214,7 @@ export const campaignStore = {
       update({ saveMessage: { tone: 'error', text: LOAD_ERROR_TEXT[out.error.code] } });
       return false;
     }
-    try {
-      const url = URL.createObjectURL(new Blob([out.json], { type: 'application/json' }));
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = out.filename;
-      document.body.append(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 0);
-    } catch {
+    if (!downloadJson(out.filename, out.json)) {
       update({ saveMessage: { tone: 'error', text: 'Не удалось скачать файл.' } });
       return false;
     }

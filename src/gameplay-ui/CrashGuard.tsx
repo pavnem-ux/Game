@@ -1,6 +1,7 @@
 import { Component, useSyncExternalStore } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { BuildLabel } from './BuildLabel';
+import { ReportButton } from './ReportButton';
 import { crashState } from './crash-state';
 import { RU } from './strings-ru';
 
@@ -19,6 +20,7 @@ function CrashScreen() {
         <button className="button primary" autoFocus onClick={() => crashState.recover()}>
           {t.back}
         </button>
+        <ReportButton />
         <BuildLabel />
       </section>
     </div>

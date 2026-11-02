@@ -56,6 +56,8 @@ export interface WorldEvent {
 }
 export interface GameplaySnapshot {
   readonly time: number;
+  /** Task 08.5: the run's base random seed (`options.seed`, default 1337). */
+  readonly seed: number;
   /** Task 08.5: in-memory statistics of this run (reset with every new world). */
   readonly runStats: RunStatsSnapshot;
   readonly paused: boolean;
