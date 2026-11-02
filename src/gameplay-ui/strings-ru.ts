@@ -9,6 +9,13 @@ import { SKILL_CATALOG, SYNERGY_RULES } from '../skills';
  */
 export const RU = Object.freeze({
   build: Object.freeze({ label: 'Версия сборки' }),
+  crash: Object.freeze({
+    eyebrow: 'НЕПРЕДВИДЕННАЯ ОШИБКА',
+    title: 'Что-то пошло не так.',
+    body: 'Игра столкнулась с ошибкой. Ваше сохранение не изменено, а текущий забег прерван без записи.',
+    hint: 'Если ошибка повторяется, отправьте отчёт через «Сообщить о проблеме».',
+    back: 'Вернуться в меню',
+  }),
   stats: Object.freeze({
     title: 'Статистика забега',
     topSources: 'Главные источники урона',

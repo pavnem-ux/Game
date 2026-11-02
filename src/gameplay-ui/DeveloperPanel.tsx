@@ -9,6 +9,9 @@ import { campaignDebug } from './campaign-debug';
 import type { AlphaState } from './store';
 export default function DeveloperPanel({ state }: { state: AlphaState }) {
   const w = state.world;
+  // Task 08.5 §3.2: DEV/QA-only crash trigger for testing the error boundary (render error).
+  const [crashNow, setCrashNow] = useState(false);
+  if (crashNow) throw new Error('Debug crash: simulated render error');
   const [characterClass, setClass] = useState<CharacterClass>(
     w?.character.characterClass ?? 'warrior',
   );
@@ -122,6 +125,7 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
         >
           Сбросить тестовый прогресс
         </button>
+        <button onClick={() => setCrashNow(true)}>Сымитировать сбой</button>
         {saveView && <textarea aria-label="Debug сохранение" readOnly rows={10} value={saveView} />}
       </fieldset>
       {w?.campaign && (

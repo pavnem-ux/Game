@@ -3,7 +3,7 @@
 Spec: [task-08.5.md](task-08.5.md) (owner's text, Prettier-formatted). Code map: reuse
 [task-08-progress.md](task-08-progress.md#code-map) (additions below).
 
-Current: Phase 3, step 3.2
+Current: Phase 3, step 3.3
 
 Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR targets
 `task-08-campaign` so its diff shows only Task 08.5; retarget after PR #3/#4 are merged.
@@ -30,7 +30,7 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
 ### Phase 3 — Bug reporting
 
 - [x] 3.1 Build version label on main menu + pause (build-time injection)
-- [ ] 3.2 Error boundary + global handlers, last 5 errors in a separate key
+- [x] 3.2 Error boundary + global handlers, last 5 errors in a separate key
 - [ ] 3.3 «Сообщить о проблеме» report download (pause + results)
 - [ ] 3.4 Debug: load a report → import its save (validated import)
 - [ ] Tests: report fields; crash path leaves save intact
@@ -81,6 +81,11 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
   `__APP_COMMIT__` (`src/build-env.d.ts`); `src/gameplay-ui/BuildLabel.tsx` on the main menu
   (`CampaignMenu`) and pause (`PauseDialog`); tests `tests/build-info.test.mjs` (in
   `test:build-policy`), browser/production label checks.
+- 3.2 `src/gameplay-ui/error-log.ts` (key `skazki.errors`, last 5), `crash-state.ts`
+  (`crashState.report/recover`, `installGlobalErrorHandlers`), `CrashGuard.tsx` (error
+  boundary + crash screen, wraps `AlphaApp` in `src/main.tsx`; prototype untouched),
+  `alphaBridge.reset`, `campaignStore.discardActiveRun`; DEV panel «Сымитировать сбой»; tests
+  `tests/persistence/crash-safety.test.ts`, crash path in `tests/campaign-browser.mjs`.
 
 - Existing pieces this task builds on (from Task 07.x/08):
   - Time scale: `AlphaScene.timeScale` + `time-scale` command (DEV/QA, 1–20, multiplies the
@@ -146,6 +151,15 @@ Branch `task-08.5-playtest` from `task-08-campaign` (Task 08, PR #4). Draft PR t
 
 - 3.1: commit = Workers Builds `WORKERS_CI_COMMIT_SHA` → `GITHUB_SHA` → local `git rev-parse`
   → `unknown` (the label never fails a build). Version = `package.json` (`0.1.0`, unchanged).
+
+- 3.2: on any crash (render error, uncaught error, unhandled rejection) the active run is
+  discarded with NO save write — not even the usual «abandoned» record — so the save stays
+  byte-identical (verified in unit + browser tests). The crash screen unmounts the game;
+  «Вернуться в меню» remounts a fresh app/Phaser game. Error entries: time, source, message
+  (≤ 500 chars), stack (≤ 2000), build label; never throws, even with failing storage.
+- 3.2 fix (Task 08 bug found by the crash test): after the debug progress reset or an import that
+  locks the selected map, «Начать забег» silently did nothing. The UI selection now falls back to
+  the highest unlocked map whenever the profile changes (`tests/persistence/campaign-selection`).
 
 ## Blockers / known issues
 

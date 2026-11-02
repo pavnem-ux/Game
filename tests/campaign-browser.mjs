@@ -330,6 +330,35 @@ try {
   assert.equal(JSON.parse(await stored()).highestUnlockedMap, 1);
   await page.getByRole('button', { name: /DEV · Закрыть/ }).click();
 
+  // Task 08.5 §3.2: a crash mid-run shows the friendly screen, logs the error in its own key,
+  // leaves the save byte-identical and «Вернуться в меню» recovers a working game.
+  await page.evaluate(() => localStorage.removeItem('skazki.errors'));
+  await page.getByRole('button', { name: 'Начать забег' }).click();
+  await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
+  const saveBeforeCrash = await stored();
+  page.once('pageerror', () => {}); // the simulated error is expected
+  const expectedErrors = errors.length;
+  await page.getByRole('button', { name: /DEV · Тестирование/ }).click();
+  await page.getByRole('button', { name: 'Сымитировать сбой' }).click();
+  const crashDialog = page.getByRole('alertdialog', { name: 'Что-то пошло не так.' });
+  await crashDialog.waitFor();
+  assert.match(await crashDialog.innerText(), /сохранение не изменено/);
+  await page.screenshot({ path: 'artifacts/campaign-11-crash.png' });
+  const errorLog = await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.errors')));
+  assert.ok(errorLog.length >= 1 && errorLog.length <= 5);
+  assert.match(errorLog.at(-1).message, /Debug crash/);
+  assert.equal(await stored(), saveBeforeCrash, 'the crash never writes the save');
+  await crashDialog.getByRole('button', { name: 'Вернуться в меню' }).click();
+  await nav.waitFor();
+  assert.equal(await stored(), saveBeforeCrash, 'recovery never writes the save');
+  await page.waitForFunction(() => window.__alpha?.state().screen === 'menu');
+  await page.getByRole('button', { name: 'Начать забег' }).click();
+  await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
+  await page.getByRole('button', { name: 'Пауза', exact: true }).click();
+  await page.getByRole('button', { name: /Выйти в меню · забег не засчитается/ }).click();
+  await nav.waitFor();
+  errors.length = expectedErrors; // drop the simulated crash from the unexpected-error list
+
   // Phone width: every menu page fits without horizontal scrolling.
   await page.setViewportSize({ width: 390, height: 844 });
   for (const tab of ['Играть', 'Персонаж', 'Карты', 'Прогресс', 'Настройки']) {

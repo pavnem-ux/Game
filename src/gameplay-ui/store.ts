@@ -28,14 +28,15 @@ export interface AlphaState {
   /** DEV/QA only: current debug time scale (×1/×2/×4/×8). */
   readonly timeScale?: number;
 }
-let snapshot: AlphaState = {
+const INITIAL_STATE: AlphaState = Object.freeze({
   screen: 'menu',
   world: null,
   events: [],
   runId: 0,
   record: 0,
   error: '',
-};
+});
+let snapshot: AlphaState = INITIAL_STATE;
 const listeners = new Set<() => void>(),
   commands = new Set<(command: AlphaCommand) => void>();
 export const alphaBridge = {
@@ -51,6 +52,11 @@ export const alphaBridge = {
     listeners.forEach((fn) => fn());
   },
   send: (command: AlphaCommand) => commands.forEach((fn) => fn(command)),
+  /** Task 08.5 crash recovery: drop the stale run snapshot (the remounted scene publishes anew). */
+  reset: () => {
+    snapshot = INITIAL_STATE;
+    listeners.forEach((fn) => fn());
+  },
   onCommand: (fn: (command: AlphaCommand) => void) => {
     commands.add(fn);
     return () => {

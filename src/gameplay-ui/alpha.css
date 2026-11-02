@@ -1518,3 +1518,50 @@ p.damage-note {
 .menu-build-label {
   margin-top: 18px;
 }
+
+/* Task 08.5 §3.2 crash screen */
+.crash-shell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 16px;
+  background: #0f1714;
+}
+.crash-panel {
+  width: min(520px, 100%);
+  background: #13211c;
+  border: 1px solid #b97a6a;
+  border-radius: 8px;
+  padding: 26px;
+  color: #d9d0b6;
+  text-align: center;
+}
+.crash-panel h2 {
+  font-size: 32px;
+  font-weight: 500;
+  margin: 10px 0 14px;
+}
+.crash-hint {
+  margin-top: 10px;
+  color: #b9ad8c;
+  font-size: 13px;
+}
+.crash-panel .button {
+  display: block;
+  margin: 0 auto;
+}
+.crash-message {
+  display: block;
+  margin: 12px 0 16px;
+  padding: 8px 10px;
+  max-height: 96px;
+  overflow: auto;
+  text-align: left;
+  font-size: 12px;
+  color: #ffb199;
+  background: #0e1c17;
+  border-radius: 4px;
+  word-break: break-word;
+}

@@ -88,7 +88,17 @@ function ensure(): CampaignUiState {
       pendingImport: null,
       saveMessage: null,
     });
-    service.subscribe((progression) => update({ progression }));
+    // A replaced/reset profile can lock the selected map: fall back to the highest unlocked one,
+    // otherwise «Начать забег» would silently refuse to start (Task 08.5 fix).
+    service.subscribe((progression) => {
+      const profile = progression.profile;
+      const selected = state!.selectedMapId;
+      update({
+        progression,
+        selectedMapId:
+          profile && !isMapUnlocked(profile, selected) ? profile.highestUnlockedMap : selected,
+      });
+    });
     // Commit each resolved campaign run exactly once (also idempotent in applyRunResult).
     alphaBridge.subscribe(() => {
       const world = alphaBridge.getSnapshot().world;
@@ -148,6 +158,14 @@ export const campaignStore = {
     if (world?.campaign?.status === 'active') alphaBridge.send({ type: 'abandon' });
     update({ page: 'play' });
     alphaBridge.send({ type: 'menu' });
+  },
+  /**
+   * Task 08.5 crash path: the active run is dropped without any save write, so neither the
+   * results commit nor the `pagehide` abandon can touch the save for it afterwards.
+   */
+  discardActiveRun(): void {
+    const runId = alphaBridge.getSnapshot().world?.campaign?.runId;
+    if (runId) committed.add(runId);
   },
   /** Export: validated profile → JSON download. Read-only; nothing is changed. */
   exportSave(): boolean {

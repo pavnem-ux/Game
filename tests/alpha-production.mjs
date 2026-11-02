@@ -128,6 +128,8 @@ try {
         'kill-in-view',
         'Убить всех на экране',
         'Debug Overlay',
+        'Debug crash',
+        'Сымитировать сбой',
         'Урон в секунду (5 с)',
       ])
         assert.ok(
