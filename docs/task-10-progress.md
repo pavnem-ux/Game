@@ -4,7 +4,7 @@ Spec: [task-10-maps.md](task-10-maps.md) (owner's file; Prettier only added blan
 lists). Branch `task-10-maps` from `main` at `65c1835` (contains Tasks 08, 08.5, 09, 09.1:
 `src/campaign` and `src/talents` present). All new numbers are **provisional**.
 
-Current: Phase 2 (bosses & elites — tests)
+Current: Phase 3 (per-map modifiers)
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/8
 
@@ -16,9 +16,9 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/8
 - [x] 1.2 Run XP −20%, Gold table, ranged share 0.12 (spec 1.3)
 - [x] Phase 1 tests (40 maps; maps 1–10 snapshot; difficulty 11/20/40; crystal/elite XP; Gold;
       unlock chain 10→…→40)
-- [ ] 2.1 Boss configs 11–40
-- [ ] 2.2 Elite interval per act, 2 elites per event where configured
-- [ ] Phase 2 tests (boss uniqueness, ability counts, elite times, reserved slots)
+- [x] 2.1 Boss configs 11–40 (landed with 1.1, see commit note)
+- [x] 2.2 Elite interval per act, 2 elites per event where configured
+- [x] Phase 2 tests (`tests/campaign/bosses-elites-40.test.ts`) (boss uniqueness, ability counts, elite times, reserved slots)
 - [ ] 3.1 Per-map modifiers through existing levers + tests
 - [ ] 4.1 Save validation/migration for maps 1–40
 - [ ] 4.2 Recommended level function
@@ -70,3 +70,4 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/8
 ## Verification log
 
 - Phase 1: typecheck ✓, format ✓, `npm test` 1160 ✓.
+- Phase 2: typecheck ✓, format ✓, `npm test` 1168 ✓.

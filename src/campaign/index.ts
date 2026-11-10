@@ -44,6 +44,8 @@ export type {
 } from './boss-abilities';
 export {
   BOSS_DEFINITIONS,
+  BOSS_ABILITY_COUNTS,
+  bossParamSignature,
   bossSignature,
   getBossDefinition,
   validateBossDefinitions,
