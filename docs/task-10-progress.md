@@ -4,7 +4,7 @@ Spec: [task-10-maps.md](task-10-maps.md) (owner's file; Prettier only added blan
 lists). Branch `task-10-maps` from `main` at `65c1835` (contains Tasks 08, 08.5, 09, 09.1:
 `src/campaign` and `src/talents` present). All new numbers are **provisional**.
 
-Current: Phase 5 (verification & delivery)
+Current: done — awaiting Codex review and owner approval (PR #8)
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/8
 
@@ -25,9 +25,10 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/8
 - [x] 4.3 Map selection UI (acts, recommended level, modifiers, boss, lock reason)
 - [x] 4.4 Debug: unlock all 40 maps, jump to any map
 - [x] Phase 4 tests (old save, maps 11–40 persist, recommended level 1/11/30/40)
-- [ ] 5.1 Accelerated check: maps 20 and 40 completable (level 50, all talents)
-- [ ] 5.2 Full checks (AGENTS.md §6 + e2e), docs (`CAMPAIGN_ALPHA.md`, README, `playtest.md`)
-- [ ] 5.3 PR description
+- [x] 5.1 Accelerated check: maps 20 and 40 completable (level 50, all talents) — 8/8 victories,
+      table in `docs/CAMPAIGN_ALPHA.md`
+- [x] 5.2 Full checks (AGENTS.md §6 + e2e), docs (`CAMPAIGN_ALPHA.md`, README, `playtest.md`)
+- [x] 5.3 PR description
 
 ## Code map (Task 10)
 
@@ -95,10 +96,16 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/8
   40; clearing all 40 maps once reaches **41**, not the spec's expected ~43 (45 000 XP; level 42
   needs 45 100). Reported, not tuned: victory XP and the level curve are fixed by the spec.
 
+- 5.1 The check is a headless bot run (script kept out of the repo, in the agent scratchpad):
+  all 4 classes win maps 20 and 40 with no deaths; bosses die within 1–8 s of spawning. Reported as
+  a balance finding (late maps too easy at level 50), not tuned.
+
 ## Verification log
 
 - Phase 1: typecheck ✓, format ✓, `npm test` 1160 ✓.
 - Phase 2: typecheck ✓, format ✓, `npm test` 1168 ✓.
 - Phase 3: typecheck ✓, format ✓, `npm test` 1173 ✓.
+- Phase 5: typecheck ✓, format ✓, `npm test` 1182 ✓, `npm run build` ✓, `test:production` 2 PASS,
+  `GAME_LOCAL_QA=1 npm run build:qa` + `test:qa` PASS, `test:e2e` 3 PASS.
 - Phase 4: typecheck ✓, format ✓, `npm test` 1182 ✓, `npm run build` ✓, `test:production` 2 PASS,
   `test:e2e` 3 PASS (campaign test: act tabs, Act II cards, «1 / 40», all 40 unlocked by DEV).
