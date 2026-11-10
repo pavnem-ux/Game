@@ -8,6 +8,7 @@ export {
   xpToNextLevel,
 } from './class-xp';
 export type { ClassProgress, ClassXpResult } from './class-xp';
+export { levelAfterAllMaps, recommendedLevel } from './recommended-level';
 export {
   MAX_PROCESSED_RUN_IDS,
   MAX_RECENT_RUNS,

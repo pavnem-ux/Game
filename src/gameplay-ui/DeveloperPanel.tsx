@@ -1,6 +1,7 @@
 import { TALENT_CONFIG } from '../talents';
 import { useState } from 'react';
 import { DEBUG_TIME_SCALES } from '../engine/time-scale';
+import { CAMPAIGN_MAPS } from '../campaign';
 import { CHARACTER_CLASSES } from '../character-stats';
 import type { CharacterClass } from '../character-stats';
 import { CLASS_LABELS, DEFAULT_SPAWNING } from '../gameplay';
@@ -44,6 +45,7 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
     [debugXp, setDebugXp] = useState(500),
     [debugGold, setDebugGold] = useState(100),
     [debugSeed, setDebugSeed] = useState(String(w?.seed ?? 1)),
+    [jumpMap, setJumpMap] = useState(11),
     [talentNodeChoice, setTalentNode] = useState(''),
     [talentRank, setTalentRank] = useState(1),
     [saveView, setSaveView] = useState('');
@@ -83,6 +85,24 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
       <fieldset aria-label="Campaign Debug">
         <legend>Кампания · профиль</legend>
         <button onClick={() => campaignDebug.unlockMaps()}>Открыть все карты</button>
+        <label>
+          Карта
+          <input
+            aria-label="Debug карта"
+            type="number"
+            min={1}
+            max={CAMPAIGN_MAPS.length}
+            value={jumpMap}
+            onChange={(e) => setJumpMap(Number(e.target.value))}
+          />
+        </label>
+        <button
+          onClick={() => {
+            if (!campaignDebug.jumpToMap(jumpMap)) window.alert('Карта не найдена.');
+          }}
+        >
+          Перейти к карте
+        </button>
         <label>
           Уровень класса
           <input

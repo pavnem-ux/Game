@@ -4,7 +4,7 @@ Spec: [task-10-maps.md](task-10-maps.md) (owner's file; Prettier only added blan
 lists). Branch `task-10-maps` from `main` at `65c1835` (contains Tasks 08, 08.5, 09, 09.1:
 `src/campaign` and `src/talents` present). All new numbers are **provisional**.
 
-Current: Phase 4 (save & UI)
+Current: Phase 5 (verification & delivery)
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/8
 
@@ -21,10 +21,10 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/8
 - [x] Phase 2 tests (`tests/campaign/bosses-elites-40.test.ts`) (boss uniqueness, ability counts, elite times, reserved slots)
 - [x] 3.1 Per-map modifiers through existing levers + tests (`tests/campaign/modifiers.test.ts`)
 - [x] 4.1 Save validation/migration for maps 1–40 (schema v3, `migrateV2toV3`)
-- [ ] 4.2 Recommended level function
-- [ ] 4.3 Map selection UI (acts, recommended level, modifiers, boss, lock reason)
-- [ ] 4.4 Debug: unlock all 40 maps, jump to any map
-- [ ] Phase 4 tests (old save, maps 11–40 persist, recommended level 1/11/30/40)
+- [x] 4.2 Recommended level function
+- [x] 4.3 Map selection UI (acts, recommended level, modifiers, boss, lock reason)
+- [x] 4.4 Debug: unlock all 40 maps, jump to any map
+- [x] Phase 4 tests (old save, maps 11–40 persist, recommended level 1/11/30/40)
 - [ ] 5.1 Accelerated check: maps 20 and 40 completable (level 50, all talents)
 - [ ] 5.2 Full checks (AGENTS.md §6 + e2e), docs (`CAMPAIGN_ALPHA.md`, README, `playtest.md`)
 - [ ] 5.3 PR description
@@ -52,6 +52,14 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/8
   base); the test API `spawnEnemy` and bosses keep their own configs.
 - Save (4.1): `PROFILE_SCHEMA_VERSION` 3; `migrateV2toV3` in `src/persistence/saveSchema.ts`;
   map ids validated against `CAMPAIGN_MAPS.length` (40). Tests `tests/persistence/maps-40.test.ts`.
+- 4.2 `src/profile/recommended-level.ts` (`recommendedLevel`, `levelAfterAllMaps`); tests
+  `tests/profile/recommended-level.test.ts`.
+- 4.3 `CampaignPages.tsx` `MapsPage`: act tabs (group «Акты кампании», selected map's act first),
+  act title, «Рекомендуемый уровень N», lock reason «Победите на карте N», modifier list, boss
+  «???» while locked. `CampaignMenu.tsx`: map select grouped by act; summary with recommended level
+  and modifiers. CSS in `alpha.css`.
+- 4.4 `campaignDebug.jumpToMap(id)` (unlock up to it + normal `startRun`), DEV panel «Debug карта» /
+  «Перейти к карте»; tests `tests/persistence/maps-debug.test.ts`; production markers added.
 - Tests: `tests/campaign/maps-40.test.ts` + fixture `tests/campaign/fixtures/act1-task08.json`
   (maps, schedules, spawner settings and XP values dumped from `main` before Task 10).
 
@@ -82,8 +90,15 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/8
   for exactly those saves; every other field is kept. Older builds will refuse a v3 save
   (`newer-version`), as designed.
 
+- 4.2 The recommended level equals the map number for every map (each victory gives a little more
+  than one level's cost on the existing curve): map 29 → 29, map 30 → 30 (superpower), map 40 →
+  40; clearing all 40 maps once reaches **41**, not the spec's expected ~43 (45 000 XP; level 42
+  needs 45 100). Reported, not tuned: victory XP and the level curve are fixed by the spec.
+
 ## Verification log
 
 - Phase 1: typecheck ✓, format ✓, `npm test` 1160 ✓.
 - Phase 2: typecheck ✓, format ✓, `npm test` 1168 ✓.
 - Phase 3: typecheck ✓, format ✓, `npm test` 1173 ✓.
+- Phase 4: typecheck ✓, format ✓, `npm test` 1182 ✓, `npm run build` ✓, `test:production` 2 PASS,
+  `test:e2e` 3 PASS (campaign test: act tabs, Act II cards, «1 / 40», all 40 unlocked by DEV).

@@ -1,8 +1,8 @@
-import { useSyncExternalStore } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { CHARACTER_CLASSES, calculateCharacterStats } from '../character-stats';
-import { CAMPAIGN_MAPS } from '../campaign';
+import { CAMPAIGN_ACTS, CAMPAIGN_MAPS, actOf } from '../campaign';
 import { CLASS_LABELS, WEAPON_LABELS } from '../gameplay';
-import { isMapUnlocked, talentPoints, xpToNextLevel } from '../profile';
+import { isMapUnlocked, recommendedLevel, talentPoints, xpToNextLevel } from '../profile';
 import { campaignStore } from './campaign-state';
 import { CLASS_SYMBOLS, clock, factor, minutes } from './campaign-format';
 import { displayHp } from './format';
@@ -82,16 +82,44 @@ export function CharacterPage() {
   );
 }
 
-/** All 10 maps: lock state, difficulty, rewards, best result, boss (if unlocked). */
+/**
+ * Task 10: 40 maps in 4 act tabs (the selected map's act opens first): lock state and reason,
+ * recommended level, modifiers, difficulty, rewards, best result, boss (if unlocked).
+ */
 export function MapsPage() {
   const ui = useCampaign();
   const profile = ui.progression.profile;
+  const [act, setAct] = useState(() => actOf(ui.selectedMapId).id);
   if (!profile) return <p className="campaign-empty">Профиль недоступен.</p>;
+  const shown = CAMPAIGN_MAPS.filter((m) => m.act === act);
+  const current = CAMPAIGN_ACTS[act - 1];
   return (
     <div className="campaign-page maps-page">
       <h2>Карты</h2>
-      <ol className="map-list">
-        {CAMPAIGN_MAPS.map((m) => {
+      <div className="act-tabs" role="group" aria-label="Акты кампании">
+        {CAMPAIGN_ACTS.map((a) => {
+          const open = isMapUnlocked(profile, a.firstMap);
+          return (
+            <button
+              key={a.id}
+              className={`act-tab ${a.id === act ? 'active' : ''}`}
+              aria-pressed={a.id === act}
+              onClick={() => setAct(a.id)}
+            >
+              Акт {a.roman} · {a.name}
+              {!open && ' 🔒'}
+            </button>
+          );
+        })}
+      </div>
+      <h3 className="act-title">
+        Акт {current.roman} · {current.name}{' '}
+        <small>
+          карты {current.firstMap}–{current.lastMap}
+        </small>
+      </h3>
+      <ol className="map-list" start={current.firstMap}>
+        {shown.map((m) => {
           const unlocked = isMapUnlocked(profile, m.id);
           const best = profile.bestResults[String(m.id)];
           const done = profile.completedMaps.includes(m.id);
@@ -111,6 +139,17 @@ export function MapsPage() {
                   {done ? '✓ Пройдена' : unlocked ? 'Открыта' : '🔒 Закрыта'}
                 </span>
               </div>
+              <p className="map-recommended">
+                Рекомендуемый уровень {recommendedLevel(m.id)}
+                {!unlocked && m.id > 1 && <> · Победите на карте {m.id - 1}</>}
+              </p>
+              {m.modifiers.length > 0 && (
+                <ul className="map-modifiers" aria-label="Особенности карты">
+                  {m.modifiers.map((x) => (
+                    <li key={x.id}>{x.label}</li>
+                  ))}
+                </ul>
+              )}
               <p className="map-meta">
                 {minutes(m.durationSeconds)} · HP врагов {factor(m.difficulty.hp)} · урон{' '}
                 {factor(m.difficulty.damage)} · волны {factor(m.difficulty.spawnRate)}

@@ -70,6 +70,16 @@ export const campaignDebug = {
     }));
   },
   /**
+   * Task 10 §1.5: jump to any map — unlocks maps up to it (same profile edit as «Открыть все
+   * карты», never locks anything) and starts a normal campaign run there.
+   */
+  jumpToMap(mapId: number): boolean {
+    if (!Number.isInteger(mapId) || mapId < 1 || mapId > CAMPAIGN_MAPS.length) return false;
+    if (!this.unlockMaps(mapId)) return false;
+    campaignStore.selectMap(mapId);
+    return campaignStore.startRun(mapId);
+  },
+  /**
    * Sets the permanent class level (= grants/removes talent points, Task 09 §1.6). The tree is
    * kept while it stays valid; if the new level cannot hold it (points or the level-30 gate),
    * the class tree is reset. Returns whether the tree had to be reset (null = refused).

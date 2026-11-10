@@ -1741,3 +1741,37 @@ p.damage-note {
 .skill-card.enhanced {
   border-color: #e8c36a;
 }
+/* Task 10: campaign acts and map details. */
+.act-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.act-tab {
+  padding: 6px 10px;
+  border: 1px solid #9db68755;
+  background: #14201ae6;
+  color: #e5e6cf;
+  border-radius: 4px;
+  font-size: 13px;
+}
+.act-tab.active {
+  border-color: #e8c36a;
+  color: #f4e3b0;
+}
+.act-title small {
+  font-weight: normal;
+  opacity: 0.7;
+}
+.map-recommended {
+  margin: 2px 0;
+  font-size: 13px;
+  color: #f4e3b0;
+}
+.map-modifiers {
+  margin: 2px 0;
+  padding-left: 18px;
+  font-size: 12px;
+  color: #ffb38a;
+}
