@@ -39,6 +39,7 @@ const winOn = (p: PlayerProfile, runId: string) =>
     eliteKills: 4,
     bossKilled: true,
     runLevel: 9,
+    coins: 45, // Task 11: 45 coins + 30 victory bonus = 75 Gold on map 1
   }).profile;
 
 describe('saveStore (Task 08 §1.4, step 4.2)', () => {
@@ -77,6 +78,7 @@ describe('saveStore (Task 08 §1.4, step 4.2)', () => {
       eliteKills: 4,
       bossKilled: true,
       runLevel: 9,
+      coins: 45,
     });
     expect(again.summary.duplicate).toBe(true);
     expect(again.profile.gold).toBe(75);

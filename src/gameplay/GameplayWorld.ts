@@ -72,6 +72,8 @@ import type {
 import type { DirectDamageObserver, DirectDamagePolicy } from '../enemy-ai';
 import { addModifiers, gearModifiers, validateLoadout } from '../equipment';
 import type { Loadout } from '../equipment';
+import { RunCoins } from './coins';
+import { COIN_RULES, coinValue } from '../equipment/economy';
 /** The sole world scheduler. All damage is resolved by existing modules, one boundary at a time. */
 export class GameplayWorld {
   readonly core: CombatCore;
@@ -91,6 +93,9 @@ export class GameplayWorld {
   private eventSequence = 0;
   private kills = 0;
   private readonly experience = new RunExperience();
+  /** Task 11: Gold coins of this run (campaign only) and their seeded drop stream. */
+  private readonly coins = new RunCoins();
+  private readonly coinRandom: () => number;
   private spawnSettings: SpawnSettings;
   private nextSpawnAt: number;
   private waveSequence = 0;
@@ -155,6 +160,7 @@ export class GameplayWorld {
     this.random = rng.combat;
     const skillRandom = rng.skills;
     this.spawnRandom = rng.spawn;
+    this.coinRandom = rng.coins;
     this.campaignMap = options.campaign ? getCampaignMap(options.campaign.mapId) : null;
     this.director = this.campaignMap ? new CampaignDirector(this.campaignMap) : null;
     this.enemyStats = this.campaignMap
@@ -387,6 +393,7 @@ export class GameplayWorld {
       kills: this.kills,
       progression: this.experience.getState(),
       crystals: this.experience.getCrystals(),
+      coins: Object.freeze({ collected: this.coins.collected, piles: this.coins.getPiles() }),
       spawning: Object.freeze({
         settings: this.spawnSettings,
         nextSpawnAt: this.nextSpawnAt,
@@ -1176,6 +1183,23 @@ export class GameplayWorld {
     });
     this.controlIndex++;
     this.progression(this.experience.collect(this.body, this.body.radius));
+    const coins = this.coins.collect(this.body, this.body.radius);
+    if (coins.length) this.record('progression', coins);
+  }
+  /**
+   * Task 11 §1.4: campaign coin drop of one rewarded death — boss: large pile, elite: guaranteed
+   * pile, normal enemy: one seeded roll for a small pile. Values scale with the map.
+   */
+  private dropCoins(enemyId: string, position: Point) {
+    const map = this.campaignMap;
+    if (!map) return;
+    const kind =
+      enemyId === this.bossEnemyId ? 'boss' : this.eliteProfiles.has(enemyId) ? 'elite' : 'normal';
+    if (kind === 'normal' && !(this.coinRandom() < COIN_RULES.normalChance)) return;
+    const pile = this.coins.drop(position, coinValue(kind, map.id));
+    this.record('progression', [
+      Object.freeze({ type: 'coins-dropped', pileId: pile.id, amount: coinValue(kind, map.id) }),
+    ]);
   }
   private prepare() {
     this.skills.invalidateGeometry();
@@ -1386,6 +1410,8 @@ export class GameplayWorld {
               position: enemy.position,
             }),
           ]);
+          // Task 11: coins drop here too — inside the once-per-death reward (dedup by design).
+          this.dropCoins(event.entityId, enemy.position);
         }
         this.skills.noteDeath(event.entityId, enemy.position);
         if (event.entityId === this.bossEnemyId && !this.bossDefeated) {

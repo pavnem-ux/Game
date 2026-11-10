@@ -43,6 +43,8 @@ const result = (over: Partial<RunResult> = {}): RunResult => ({
   eliteKills: 4,
   bossKilled: true,
   runLevel: 8,
+  // Task 11: Gold = collected coins + victory bonus; 45 + 30 = 75 on map 1.
+  coins: 45,
   ...over,
 });
 

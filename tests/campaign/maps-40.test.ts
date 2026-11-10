@@ -90,7 +90,9 @@ describe('Task 10 Phase 1 — 40 maps in 4 acts', () => {
     for (const m of CAMPAIGN_MAPS) {
       expect(m.victoryXp).toBe(100 + 50 * m.id);
       expect(m.victoryGold).toBe(m.id <= 10 ? (100 + 50 * m.id) / 2 : 300 + 15 * (m.id - 10));
-      expect(runRewards({ mapId: m.id, outcome: 'victory', elapsed: 900 })).toEqual({
+      // Task 11: Gold of a victory = coins + 40% bonus; the Task 10 table is the 100% reference.
+      const coins = m.victoryGold - Math.round(m.victoryGold * 0.4);
+      expect(runRewards({ mapId: m.id, outcome: 'victory', elapsed: 900, coins })).toMatchObject({
         xp: m.victoryXp,
         gold: m.victoryGold,
       });

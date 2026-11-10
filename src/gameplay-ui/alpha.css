@@ -1775,3 +1775,8 @@ p.damage-note {
   font-size: 12px;
   color: #ffb38a;
 }
+/* Task 11: run coins in the campaign HUD. */
+.campaign-hud-coins {
+  color: #f0c862;
+  font-variant-numeric: tabular-nums;
+}

@@ -375,6 +375,13 @@ export class AlphaScene extends Phaser.Scene {
         .fillTriangle(x - 4, y, x + 4, y, x, y + 6);
       g.lineStyle(1, 0xe4ffe1, 0.7).lineBetween(x, y - 4, x - 2, y);
     }
+    // Task 11: Gold coin piles (original simple shapes; bigger piles drawn slightly larger).
+    for (const pile of s.coins.piles) {
+      const r = Math.min(9, 4 + Math.log2(pile.value + 1));
+      g.fillStyle(0xf0c862, 0.18).fillCircle(pile.x, pile.y, r + 6);
+      g.fillStyle(0xf0c862).fillCircle(pile.x, pile.y, r);
+      g.lineStyle(1, 0xfff1c4, 0.8).strokeCircle(pile.x, pile.y, r);
+    }
     let stunLabel = 0;
     let label = 0,
       damageLabel = 0;

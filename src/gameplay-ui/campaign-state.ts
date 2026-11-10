@@ -73,6 +73,8 @@ export function runResultFrom(
     bossKilled: c.bossKilled,
     runLevel: world.progression.level,
     stats: summarizeRunStats(world.runStats),
+    // Task 11: coins collected this run (converted to Gold once, with the result).
+    coins: world.coins.collected,
   });
 }
 

@@ -1,5 +1,6 @@
 import type { CharacterClass } from '../character-stats';
 import { CAMPAIGN_BALANCE, getCampaignMap } from '../campaign';
+import { runGold } from '../equipment/economy';
 
 /**
  * Task 08 run rewards (pure). Victory: full map XP to the class and Gold to the profile. Defeat:
@@ -22,6 +23,8 @@ export interface RunResult {
   readonly runLevel: number;
   /** Task 08.5: optional run-statistics summary, stored with the recent run (display only). */
   readonly stats?: RunStatsSummary;
+  /** Task 11: Gold coins collected during the run (absent = 0). */
+  readonly coins?: number;
 }
 /**
  * Task 08.5 §2: the only run statistics that are persisted (in `recentRuns`). Whole numbers for
@@ -77,27 +80,42 @@ export function validateRunStatsSummary(stats: unknown, what = 'stats'): RunStat
 }
 export interface RunRewards {
   readonly xp: number;
+  /** Total Gold credited (= coins + bonus). */
   readonly gold: number;
+  /** Task 11: Gold from collected coins (victory: all; defeat: 50%) and the victory bonus. */
+  readonly coins: number;
+  readonly bonus: number;
 }
 
-export function runRewards(result: Pick<RunResult, 'mapId' | 'outcome' | 'elapsed'>): RunRewards {
+/**
+ * Rewards of a finished run. XP as in Task 08 (victory XP; defeat share by time survived).
+ * Task 11: Gold = collected coins + victory bonus (victory), 50% of the coins (defeat), nothing
+ * when abandoned — see `runGold` in the economy config.
+ */
+export function runRewards(
+  result: Pick<RunResult, 'mapId' | 'outcome' | 'elapsed' | 'coins'>,
+): RunRewards {
   const map = getCampaignMap(result.mapId);
   if (!Number.isFinite(result.elapsed) || result.elapsed < 0)
     throw new RangeError('elapsed must be a finite, non-negative number of seconds.');
+  let xp: number;
   switch (result.outcome) {
     case 'victory':
-      return Object.freeze({ xp: map.victoryXp, gold: map.victoryGold });
-    case 'defeat': {
-      const share =
-        CAMPAIGN_BALANCE.rewards.defeatShare * Math.min(result.elapsed / map.durationSeconds, 1);
-      return Object.freeze({
-        xp: Math.floor(map.victoryXp * share),
-        gold: Math.floor(map.victoryGold * share),
-      });
-    }
+      xp = map.victoryXp;
+      break;
+    case 'defeat':
+      xp = Math.floor(
+        map.victoryXp *
+          CAMPAIGN_BALANCE.rewards.defeatShare *
+          Math.min(result.elapsed / map.durationSeconds, 1),
+      );
+      break;
     case 'abandoned':
-      return Object.freeze({ xp: 0, gold: 0 });
+      xp = 0;
+      break;
     default:
       throw new TypeError(`Unknown run outcome: ${String(result.outcome)}.`);
   }
+  const gold = runGold(result.outcome, map.id, result.coins ?? 0);
+  return Object.freeze({ xp, gold: gold.total, coins: gold.coins, bonus: gold.bonus });
 }

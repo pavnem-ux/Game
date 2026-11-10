@@ -144,7 +144,9 @@ try {
   );
   const text = await results.innerText();
   assert.match(text, /\+150 XP/);
-  assert.match(text, /Золото\s+\+75/);
+  // Task 11: Gold = coins collected in the run + victory bonus (30 on map 1).
+  assert.match(text, /Монеты\s+\d+/);
+  assert.match(text, /Бонус за победу\s+\+30/);
   assert.match(text, /1 → 2 \(\+1\)/);
   assert.match(text, /Очки талантов\s+\+1/);
   assert.match(text, /Открыта карта 2: Туманные болота/);
@@ -158,7 +160,9 @@ try {
   assert.match(statsText, /Гибель\s+не погибали/);
   await page.screenshot({ path: 'artifacts/campaign-03-victory.png' });
   const afterWin = await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.profile')));
-  assert.equal(afterWin.gold, 75);
+  const winGold = afterWin.gold;
+  assert.ok(winGold >= 30, 'victory pays at least the bonus');
+  assert.match(text, new RegExp(`Золото\\s+\\+${winGold}`));
   assert.equal(afterWin.highestUnlockedMap, 2);
   assert.equal(afterWin.classes.archer.level, 2);
   assert.equal(afterWin.stats.wins, 1);
@@ -166,13 +170,13 @@ try {
   assert.ok(afterWin.recentRuns[0].stats.topSources.length >= 1);
   await results.getByRole('button', { name: 'В меню' }).click();
   await nav.waitFor();
-  assert.equal(await page.getByLabel('Золото: 75').count(), 1);
+  assert.equal(await page.getByLabel(`Золото: ${winGold}`).count(), 1);
 
   // Restart browser (reload): progress intact; Map 2 with another class; shared Gold, separate XP.
   await page.reload();
   await page.waitForFunction(() => !!window.__alpha);
   await nav.waitFor();
-  assert.equal(await page.getByLabel('Золото: 75').count(), 1);
+  assert.equal(await page.getByLabel(`Золото: ${winGold}`).count(), 1);
   await nav.getByRole('button', { name: 'Прогресс', exact: true }).click();
   assert.match(await page.locator('.progression-page').innerText(), /Пройдено карт: 1 \/ 40/);
   assert.match(await page.locator('.recent-runs').innerText(), /Победа · карта 1/);
@@ -246,13 +250,13 @@ try {
   assert.ok(report.run.stats && Array.isArray(report.run.stats.bySource));
   assert.ok(Array.isArray(report.errors));
   assert.equal(report.save.ok, true);
-  assert.equal(report.save.profile.gold, 75);
+  assert.equal(report.save.profile.gold, winGold);
   assert.match(report.userAgent, /Chrome/);
   await page.getByRole('status').filter({ hasText: 'Отчёт сохранён' }).waitFor();
   await page.getByRole('button', { name: /Выйти в меню · забег не засчитается/ }).click();
   await nav.waitFor();
   const afterQuit = await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.profile')));
-  assert.equal(afterQuit.gold, 75);
+  assert.equal(afterQuit.gold, winGold);
   assert.equal(afterQuit.classes.mage.lifetimeXp, 0);
   assert.equal(afterQuit.recentRuns[0].outcome, 'abandoned');
   assert.equal(afterQuit.stats.runs, 2);
@@ -265,7 +269,7 @@ try {
   const afterReload = await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.profile')));
   assert.equal(afterReload.recentRuns[0].outcome, 'abandoned');
   assert.equal(afterReload.stats.runs, 3);
-  assert.equal(afterReload.gold, 75);
+  assert.equal(afterReload.gold, winGold);
 
   // 5.5 Save Management: status, warning, export download, import (invalid → unchanged; valid →
   // confirm → replace), visible warning on a write failure.
@@ -281,7 +285,7 @@ try {
   const exported = JSON.parse(
     await (await import('node:fs/promises')).readFile(await download.path(), 'utf8'),
   );
-  assert.equal(exported.gold, 75);
+  assert.equal(exported.gold, winGold);
   const stored = () => page.evaluate(() => localStorage.getItem('skazki.profile'));
   const before = await stored();
   await page.getByLabel('Файл сохранения').setInputFiles({
@@ -329,7 +333,7 @@ try {
   });
   await confirm.getByRole('button', { name: 'Заменить сохранение' }).click();
   await page.getByText('Сохранение импортировано.').waitFor();
-  assert.equal(JSON.parse(await stored()).gold, 75);
+  assert.equal(JSON.parse(await stored()).gold, winGold);
   await page.screenshot({ path: 'artifacts/campaign-07-settings.png', fullPage: true });
   // Write failure: storage refuses writes → visible warning, nothing claimed as saved.
   await page.evaluate(() => {
@@ -490,7 +494,7 @@ try {
   await page.getByText('Сохранение импортировано.').waitFor();
   const imported = JSON.parse(await stored());
   assert.equal(imported.profileId, report.save.profile.profileId);
-  assert.equal(imported.gold, 75);
+  assert.equal(imported.gold, winGold);
   await page.getByRole('button', { name: /DEV · Закрыть/ }).click();
 
   // Task 08.5 §5.3: «Тряска экрана» (on by default) lives in its own settings key.
