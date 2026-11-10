@@ -36,9 +36,9 @@ const code = (raw: unknown) => {
 };
 
 describe('saveSchema (Task 08 §1.4, step 4.1)', () => {
-  it('v3 is current (Task 10 maps) and the migrations map upgrades v1 → v2 → v3', () => {
-    expect(SAVE_SCHEMA_VERSION).toBe(3);
-    expect(Object.keys(migrations)).toEqual(['1', '2']);
+  it('v4 is current (Task 11 gear) and the migrations map upgrades v1 → v2 → v3 → v4', () => {
+    expect(SAVE_SCHEMA_VERSION).toBe(4);
+    expect(Object.keys(migrations)).toEqual(['1', '2', '3']);
   });
   it('a valid profile round-trips through JSON unchanged', () => {
     const p = played();
@@ -57,7 +57,14 @@ describe('saveSchema (Task 08 §1.4, step 4.1)', () => {
     if (!r.ok) throw r.error;
     expect(r.profile.classes.mage.level).toBe(played().classes.mage.level);
     expect(r.profile.classes.mage.talents).toEqual({});
-    expect(r.profile.classes.rogue).toEqual({ xp: 0, level: 1, lifetimeXp: 0, talents: {} });
+    expect(r.profile.classes.rogue).toEqual({
+      xp: 0,
+      level: 1,
+      lifetimeXp: 0,
+      talents: {},
+      // Task 11: a missing loadout defaults to the starter weapon and empty slots.
+      loadout: { weapon: 'starter_daggers', armor: null, amulet: null, ring: null },
+    });
     expect(r.profile.stats.runs).toBe(0);
     expect(r.profile.recentRuns).toEqual([]);
     expect(r.profile.gold).toBe(played().gold);
@@ -99,7 +106,7 @@ describe('saveSchema (Task 08 §1.4, step 4.1)', () => {
     expect(code([base])).toBe('not-an-object');
   });
   it('newer-version and malformed JSON are reported with distinct codes', () => {
-    expect(code({ ...json(played()), schemaVersion: 4 })).toBe('newer-version');
+    expect(code({ ...json(played()), schemaVersion: 5 })).toBe('newer-version');
     const bad = parseProfileJson('{"schemaVersion": 1,');
     expect(!bad.ok && bad.error.code).toBe('malformed-json');
   });

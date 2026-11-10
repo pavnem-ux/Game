@@ -95,7 +95,10 @@ export const campaignDebug = {
     const talents = kept.ok ? kept.ranks : {};
     const ok = edit((p) => ({
       ...p,
-      classes: { ...p.classes, [characterClass]: progressAt(level, talents) },
+      classes: {
+        ...p.classes,
+        [characterClass]: { ...p.classes[characterClass], ...progressAt(level, talents) },
+      },
     }));
     return ok ? { talentsReset: !kept.ok } : null;
   },
@@ -127,7 +130,9 @@ export const campaignDebug = {
       classes: {
         ...p.classes,
         [characterClass]:
-          level === progress.level ? { ...progress, talents: ranks } : progressAt(level, ranks),
+          level === progress.level
+            ? { ...progress, talents: ranks }
+            : { ...progress, ...progressAt(level, ranks) },
       },
     }));
   },

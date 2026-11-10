@@ -12,6 +12,8 @@ import {
 } from '../profile';
 import type { ClassProgress, MapBest, PlayerProfile, RecentRun, RunStatsSummary } from '../profile';
 import { validateTalentRanks } from '../talents';
+import { GEAR_SLOTS, defaultLoadout, findItem, isEligible } from '../equipment';
+import type { Loadout } from '../equipment';
 
 /**
  * Task 08 `saveSchema`: validation, defaults and migrations for the persisted profile.
@@ -52,9 +54,28 @@ export function migrateV2toV3(data: Json): Json {
     return { ...data, highestUnlockedMap: 11 };
   return { ...data };
 }
+/**
+ * v3 → v4 (Task 11): `ownedItems: []` and every class gets the default loadout (starter weapon,
+ * empty armor/amulet/ring). Gold, XP, levels, maps, talents and runs are untouched.
+ */
+export function migrateV3toV4(data: Json): Json {
+  const classes: Json = {};
+  if (isObject(data.classes))
+    for (const [id, value] of Object.entries(data.classes))
+      classes[id] =
+        isObject(value) && (CHARACTER_CLASSES as readonly string[]).includes(id)
+          ? { ...value, loadout: defaultLoadout(id as CharacterClass) }
+          : value; // left for normal validation to reject
+  return {
+    ...data,
+    ...(isObject(data.classes) ? { classes } : {}),
+    ownedItems: [],
+  };
+}
 export const migrations: Readonly<Record<number, Migration>> = Object.freeze({
   1: migrateV1toV2,
   2: migrateV2toV3,
+  3: migrateV3toV4,
 });
 
 export type SaveErrorCode =
@@ -108,7 +129,28 @@ function talentRanks(c: CharacterClass, level: number, raw: unknown, what: strin
   const r = validateTalentRanks(c, level, raw);
   return r.ok ? r.ranks : invalid(what);
 }
-function classProgress(raw: unknown, c: string): ClassProgress {
+/** Task 11: a class loadout — known ids, right slot and class, owned (starter always owned). */
+function loadout(raw: unknown, c: CharacterClass, owned: ReadonlySet<string>): Loadout {
+  if (raw === undefined) return defaultLoadout(c);
+  if (!isObject(raw)) invalid(`classes.${c}.loadout`);
+  const v = raw as Json;
+  const out: Record<string, string | null> = {};
+  for (const slot of GEAR_SLOTS) {
+    const id = or(v[slot], slot === 'weapon' ? defaultLoadout(c).weapon : null);
+    const what = `classes.${c}.loadout.${slot}`;
+    if (id === null) {
+      if (slot === 'weapon') invalid(what); // the weapon slot always holds a weapon
+      out[slot] = null;
+      continue;
+    }
+    const item = typeof id === 'string' ? findItem(id) : null;
+    if (!item || !isEligible(item, c, slot)) invalid(what);
+    if (!item!.starter && !owned.has(item!.id)) invalid(`${what} (not owned)`);
+    out[slot] = item!.id;
+  }
+  return Object.freeze(out as Record<(typeof GEAR_SLOTS)[number], string | null>);
+}
+function classProgress(raw: unknown, c: string, owned: ReadonlySet<string>): ClassProgress {
   const v = isObject(raw) ? raw : raw === undefined ? {} : invalid(`classes.${c}`);
   const level = int(
     or(v.level, NEW_CLASS_PROGRESS.level),
@@ -123,6 +165,7 @@ function classProgress(raw: unknown, c: string): ClassProgress {
     level,
     lifetimeXp: int(or(v.lifetimeXp, 0), `classes.${c}.lifetimeXp`),
     talents: talentRanks(c as CharacterClass, level, or(v.talents, {}), `classes.${c}.talents`),
+    loadout: loadout(v.loadout, c as CharacterClass, owned),
   });
 }
 function mapBest(raw: unknown, key: string): MapBest {
@@ -178,11 +221,21 @@ function recentRun(raw: unknown, i: number): RecentRun {
 /** Validates current-version data, filling defaults for missing fields. Throws SaveDataError. */
 export function normalizeProfile(data: Json, version = SAVE_SCHEMA_VERSION): PlayerProfile {
   if (data.schemaVersion !== version) invalid('schemaVersion');
+  // Task 11: owned shop items first (known, buyable ids, no duplicates); loadouts check them.
+  const ownedRaw = or(data.ownedItems, []);
+  if (!Array.isArray(ownedRaw)) invalid('ownedItems');
+  const ownedItems = (ownedRaw as unknown[]).map((id, i) => {
+    const item = typeof id === 'string' ? findItem(id) : null;
+    if (!item || item.starter) invalid(`ownedItems[${i}]`);
+    return item!.id;
+  });
+  if (new Set(ownedItems).size !== ownedItems.length) invalid('ownedItems (duplicates)');
+  const owned = new Set(ownedItems);
   const classesRaw = or(data.classes, {});
   if (!isObject(classesRaw)) invalid('classes');
   const classes = Object.freeze(
     Object.fromEntries(
-      CHARACTER_CLASSES.map((c) => [c, classProgress((classesRaw as Json)[c], c)]),
+      CHARACTER_CLASSES.map((c) => [c, classProgress((classesRaw as Json)[c], c, owned)]),
     ) as Record<CharacterClass, ClassProgress>,
   );
   const highestUnlockedMap = mapId(or(data.highestUnlockedMap, 1), 'highestUnlockedMap');
@@ -235,6 +288,7 @@ export function normalizeProfile(data: Json, version = SAVE_SCHEMA_VERSION): Pla
     }),
     recentRuns: Object.freeze((recentRaw as unknown[]).map(recentRun)),
     processedRunIds: Object.freeze(processedRunIds),
+    ownedItems: Object.freeze(ownedItems),
   });
 }
 
