@@ -161,6 +161,44 @@ try {
   assert.match(await page.locator('.progression-page').innerText(), /Пройдено карт: 1 \/ 10/);
   assert.match(await page.locator('.recent-runs').innerText(), /Победа · карта 1/);
   await page.screenshot({ path: 'artifacts/campaign-04-progression.png', fullPage: true });
+  // Task 09 §1.5: talent screen (selected class = archer, level 2 → 1 point).
+  const talents = page.getByRole('region', { name: 'Таланты', exact: true });
+  assert.equal(await page.getByRole('button', { name: 'Таланты — скоро' }).count(), 0);
+  assert.match(await talents.innerText(), /Свободно очков: 1 из 1/);
+  // Task 09.1 G0: the catalog is approved; not-yet-implemented ranks are flagged instead.
+  assert.match(await talents.innerText(), /Часть рангов пока не действует в бою/);
+  const superBranch = talents.getByRole('region', { name: /^Ветка 3\./ });
+  assert.match(await superBranch.innerText(), /доступно с 30 уровня/);
+  assert.equal(
+    await superBranch
+      .getByRole('button', { name: /Изучить/ })
+      .first()
+      .isDisabled(),
+    true,
+  );
+  const eye = talents.getByRole('listitem', { name: /^Меткий глаз: Ранг 0$/ });
+  const next = talents.getByRole('listitem', { name: /^Слабая точка: Ранг 0$/ });
+  assert.equal(await next.getByRole('button', { name: 'Изучить ранг I' }).isDisabled(), true);
+  assert.match(await next.innerText(), /Сначала изучите предыдущий талант до ранга II/);
+  await eye.getByRole('button', { name: 'Изучить ранг I' }).click();
+  await talents.getByText(/Свободно очков: 0 из 1/).waitFor();
+  assert.deepEqual(
+    await page.evaluate(
+      () => JSON.parse(localStorage.getItem('skazki.profile')).classes.archer.talents,
+    ),
+    { 'archer.b1.n01': 1 },
+  );
+  assert.equal(
+    await talents
+      .getByRole('listitem', { name: /^Меткий глаз: Ранг I$/ })
+      .getByRole('button', { name: 'Изучить ранг II' })
+      .isDisabled(),
+    true,
+    'no points left',
+  );
+  await talents.getByRole('button', { name: /Маг/ }).click();
+  assert.match(await talents.innerText(), /Свободно очков: 0 из 0/);
+  await page.screenshot({ path: 'artifacts/campaign-12-talents.png', fullPage: true });
   await nav.getByRole('button', { name: 'Персонаж', exact: true }).click();
   await page.getByRole('article', { name: /Маг/ }).getByRole('button', { name: 'Выбрать' }).click();
   await nav.getByRole('button', { name: 'Карты', exact: true }).click();
@@ -353,6 +391,37 @@ try {
   await devProfile.getByRole('button', { name: 'Сбросить тестовый прогресс' }).click();
   await page.getByLabel('Золото: 0').waitFor();
   assert.equal(JSON.parse(await stored()).highestUnlockedMap, 1);
+  // Task 09 §1.6 (DEV): talent debug — superpower preset, set a rank, reset the tree.
+  const talentDebug = page.getByRole('group', { name: 'Talent Debug' });
+  await talentDebug.getByRole('button', { name: 'Пресет сверхспособности вкл/выкл' }).click();
+  await page.waitForFunction(
+    () =>
+      JSON.parse(localStorage.getItem('skazki.profile')).classes.warrior.talents[
+        'warrior.b3.n01'
+      ] === 1,
+  );
+  assert.equal(JSON.parse(await stored()).classes.warrior.level, 30);
+  await talentDebug.getByLabel('Debug талант').selectOption('warrior.b1.n03');
+  await talentDebug.getByLabel('Debug ранг таланта').selectOption('3');
+  await talentDebug.getByRole('button', { name: 'Установить ранг таланта' }).click();
+  await page.waitForFunction(
+    () =>
+      JSON.parse(localStorage.getItem('skazki.profile')).classes.warrior.talents[
+        'warrior.b1.n03'
+      ] === 3,
+  );
+  assert.deepEqual(JSON.parse(await stored()).classes.warrior.talents, {
+    'warrior.b3.n01': 1,
+    'warrior.b1.n01': 2,
+    'warrior.b1.n02': 2,
+    'warrior.b1.n03': 3,
+  });
+  await talentDebug.getByRole('button', { name: 'Сбросить дерево талантов' }).click();
+  await page.waitForFunction(
+    () =>
+      Object.keys(JSON.parse(localStorage.getItem('skazki.profile')).classes.warrior.talents)
+        .length === 0,
+  );
   await page.getByRole('button', { name: /DEV · Закрыть/ }).click();
 
   // Task 08.5 §3.2: a crash mid-run shows the friendly screen, logs the error in its own key,

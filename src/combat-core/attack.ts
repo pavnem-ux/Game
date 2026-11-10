@@ -24,11 +24,16 @@ export function createAttackSnapshot(
   const stat = request.damageType === 'physical' ? attacker.physicalDamage : attacker.magicalDamage;
   const baseDamage = stat * request.coefficient;
   nonNegative(baseDamage, 'calculated base damage');
+  if (request.noCritical !== undefined && typeof request.noCritical !== 'boolean')
+    throw new TypeError('noCritical must be a boolean.');
   // Exactly one draw per attack; a bonus never exceeds the central Crit Chance cap.
-  const critical = rollChance(
-    Math.min(COMBAT_ATTRIBUTE_CAPS.criticalChance, attacker.criticalChance + bonus),
-    random,
-  );
+  // Task 09.1: a `noCritical` attack draws nothing and is never critical.
+  const critical = request.noCritical
+    ? false
+    : rollChance(
+        Math.min(COMBAT_ATTRIBUTE_CAPS.criticalChance, attacker.criticalChance + bonus),
+        random,
+      );
   const rawDamage = critical
     ? calculateCriticalDamage(baseDamage, attacker.criticalDamage)
     : baseDamage;

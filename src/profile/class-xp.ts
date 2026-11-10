@@ -13,14 +13,17 @@ export interface ClassProgress {
   readonly level: number;
   /** Every permanent XP point ever granted to this class (including past the cap). */
   readonly lifetimeXp: number;
-  /** Reserved for future talent spending (always 0 in Task 08). */
-  readonly talentsSpent: number;
+  /**
+   * Task 09: allocated talent ranks of this class tree (node id → rank 1–3). Only ranks are
+   * stored; points are derived from the level (replaces the Task 08 `talentsSpent` placeholder).
+   */
+  readonly talents: Readonly<Record<string, number>>;
 }
 export const NEW_CLASS_PROGRESS: ClassProgress = Object.freeze({
   xp: 0,
   level: 1,
   lifetimeXp: 0,
-  talentsSpent: 0,
+  talents: Object.freeze({}),
 });
 
 /** XP needed to go from `level` to `level + 1` (null at the cap). */

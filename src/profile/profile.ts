@@ -8,7 +8,8 @@ import type { RunOutcome, RunStatsSummary } from './rewards';
  * Task 08 player profile (persisted as one JSON document by the save store in Phase 4).
  * Only source data is stored — never derived values (combat stats, talent points).
  */
-export const PROFILE_SCHEMA_VERSION = 1;
+/** v2 (Task 09): per-class `talents` ranks replace the `talentsSpent` placeholder. */
+export const PROFILE_SCHEMA_VERSION = 2;
 export const MAX_RECENT_RUNS = 20;
 export const MAX_PROCESSED_RUN_IDS = 50;
 

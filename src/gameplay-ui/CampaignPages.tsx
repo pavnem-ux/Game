@@ -6,6 +6,7 @@ import { isMapUnlocked, talentPoints, xpToNextLevel } from '../profile';
 import { campaignStore } from './campaign-state';
 import { CLASS_SYMBOLS, clock, factor, minutes } from './campaign-format';
 import { displayHp } from './format';
+import { TalentsPanel } from './TalentsPanel';
 
 const useCampaign = () => useSyncExternalStore(campaignStore.subscribe, campaignStore.getSnapshot);
 
@@ -211,16 +212,14 @@ export function ProgressionPage() {
           </p>
         </section>
         <section className="progression-card coming-soon" aria-label="Скоро">
-          <h3>Таланты · Снаряжение</h3>
-          <p>Скоро. Очки талантов уже копятся с уровнем класса.</p>
-          <button className="button" disabled>
-            Таланты — скоро
-          </button>
+          <h3>Снаряжение</h3>
+          <p>Скоро.</p>
           <button className="button" disabled>
             Снаряжение — скоро
           </button>
         </section>
       </div>
+      <TalentsPanel />
       <section className="recent-runs" aria-label="Последние забеги">
         <h3>Последние забеги</h3>
         {profile.recentRuns.length === 0 ? (

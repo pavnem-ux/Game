@@ -7,15 +7,15 @@ import {
   MAX_RECENT_RUNS,
   NEW_CLASS_PROGRESS,
   PROFILE_SCHEMA_VERSION,
-  talentPoints,
   validateRunStatsSummary,
   xpToNextLevel,
 } from '../profile';
 import type { ClassProgress, MapBest, PlayerProfile, RecentRun, RunStatsSummary } from '../profile';
+import { validateTalentRanks } from '../talents';
 
 /**
  * Task 08 `saveSchema`: validation, defaults and migrations for the persisted profile.
- * - `migrations` is keyed by the version a migration upgrades FROM (empty: v1 is current).
+ * - `migrations` is keyed by the version a migration upgrades FROM (v1 → v2: Task 09 talents).
  * - Missing fields added in later versions get defaults; a profile is never reset because a field
  *   was added. Unknown fields are dropped (imported data is data only).
  * - Anything structurally wrong, out of range or from a newer version is rejected, never "fixed".
@@ -23,7 +23,25 @@ import type { ClassProgress, MapBest, PlayerProfile, RecentRun, RunStatsSummary 
 export const SAVE_SCHEMA_VERSION = PROFILE_SCHEMA_VERSION;
 type Json = Record<string, unknown>;
 export type Migration = (data: Json) => Json;
-export const migrations: Readonly<Record<number, Migration>> = Object.freeze({});
+/**
+ * v1 → v2 (Task 09): every class gets `talents: {}` and loses the `talentsSpent` placeholder
+ * (talents could not be spent before Task 09). Gold, XP, levels, maps and runs are untouched.
+ */
+export function migrateV1toV2(data: Json): Json {
+  if (!isObject(data.classes)) return { ...data };
+  const classes: Json = {};
+  for (const [id, value] of Object.entries(data.classes)) {
+    if (!isObject(value)) {
+      classes[id] = value; // left for normal validation to reject
+      continue;
+    }
+    const rest: Json = { ...value };
+    delete rest.talentsSpent;
+    classes[id] = { ...rest, talents: {} };
+  }
+  return { ...data, classes };
+}
+export const migrations: Readonly<Record<number, Migration>> = Object.freeze({ 1: migrateV1toV2 });
 
 export type SaveErrorCode =
   | 'malformed-json'
@@ -71,6 +89,11 @@ const cls = (v: unknown, what: string): CharacterClass =>
 const mapId = (v: unknown, what: string) => int(v, what, 1, MAP_COUNT);
 const or = <T>(v: unknown, fallback: T): unknown => (v === undefined ? fallback : v);
 
+/** Task 09 §1.4: known nodes, ranks 0–3, prerequisites, level-30 gate, spent ≤ earned. */
+function talentRanks(c: CharacterClass, level: number, raw: unknown, what: string) {
+  const r = validateTalentRanks(c, level, raw);
+  return r.ok ? r.ranks : invalid(what);
+}
 function classProgress(raw: unknown, c: string): ClassProgress {
   const v = isObject(raw) ? raw : raw === undefined ? {} : invalid(`classes.${c}`);
   const level = int(
@@ -85,7 +108,7 @@ function classProgress(raw: unknown, c: string): ClassProgress {
     xp,
     level,
     lifetimeXp: int(or(v.lifetimeXp, 0), `classes.${c}.lifetimeXp`),
-    talentsSpent: int(or(v.talentsSpent, 0), `classes.${c}.talentsSpent`, 0, talentPoints(level)),
+    talents: talentRanks(c as CharacterClass, level, or(v.talents, {}), `classes.${c}.talents`),
   });
 }
 function mapBest(raw: unknown, key: string): MapBest {

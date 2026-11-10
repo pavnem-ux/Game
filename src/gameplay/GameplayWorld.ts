@@ -1,3 +1,7 @@
+import { OFFHAND_WEAPON, talentLoadout } from '../talents';
+import { talentWeaponRangeFactor } from '../talents/handlers';
+import type { TalentLoadout } from '../talents';
+import { composeRunStats } from '../skills/stats';
 import { DEFAULT_SEED, createRunRandom } from './rng';
 import { RunStats } from './run-stats';
 import type { EnemyType } from './run-stats';
@@ -91,6 +95,10 @@ export class GameplayWorld {
   private viewport: ViewportSize;
   private readonly spawnRandom: () => number;
   private readonly history: WorldEvent[] = [];
+  /** Task 09.1: enemies that received statuses during the current boundary. */
+  private readonly statusTargets = new Set<string>();
+  /** Task 09: this run's talent loadout (fixed for the run; allocation changes affect the next). */
+  readonly talents: TalentLoadout;
   /** Task 08.5 run statistics: read-only consumer of every recorded event (new per world). */
   private readonly runStats = new RunStats({
     playerId: 'player',
@@ -156,17 +164,31 @@ export class GameplayWorld {
     );
     this.viewport = viewportSize(options.viewport ?? { width: 1280, height: 720 });
     this.nextSpawnAt = this.spawnSettings.interval;
+    // Task 09: validated talent loadout for this class/level (inert while the catalog is not
+    // approved). Its stat layer is composed with the permanent stats once, caps included.
+    this.talents = talentLoadout(
+      options.characterClass,
+      options.level ?? 1,
+      options.talents?.ranks ?? {},
+      options.talents?.config,
+    );
+    const startStats = composeRunStats(this.character.primaryAttributes, this.talents.modifiers);
     this.core = createCore(this.random);
     this.core.addEntity({
       id: this.playerId,
       affiliation: 'player',
-      stats: this.character.combatAttributes,
+      stats: startStats,
     });
     this.survival = new PlayerSurvival(this.core, this.playerId);
     const emit = (events: readonly SurvivalEvent[]) => this.record('survival', events);
     const statusPolicies = createStatusSurvivalPolicies(this.survival, emit);
     this.statuses = new StatusEffects(this.core, {
       random: this.random,
+      // Task 09.1: talent «DoT damage taken» multipliers on enemies (1 when none apply).
+      damageMultiplier: (group) =>
+        group.targetId === this.playerId || !this.skills
+          ? 1
+          : this.skills.talentCombat.dotTakenMultiplier(group.targetId),
       ...statusPolicies,
       canDamage: (ctx) =>
         !(this.testingProtection && ctx.group.targetId === this.playerId) &&
@@ -186,17 +208,32 @@ export class GameplayWorld {
       movementStep: 1 / 30,
       separation: { cellSize: 64, padding: 8, strength: 0.8 },
       ...this.hostilePolicies,
+      // Task 09.1 G12: talent-only reduction of enemy direct hits on the player.
+      playerDamageMultiplier: () => this.skills?.talentCombat.playerDamageTakenMultiplier() ?? 1,
     });
     this.weapons = new WeaponAttacks(this.core, {
       damageModifier: (context) => this.skills.damageModifier(context),
+      // Task 09.1: talent crit-chance bonus for the player's weapon (category, at strike start).
+      attackModifier: (context) =>
+        context.entityId === this.playerId ? this.skills.weaponAttackBonus(context.weaponId) : {},
     });
     this.weapons.setBody(this.playerId, this.body);
-    const weapon = ALPHA_WEAPONS[options.characterClass];
+    // Task 09.1: a talent may extend the basic weapon's range for this run (Archer 2.1).
+    const rangeFactor = talentWeaponRangeFactor(
+      options.characterClass,
+      this.talents.ranks,
+      options.talents?.config,
+    );
+    const baseWeapon = ALPHA_WEAPONS[options.characterClass];
+    const weapon =
+      rangeFactor === 1
+        ? baseWeapon
+        : { ...baseWeapon, attackRange: baseWeapon.attackRange * rangeFactor };
     this.weapons.equipWeapon({
       entityId: this.playerId,
       characterClass: options.characterClass,
       weapon,
-      attackSpeedPercent: this.character.combatAttributes.attackSpeed,
+      attackSpeedPercent: startStats.attackSpeed,
       fallbackDirection: { x: 1, y: 0 },
     });
     this.run = new RunSkills(options.characterClass, skillRandom);
@@ -210,7 +247,15 @@ export class GameplayWorld {
         playerId: this.playerId,
         characterClass: options.characterClass,
         primary: this.character.primaryAttributes,
+        talentModifiers: this.talents.modifiers,
+        talents: {
+          ranks: this.talents.ranks,
+          ...(options.talents?.config ? { config: options.talents.config } : {}),
+          random: rng.talents,
+        },
         basicWeaponId: weapon.id,
+        playerMoving: () =>
+          Math.hypot(world.input.x, world.input.y) > 0 && world.survival.getState().canPlayerAct,
         activationStep: ALPHA.controlStep,
         playerBody: () => world.body,
         facing: () => world.facing,
@@ -227,6 +272,28 @@ export class GameplayWorld {
       this.run,
       skillRandom,
     );
+    // Task 09.1 C1: a talent may add a real automatic slot (Mage superpower) for this run.
+    if (this.skills.talentCombat.extraAutoSlots() > 0) this.run.enableExtraAutoSlot();
+    // Task 09.1 G6/G7: the Warrior superpower's off-hand sword (own timer from run start).
+    const offhand = this.skills.talentCombat.offhand();
+    if (offhand)
+      this.weapons.equipSecondaryWeapon({
+        entityId: this.playerId,
+        characterClass: options.characterClass,
+        weapon: {
+          id: OFFHAND_WEAPON.id,
+          category: 'sword',
+          allowedClass: 'warrior',
+          damageType: 'physical',
+          pattern: 'melee_arc',
+          damageCoefficient: offhand.coefficient,
+          baseAttackInterval: OFFHAND_WEAPON.baseAttackInterval / (1 + offhand.speed / 100),
+          attackRange: OFFHAND_WEAPON.attackRange,
+          arcDegrees: OFFHAND_WEAPON.arcDegrees,
+        },
+        attackSpeedPercent: startStats.attackSpeed,
+        fallbackDirection: { x: 1, y: 0 },
+      });
     this.baseOnHit = Object.freeze([...(options.onHit ?? defaultOnHit(options.characterClass))]);
     this.onHitDefinitions = this.baseOnHit;
     this.adapter = this.makeAdapter(this.baseOnHit);
@@ -248,6 +315,7 @@ export class GameplayWorld {
       this.manualPause ||
       this.survival.getState().requiresWorldPause ||
       this.run.pendingChoices > 0 ||
+      this.run.pendingEnhancedChoice !== null ||
       this.campaignRun.status !== 'active'
     );
   }
@@ -275,10 +343,20 @@ export class GameplayWorld {
     this.manualPause = paused;
     this.setMovement(0, 0);
   }
+  private talentSnapshotCache: GameplaySnapshot['talents'] | null = null;
+  private get talentSnapshot(): GameplaySnapshot['talents'] {
+    return (this.talentSnapshotCache ??= Object.freeze({
+      ranks: this.talents.ranks,
+      pointsSpent: this.talents.pointsSpent,
+      activeRanks: this.talents.activeRanks,
+      superpower: this.talents.superpower,
+    }));
+  }
   getSnapshot(): GameplaySnapshot {
     return Object.freeze({
       time: this.clock,
       seed: this.options.seed ?? DEFAULT_SEED,
+      talents: this.talentSnapshot,
       runStats: this.runStats.snapshot(this.clock),
       paused: this.paused,
       player: this.core.getEntity(this.playerId),
@@ -287,6 +365,13 @@ export class GameplayWorld {
       stats: this.skills.effectiveStats,
       skills: this.run.getState(),
       skillCombat: this.skills.snapshot(),
+      talentEntities: Object.freeze(
+        this.skills.talents
+          .list()
+          .map((e) =>
+            Object.freeze({ id: e.id, kind: e.kind, x: e.x, y: e.y, expiresAt: e.expiresAt }),
+          ),
+      ),
       survival: this.survival.getState(),
       kills: this.kills,
       progression: this.experience.getState(),
@@ -364,6 +449,7 @@ export class GameplayWorld {
   update(delta: number): void {
     if (!Number.isFinite(delta) || delta < 0 || !Number.isFinite(this.clock + delta))
       throw new RangeError('delta must be finite and non-negative.');
+    this.cleanupTalentEntities(); // also while frozen (death, revival choice, resolved run)
     if (this.paused) return;
     let end = this.clock;
     if (delta > 0) {
@@ -389,10 +475,18 @@ export class GameplayWorld {
       else if (next.kind === 'skill') this.skills.resolveBoundary();
       else if (next.kind === 'campaign') this.resolveCampaignEvent();
       else if (next.kind === 'boss') this.resolveBossAbility();
+      // Task 09.1: status applications of this boundary (Rogue Deadly Synthesis check).
+      if (this.statusTargets.size) {
+        const targets = [...this.statusTargets];
+        this.statusTargets.clear();
+        this.skills.talentCombat.onStatusesApplied(targets);
+      }
       this.skills.endStep();
+      this.cleanupTalentEntities();
       if (
         (this.survival.getState().requiresWorldPause ||
           this.run.pendingChoices > 0 ||
+          this.run.pendingEnhancedChoice !== null ||
           this.campaignRun.status !== 'active') &&
         pauseAt === null
       ) {
@@ -401,6 +495,15 @@ export class GameplayWorld {
         this.input = Object.freeze({ x: 0, y: 0 });
       }
     }
+  }
+  /** Task 09.1: talent entities never outlive the player's life or the run. */
+  private cleanupTalentEntities(): void {
+    if (
+      !this.core.getEntity(this.playerId).alive ||
+      this.survival.getState().runState === 'ended' ||
+      this.campaignRun.status !== 'active'
+    )
+      this.skills.talents.clearEntities();
   }
   decide(decision: RevivalDecision): void {
     const result = this.survival.decide(decision, this.statuses);
@@ -540,10 +643,21 @@ export class GameplayWorld {
   grantTestSkill(skillId: string, rank = 1): void {
     if (typeof skillId !== 'string') throw new TypeError('skillId must be a string.');
     const unlockedBefore = new Set(this.skills.synergies.unlockedIds());
-    this.skills.applyChoice(this.run.grantForTesting(skillId, rank));
-    this.record('skill', [Object.freeze({ type: 'skill-chosen', skillId, rank })]);
+    const granted = this.run.grantWithEvents(skillId, rank);
+    this.skills.applyChoice(granted.result);
+    this.record('skill', [
+      Object.freeze({ type: 'skill-chosen', skillId, rank }),
+      ...granted.events,
+    ]);
     this.recordSynergyUnlocks(unlockedBefore, skillId);
     this.rebuildOnHit();
+    this.prepare();
+  }
+  /** Task 09.1 C1: the one-time choice of the enhanced skill among the five actives. */
+  chooseEnhancedSkill(skillId: string): void {
+    if (typeof skillId !== 'string') throw new TypeError('skillId must be a string.');
+    if (this.survival.getState().runState === 'ended') throw new Error('The run has ended.');
+    this.record('skill', this.run.chooseEnhanced(skillId));
     this.prepare();
   }
   /** Spend one of the run's three rerolls on the current offer; never grants an extra choice. */
@@ -585,7 +699,7 @@ export class GameplayWorld {
       resistance: stats.resistance,
       criticalChance: stats.criticalChance,
       criticalDamage: stats.criticalDamage,
-      dodgeChance: player.dodgeChance,
+      dodgeChance: stats.dodgeChance,
     };
     // Only Core-owned fields go to Core; attack/movement speed stay with Weapons/World.
     if ((Object.keys(core) as (keyof typeof core)[]).some((k) => core[k] !== player[k]))
@@ -1009,7 +1123,9 @@ export class GameplayWorld {
   }
   private makeAdapter(definitions: readonly EffectDefinition[]) {
     // Player basic-weapon effects receive run modifiers (Toxic Mastery, Lingering, Elemental Mastery).
-    const player = this.skills ? definitions.map((d) => this.skills.playerEffect(d)) : definitions;
+    const player = this.skills
+      ? definitions.map((d) => this.skills.playerEffect(d, { basic: true }))
+      : definitions;
     return this.createStatusAdapter({
       [ALPHA_WEAPONS[this.character.characterClass].id]: player,
       'alpha-enemy': [
@@ -1130,8 +1246,12 @@ export class GameplayWorld {
         this.record('status', this.adapter.consumeImpact(event).events);
         this.forwardCombat(event.result.events);
         if (pre) this.skills.handleImpact(event, pre);
-      } else if (event.type === 'attack-started') this.skills.onBasicAttack(event);
-      else if (event.type === 'projectile-expired') this.skills.handleProjectileExpired(event);
+      } else if (event.type === 'attack-started') {
+        // Task 09.1: off-hand damage is its own talent source in run stats.
+        if (event.weaponId === OFFHAND_WEAPON.id)
+          this.skills.tagTalentAttack(event.attack.id, 'warrior.b3.n01');
+        this.skills.onBasicAttack(event);
+      } else if (event.type === 'projectile-expired') this.skills.handleProjectileExpired(event);
   }
   private consumeEnemies(events: readonly EnemyEvent[]) {
     this.record('enemy', events);
@@ -1153,6 +1273,8 @@ export class GameplayWorld {
           }).events,
         );
         this.forwardCombat(event.result.events);
+        // Task 09.1: a dodged enemy direct attack (counterattack, shadow copy, Elusive).
+        if (event.result.status === 'dodged') this.skills.onPlayerDodged(attack.attackerId);
       }
   }
   private consumeStatuses(events: readonly StatusEvent[]) {
@@ -1180,8 +1302,26 @@ export class GameplayWorld {
   }
   private forwardCombat(events: readonly CombatEvent[]) {
     this.record('combat', events);
+    // Task 09.1: player HP changes feed HP-threshold talents (after Core resolved them).
+    if (this.skills)
+      for (const event of events)
+        if (
+          ((event.type === 'damage' || event.type === 'periodic-damage') &&
+            event.targetId === this.playerId) ||
+          ((event.type === 'healing' ||
+            event.type === 'revived' ||
+            event.type === 'max-hp-changed') &&
+            event.entityId === this.playerId)
+        )
+          this.skills.onPlayerHpChanged(
+            event.type === 'damage' || event.type === 'periodic-damage',
+          );
     for (const event of events)
-      if (
+      if (event.type === 'damage' && event.targetId === this.playerId) {
+        // Task 09.1: real direct damage taken (after mitigation/barrier), e.g. Mage Protective Seal.
+        if (event.appliedDamage > 0 && this.skills)
+          this.skills.onPlayerDirectDamage(event.sourceId);
+      } else if (
         event.type === 'death' &&
         event.entityId !== this.playerId &&
         this.enemyIds.has(event.entityId)
@@ -1257,6 +1397,12 @@ export class GameplayWorld {
         event,
       });
       this.history.push(entry);
+      if (
+        channel === 'status' &&
+        event.type === 'status-applied' &&
+        event.group.targetId !== this.playerId
+      )
+        this.statusTargets.add(event.group.targetId);
       if (channel === 'combat' || channel === 'weapon' || channel === 'progression')
         this.runStats.consume(entry);
     }

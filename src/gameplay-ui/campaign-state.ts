@@ -267,6 +267,18 @@ export const campaignStore = {
           },
     });
   },
+  /** Task 09: buy the next rank of a talent node (validated, autosaved). */
+  purchaseTalent(characterClass: CharacterClass, nodeId: string) {
+    const result = campaignStore.service().purchaseTalent(characterClass, nodeId);
+    if (result.ok && !result.saved)
+      update({
+        saveMessage: {
+          tone: 'error',
+          text: 'Талант изучен, но прогресс не сохранён. Повторите сохранение в «Настройках».',
+        },
+      });
+    return result;
+  },
   retrySave() {
     const ok = campaignStore.service().retrySave();
     update({
@@ -298,6 +310,8 @@ export const campaignStore = {
         characterClass: cls,
         level: profile.classes[cls].level,
         seed,
+        // Task 09: the class's talents apply from run start; changes affect the next run.
+        talents: { ranks: profile.classes[cls].talents },
         campaign: { mapId, runId: generateRunId() },
       },
     });

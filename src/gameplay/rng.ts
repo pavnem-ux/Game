@@ -13,7 +13,12 @@ import type { RandomSource } from '../combat-core';
  * No wall-clock time or Math.random here (AGENTS.md §4.5).
  */
 export const DEFAULT_SEED = 1337;
-export const STREAM_SALTS = Object.freeze({ skills: 0x5bd1e995, spawn: 0x9e3779b9 });
+export const STREAM_SALTS = Object.freeze({
+  skills: 0x5bd1e995,
+  spawn: 0x9e3779b9,
+  /** Task 09.1: talent procs (a new stream, so existing sequences stay identical). */
+  talents: 0x27d4eb2f,
+});
 /** Largest seed a run can be started with from the UI (32-bit unsigned). */
 export const MAX_UI_SEED = 0xffffffff;
 
@@ -34,6 +39,7 @@ export interface RunRandom {
   readonly combat: RandomSource;
   readonly skills: RandomSource;
   readonly spawn: RandomSource;
+  readonly talents: RandomSource;
 }
 export function createRunRandom(seed: number = DEFAULT_SEED): RunRandom {
   validateSeed(seed);
@@ -42,5 +48,6 @@ export function createRunRandom(seed: number = DEFAULT_SEED): RunRandom {
     combat: lcgStream(seed),
     skills: lcgStream((seed ^ STREAM_SALTS.skills) >>> 0),
     spawn: lcgStream(seed ^ STREAM_SALTS.spawn),
+    talents: lcgStream((seed ^ STREAM_SALTS.talents) >>> 0),
   });
 }

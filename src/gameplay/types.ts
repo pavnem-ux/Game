@@ -1,3 +1,4 @@
+import type { TalentConfig, TalentRanks } from '../talents';
 import type { RunStatsSnapshot } from './run-stats';
 import type { ExperienceEvent, RunProgression, XpCrystal } from './experience';
 import type { SpawnSettings, ViewportSize } from './spawning';
@@ -27,6 +28,11 @@ export interface GameplayOptions {
   readonly onHit?: readonly EffectDefinition[];
   /** Task 08: play a campaign map (scaled enemies/spawning, timer, scheduled events). */
   readonly campaign?: Readonly<{ mapId: number; runId?: string }>;
+  /**
+   * Task 09: the class's allocated talent ranks, applied at run start (validated; inert while
+   * the catalog is not approved). `config` is a test seam (defaults to the shipped catalog).
+   */
+  readonly talents?: Readonly<{ ranks: TalentRanks; config?: TalentConfig }>;
 }
 export interface WorldEvent {
   readonly sequence: number;
@@ -56,8 +62,23 @@ export interface WorldEvent {
 }
 export interface GameplaySnapshot {
   readonly time: number;
+  /** Task 09.1: talent-spawned entities for rendering (shadow copy, ballistae); positions only. */
+  readonly talentEntities?: readonly Readonly<{
+    id: string;
+    kind: string;
+    x: number;
+    y: number;
+    expiresAt: number;
+  }>[];
   /** Task 08.5: the run's base random seed (`options.seed`, default 1337). */
   readonly seed: number;
+  /** Task 09: talents applied to this run (fixed for the run). */
+  readonly talents: Readonly<{
+    ranks: TalentRanks;
+    pointsSpent: number;
+    activeRanks: number;
+    superpower: boolean;
+  }>;
   /** Task 08.5: in-memory statistics of this run (reset with every new world). */
   readonly runStats: RunStatsSnapshot;
   readonly paused: boolean;

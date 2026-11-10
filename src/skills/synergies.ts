@@ -594,6 +594,11 @@ export class SynergyResolver {
     cause: { direct: boolean; tags: ReadonlySet<CombatTag>; procs: boolean },
   ): void {
     if (this.isEligible('wildfire') && pre.effects.has('burn') && pre.position) {
+      // Task 09.1: talents naming Wildfire may widen the spread (radius, neighbours); no cascade.
+      const geometry = this.e.talentCombat.synergySpread('wildfire', {
+        radius: T.wildfire.radius,
+        maxTargets: T.wildfire.maxTargets,
+      });
       const n = this.spread(
         'wildfire',
         pre.position,
@@ -601,8 +606,8 @@ export class SynergyResolver {
         'burn',
         T.wildfire.burnDamage,
         T.wildfire.burnDuration,
-        this.e.area(T.wildfire.radius),
-        T.wildfire.maxTargets,
+        this.e.area(geometry.radius),
+        geometry.maxTargets,
       );
       if (n) this.announce('wildfire', targetId, pre.position);
     }

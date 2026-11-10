@@ -2,6 +2,7 @@ import { CHARACTER_CLASSES } from '../character-stats';
 import { ALPHA_WEAPONS, WEAPON_LABELS } from '../gameplay';
 import type { EnemyType } from '../gameplay';
 import { SKILL_CATALOG, SYNERGY_RULES } from '../skills';
+import { TALENT_CONFIG } from '../talents';
 
 /**
  * Task 08.5 player-facing Russian text (one module for all new 08.5 strings; older screens keep
@@ -9,6 +10,34 @@ import { SKILL_CATALOG, SYNERGY_RULES } from '../skills';
  */
 export const RU = Object.freeze({
   build: Object.freeze({ label: 'Версия сборки' }),
+  talents: Object.freeze({
+    title: 'Таланты',
+    classSwitch: 'Класс дерева талантов',
+    points: (available: number, earned: number) => `Свободно очков: ${available} из ${earned}`,
+    level: (level: number) => `Уровень класса ${level}`,
+    superpower: 'Сверхспособность',
+    superpowerActive: 'Сверхспособность изучена',
+    superpowerReady: 'Сверхспособность доступна: изучите I ранг первого таланта ветки',
+    superpowerLocked: 'Сверхспособность доступна с 30 уровня',
+    branchLocked: 'доступно с 30 уровня',
+    rank: (rank: number) => `Ранг ${['0', 'I', 'II', 'III'][rank]}`,
+    rankOf: (rank: number) => `${['0', 'I', 'II', 'III'][rank]} / III`,
+    learn: (rank: number) => `Изучить ранг ${['', 'I', 'II', 'III'][rank]}`,
+    requires: (name: string) => `Требуется: «${name}» ранг II`,
+    reasons: Object.freeze({
+      'unknown-node': 'Неизвестный талант',
+      'wrong-class': 'Талант другого класса',
+      'max-rank': 'Максимальный ранг',
+      level: 'Доступно с 30 уровня',
+      prerequisite: 'Сначала изучите предыдущий талант до ранга II',
+      'no-points': 'Нет свободных очков',
+    } as Record<string, string>),
+    inert:
+      'Часть рангов пока не действует в бою (отмечены): изученные ранги сохраняются и заработают после реализации.',
+    rankPending: 'пока не действует в бою',
+    rankBlocked: 'заблокировано: см. talents-gaps',
+    noRefund: 'Сброса талантов нет: выбор окончательный.',
+  }),
   seed: Object.freeze({ label: 'Сид забега' }),
   settings: Object.freeze({
     title: 'Игра',
@@ -74,6 +103,8 @@ export function damageSourceLabel(source: string): string {
       return `Синергия «${SYNERGY_NAMES.get(id) ?? id}»`;
     case 'status':
       return EFFECT_LABELS[id] ?? 'Эффект';
+    case 'talent':
+      return `Талант «${TALENT_CONFIG.nodes.get(source.slice('talent:'.length))?.name ?? 'талант'}»`;
     case 'debug':
       return 'Отладка';
     default:

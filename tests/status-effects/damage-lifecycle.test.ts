@@ -184,3 +184,22 @@ describe('optional survival integration hooks', () => {
     expect(core.getEntity('target').currentHp).toBe(1000);
   });
 });
+describe('Task 09.1 damageMultiplier option (additive)', () => {
+  it('scales each stack contribution and the tick total; timers unchanged; default 1', () => {
+    const { statuses } = setup({ damageMultiplier: (g) => (g.effectType === 'poison' ? 1.1 : 1) });
+    statuses.apply(application({ rawDamagePerTick: 10 }));
+    statuses.apply(application({ sourceId: 'other', rawDamagePerTick: 5 }));
+    statuses.apply(application({ effectType: 'burn', rawDamagePerTick: 10 }));
+    const t = ticks(statuses.update(1));
+    expect(t.map((x) => [x.group.effectType, x.rawDamage])).toEqual([
+      ['poison', 16.5],
+      ['burn', 10],
+    ]);
+    expect(t[0].result?.damage).toBe(17);
+  });
+  it('rejects a negative or non-finite multiplier', () => {
+    const { statuses } = setup({ damageMultiplier: () => -1 });
+    statuses.apply(application());
+    expect(() => statuses.update(1)).toThrow(RangeError);
+  });
+});

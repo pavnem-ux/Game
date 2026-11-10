@@ -1,3 +1,5 @@
+import { checkPurchase, purchaseRank } from '../talents';
+import type { TalentBlockReason } from '../talents';
 import { CHARACTER_CLASSES } from '../character-stats';
 import type { CharacterClass } from '../character-stats';
 import { applyRunResult } from '../profile';
@@ -38,6 +40,19 @@ export interface ProgressionService {
   selectClass(characterClass: CharacterClass): boolean;
   /** Re-attempts the last failed write with the current in-memory profile. */
   retrySave(): boolean;
+  /**
+   * Task 09: buys the next rank of a talent node for a class (tree rules from `src/talents`) and
+   * autosaves. A refused purchase changes nothing; a failed write keeps it in memory (unsaved).
+   */
+  purchaseTalent(
+    characterClass: CharacterClass,
+    nodeId: string,
+  ): Readonly<{
+    ok: boolean;
+    reason: TalentBlockReason | 'no-profile' | null;
+    saved: boolean;
+    failure: SaveFailure | null;
+  }>;
   /** Replaces the profile (import). On a failed write the previous profile stays current. */
   replaceProfile(profile: PlayerProfile): {
     readonly ok: boolean;
@@ -115,6 +130,26 @@ export function createProgressionService(store: SaveStore): ProgressionService {
     retrySave() {
       if (!profile || status.state === 'saved') return status.state === 'saved';
       return commit(profile).ok;
+    },
+    purchaseTalent(characterClass, nodeId) {
+      if (!profile || status.state === 'error')
+        return Object.freeze({ ok: false, reason: 'no-profile', saved: false, failure: null });
+      const progress = profile.classes[characterClass];
+      if (!progress) throw new TypeError('Unknown class.');
+      const check = checkPurchase(characterClass, progress.level, progress.talents, nodeId);
+      if (!check.ok)
+        return Object.freeze({ ok: false, reason: check.reason, saved: false, failure: null });
+      const talents = purchaseRank(characterClass, progress.level, progress.talents, nodeId);
+      const written = commit(
+        Object.freeze({
+          ...profile,
+          classes: Object.freeze({
+            ...profile.classes,
+            [characterClass]: Object.freeze({ ...progress, talents }),
+          }),
+        }),
+      );
+      return Object.freeze({ ok: true, reason: null, saved: written.ok, failure: written.failure });
     },
     replaceProfile(next) {
       if (status.state === 'error') return { ok: false, failure: 'blocked' };

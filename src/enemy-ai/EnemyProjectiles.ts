@@ -1,4 +1,4 @@
-import type { CombatCore } from '../combat-core';
+import type { AttackSnapshot, CombatCore } from '../combat-core';
 import { aimDirection, segmentCircleIntersection } from '../weapon-attacks';
 import type { CombatBody } from '../weapon-attacks';
 import type {
@@ -26,6 +26,7 @@ export class EnemyProjectiles {
     readonly playerId: string,
     private readonly canResolveDirectDamage?: DirectDamagePolicy,
     private readonly onDirectDamageResolved?: DirectDamageObserver,
+    private readonly playerDamageMultiplier?: (attack: AttackSnapshot) => number,
   ) {
     if (core.getEntity(playerId).affiliation !== 'player')
       throw new Error('Projectile target must be the player.');
@@ -150,7 +151,11 @@ export class EnemyProjectiles {
           ),
         )
       : false;
-    const result = blocked ? null : this.core.resolveAttack(f.view.attack, this.playerId);
+    const result = blocked
+      ? null
+      : this.core.resolveAttack(f.view.attack, this.playerId, {
+          damageMultiplier: this.playerDamageMultiplier?.(f.view.attack) ?? 1,
+        });
     this.flights.delete(event.id);
     if (result)
       this.onDirectDamageResolved?.(

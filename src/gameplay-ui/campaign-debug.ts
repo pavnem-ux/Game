@@ -9,7 +9,9 @@ import {
 } from '../persistence';
 import { REPORT_FORMAT } from './bug-report';
 import { MAX_UI_SEED } from '../gameplay';
-import { NEW_CLASS_PROGRESS, addClassXp, createProfile } from '../profile';
+import { MAX_CLASS_LEVEL, NEW_CLASS_PROGRESS, addClassXp, createProfile } from '../profile';
+import { TALENT_CONFIG, TALENT_RULES, superpowerActive, validateTalentRanks } from '../talents';
+import type { TalentRanks } from '../talents';
 import type { PlayerProfile } from '../profile';
 import { campaignStore } from './campaign-state';
 
@@ -18,6 +20,20 @@ import { campaignStore } from './campaign-state';
  * of this is reachable in production. Every change goes through the validated save path
  * (`replaceProfile`), so a debug edit can never write an invalid profile.
  */
+/** Class progress at exactly `level` (start of the level) with the given talents. */
+function progressAt(level: number, talents: TalentRanks) {
+  const toReach = Array.from({ length: level - 1 }, (_, i) => 100 + 50 * i).reduce(
+    (a, b) => a + b,
+    0,
+  );
+  return { ...addClassXp(NEW_CLASS_PROGRESS, toReach).progress, talents };
+}
+/** Smallest level ≥ `from` at which `ranks` is a valid tree (points + gate); null if none. */
+function minimumLevel(characterClass: CharacterClass, from: number, ranks: TalentRanks) {
+  for (let level = from; level <= MAX_CLASS_LEVEL; level++)
+    if (validateTalentRanks(characterClass, level, ranks).ok) return level;
+  return null;
+}
 function edit(change: (p: PlayerProfile) => PlayerProfile): boolean {
   const profile = campaignStore.getSnapshot().progression.profile;
   if (!profile) return false;
@@ -53,18 +69,76 @@ export const campaignDebug = {
       highestUnlockedMap: Math.max(p.highestUnlockedMap, Math.min(CAMPAIGN_MAPS.length, upTo)),
     }));
   },
-  setClassLevel(characterClass: CharacterClass, level: number) {
-    const toReach = Array.from({ length: level - 1 }, (_, i) => 100 + 50 * i).reduce(
-      (a, b) => a + b,
-      0,
+  /**
+   * Sets the permanent class level (= grants/removes talent points, Task 09 §1.6). The tree is
+   * kept while it stays valid; if the new level cannot hold it (points or the level-30 gate),
+   * the class tree is reset. Returns whether the tree had to be reset (null = refused).
+   */
+  setClassLevel(characterClass: CharacterClass, level: number): { talentsReset: boolean } | null {
+    const profile = campaignStore.getSnapshot().progression.profile;
+    if (!profile || !Number.isInteger(level) || level < 1 || level > MAX_CLASS_LEVEL) return null;
+    const kept = validateTalentRanks(
+      characterClass,
+      level,
+      profile.classes[characterClass].talents,
     );
+    const talents = kept.ok ? kept.ranks : {};
+    const ok = edit((p) => ({
+      ...p,
+      classes: { ...p.classes, [characterClass]: progressAt(level, talents) },
+    }));
+    return ok ? { talentsReset: !kept.ok } : null;
+  },
+  /**
+   * Task 09 §1.6: sets any node to rank 0–3. Missing prerequisites are filled to rank II, later
+   * nodes that would lose their prerequisite are cleared, and the class level is raised only if
+   * the tree needs more points or the level-30 gate. Everything is re-validated on save.
+   */
+  setTalentRank(characterClass: CharacterClass, nodeId: string, rank: number): boolean {
+    const profile = campaignStore.getSnapshot().progression.profile;
+    const node = TALENT_CONFIG.nodes.get(nodeId);
+    if (!profile || !node || node.characterClass !== characterClass) return false;
+    if (!Number.isInteger(rank) || rank < 0 || rank > TALENT_RULES.maxRank) return false;
+    const progress = profile.classes[characterClass];
+    const ranks: Record<string, number> = { ...progress.talents };
+    const branch = TALENT_CONFIG.branchesOf(characterClass)[node.branch - 1];
+    if (rank > 0) {
+      ranks[nodeId] = rank;
+      for (const n of branch.nodes)
+        if (n.order < node.order)
+          ranks[n.id] = Math.max(ranks[n.id] ?? 0, TALENT_RULES.prerequisiteRank);
+    } else delete ranks[nodeId];
+    if (rank < TALENT_RULES.prerequisiteRank)
+      for (const n of branch.nodes) if (n.order > node.order) delete ranks[n.id];
+    const level = minimumLevel(characterClass, progress.level, ranks);
+    if (level === null) return false;
     return edit((p) => ({
       ...p,
       classes: {
         ...p.classes,
-        [characterClass]: addClassXp(NEW_CLASS_PROGRESS, toReach).progress,
+        [characterClass]:
+          level === progress.level ? { ...progress, talents: ranks } : progressAt(level, ranks),
       },
     }));
+  },
+  /** Task 09 §1.6: clears one class tree (debug only; players have no respec). */
+  resetTalents(characterClass: CharacterClass): boolean {
+    return edit((p) => ({
+      ...p,
+      classes: { ...p.classes, [characterClass]: { ...p.classes[characterClass], talents: {} } },
+    }));
+  },
+  /**
+   * Task 09 §1.6 superpower test preset: on = class level ≥ 30 + rank I of the branch-3 first node
+   * (the activation rule); off = branch 3 cleared. Returns the new state (null = refused).
+   */
+  toggleSuperpowerPreset(characterClass: CharacterClass): boolean | null {
+    const profile = campaignStore.getSnapshot().progression.profile;
+    if (!profile) return null;
+    const first = `${characterClass}.b${TALENT_RULES.superpowerBranch}.n01`;
+    if (superpowerActive(characterClass, profile.classes[characterClass].talents))
+      return campaignDebug.setTalentRank(characterClass, first, 0) ? false : null;
+    return campaignDebug.setTalentRank(characterClass, first, 1) ? true : null;
   },
   grantXp(characterClass: CharacterClass, amount: number) {
     return edit((p) => ({

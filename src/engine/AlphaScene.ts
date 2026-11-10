@@ -13,6 +13,7 @@ import { createWorld } from './World';
 import type { TestingController } from '../gameplay/testing';
 import { stunIndicator } from './stun-indicator';
 import { oncePerKeyEvent } from './key-event-once';
+import { OFFHAND_WEAPON } from '../talents';
 
 /** Task 08.5 §5.1: floating-number styles (crit larger and gold, player damage red). */
 const FLOAT_STYLES: Record<FloatingKind, { color: string; size: number }> = {
@@ -70,7 +71,8 @@ export class AlphaScene extends Phaser.Scene {
       if (
         this.world &&
         !this.world.survival.getState().requiresWorldPause &&
-        this.world.run.pendingChoices === 0
+        this.world.run.pendingChoices === 0 &&
+        this.world.run.pendingEnhancedChoice === null
       ) {
         this.world.setPaused(!this.world.paused);
         this.clearInput();
@@ -221,6 +223,10 @@ export class AlphaScene extends Phaser.Scene {
           this.world?.chooseSkill(command.card);
           this.clearInput();
           break;
+        case 'choose-enhanced':
+          this.world?.chooseEnhancedSkill(command.skillId);
+          this.clearInput();
+          break;
         case 'reroll':
           this.world?.rerollSkillOffer();
           break;
@@ -350,6 +356,16 @@ export class AlphaScene extends Phaser.Scene {
       const armed = z.armedAt === undefined || z.armedAt <= s.time;
       g.fillStyle(c, armed ? 0.12 : 0.05).fillCircle(z.center.x, z.center.y, z.radius);
       g.lineStyle(1, c, armed ? 0.55 : 0.3).strokeCircle(z.center.x, z.center.y, z.radius);
+    }
+    // Task 09.1: talent entities (Rogue shadow copy, Archer ballistae) — original simple shapes.
+    for (const t of s.talentEntities ?? []) {
+      if (t.kind === 'ballista') {
+        g.fillStyle(0x8a6a3e, 0.9).fillRect(t.x - 10, t.y - 10, 20, 20);
+        g.lineStyle(2, 0xe8c36a, 0.9).strokeRect(t.x - 10, t.y - 10, 20, 20);
+      } else {
+        g.fillStyle(0x9a8cff, 0.35).fillCircle(t.x, t.y, 13);
+        g.lineStyle(1, 0xc9c0ff, 0.6).strokeCircle(t.x, t.y, 13);
+      }
     }
     for (const crystal of s.crystals) {
       const { x, y } = crystal;
@@ -555,7 +571,11 @@ export class AlphaScene extends Phaser.Scene {
     for (const f of this.fx) {
       const e = f.event.event;
       if (e.type === 'attack-started' && !e.projectileId) {
-        const w = s.weapon.weapon;
+        // Task 09.1 G6: the off-hand sword draws its own (shorter, narrower) swing.
+        const w =
+          e.weaponId === OFFHAND_WEAPON.id
+            ? { ...OFFHAND_WEAPON, pattern: 'melee_arc' as const }
+            : s.weapon.weapon;
         if (w.pattern !== 'projectile') {
           const a = Math.atan2(e.direction.y, e.direction.x),
             half = (w.arcDegrees * Math.PI) / 360;
@@ -686,11 +706,13 @@ export class AlphaScene extends Phaser.Scene {
           ? 'revival'
           : run === 'ended'
             ? 'ended'
-            : world.skills.offer
-              ? 'level-up'
-              : world.paused
-                ? 'paused'
-                : 'playing';
+            : world.skills.enhancedChoice
+              ? 'enhanced-skill'
+              : world.skills.offer
+                ? 'level-up'
+                : world.paused
+                  ? 'paused'
+                  : 'playing';
     if (screen === 'ended' && !world?.campaign && this.recordedRun !== this.runId) {
       this.record = saveRun(world!.time, world!.kills).bestSeconds;
       this.recordedRun = this.runId;

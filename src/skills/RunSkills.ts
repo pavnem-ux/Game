@@ -34,6 +34,10 @@ export class RunSkills {
   private offerSequence = 0;
   private gold = 0;
   private readonly bonuses: Record<BonusRewardId, number> = { recovery: 0, barrier: 0, gold: 0 };
+  /** Task 09.1 C1: extra automatic slots (Mage superpower) and the enhanced 5th-slot skill. */
+  private extraAuto = 0;
+  private enhanced: string | null = null;
+  private enhancedChoice: readonly string[] | null = null;
   constructor(
     readonly characterClass: CharacterClass,
     private readonly random: Random,
@@ -53,6 +57,43 @@ export class RunSkills {
     const d = this.pool.find((s) => s.id === skillId);
     if (!d) throw new Error(`Skill ${skillId} is not available to ${this.characterClass}.`);
     return d;
+  }
+  /** Automatic-slot maximum for this run (4, or 5 with the Mage superpower). */
+  get autoSlots(): number {
+    return SKILL_RULES.autoSlots + this.extraAuto;
+  }
+  get enhancedSkillId(): string | null {
+    return this.enhanced;
+  }
+  /** The five actives to choose the enhanced skill from (null = no choice pending). */
+  get pendingEnhancedChoice(): readonly string[] | null {
+    return this.enhancedChoice;
+  }
+  /**
+   * Task 09.1 C1: one extra real automatic slot (total 5) from the existing pool. Set once at
+   * run start, before any skill is acquired.
+   */
+  enableExtraAutoSlot(): void {
+    if (this.ranks.size > 0) throw new Error('Slots are fixed once the run has skills.');
+    this.extraAuto = 1;
+  }
+  /** C1 variant B: the one-time choice of which of the five actives is enhanced. */
+  chooseEnhanced(skillId: string): SkillEvent[] {
+    const choice = this.enhancedChoice;
+    if (!choice) throw new Error('No enhanced-skill choice is pending.');
+    if (!choice.includes(skillId)) throw new Error('Not one of the five active skills.');
+    this.enhanced = skillId;
+    this.enhancedChoice = null;
+    return [Object.freeze({ type: 'enhanced-skill', skillId, reason: 'chosen' })];
+  }
+  /** The 5th distinct active fills the extra slot: it is enhanced by default, choice offered. */
+  private acquired(d: SkillDefinition): SkillEvent[] {
+    if (d.kind !== 'auto' || this.extraAuto === 0 || this.enhanced !== null) return [];
+    const autos = [...this.ranks.keys()].filter((id) => this.definition(id).kind === 'auto');
+    if (autos.length !== this.autoSlots) return [];
+    this.enhanced = d.id;
+    this.enhancedChoice = Object.freeze(autos);
+    return [Object.freeze({ type: 'enhanced-skill', skillId: d.id, reason: 'default' })];
   }
   get pendingChoices() {
     return this.pending;
@@ -91,15 +132,14 @@ export class RunSkills {
       if (current === 0) {
         const used = this.slotUsage();
         if (
-          d.kind === 'auto'
-            ? used.auto >= SKILL_RULES.autoSlots
-            : used.passive >= SKILL_RULES.passiveSlots
+          d.kind === 'auto' ? used.auto >= this.autoSlots : used.passive >= SKILL_RULES.passiveSlots
         )
           throw new Error('No free slot for this skill.');
       }
       this.ranks.set(d.id, current + 1);
       result = { type: 'skill', skillId: d.id, rank: current + 1 };
       events.push(Object.freeze({ type: 'skill-chosen', skillId: d.id, rank: current + 1 }));
+      if (current === 0) events.push(...this.acquired(d));
     } else {
       this.bonuses[card.bonusId]++;
       result = { type: 'bonus', bonusId: card.bonusId };
@@ -111,6 +151,10 @@ export class RunSkills {
   }
   /** DEV/tests only: set a skill rank directly while still enforcing class, slot and rank limits. */
   grantForTesting(skillId: string, rank: number): ChoiceResult {
+    return this.grantWithEvents(skillId, rank).result;
+  }
+  /** `grantForTesting` plus the acquisition events (enhanced-slot assignment). */
+  grantWithEvents(skillId: string, rank: number): { result: ChoiceResult; events: SkillEvent[] } {
     const d = this.definition(skillId);
     if (!Number.isInteger(rank) || rank < 1 || rank > SKILL_RULES.maxRank)
       throw new RangeError('Rank must be 1–5.');
@@ -118,16 +162,16 @@ export class RunSkills {
     if (this.rank(skillId) === 0) {
       const used = this.slotUsage();
       if (
-        d.kind === 'auto'
-          ? used.auto >= SKILL_RULES.autoSlots
-          : used.passive >= SKILL_RULES.passiveSlots
+        d.kind === 'auto' ? used.auto >= this.autoSlots : used.passive >= SKILL_RULES.passiveSlots
       )
         throw new Error('No free slot for this skill.');
     }
+    const fresh = this.rank(skillId) === 0;
     this.ranks.set(skillId, rank);
+    const events = fresh ? this.acquired(d) : [];
     if (this.offer) this.offer = null;
     if (this.pending > 0) this.generate(false, new Set());
-    return Object.freeze({ type: 'skill', skillId, rank });
+    return { result: Object.freeze({ type: 'skill', skillId, rank }), events };
   }
   addGold(amount: number): void {
     if (!Number.isSafeInteger(amount) || amount < 0) throw new RangeError('Invalid gold amount.');
@@ -137,6 +181,7 @@ export class RunSkills {
   clearPending(): void {
     this.pending = 0;
     this.offer = null;
+    this.enhancedChoice = null;
   }
   getState(): RunSkillsSnapshot {
     const used = this.slotUsage();
@@ -148,7 +193,7 @@ export class RunSkills {
         }),
       ),
       slots: Object.freeze({
-        auto: Object.freeze({ used: used.auto, max: SKILL_RULES.autoSlots }),
+        auto: Object.freeze({ used: used.auto, max: this.autoSlots }),
         passive: Object.freeze({ used: used.passive, max: SKILL_RULES.passiveSlots }),
       }),
       rerolls: this.rerolls,
@@ -156,6 +201,8 @@ export class RunSkills {
       offer: this.offer,
       gold: this.gold,
       bonusesClaimed: Object.freeze({ ...this.bonuses }),
+      enhancedSkillId: this.enhanced,
+      enhancedChoice: this.enhancedChoice,
     });
   }
   private slotUsage() {
@@ -172,6 +219,7 @@ export class RunSkills {
       ranks: this.ranks,
       autoUsed: used.auto,
       passiveUsed: used.passive,
+      autoMax: this.autoSlots,
     });
   }
   private generate(reroll: boolean, rejected: ReadonlySet<string>): SkillEvent[] {
@@ -184,7 +232,7 @@ export class RunSkills {
       cards = [...bonusCards()];
       const used = this.slotUsage();
       const exhausted =
-        used.auto === SKILL_RULES.autoSlots &&
+        used.auto === this.autoSlots &&
         used.passive === SKILL_RULES.passiveSlots &&
         [...this.ranks.values()].every((r) => r === SKILL_RULES.maxRank);
       if (!exhausted)

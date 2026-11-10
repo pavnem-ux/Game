@@ -37,7 +37,7 @@ export interface RunStatsSummary {
   readonly lowHpMoments: number;
 }
 export const RUN_STATS_SUMMARY_LIMITS = Object.freeze({ topSources: 3, sourceLength: 64 });
-const SOURCE_ID = /^[a-z]+(:[a-z0-9_-]+)?$/;
+const SOURCE_ID = /^[a-z]+(:[a-z0-9_.-]+)?$/; // Task 09: `talent:<class>.b<n>.n0<m>`
 /** Throws on an invalid summary (shared by run results and save parsing). */
 export function validateRunStatsSummary(stats: unknown, what = 'stats'): RunStatsSummary {
   const fail = (field: string): never => {
