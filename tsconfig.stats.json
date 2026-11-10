@@ -19,6 +19,8 @@
     "src/player-survival",
     "tests/player-survival",
     "src/gameplay",
-    "tests/gameplay"
+    "tests/gameplay",
+    "src/skills",
+    "tests/skills"
   ]
 }

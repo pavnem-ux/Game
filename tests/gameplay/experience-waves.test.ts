@@ -250,7 +250,14 @@ describe('continuous waves on the shared world timeline', () => {
     const w = new GameplayWorld({
       characterClass: 'warrior',
       initialEnemies: false,
-      spawning: { interval: 1, minimumInterval: 1, count: 3, maximumCount: 3, maxActive: 3 },
+      spawning: {
+        interval: 1,
+        minimumInterval: 1,
+        count: 3,
+        maximumCount: 3,
+        maxActive: 3,
+        rangedShare: 1 / 3,
+      },
     });
     w.setTestProtection(true);
     w.update(0.99);
@@ -260,6 +267,12 @@ describe('continuous waves on the shared world timeline', () => {
     expect(new Set(w.getSnapshot().enemies.map((e) => e.config.behavior)).size).toBe(2);
     for (let i = 0; i < 20; i++) {
       w.update(1);
+      // Task 07: collected crystals can level up the run, which pauses for a skill choice.
+      while (w.run.currentOffer) {
+        const card = w.run.currentOffer.cards[0];
+        w.chooseSkill(card.kind === 'skill' ? card.skillId : `bonus:${card.bonusId}`);
+        w.update(Math.ceil(w.time) - w.time);
+      }
       expect(w.getSnapshot().enemies.length).toBeLessThanOrEqual(3);
     }
     expect(w.getSnapshot().spawning.waves).toBe(21);
@@ -355,6 +368,17 @@ describe('continuous waves on the shared world timeline', () => {
     );
     test({ type: 'grant-xp', amount: 55 });
     expect(w.getSnapshot().progression.level).toBe(3);
+    // Task 07: two queued level-up choices pause the world until resolved.
+    expect(w.getSnapshot().skills.pendingChoices).toBe(2);
+    expect(w.paused).toBe(true);
+    for (let i = 0; i < 2; i++) {
+      const card = w.run.currentOffer!.cards[0];
+      test({
+        type: 'choose-skill',
+        card: card.kind === 'skill' ? card.skillId : `bonus:${card.bonusId}`,
+      });
+    }
+    expect(w.paused).toBe(false);
     test({ type: 'xp-crystal', value: 10, distance: 90 });
     expect(w.getSnapshot().crystals).toHaveLength(1);
     const previous = w.getSnapshot();

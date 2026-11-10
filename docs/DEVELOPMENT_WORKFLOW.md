@@ -140,3 +140,13 @@ production автоматически. Его изменения влияют н
    умолчанию, сверить их с таблицей; ошибки сборки смотреть по ссылке «View logs» в PR.
 4. **GitHub Actions** — разрешены для репозитория (Settings → Actions → General). Workflow не
    использует секреты.
+
+## Task 07.1 QA Preview
+
+Для QA Previews Base может использовать `npm run build:qa` и
+`npx wrangler preview --config wrangler.qa.jsonc` вместо обычных команд сборки Preview.
+Production остаётся `npm run build` / `npx wrangler deploy`, `dist/`, `wrangler.jsonc`.
+Настройки main не менять. Сборка QA отдельная (`dist-qa/`), main запрещён политикой сборки,
+проверки CI включают отдельный QA build/browser job для PR. Настройка и URL:
+[GAMEPLAY_BALANCE_QA.md](GAMEPLAY_BALANCE_QA.md). Прежний запрет debug в Preview относится
+к обычным production-сборкам, а не к явно включённой владельцем QA-сборке Task 07.1.

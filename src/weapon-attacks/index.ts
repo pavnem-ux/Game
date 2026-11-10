@@ -23,4 +23,7 @@ export type {
   ProjectileSnapshot,
   WeaponState,
   UpdateOptions,
+  DamageModifierContext,
+  WeaponAttacksOptions,
+  ProjectileLaunchInput,
 } from './types';

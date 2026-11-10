@@ -5,6 +5,7 @@ import type { Command, Phase, Upgrade } from '../core/types';
 import { ENEMY, GAME, UPGRADES } from '../config/game';
 import { loadSave, saveRun } from '../progression/save';
 import { createWorld } from './World';
+import { oncePerKeyEvent } from './key-event-once';
 import { Player } from './systems/Player';
 import { Enemies } from './systems/Enemies';
 import { Combat } from './systems/Combat';
@@ -38,10 +39,10 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.centerOn(this.player.x, this.player.y);
     this.keys = this.input.keyboard!.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT') as typeof this.keys;
     const keyboard = this.input.keyboard!;
-    const toggle = () => {
+    const toggle = oncePerKeyEvent(() => {
       if (this.phase === 'playing') this.command({ type: 'pause' });
       else if (this.phase === 'paused') this.command({ type: 'resume' });
-    };
+    });
     keyboard.on('keydown-ESC', toggle);
     keyboard.on('keydown-P', toggle);
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {

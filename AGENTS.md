@@ -17,7 +17,7 @@ Hosted as a static-assets Cloudflare Worker `game`, built and deployed by Cloudf
 | Claude Code (primary dev) | Implements approved tasks on feature branches, writes/runs tests and docs, opens PRs, addresses review findings.                |
 | OpenAI Codex (reviewer)   | Independent code review of every PR, following [Review guidelines](#9-review-guidelines). Does not push to the author's branch. |
 
-Work is organised in numbered tasks (Task 01 … Task 06.1 are done). **A task starts only when the
+Work is organised in numbered tasks (Task 01 … Task 07 are done or in review). **A task starts only when the
 owner explicitly requests it.** Never start the next task (e.g. Task 07) on your own initiative,
 and never bundle unrequested features into a PR.
 
@@ -54,6 +54,7 @@ Detailed contracts live in `docs/`; read the relevant document before changing a
 | `src/enemy-ai/`                                                   | Enemy movement, separation grid, contact/ranged attacks, enemy projectiles                | `docs/ENEMY_AI.md`                                          |
 | `src/player-survival/`                                            | Hit protection, death/decision lifecycle, one manual revival, survival policies           | `docs/PLAYER_SURVIVAL.md`                                   |
 | `src/gameplay/`                                                   | `GameplayWorld`: the **sole scheduler** of the alpha; run XP, waves, provisional config   | `docs/PLAYABLE_COMBAT_ALPHA.md`, `docs/EXPERIENCE_WAVES.md` |
+| `src/skills/`                                                     | In-run skills: catalogue, level-up offers, auto abilities, passives, Slow/Stun, synergies | `docs/IN_RUN_SKILLS.md`                                     |
 | `src/gameplay-ui/`, `src/engine/AlphaScene.ts`                    | React screens/HUD/DEV panel; Phaser rendering and input only                              | `docs/PLAYABLE_COMBAT_ALPHA.md`                             |
 | `src/config`, `core`, `engine` (other files), `ui`, `progression` | Preserved first prototype at `/?prototype`                                                | `docs/ARCHITECTURE.md`                                      |
 
@@ -67,9 +68,10 @@ Detailed contracts live in `docs/`; read the relevant document before changing a
 3. **Boundaries before damage.** All clocks/positions advance to the globally earliest time T
    _before_ any damage at T; then exactly one event resolves and its results are delivered
    immediately. Next boundaries are recomputed from the changed state — no queued stale commands.
-4. **Stable tie order** at equal timestamps (see `docs/PLAYABLE_COMBAT_ALPHA.md`): input sample →
-   enemy projectiles → player projectiles → status ticks → AI steering → player strikes → enemy
-   attacks → status expirations → reinforcement spawning. Do not reorder without owner approval.
+4. **Stable tie order** at equal timestamps (see `docs/PLAYABLE_COMBAT_ALPHA.md`,
+   `docs/IN_RUN_SKILLS.md`): input sample → enemy projectiles → player projectiles → status ticks →
+   AI steering → player strikes → skill actions → enemy attacks → status expirations → skill
+   expirations → reinforcement spawning. Do not reorder without owner approval.
 5. **Determinism.** Simulation uses only seeded RNG streams (Combat Core RNG and the separate spawn
    RNG). No `Math.random()`, `Date.now()`, `performance.now()` or timers inside simulation code.
    Same seed + same inputs/actions ⇒ same results. Frame rate must not change rewards or deadlines.
@@ -79,13 +81,19 @@ Detailed contracts live in `docs/`; read the relevant document before changing a
    A second death ends the run. Ordinary healing never revives.
 7. **Rewards are deduplicated.** Each enemy death is rewarded at most once; XP enters progression
    only on crystal collection; no XP is lost at the crystal cap.
-8. **Run vs permanent progression.** Run level/XP never changes permanent level or recalculates
-   Character Stats. The prototype's XP/upgrades are never mixed into the alpha.
+8. **Run vs permanent progression.** Run level/XP never changes permanent level. Run skills combine
+   with Character Stats only through `composeRunStats` (central caps applied once); the permanent
+   snapshot is never modified. The prototype's XP/upgrades are never mixed into the alpha.
+   Synergy/secondary hits never trigger synergies (no proc chains).
 9. **Immutable outputs.** Snapshots and events returned by modules are frozen/immutable; React
    receives throttled snapshots (~10 Hz), never per-enemy components or per-frame state.
-10. **DEV isolation.** Developer Testing Mode, `window.__alpha` / `window.__survivors` and testing
-    controllers exist only under `import.meta.env.DEV`. Production builds (including Cloudflare
-    previews) must not expose them, even with `?debug`. `npm run test:production` enforces this.
+10. **Production / QA isolation (owner-approved Task 07.1).** Normal `npm run build` always
+    excludes testing controllers and debug globals, even with `?debug`. Alpha QA tools may exist
+    only under `import.meta.env.DEV || __QA_BUILD__`; the latter is set exclusively by the explicit
+    non-main QA build policy in `config/qa-build.mjs`. Legacy debug remains DEV-only. QA artifacts
+    go to `dist-qa/`, served only with the separate Preview configuration; production still uses
+    `wrangler.jsonc` and `dist/`. Never enable QA for `main` or rely on a URL query as the boundary.
+    `npm run test:production`, `test:build-policy` and `test:qa` enforce the separation.
 11. **Bounded work.** Respect existing caps (alpha: 120 enemies, 512 crystal piles; prototype pools)
     and allocation-free hot loops in Phaser `update`.
 12. **Original content.** Procedural/original art only. No assets from other games, no CDN assets.

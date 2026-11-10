@@ -68,7 +68,7 @@ export class WeaponStatusAdapter {
     const alive = this.statuses.isAlive(impact.targetId);
     this.statuses.validateCombatEvents(result.events);
     const definitions = this.mapping.get(impact.weaponId) ?? [];
-    const eligible = result.status === 'hit' && result.appliedDamage > 0 && alive;
+    const eligible = result.status === 'hit' && this.hasHpLoss(impact) && alive;
     const applications = eligible
       ? this.statuses.applyBatch(
           definitions.map((definition) => ({
@@ -82,5 +82,10 @@ export class WeaponStatusAdapter {
     const events: StatusEvent[] = [...this.statuses.consumeCombatEvents(result.events)];
     for (const application of applications) events.push(...application.events);
     return Object.freeze({ eligible, applications, events: Object.freeze(events) });
+  }
+
+  /** Default on-hit eligibility. Specialized integrations can handle prevented HP loss. */
+  protected hasHpLoss(impact: WeaponImpactEvent): boolean {
+    return impact.result.appliedDamage > 0;
   }
 }

@@ -12,6 +12,13 @@ export interface EnemyActor {
   vy: number;
   state: EnemyBehaviorState;
   nextAttackAt: number;
+  /** Task 07 crowd control: 1 = unaffected; 0 while stunned. Changed only at boundaries. */
+  speedFactor?: number;
+  stunned?: boolean;
+}
+/** Effective movement speed after Slow/Stun. */
+export function actorSpeed(actor: EnemyActor): number {
+  return actor.stunned ? 0 : actor.config.movementSpeed * (actor.speedFactor ?? 1);
 }
 export function desiredState(actor: EnemyActor, player: CombatBody): EnemyBehaviorState {
   if (actor.config.behavior === 'melee') return 'chase';
@@ -27,7 +34,7 @@ export function goalVelocity(actor: EnemyActor, player: CombatBody): Point {
   const dx = player.x - actor.x,
     dy = player.y - actor.y,
     d = Math.hypot(dx, dy),
-    speed = actor.config.movementSpeed;
+    speed = actorSpeed(actor);
   if (actor.state === 'attack' || actor.state === 'idle' || actor.state === 'dead')
     return { x: 0, y: 0 };
   if (d <= EPS) return actor.state === 'retreat' ? { x: speed, y: 0 } : { x: 0, y: 0 };
@@ -42,7 +49,7 @@ export function separatedVelocity(
   maxRadius: number,
   config: SeparationConfig,
 ): { velocity: Point; checks: number } {
-  if (config.strength === 0) return { velocity: base, checks: 0 };
+  if (config.strength === 0 || actor.stunned) return { velocity: base, checks: 0 };
   let x = 0,
     y = 0,
     checks = 0;
@@ -64,10 +71,10 @@ export function separatedVelocity(
     x /= length;
     y /= length;
   }
-  x = base.x + x * actor.config.movementSpeed * config.strength;
-  y = base.y + y * actor.config.movementSpeed * config.strength;
-  const speed = Math.hypot(x, y),
-    limit = actor.config.movementSpeed;
+  const limit = actorSpeed(actor);
+  x = base.x + x * limit * config.strength;
+  y = base.y + y * limit * config.strength;
+  const speed = Math.hypot(x, y);
   if (speed > limit) {
     x = (x / speed) * limit;
     y = (y / speed) * limit;

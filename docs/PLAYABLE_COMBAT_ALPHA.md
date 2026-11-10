@@ -17,6 +17,10 @@ npm run dev
 - WASD / стрелки — движение с нормализованной диагональю; скорость берётся из Character Stats. Автоатака не замедляет движение, враги не блокируют путь.
 - На touchscreen потяните в нижней левой части Canvas — джойстик.
 - P / Esc или `Ⅱ` — пауза/продолжение. Потеря видимости вкладки ставит игру на паузу.
+  Переключатель паузы срабатывает ровно один раз на нажатие (`oncePerKeyEvent`,
+  `src/engine/key-event-once.ts`, также в прототипе): Phaser повторно перебирает очередь клавиш
+  на каждом событии до следующего игрового шага, и без защиты клавиши, нажатые в том же кадре,
+  снова переключали паузу.
 - При первой смерти выберите **Воскреснуть · Revive** либо **Завершить забег · End Run**.
 - Revival восстанавливает 50% текущего Max HP, очищает эффекты игрока и даёт 3 секунды полной защиты. Золотое кольцо и HUD показывают защиту. Мир и run ID остаются прежними.
 - После второй смерти — итог и новый забег/выбор класса. Новый забег создаёт все пять модулей заново.
@@ -128,9 +132,9 @@ Phaser ограничивает один визуальный dt до 50 ms, ч�
 
 Арена 3600×3600, player radius 13, base movement speed 185 × Character Stats movement multiplier. Soft separation: cell 64, padding 8, strength 0.8, AI movement step 1/30 s. Active enemy cap 120; manual test group radius 260/305; normal Task 06.1 starts use off-screen placement.
 
-Enemy stats: Max HP 90, physical 18, magical 22, Resistance 5, Crit Chance 8%, Critical Damage 200%, Dodge 0. Melee: speed 100, radius 14, physical coefficient 1, interval 0.9 s. Ranged: speed 82, radius 15, magical coefficient 1, interval 1.7 s, range 360, retreat 150, hysteresis 18, projectile speed 240/radius 6/max travel 700.
+Enemy stats: Max HP 90, physical 18, magical 22, Resistance 5, Crit Chance 8%, Critical Damage 200%, Dodge 0. Melee: speed 80, radius 14, physical coefficient 1, interval 1.17 s. Ranged: speed 65.6, radius 15, magical coefficient 1, interval 2.21 s, range 360, retreat 150, hysteresis 18, projectile speed 240/radius 6/max travel 700.
 
-Default player on-hit: 100%, raw 3/tick, duration 4 s; Warrior/Rogue — Bleed, Mage — Burn, Archer — Poison. Enemy successful positive impacts: Poison 25%, raw 2/tick, duration 4 s. Эти raw values — тестовый контент; никаких новых формул статусов нет. Все группы используют существующие cap 10, interval 1 s, Resistance и death cleanup. Летальные/direct-blocked/Dodge hits не создают статус.
+Default player on-hit: 100%, raw 3/tick, duration 4 s; Rogue — Bleed, Mage — Burn, Archer — Poison; Warrior — no built-in DoT (Task 07.1). Enemy successful positive impacts: Poison 25%, raw 2/tick, duration 4 s. Эти raw values — тестовый контент; никаких новых формул статусов нет. Все группы используют существующие cap 10, interval 1 s, Resistance и death cleanup. Летальные/direct-blocked/Dodge hits не создают статус.
 
 ## Проверки
 
@@ -176,8 +180,15 @@ Enemy separation использует прежний spatial grid. Активн�
 
 Оставшиеся источники нагрузки: boundary selection сканирует активные entities/flights, player projectile targeting/collision проверяет подходящих enemies; scene строит snapshots и status labels. Глобальный broadphase для player projectiles не добавлен. Предельно плотная separation группа всё ещё содержит много реальных соседей. Большие delta стоят пропорционально событиям. Core хранит уникальные ID умерших до конца run ради attribution; бесконечное ручное создание/удаление врагов растит эту сессионную таблицу, хотя active world/history ограничены.
 
-Победа, skills/upgrades, currency/inventory, permanent progression, accounts и финальный баланс/арт отсутствуют. Task 06.1 добавил run XP и подкрепления; Cloudflare deployment (Workers Builds) настроен отдельно. Непрерывные подкрепления Task 06.1 приходят автоматически по общему расписанию. Input sampling дискретный, visuals простые, clocks/RNG детерминированы для одинакового input, а не для любых fps/input samples. Прежнее предупреждение Vite о большом Phaser bundle сохраняется. Task 07 не начат.
+Победа, skills/upgrades, currency/inventory, permanent progression, accounts и финальный баланс/арт отсутствуют. Task 06.1 добавил run XP и подкрепления; Cloudflare deployment (Workers Builds) настроен отдельно. Непрерывные подкрепления Task 06.1 приходят автоматически по общему расписанию. Input sampling дискретный, visuals простые, clocks/RNG детерминированы для одинакового input, а не для любых fps/input samples. Прежнее предупреждение Vite о большом Phaser bundle сохраняется. Навыки забега добавлены в Task 07: [IN_RUN_SKILLS.md](IN_RUN_SKILLS.md); там же обновлённый порядок событий при равном времени.
 
 ### Task 06.1 update
 
 [Experience & Enemy Waves](EXPERIENCE_WAVES.md) описывает текущие defaults, collectible crystals, provisional XP curve, отдельные run/permanent levels, off-screen placement, schedule/pressure/caps и новые DEV controls. Порядок общей timeline сохранён, spawn стоит после combat events на равном timestamp. Приведённые выше результаты 576 тестов и параметры стартового сценария относятся к завершённому Task 06; актуальные проверки Task 06.1 описаны в новом документе.
+
+Task 07.1: обзор навыков без паузы, целые HP в HUD, лечение 15% Max HP за уровень забега, 18% ranged в обычных волнах и отдельная QA-сборка Preview описаны в [GAMEPLAY_BALANCE_QA.md](GAMEPLAY_BALANCE_QA.md).
+
+Task 07.2 добавляет безопасный обзор навыков поверх paused/level-up диалогов, pooled-бейдж Stun,
+QA-only God Mode и диагностику реальных синергий. Второй optional аргумент GameplayWorld —
+фабрика Core для специализированной интеграции; protected factories/record сохраняют default
+поведение и прежние API. [Описание изменений и QA checklist](SKILLS_PAUSE_QA.md).

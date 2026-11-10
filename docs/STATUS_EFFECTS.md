@@ -209,3 +209,11 @@ Optional `onPeriodicDamageResolved(context, result)` вызывается син
 ### Интеграция Task 06
 
 Общий GameplayWorld использует additive `peekBoundary(end)`, `advanceToBoundary(time)`, `resolveBoundary()` вместо последовательного большого update нескольких модулей. Эти методы разделяют прежний scheduler/resolver; на каждой операции все clocks уже согласованы. WeaponStatusAdapter получает actual impact на том же Status time, periodic deaths доставляются Survival немедленно. Сам StatusEffects не стал глобальным оркестратором. [Порядок событий, pause/revival и playable alpha](PLAYABLE_COMBAT_ALPHA.md).
+
+## Task 07.2 — QA integration hook
+
+Protected `WeaponStatusAdapter.hasHpLoss(impact)` по умолчанию возвращает прежнее
+`impact.result.appliedDamage > 0`; standalone/Production-поведение не меняется. QA-only адаптер
+учитывает предотвращённый God Mode HP loss, сохраняя применение статусов успешных ненулевых
+входящих ударов. Общие проверки hit/Dodge, живой цели и валидности результатов остаются прежними.
+[Контракт и тесты](SKILLS_PAUSE_QA.md).

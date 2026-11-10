@@ -1,6 +1,6 @@
 # Task 06.1 — Experience, run levels and continuous waves
 
-The playable alpha now has collectible XP drops and continuous mixed enemy reinforcements. These are provisional combat-testing rules. Task 07 skills, skill selection, permanent progression and new combat-stat growth are not implemented.
+The playable alpha now has collectible XP drops and continuous mixed enemy reinforcements. These are provisional combat-testing rules. As of Task 06.1, skills, skill selection, permanent progression and new combat-stat growth were not implemented; Task 07 later added in-run skills and level-up choices ([IN_RUN_SKILLS.md](IN_RUN_SKILLS.md)).
 
 ## Play and inspect
 
@@ -115,4 +115,23 @@ There are no skill choices, stat gains from run levels, permanent XP saves, boss
 
 The build contract is unchanged: Node.js 24.19.0, production branch `main`, build command `npm run build`, output `dist`, repository root. No server/API/secret is needed. Developer Testing Mode remains excluded from all production and Preview builds. The deployment target is Cloudflare Workers Builds (static-assets Worker `game`); see [deployment instructions](DEPLOY_CLOUDFLARE_WORKERS.md).
 
-A successful local production build and static/browser regression establish that the new version can be built with the configured command. They do not establish a successful remote Cloudflare deployment; actual deployment status and the live URL require Cloudflare dashboard access or a provided URL. No live Cloudflare URL was verified in this task. Task 07 has not begun.
+A successful local production build and static/browser regression establish that the new version can be built with the configured command. They do not establish a successful remote Cloudflare deployment; actual deployment status and the live URL require Cloudflare dashboard access or a provided URL. No live Cloudflare URL was verified in this task. (Task 07 later added in-run skills: see [IN_RUN_SKILLS.md](IN_RUN_SKILLS.md); a run level-up now pauses for a skill choice.)
+
+## Task 07.1 — баланс и лечение
+
+Обычные начальные враги и подкрепления теперь используют `SpawnSettings.rangedShare` (по умолчанию
+`0.18`, конечное число от 0 до 1). Тип определяется сравнением `floor((n+1)*share)` и
+`floor(n*share)` для счётчика успешно созданных врагов: ровно 18 ranged на 100 спавнов при
+неизменной настройке, без дополнительного RNG. Счётчик не сбрасывается на паузе/Revive/волне.
+Начальные 12 врагов включают 2 ranged. Лимиты и расписание не менялись. Явные DEV-группы
+(`spawnGroup`) оставлены смешанными по старому правилу — каждый третий ranged; это QA-инструмент,
+а не обычная волна.
+
+`GameplayWorld` обрабатывает агрегированное `run-level-up` по одному уровню: запрашивает у Core
+лечение на `Max HP * ALPHA_BALANCE.runLevelHealingFraction` (0.15), затем ставит выборы навыков
+в очередь. Применяется текущий Max HP до выбора карты. Источник истины HP — только Core; дроби
+сохраняются, полный HP — no-op. Новое неизменяемое событие `RunLevelHealingEvent`
+(`type: run-level-healed`, `level`, `requestedHealing`, `healed`) в канале `progression` выдаётся
+ровно по одному на уровень, в том числе с `healed: 0` при полном HP. Положительное лечение также
+выдаёт обычное событие `healing` Core. Это не лечение при получении урона, не постоянный уровень
+и не воскрешение. Подробнее: [GAMEPLAY_BALANCE_QA.md](GAMEPLAY_BALANCE_QA.md).

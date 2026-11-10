@@ -1,6 +1,7 @@
 import type { ExperienceEvent, RunProgression, XpCrystal } from './experience';
 import type { SpawnSettings, ViewportSize } from './spawning';
-import type { CharacterClass, CharacterStatsSnapshot } from '../character-stats';
+import type { CharacterClass, CharacterStatsSnapshot, CombatAttributes } from '../character-stats';
+import type { RunSkillsSnapshot, SkillCombatSnapshot, SkillEvent } from '../skills';
 import type { CombatEntity, CombatEvent } from '../combat-core';
 import type { EnemyEvent, EnemySnapshot, EnemyProjectileSnapshot } from '../enemy-ai';
 import type { PlayerSurvivalState, SurvivalEvent } from '../player-survival';
@@ -33,7 +34,8 @@ export interface WorldEvent {
     | 'status'
     | 'survival'
     | 'progression'
-    | 'spawning';
+    | 'spawning'
+    | 'skill';
   readonly event:
     | CombatEvent
     | WeaponEvent
@@ -41,8 +43,10 @@ export interface WorldEvent {
     | StatusEvent
     | SurvivalEvent
     | ExperienceEvent
+    | RunLevelHealingEvent
     | RewardEvent
-    | WaveEvent;
+    | WaveEvent
+    | SkillEvent;
 }
 export interface GameplaySnapshot {
   readonly time: number;
@@ -50,6 +54,10 @@ export interface GameplaySnapshot {
   readonly player: CombatEntity;
   readonly playerBody: CombatBody;
   readonly character: CharacterStatsSnapshot;
+  /** Task 07: permanent stats combined with run passives/buffs (central caps applied once). */
+  readonly stats: CombatAttributes;
+  readonly skills: RunSkillsSnapshot;
+  readonly skillCombat: SkillCombatSnapshot;
   readonly survival: PlayerSurvivalState;
   readonly kills: number;
   readonly progression: RunProgression;
@@ -86,4 +94,12 @@ export interface WaveEvent {
   readonly enemyIds: readonly string[];
   readonly positions: readonly Point[];
   readonly nextSpawnAt: number;
+}
+
+/** One notification per gained run level; Combat Core emits positive HP healing separately. */
+export interface RunLevelHealingEvent {
+  readonly type: 'run-level-healed';
+  readonly level: number;
+  readonly requestedHealing: number;
+  readonly healed: number;
 }

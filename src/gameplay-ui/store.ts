@@ -1,16 +1,19 @@
 import type { CharacterClass } from '../character-stats';
 import type { GameplayOptions, GameplaySnapshot, WorldEvent } from '../gameplay';
+import type { QaSnapshot } from '../gameplay/qa';
 export type AlphaCommand =
   | { type: 'start'; options: GameplayOptions }
-  | { type: 'pause' | 'resume' | 'menu' | 'revive' | 'finish' }
+  | { type: 'pause' | 'resume' | 'menu' | 'revive' | 'finish' | 'reroll' }
+  | { type: 'choose-skill'; card: string }
   | { type: 'testing'; action: unknown };
 export interface AlphaState {
-  readonly screen: 'menu' | 'playing' | 'paused' | 'revival' | 'ended';
+  readonly screen: 'menu' | 'playing' | 'paused' | 'revival' | 'ended' | 'level-up';
   readonly world: GameplaySnapshot | null;
   readonly events: readonly WorldEvent[];
   readonly runId: number;
   readonly record: number;
   readonly error: string;
+  readonly qa?: QaSnapshot | null;
 }
 let snapshot: AlphaState = {
   screen: 'menu',

@@ -1,11 +1,22 @@
-import { lazy, Suspense, useState, useSyncExternalStore } from 'react';
+import {
+  lazy,
+  Suspense,
+  useState,
+  useSyncExternalStore,
+  useRef,
+  useCallback,
+  useEffect,
+} from 'react';
 import type { CharacterClass } from '../character-stats';
 import { CHARACTER_CLASSES, calculateCharacterStats } from '../character-stats';
 import { CLASS_LABELS, WEAPON_LABELS } from '../gameplay';
 import { alphaBridge } from './store';
 import { AlphaCanvas } from './AlphaCanvas';
+import { LevelUpDialog, PauseDialog, SkillBar } from './SkillPanels';
+import { displayHp } from './format';
 import './alpha.css';
-const DeveloperPanel = import.meta.env.DEV ? lazy(() => import('./DeveloperPanel')) : null;
+const DeveloperPanel =
+  import.meta.env.DEV || __QA_BUILD__ ? lazy(() => import('./DeveloperPanel')) : null;
 const time = (seconds: number) =>
   `${Math.floor(seconds / 60)
     .toString()
@@ -23,8 +34,30 @@ export function AlphaApp() {
   const [selected, setSelected] = useState<CharacterClass>('warrior');
   const [level, setLevel] = useState(1);
   const [debugOpen, setDebugOpen] = useState(false);
-  const debug = import.meta.env.DEV && new URLSearchParams(location.search).has('debug');
+  const [skillsOpen, setSkillsOpen] = useState(false);
+  const skillsOpener = useRef<HTMLElement | null>(null);
+  const openSkills = useCallback(() => {
+    skillsOpener.current = document.activeElement as HTMLElement | null;
+    setSkillsOpen(true);
+  }, []);
+  const closeSkills = useCallback(() => {
+    setSkillsOpen(false);
+    requestAnimationFrame(() => {
+      if (skillsOpener.current?.isConnected) skillsOpener.current.focus();
+    });
+  }, []);
+  useEffect(() => {
+    setSkillsOpen(false);
+  }, [state.runId]);
+  // The Pause screen shows Skills inline; a quick-look overview opened during play is folded into it.
+  // This only changes UI state, never the simulation's pause ownership.
+  useEffect(() => {
+    if (state.screen === 'paused') setSkillsOpen(false);
+  }, [state.screen]);
+  const debug =
+    (import.meta.env.DEV || __QA_BUILD__) && new URLSearchParams(location.search).has('debug');
   const s = state.world;
+  const hp = s ? displayHp(s.player.currentHp, s.player.maxHp) : null;
   const start = () =>
     alphaBridge.send({ type: 'start', options: { characterClass: selected, level } });
   return (
@@ -38,7 +71,7 @@ export function AlphaApp() {
         </div>
         <span className="header-caption">ХРОНИКИ ПОСЛЕДНЕГО СВЕТА</span>
         <span className="build-badge">
-          COMBAT ALPHA <span>06</span>
+          {__QA_BUILD__ ? 'QA PREVIEW' : 'COMBAT ALPHA'} <span>07.2 v2</span>
         </span>
       </header>
       <main className={`arena alpha-arena screen-${state.screen}`}>
@@ -66,7 +99,7 @@ export function AlphaApp() {
               <p className="alpha-note">
                 Тестовая арена · предварительный баланс
                 <br />
-                Собирайте XP-кристаллы · новые группы врагов приходят постоянно.
+                Собирайте XP-кристаллы · на каждом уровне — выбор навыка.
               </p>
             </div>
             <div className="alpha-selection">
@@ -84,7 +117,7 @@ export function AlphaApp() {
                       <strong>{CLASS_LABELS[c]}</strong>
                       <small>{WEAPON_LABELS[c]}</small>
                       <span>
-                        {stats.maxHp} HP ·{' '}
+                        {displayHp(stats.maxHp, stats.maxHp).max} HP ·{' '}
                         {c === 'mage' ? stats.magicalDamage : stats.physicalDamage} урона
                       </span>
                     </button>
@@ -128,8 +161,7 @@ export function AlphaApp() {
                       {CLASS_LABELS[s.character.characterClass]} · забег {s.progression.level}
                     </strong>
                     <span>
-                      {s.player.currentHp.toFixed(s.player.currentHp % 1 ? 1 : 0)} /{' '}
-                      {s.player.maxHp} HP
+                      {hp!.current} / {hp!.max} HP
                     </span>
                   </div>
                   <div
@@ -137,8 +169,8 @@ export function AlphaApp() {
                     role="progressbar"
                     aria-label="Здоровье"
                     aria-valuemin={0}
-                    aria-valuemax={s.player.maxHp}
-                    aria-valuenow={s.player.currentHp}
+                    aria-valuemax={hp!.max}
+                    aria-valuenow={hp!.current}
                   >
                     <div style={{ width: `${(s.player.currentHp / s.player.maxHp) * 100}%` }} />
                   </div>
@@ -186,6 +218,13 @@ export function AlphaApp() {
                 </button>
               </div>
             </div>
+            <SkillBar
+              world={s}
+              open={skillsOpen}
+              onOpen={openSkills}
+              onClose={closeSkills}
+              context={state.screen}
+            />
             <div className="alpha-mobile-summary">
               {time(s.time)} · {s.kills} повержено
             </div>
@@ -222,44 +261,32 @@ export function AlphaApp() {
             </div>
           </>
         )}
-        {(state.screen === 'paused' || state.screen === 'revival' || state.screen === 'ended') && (
+        {state.screen === 'level-up' && s?.skills.offer && (
+          <LevelUpDialog world={s} onOpenSkills={openSkills} hiddenBehindSkills={skillsOpen} />
+        )}
+        {state.screen === 'paused' && s && <PauseDialog world={s} />}
+        {(state.screen === 'revival' || state.screen === 'ended') && (
           <section
             className="overlay modal-overlay"
             role="dialog"
             aria-modal="true"
             aria-labelledby="alpha-dialog-title"
+            inert={skillsOpen}
+            aria-hidden={skillsOpen || undefined}
           >
             <div className="small-modal">
-              <div className="modal-sigil">{state.screen === 'paused' ? 'Ⅱ' : '◇'}</div>
+              <div className="modal-sigil">◇</div>
               <div className="eyebrow centered">
-                {state.screen === 'revival'
-                  ? 'МИР ЖДЁТ ВАШЕГО РЕШЕНИЯ'
-                  : state.screen === 'ended'
-                    ? 'ЗАБЕГ ЗАВЕРШЁН'
-                    : 'МИГ ТИШИНЫ'}
+                {state.screen === 'revival' ? 'МИР ЖДЁТ ВАШЕГО РЕШЕНИЯ' : 'ЗАБЕГ ЗАВЕРШЁН'}
               </div>
               <h2 id="alpha-dialog-title">
-                {state.screen === 'paused'
-                  ? 'Перевести дух.'
-                  : state.screen === 'revival'
-                    ? 'Ещё одна искра.'
-                    : 'Искра погасла.'}
+                {state.screen === 'revival' ? 'Ещё одна искра.' : 'Искра погасла.'}
               </h2>
               <p>
                 {state.screen === 'revival'
                   ? 'Вернитесь с 50% HP и защитой на 3 секунды. Арена и враги останутся прежними.'
-                  : state.screen === 'paused'
-                    ? 'Всё игровое время остановлено.'
-                    : `${time(s?.time ?? 0)} в руинах · ${s?.kills ?? 0} повержено`}
+                  : `${time(s?.time ?? 0)} в руинах · ${s?.kills ?? 0} повержено`}
               </p>
-              {state.screen === 'paused' && (
-                <button
-                  className="button primary"
-                  onClick={() => alphaBridge.send({ type: 'resume' })}
-                >
-                  Продолжить →
-                </button>
-              )}
               {state.screen === 'revival' && (
                 <>
                   <button
@@ -311,7 +338,7 @@ export function AlphaApp() {
             aria-expanded={debugOpen}
             onClick={() => setDebugOpen(!debugOpen)}
           >
-            DEV · {debugOpen ? 'Закрыть' : 'Тестирование'}
+            {__QA_BUILD__ ? 'QA' : 'DEV'} · {debugOpen ? 'Закрыть' : 'Тестирование'}
           </button>
         )}
         {debug && debugOpen && DeveloperPanel && (

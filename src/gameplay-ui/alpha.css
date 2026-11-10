@@ -352,3 +352,579 @@
     top: 148px;
   }
 }
+
+/* Task 07 — level-up skill choice and skill bar */
+.skill-card h3 em {
+  font-style: normal;
+  color: #c9ddb1;
+  font-size: 18px;
+}
+.skill-card.kind-passive {
+  background: linear-gradient(160deg, #2a3341, #171f29);
+}
+.skill-card.kind-bonus {
+  background: linear-gradient(160deg, #3b3524, #211c13);
+}
+.skill-card:focus-visible {
+  outline: 2px solid #e6f1c9;
+  outline-offset: 3px;
+}
+.skill-panel .text-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.skill-bar {
+  position: absolute;
+  left: 50%;
+  bottom: 70px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  max-width: min(720px, calc(100% - 32px));
+  pointer-events: none;
+  z-index: 4;
+}
+.skill-chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid #9db68755;
+  background: #14201ae6;
+  color: #e5e6cf;
+  font-size: 12px;
+  border-radius: 4px;
+}
+.skill-chip.kind-passive {
+  border-color: #8ea6c855;
+  background: #141b24e6;
+}
+.skill-chip i {
+  font-style: normal;
+  font-size: 15px;
+}
+.skill-chip b {
+  font-size: 10px;
+  color: #c9ddb1;
+}
+.skill-chip small {
+  font-size: 9px;
+  color: #f0c58a;
+}
+.skill-slots,
+.skill-gold,
+.skill-barrier,
+.skill-buff {
+  padding: 4px 8px;
+  font-size: 10px;
+  color: #a9bba0;
+  background: #14201acc;
+  border-radius: 4px;
+}
+.skill-gold {
+  color: #f0d58a;
+}
+.skill-barrier {
+  color: #bfe4ff;
+}
+.skill-buff {
+  color: #ffd3a6;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+@media (max-width: 700px) {
+  .skill-bar {
+    bottom: 96px;
+  }
+  .upgrade-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.skill-overview-toggle,
+.skill-overview button {
+  pointer-events: auto;
+  border: 1px solid #91b59c;
+  border-radius: 4px;
+  background: #172b24;
+  color: #eff3dd;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+.skill-overview-toggle:focus-visible,
+.skill-overview button:focus-visible {
+  outline: 2px solid #ead8a1;
+  outline-offset: 2px;
+}
+.skill-overview {
+  position: absolute;
+  z-index: 8;
+  right: 14px;
+  top: 110px;
+  width: 370px;
+  max-width: calc(100% - 28px);
+  max-height: calc(100% - 230px);
+  overflow: auto;
+  padding: 16px;
+  border: 1px solid #91b59c;
+  border-radius: 6px;
+  background: #10231df5;
+  color: #e4edda;
+  font-size: 13px;
+  box-shadow: 0 8px 30px #0008;
+  pointer-events: auto;
+}
+.skill-overview-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.skill-overview h2 {
+  font-size: 20px;
+}
+.skill-overview h3 {
+  font-size: 15px;
+  margin: 14px 0 4px;
+}
+.skill-overview p {
+  margin: 5px 0;
+  line-height: 1.45;
+}
+.skill-overview ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.skill-overview li {
+  border-top: 1px solid #91b59c44;
+  padding: 10px 0;
+}
+.skill-overview li i {
+  font-style: normal;
+}
+.skill-overview li span {
+  color: #e4c78c;
+}
+@media (max-width: 760px) {
+  .skill-overview {
+    right: 12px;
+    top: 104px;
+    max-width: calc(100% - 24px);
+    max-height: 46%;
+    padding: 12px;
+  }
+  .skill-slots {
+    flex-basis: 100%;
+    text-align: center;
+  }
+  .skill-bar {
+    gap: 4px;
+  }
+}
+
+.skills-modal-open {
+  margin: 8px 0 14px;
+  background: #203b2c;
+  border: 1px solid #8da87b;
+  color: #e6edd4;
+  font-family: inherit;
+  font-weight: 600;
+}
+.skills-modal-open:focus-visible {
+  outline: 2px solid #ead8a1;
+  outline-offset: 3px;
+}
+.skills-modal-open:hover {
+  background: #2a4935;
+}
+.skill-overview-backdrop {
+  position: absolute;
+  inset: 0;
+  background: #08130ed9;
+  z-index: 24;
+}
+.skill-overview {
+  z-index: 25;
+  width: 650px;
+}
+.skill-overview.is-blocking {
+  top: 50%;
+  left: 50%;
+  right: auto;
+  transform: translate(-50%, -50%);
+  max-height: calc(100% - 36px);
+}
+.skill-overview-heading {
+  position: sticky;
+  top: -16px;
+  padding: 8px 0;
+  background: #10231d;
+  z-index: 1;
+}
+.skill-overview-heading button {
+  flex-shrink: 0;
+}
+.skill-overview-groups {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.skill-group {
+  border: 1px solid #79a77666;
+  border-radius: 6px;
+  padding: 10px;
+  min-width: 0;
+  background: #162c20;
+}
+.skill-group.kind-passive {
+  border-color: #85a9d466;
+  background: #142330;
+}
+.skill-overview .skill-group h3 {
+  margin: 0 0 6px;
+}
+.skill-overview .skill-group li {
+  margin: 6px 0;
+  border: 1px solid #b8d2aa44;
+  border-radius: 4px;
+  padding: 8px;
+  background: #0e1c17;
+}
+.skill-entry-heading {
+  display: block;
+  line-height: 1.45;
+  color: #f3eed5;
+}
+.skill-entry-description {
+  color: #c4d2c1;
+}
+.skill-overview .skill-empty-slot {
+  border-style: dashed !important;
+  background: transparent !important;
+  color: #94a897;
+  padding: 7px !important;
+  font-size: 12px;
+}
+.skill-rerolls {
+  color: #e6cb88;
+}
+@media (max-width: 760px) {
+  .skill-overview-groups {
+    grid-template-columns: 1fr;
+  }
+  .skill-overview.is-blocking {
+    max-height: calc(100% - 24px);
+  }
+  .skill-overview-heading {
+    top: -12px;
+  }
+  .skill-overview-heading h2 {
+    font-size: 18px;
+  }
+}
+
+.synergy-diagnostic {
+  border-top: 1px solid #91b59c55;
+  padding: 10px 0;
+}
+.synergy-diagnostic code {
+  display: block;
+  color: #b4c9df;
+  margin-top: 4px;
+}
+
+/* Task 07.3 — Pause screen with Skills & Synergies, level-up synergy hints */
+.pause-overlay {
+  align-items: flex-start;
+  overflow: auto;
+  padding: 24px;
+}
+.pause-panel {
+  width: min(1040px, 100%);
+  margin: auto;
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 20px;
+  align-items: start;
+  border: 1px solid #a3b68933;
+  background: linear-gradient(145deg, #253425f2, #131f18f2);
+  box-shadow: 0 20px 80px #0005;
+  padding: 24px;
+  color: #e4edda;
+}
+.pause-header {
+  text-align: center;
+  position: sticky;
+  top: 0;
+}
+.pause-header h2 {
+  font-family: Georgia, serif;
+  font-size: 34px;
+  font-weight: 400;
+  color: #e8e9d4;
+  margin: 12px 0 8px;
+}
+.pause-header p {
+  font-size: 12px;
+  color: #9fb197;
+  line-height: 1.6;
+}
+.pause-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+.pause-actions .button {
+  width: 100%;
+}
+.pause-skills {
+  min-width: 0;
+  font-size: 13px;
+}
+.pause-skills .skill-overview-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 8px;
+}
+.pause-skills h2 {
+  font-size: 20px;
+}
+.pause-skills h3 {
+  font-size: 15px;
+  margin: 0 0 6px;
+}
+.pause-skills p {
+  margin: 5px 0;
+  line-height: 1.45;
+}
+.pause-skills ul,
+.synergy-overview ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.pause-skills .skill-group li {
+  margin: 6px 0;
+  border: 1px solid #b8d2aa44;
+  border-radius: 4px;
+  padding: 8px;
+  background: #0e1c17;
+}
+.pause-skills .skill-group li i {
+  font-style: normal;
+}
+.pause-skills .skill-group li span {
+  color: #e4c78c;
+}
+.pause-skills .skill-empty-slot {
+  border-style: dashed !important;
+  background: transparent !important;
+  color: #94a897;
+  font-size: 12px;
+}
+.synergy-overview {
+  margin-top: 14px;
+  border: 1px solid #c9a96a55;
+  border-radius: 6px;
+  padding: 10px;
+  background: #221d12;
+}
+.synergy-overview h3 {
+  margin: 0 0 4px;
+  color: #f0d79a;
+}
+.synergy-overview-note {
+  color: #b9ad8c;
+  font-size: 12px;
+}
+.synergy-overview .synergy-entry {
+  margin: 8px 0;
+  border: 1px solid #c9a96a44;
+  border-left-width: 4px;
+  border-radius: 4px;
+  padding: 8px 10px;
+  background: #171308;
+}
+.synergy-entry.is-available {
+  border-color: #e3c46f;
+  background: #2a2412;
+}
+.synergy-entry-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: #f6ecd0;
+}
+.synergy-status {
+  font-size: 11px;
+  white-space: nowrap;
+  color: #a69a7b;
+}
+.synergy-entry.is-available .synergy-status {
+  color: #f2d27a;
+}
+.synergy-entry p {
+  font-size: 12px;
+  color: #d9d0b6;
+}
+.synergy-entry b {
+  color: #f0d79a;
+  font-weight: 600;
+}
+.synergy-skill-owned {
+  color: #f2d27a;
+  font-weight: 600;
+}
+.synergy-explanation {
+  color: #b9ad8c !important;
+  font-style: italic;
+}
+.skill-card.synergy-unlock {
+  border-color: #e3c46f;
+  box-shadow:
+    inset 0 0 0 1px #e3c46f88,
+    0 0 18px #e3c46f33;
+}
+.skill-card.synergy-pair {
+  border-color: #c9a96a88;
+}
+.card-synergy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: -12px 0 14px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.card-synergy-unlock {
+  color: #f2d27a;
+  font-weight: 600;
+}
+.card-synergy-pair {
+  color: #d8c08a;
+}
+.card-synergy-owned {
+  color: #8f9b86;
+}
+.synergy-hint-note {
+  margin-top: -8px;
+}
+@media (max-width: 760px) {
+  .pause-overlay {
+    padding: 10px;
+  }
+  .pause-panel {
+    grid-template-columns: 1fr;
+    padding: 14px;
+    gap: 12px;
+  }
+  .pause-header {
+    position: static;
+  }
+  .pause-header .modal-sigil {
+    display: none;
+  }
+  .pause-header h2 {
+    font-size: 26px;
+    margin: 6px 0;
+  }
+}
+/* Task 07.2 v2 — damage readout and synergy pairs. */
+.damage-lines {
+  list-style: none;
+  margin: 6px 0 10px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+}
+.damage-line {
+  font-size: 12px;
+  line-height: 1.35;
+  color: #e8dfc4;
+}
+.damage-line small {
+  display: block;
+  font-size: 10.5px;
+  color: #a99f84;
+}
+.damage-lines.is-compact {
+  margin: -8px 0 14px;
+  gap: 2px;
+}
+.damage-lines.is-compact .damage-line {
+  font-size: 11px;
+}
+.damage-lines.is-compact .damage-line small {
+  font-size: 10px;
+}
+.damage-dot {
+  color: #e6c3a0;
+}
+.damage-control,
+.damage-area,
+.damage-note,
+.damage-buff,
+.damage-cooldown {
+  color: #b7c0c9;
+}
+.damage-none {
+  color: #c9bfa3;
+  font-style: italic;
+}
+.damage-change {
+  font-style: normal;
+  font-size: 10px;
+  padding: 0 4px;
+  margin-left: 4px;
+  border-radius: 3px;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+.damage-change.change-new {
+  color: #9fe0a8;
+}
+.damage-change.change-changed {
+  color: #f2d27a;
+}
+p.damage-note {
+  font-size: 11px;
+  max-width: 62ch;
+  margin-inline: auto;
+}
+.synergy-pairs {
+  font-size: 12px;
+  color: #d9d0b6;
+}
+.synergy-pairs ul {
+  list-style: none;
+  margin: 2px 0 4px;
+  padding: 0 0 0 10px;
+}
+.synergy-pair-row {
+  padding: 1px 0;
+}
+.synergy-pair-row.is-complete {
+  color: #f2d27a;
+}
+/* Damage lines live inside skill list items: neutralise the item box/colour styling. */
+.skill-overview .skill-group li.damage-line,
+.pause-skills .skill-group li.damage-line,
+.skill-overview li.damage-line {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  padding: 1px 0;
+  background: none;
+}
+.skill-overview li.damage-line span,
+.pause-skills .skill-group li.damage-line span {
+  color: inherit;
+}

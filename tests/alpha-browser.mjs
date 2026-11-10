@@ -35,6 +35,40 @@ try {
   await page.waitForTimeout(200);
   assert.equal((await state()).world.time, paused.world.time);
   await page.keyboard.press('p');
+  assert.equal((await state()).screen, 'playing');
+  // Regression: keys pressed in the same frame as P/Esc must not replay the pause toggle
+  // (Phaser re-scans its key queue on every key event until the next game step).
+  const sameFrame = await page.evaluate(() => {
+    const key = (type, key, code, keyCode) =>
+      document.body.dispatchEvent(new KeyboardEvent(type, { key, code, keyCode, bubbles: true }));
+    const screens = [];
+    key('keydown', 'Escape', 'Escape', 27);
+    key('keyup', 'Escape', 'Escape', 27);
+    screens.push(window.__alpha.state().screen);
+    for (const [k, code, keyCode] of [
+      ['d', 'KeyD', 68],
+      ['w', 'KeyW', 87],
+    ]) {
+      key('keydown', k, code, keyCode);
+      screens.push(window.__alpha.state().screen);
+      key('keyup', k, code, keyCode);
+      screens.push(window.__alpha.state().screen);
+    }
+    key('keydown', 'Escape', 'Escape', 27);
+    key('keyup', 'Escape', 'Escape', 27);
+    screens.push(window.__alpha.state().screen);
+    return screens;
+  });
+  assert.deepEqual(sameFrame, ['paused', 'paused', 'paused', 'paused', 'paused', 'playing']);
+  // The normal hidden-page auto-pause is unchanged.
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+    document.dispatchEvent(new Event('visibilitychange'));
+    delete document.hidden;
+  });
+  assert.equal((await state()).screen, 'paused', 'hidden document pauses the alpha');
+  await page.keyboard.press('p');
+  assert.equal((await state()).screen, 'playing');
   await command({ type: 'protection', enabled: true });
   await command({ type: 'spawn', kind: 'melee', distance: 35 });
   await page.evaluate(() => window.__alpha.advance(1));
@@ -203,6 +237,46 @@ try {
   assert.equal(s.world.spawning.waves, 3);
   assert.ok(s.world.enemies.length <= 6);
   await page.screenshot({ path: 'artifacts/alpha-11-waves.png' });
+  // Task 07: real level-up dialog, reroll and skill choice for every class.
+  for (const characterClass of ['warrior', 'mage', 'archer', 'rogue']) {
+    await command({
+      type: 'restart',
+      options: { characterClass, initialEnemies: false, spawning: { enabled: false } },
+    });
+    await command({ type: 'protection', enabled: true });
+    await command({ type: 'grant-xp', amount: 20 });
+    await page.getByRole('dialog', { name: /Уровень забега 2/ }).waitFor();
+    if (characterClass === 'warrior')
+      await page.screenshot({ path: 'artifacts/alpha-12-level-up.png' });
+    s = await state();
+    assert.equal(s.screen, 'level-up');
+    assert.equal(s.world.paused, true, 'level-up pauses the world');
+    assert.equal(s.world.skills.offer.cards.length, 3);
+    assert.ok(s.world.skills.offer.cards.every((c) => c.kind === 'skill' && c.isNew));
+    const frozen = s.world.time;
+    await page.evaluate(() => window.__alpha.advance(1));
+    assert.equal((await state()).world.time, frozen, 'no simulation while choosing');
+    await page.getByRole('button', { name: /Перебросить · осталось 3/ }).click();
+    assert.equal((await state()).world.skills.rerolls, 2);
+    const first = (await state()).world.skills.offer.cards[0];
+    await page.getByRole('listitem', { name: new RegExp(first.name) }).click();
+    s = await state();
+    assert.equal(s.screen, 'playing');
+    assert.equal(s.world.skills.owned[0].skillId, first.skillId);
+    assert.equal(s.world.skills.owned[0].rank, 1);
+    await page.getByLabel('Навыки забега').waitFor();
+    if (characterClass === 'mage') {
+      await command({ type: 'grant-skill', skillId: 'frost_nova', rank: 5 });
+      await command({ type: 'group', count: 6, distance: 90 });
+      await page.evaluate(() => window.__alpha.advance(1.5));
+      s = await state();
+      assert.ok(
+        s.events.some((e) => e.channel === 'skill' && e.event.type === 'skill-activated'),
+        'automatic skill activates without input',
+      );
+      await page.screenshot({ path: 'artifacts/alpha-12-skills.png' });
+    }
+  }
   await command({ type: 'restart', options: { characterClass: 'mage', initialEnemies: false } });
   await command({ type: 'protection', enabled: true });
   for (let i = 0; i < 5; i++) await command({ type: 'group', count: 24, distance: 550 });
@@ -254,7 +328,7 @@ try {
   await mobile.screenshot({ path: 'artifacts/alpha-08-mobile.png' });
   assert.deepEqual(errors, []);
   console.log(
-    'PASS alpha: class selection, all four weapons, both enemies, actual damage, WASD/joystick, interactive DEV, status cap, pause, same-world revival, second death, bounded enemy group, collectible death XP/run levels, DEV XP and continuous off-screen waves; no browser exceptions.',
+    'PASS alpha: class selection, all four weapons, both enemies, actual damage, WASD/joystick, interactive DEV, status cap, pause, same-world revival, second death, bounded enemy group, collectible death XP/run levels, DEV XP, continuous off-screen waves, level-up skill choice/reroll for all classes and automatic skills; no browser exceptions.',
   );
 } finally {
   await browser.close();

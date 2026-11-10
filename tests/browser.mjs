@@ -29,6 +29,41 @@ try {
   assert.equal((await state()).seconds, paused.seconds);
   await page.keyboard.press('p');
   assert.equal((await state()).phase, 'playing');
+  // Regression: Phaser re-scans its key queue on every key event until the next game step, so
+  // movement keys pressed in the same frame as P must not replay the pause toggle.
+  const sameFrame = await page.evaluate(() => {
+    const key = (type, key, keyCode) =>
+      document.body.dispatchEvent(
+        new KeyboardEvent(type, { key, code: 'Key' + key.toUpperCase(), keyCode, bubbles: true }),
+      );
+    const phases = [];
+    key('keydown', 'p', 80);
+    key('keyup', 'p', 80);
+    phases.push(window.__survivors.state().phase);
+    for (const [k, code] of [
+      ['d', 68],
+      ['s', 83],
+    ]) {
+      key('keydown', k, code);
+      phases.push(window.__survivors.state().phase);
+      key('keyup', k, code);
+      phases.push(window.__survivors.state().phase);
+    }
+    key('keydown', 'p', 80);
+    key('keyup', 'p', 80);
+    phases.push(window.__survivors.state().phase);
+    return phases;
+  });
+  assert.deepEqual(sameFrame, ['paused', 'paused', 'paused', 'paused', 'paused', 'playing']);
+  // The normal hidden-page auto-pause is unchanged.
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+    document.dispatchEvent(new Event('visibilitychange'));
+    delete document.hidden;
+  });
+  assert.equal((await state()).phase, 'paused', 'hidden document pauses the prototype');
+  await page.keyboard.press('p');
+  assert.equal((await state()).phase, 'playing');
   await page.evaluate(() => window.__survivors.advance(6));
   assert.ok((await state()).kills > 0, 'automatic projectiles kill real enemies');
   // Walk towards a real dropped crystal; this exercises attraction and collection.

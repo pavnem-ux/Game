@@ -7,6 +7,9 @@ export interface ProjectileState {
   readonly origin: Point;
   readonly affiliation: EntityAffiliation;
   readonly sequence: number;
+  /** Task 07: remaining extra targets and already-hit IDs for piercing projectiles. */
+  pierceRemaining?: number;
+  hitIds?: Set<string>;
   distanceTraveled: number;
   x: number;
   y: number;
@@ -31,7 +34,7 @@ export function nextFlightEvent(
   let fraction = Infinity,
     targetId: string | undefined;
   for (const [id, body] of bodies) {
-    if (!validTarget(core, p.data.sourceId, p.affiliation, id)) continue;
+    if (p.hitIds?.has(id) || !validTarget(core, p.data.sourceId, p.affiliation, id)) continue;
     const velocity = velocities?.get(id) ?? { x: 0, y: 0 };
     const duration = remaining / p.data.speed;
     const relativeEnd = { x: end.x - velocity.x * duration, y: end.y - velocity.y * duration };

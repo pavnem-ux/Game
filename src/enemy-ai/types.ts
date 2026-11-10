@@ -53,6 +53,15 @@ export interface EnemySnapshot {
   readonly state: EnemyBehaviorState;
   readonly alive: boolean;
   readonly nextAttackAt: number;
+  /** Task 07: present only while crowd-controlled. */
+  readonly control?: EnemyControl;
+}
+/** Task 07 crowd-control state supplied by the owner of Slow/Stun timers. */
+export interface EnemyControl {
+  /** Movement multiplier in (0, 1]; 1 means not slowed. */
+  readonly movementMultiplier: number;
+  /** Stunned enemies neither move nor start attacks; launched projectiles continue. */
+  readonly stunned: boolean;
 }
 export interface EnemyStateEvent {
   readonly type: 'enemy-state-changed';

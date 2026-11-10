@@ -5,6 +5,9 @@ import { alphaBridge, CLASS_COLORS } from '../gameplay-ui/store';
 import type { AlphaCommand } from '../gameplay-ui/store';
 import { loadSave, saveRun } from '../progression/save';
 import { createWorld } from './World';
+import type { TestingController } from '../gameplay/testing';
+import { stunIndicator } from './stun-indicator';
+import { oncePerKeyEvent } from './key-event-once';
 
 export class AlphaScene extends Phaser.Scene {
   private world: GameplayWorld | null = null;
@@ -21,7 +24,10 @@ export class AlphaScene extends Phaser.Scene {
   private fx: { event: WorldEvent; until: number; x: number; y: number; text?: string }[] = [];
   private labels: Phaser.GameObjects.Text[] = [];
   private damageLabels: Phaser.GameObjects.Text[] = [];
-  private testing?: (action: unknown) => void;
+  private stunLabels: Phaser.GameObjects.Text[] = [];
+  private testing?: TestingController;
+  private testingWorld?: (options: GameplayOptions) => GameplayWorld;
+  private testingReady: Promise<void> = Promise.resolve();
   constructor() {
     super('combat-alpha');
   }
@@ -33,14 +39,18 @@ export class AlphaScene extends Phaser.Scene {
     this.keys = this.input.keyboard!.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT') as typeof this.keys;
     // DOM controls retain their own key input. Phaser must not capture arrows/space in forms.
     this.input.keyboard!.clearCaptures();
-    const toggle = (e: KeyboardEvent) => {
+    const toggle = oncePerKeyEvent((e: KeyboardEvent) => {
       if ((e.target as HTMLElement)?.matches('input,select,textarea')) return;
-      if (this.world && !this.world.survival.getState().requiresWorldPause) {
+      if (
+        this.world &&
+        !this.world.survival.getState().requiresWorldPause &&
+        this.world.run.pendingChoices === 0
+      ) {
         this.world.setPaused(!this.world.paused);
         this.clearInput();
         this.publish();
       }
-    };
+    });
     this.input.keyboard!.on('keydown-P', toggle).on('keydown-ESC', toggle);
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
       if (
@@ -71,35 +81,59 @@ export class AlphaScene extends Phaser.Scene {
     const cleanup = () => {
       unsubscribe();
       document.removeEventListener('visibilitychange', visibility);
-      if (import.meta.env.DEV) delete window.__alpha;
+      if (import.meta.env.DEV || __QA_BUILD__) delete window.__alpha;
     };
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, cleanup);
     this.events.once(Phaser.Scenes.Events.DESTROY, cleanup);
-    if (import.meta.env.DEV && new URLSearchParams(location.search).has('debug')) {
-      void import('../gameplay/testing').then(({ createTestingController }) => {
-        if (!this.scene.isActive()) return;
-        this.testing = createTestingController(
-          () => this.world,
-          (options) => this.start(options),
-        );
-        window.__alpha = {
-          state: () => alphaBridge.getSnapshot(),
-          command: (action) => this.command({ type: 'testing', action }),
-          advance: (seconds) => {
-            this.world?.update(seconds);
-            this.publish();
-          },
-        };
-        this.publish();
-      });
+    if (
+      (import.meta.env.DEV || __QA_BUILD__) &&
+      new URLSearchParams(location.search).has('debug')
+    ) {
+      this.testingReady = import('../gameplay/testing').then(
+        ({ createTestingController, createTestingWorld }) => {
+          if (!this.scene.isActive()) return;
+          this.testingWorld = createTestingWorld;
+          this.testing = createTestingController(
+            () => this.world,
+            (options) => this.start(options),
+          );
+          window.__alpha = {
+            state: () => alphaBridge.getSnapshot(),
+            command: (action) => this.command({ type: 'testing', action }),
+            advance: (seconds) => {
+              this.world?.update(seconds);
+              if (this.world) this.draw(this.world.getSnapshot());
+              this.publish();
+            },
+            presentation: () =>
+              Object.freeze({
+                stunIndicators: Object.freeze(
+                  this.stunLabels
+                    .filter((label) => label.visible)
+                    .map((label) =>
+                      Object.freeze({
+                        entityId: label.getData('entityId') as string,
+                        text: label.text,
+                      }),
+                    ),
+                ),
+              }),
+          };
+          this.publish();
+        },
+      );
     }
     this.publish();
   }
   private start(options: GameplayOptions) {
-    const next = new GameplayWorld({
+    const input = {
       ...options,
       viewport: { width: this.scale.width, height: this.scale.height },
-    }); // Validate before replacing a running session.
+    };
+    const next =
+      (import.meta.env.DEV || __QA_BUILD__) && this.testingWorld
+        ? this.testingWorld(input)
+        : new GameplayWorld(input); // Validate before replacing a session.
     this.world = next;
     this.runId++;
     this.lastEvent = 0;
@@ -109,6 +143,18 @@ export class AlphaScene extends Phaser.Scene {
     this.keys && this.input.keyboard?.resetKeys();
   }
   private command(command: AlphaCommand) {
+    if (
+      (import.meta.env.DEV || __QA_BUILD__) &&
+      command.type === 'start' &&
+      new URLSearchParams(location.search).has('debug') &&
+      !this.testingWorld
+    ) {
+      // A fast initial click waits for the QA factory; later restarts remain synchronous.
+      void this.testingReady.then(() => {
+        if (this.scene.isActive()) this.command(command);
+      });
+      return;
+    }
     try {
       this.error = '';
       switch (command.type) {
@@ -120,6 +166,7 @@ export class AlphaScene extends Phaser.Scene {
           this.clearInput();
           this.labels.forEach((t) => t.setVisible(false));
           this.damageLabels.forEach((t) => t.setVisible(false));
+          this.stunLabels.forEach((t) => t.setVisible(false));
           this.joystick.clear();
           break;
         case 'pause':
@@ -136,8 +183,15 @@ export class AlphaScene extends Phaser.Scene {
         case 'finish':
           this.world?.decide('finish-run');
           break;
+        case 'choose-skill':
+          this.world?.chooseSkill(command.card);
+          this.clearInput();
+          break;
+        case 'reroll':
+          this.world?.rerollSkillOffer();
+          break;
         case 'testing':
-          if (import.meta.env.DEV) this.testing?.(command.action);
+          if (import.meta.env.DEV || __QA_BUILD__) this.testing?.(command.action);
           break;
       }
     } catch (e) {
@@ -185,6 +239,24 @@ export class AlphaScene extends Phaser.Scene {
       const e = event.event;
       if (event.channel === 'weapon' && e.type === 'attack-started' && !e.projectileId)
         this.fx.push({ event, until: event.time + 0.18, x: e.origin.x, y: e.origin.y });
+      if (event.channel === 'skill' && e.type === 'skill-area')
+        this.fx.push({ event, until: event.time + 0.25, x: e.center.x, y: e.center.y });
+      if (event.channel === 'skill' && e.type === 'synergy-triggered')
+        this.fx.push({
+          event,
+          until: event.time + 0.8,
+          x: e.position.x,
+          y: e.position.y - 18,
+          text: SYNERGY_LABELS[e.synergyId] ?? e.synergyId,
+        });
+      if (event.channel === 'skill' && e.type === 'synergy-unlocked')
+        this.fx.push({
+          event,
+          until: event.time + 2.4,
+          x: s.playerBody.x,
+          y: s.playerBody.y - 46,
+          text: `✦ Синергия открыта: ${SYNERGY_LABELS[e.synergyId] ?? e.synergyId}`,
+        });
       if (
         event.channel === 'combat' &&
         (e.type === 'damage' || e.type === 'periodic-damage' || e.type === 'dodge')
@@ -206,6 +278,12 @@ export class AlphaScene extends Phaser.Scene {
       }
     }
     this.fx = this.fx.filter((f) => f.until > s.time).slice(-64);
+    for (const z of s.skillCombat.zones) {
+      const c = skillColor(z.sourceKey);
+      const armed = z.armedAt === undefined || z.armedAt <= s.time;
+      g.fillStyle(c, armed ? 0.12 : 0.05).fillCircle(z.center.x, z.center.y, z.radius);
+      g.lineStyle(1, c, armed ? 0.55 : 0.3).strokeCircle(z.center.x, z.center.y, z.radius);
+    }
     for (const crystal of s.crystals) {
       const { x, y } = crystal;
       g.fillStyle(0xb4f1aa, 0.13).fillCircle(x, y, 12);
@@ -214,6 +292,7 @@ export class AlphaScene extends Phaser.Scene {
         .fillTriangle(x - 4, y, x + 4, y, x, y + 6);
       g.lineStyle(1, 0xe4ffe1, 0.7).lineBetween(x, y - 4, x - 2, y);
     }
+    let stunLabel = 0;
     let label = 0,
       damageLabel = 0;
     for (const enemy of s.enemies) {
@@ -235,6 +314,30 @@ export class AlphaScene extends Phaser.Scene {
         (34 * enemy.entity.currentHp) / enemy.entity.maxHp,
         3,
       );
+      const mark = s.skillCombat.marks.find((m) => m.targetId === enemy.entityId);
+      if (mark)
+        g.lineStyle(2, mark.kind === 'hunter' ? 0xffd27a : 0xd690ff, 0.9)
+          .strokeCircle(x, y, 22)
+          .lineBetween(x - 26, y, x - 18, y)
+          .lineBetween(x + 18, y, x + 26, y);
+      const stun = stunIndicator(enemy);
+      if (stun) {
+        const index = stunLabel++;
+        const badge =
+          this.stunLabels[index] ??
+          this.label(this.stunLabels, index)
+            .setText(stun.text)
+            .setColor(stun.color)
+            .setBackgroundColor(stun.background)
+            .setPadding(4, 2)
+            .setDepth(12);
+        badge
+          .setPosition(x, y + stun.offsetY)
+          .setData('entityId', enemy.entityId)
+          .setVisible(true);
+        g.lineStyle(2, 0xffe88e, 0.95).lineBetween(x - 7, y - 39, x + 7, y - 39);
+      } else if (enemy.control && enemy.control.movementMultiplier < 1)
+        g.lineStyle(2, 0x9fdcff, 0.7).strokeEllipse(x, y + 14, 34, 10);
       const effects = s.statuses.filter((v) => v.targetId === enemy.entityId);
       if (effects.length) {
         const text = this.label(this.labels, label++);
@@ -248,6 +351,8 @@ export class AlphaScene extends Phaser.Scene {
           .setVisible(true);
       }
     }
+    for (; stunLabel < this.stunLabels.length; stunLabel++)
+      this.stunLabels[stunLabel].setVisible(false);
     const { x, y } = s.playerBody,
       color = CLASS_COLORS[s.character.characterClass];
     g.fillStyle(0x030d0c, 0.45).fillEllipse(x, y + 17, 38, 13);
@@ -283,14 +388,16 @@ export class AlphaScene extends Phaser.Scene {
         s.survival.fullyProtected ? 0xffe4a6 : 0xd5fff2,
         0.8,
       ).strokeCircle(x, y, 26);
+    if (s.skillCombat.barrier > 0) g.lineStyle(2, 0xbfe4ff, 0.75).strokeCircle(x, y, 30);
     for (const p of s.playerProjectiles) {
-      g.lineStyle(weapon === 'archer' ? 3 : 5, color, 0.4).lineBetween(
+      const pc = p.weaponId.startsWith('skill:') ? skillColor(p.weaponId.slice(6)) : color;
+      g.lineStyle(weapon === 'archer' ? 3 : 5, pc, 0.4).lineBetween(
         p.x,
         p.y,
         p.x - p.direction.x * 18,
         p.y - p.direction.y * 18,
       );
-      g.fillStyle(color).fillCircle(p.x, p.y, p.radius);
+      g.fillStyle(pc).fillCircle(p.x, p.y, p.radius);
     }
     for (const p of s.enemyProjectiles) {
       g.lineStyle(3, 0xf3968c, 0.3).lineBetween(
@@ -320,11 +427,29 @@ export class AlphaScene extends Phaser.Scene {
             .strokePath();
         }
       }
+      if (e.type === 'skill-area') {
+        const c = skillColor(e.sourceKey),
+          alpha = Math.max(0, (f.until - s.time) / 0.25);
+        if (e.shape === 'cone' && e.direction) {
+          const a = Math.atan2(e.direction.y, e.direction.x),
+            half = ((e.arcDegrees ?? 90) * Math.PI) / 360;
+          g.fillStyle(c, 0.18 * alpha)
+            .beginPath()
+            .moveTo(f.x, f.y)
+            .arc(f.x, f.y, e.radius, a - half, a + half)
+            .closePath()
+            .fillPath();
+        } else {
+          g.fillStyle(c, 0.16 * alpha).fillCircle(f.x, f.y, e.radius);
+          g.lineStyle(2, c, 0.6 * alpha).strokeCircle(f.x, f.y, e.radius);
+          if (e.shape === 'ring' && e.innerRadius) g.strokeCircle(f.x, f.y, e.innerRadius);
+        }
+      }
       if (f.text)
         this.label(this.damageLabels, damageLabel++)
           .setPosition(f.x, f.y - 40 - (0.6 - (f.until - s.time)) * 20)
           .setText(f.text)
-          .setColor('#ffe4ba')
+          .setColor(f.event.channel === 'skill' ? '#bfe9ff' : '#ffe4ba')
           .setVisible(true);
     }
     this.labels.slice(label).forEach((t) => t.setVisible(false));
@@ -364,14 +489,17 @@ export class AlphaScene extends Phaser.Scene {
         ? 'revival'
         : run === 'ended'
           ? 'ended'
-          : world.paused
-            ? 'paused'
-            : 'playing';
+          : world.skills.offer
+            ? 'level-up'
+            : world.paused
+              ? 'paused'
+              : 'playing';
     if (screen === 'ended' && this.recordedRun !== this.runId) {
       this.record = saveRun(world!.time, world!.kills).bestSeconds;
       this.recordedRun = this.runId;
     }
     alphaBridge.publish({
+      ...(import.meta.env.DEV || __QA_BUILD__ ? { qa: this.testing?.snapshot() ?? null } : {}),
       screen,
       world,
       runId: this.runId,
@@ -381,12 +509,55 @@ export class AlphaScene extends Phaser.Scene {
     });
   }
 }
+const SKILL_COLORS: Record<string, number> = {
+  fire: 0xff8a4c,
+  ice: 0x9fdcff,
+  poison: 0x9fe07a,
+  bleed: 0xe0607a,
+  physical: 0xf1e3b8,
+  shadow: 0xb08cff,
+};
+const SKILL_FAMILY: Record<string, keyof typeof SKILL_COLORS> = {
+  fireball: 'fire',
+  flame_burst: 'fire',
+  inferno: 'fire',
+  frost_nova: 'ice',
+  ice_shards: 'ice',
+  blizzard: 'ice',
+  toxic_volley: 'poison',
+  poison_trap: 'poison',
+  blood_blades: 'bleed',
+  lacerate: 'bleed',
+  shadow_strike: 'shadow',
+  seismic_impact: 'physical',
+};
+function skillColor(key: string): number {
+  const id = key.split(/[#:]/)[0];
+  return SKILL_COLORS[SKILL_FAMILY[id] ?? 'physical'];
+}
+const SYNERGY_LABELS: Record<string, string> = {
+  thermal_shock: 'ТЕРМОШОК',
+  wildfire: 'ЛЕСНОЙ ПОЖАР',
+  shattered_ice: 'РАСКОЛ',
+  skull_crusher: 'СОКРУШЕНИЕ',
+  battle_momentum: 'НАПОР',
+  seismic_impact: 'СЕЙСМИКА',
+  toxic_barrage: 'ТОКСИН',
+  plague_chain: 'ЧУМА',
+  deadly_precision: 'ТОЧНОСТЬ',
+  blood_frenzy: 'БЕЗУМИЕ',
+  deep_wounds: 'ГЛУБОКИЕ РАНЫ',
+  final_cut: 'РАЗРЕЗ',
+};
 declare global {
   interface Window {
     __alpha?: {
       state: () => ReturnType<typeof alphaBridge.getSnapshot>;
       command: (action: unknown) => void;
       advance: (seconds: number) => void;
+      presentation: () => {
+        readonly stunIndicators: readonly { readonly entityId: string; readonly text: string }[];
+      };
     };
   }
 }

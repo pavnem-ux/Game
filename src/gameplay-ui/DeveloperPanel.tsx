@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { CHARACTER_CLASSES } from '../character-stats';
 import type { CharacterClass } from '../character-stats';
 import { CLASS_LABELS, DEFAULT_SPAWNING } from '../gameplay';
+import { skillsForClass } from '../skills';
 import { alphaBridge } from './store';
 import type { AlphaState } from './store';
 export default function DeveloperPanel({ state }: { state: AlphaState }) {
@@ -21,6 +22,8 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
   const [hp, setHp] = useState(50),
     [protectedTest, setProtection] = useState(false);
   const [xpAmount, setXpAmount] = useState(20);
+  const [skillId, setSkillId] = useState(''),
+    [skillRank, setSkillRank] = useState(1);
   const [spawnInterval, setSpawnInterval] = useState(
     w?.spawning.settings.interval ?? DEFAULT_SPAWNING.interval,
   );
@@ -61,6 +64,58 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
     <aside className="developer-panel" aria-label="Developer Testing Mode">
       <h2>Developer Testing Mode</h2>
       <p>Временный баланс · изменения класса/уровня начинают новый мир.</p>
+      {w && state.qa && (
+        <fieldset>
+          <legend>God Mode</legend>
+          <label>
+            <input
+              type="checkbox"
+              aria-label="God Mode"
+              checked={state.qa.godMode}
+              onChange={(e) => send({ type: 'god-mode', enabled: e.target.checked })}
+            />{' '}
+            God Mode {state.qa.godMode ? 'ON' : 'OFF'}
+          </label>
+          <p>
+            Останавливает только потерю HP. Атаки, статусы и таймеры продолжают работать. Новый
+            забег: OFF.
+          </p>
+        </fieldset>
+      )}
+      {w && state.qa && (
+        <fieldset aria-label="Synergy Diagnostics">
+          <legend>Synergy Diagnostics · Синергии</legend>
+          <button onClick={() => send({ type: 'reset-synergy-counters' })}>
+            Сбросить счётчики синергий
+          </button>
+          {state.qa.synergies.map((synergy) => (
+            <div className="synergy-diagnostic" key={synergy.id} data-synergy-id={synergy.id}>
+              <strong>
+                {synergy.name} ·{' '}
+                {synergy.id
+                  .split('_')
+                  .map((word) => word[0].toUpperCase() + word.slice(1))
+                  .join(' ')}
+              </strong>
+              <code>{synergy.id}</code>
+              <p>
+                {synergy.unlocked
+                  ? `Разблокирована парой: ${synergy.completedPairs.map((p) => p.join(' + ')).join('; ')}`
+                  : 'Заблокирована'}{' '}
+                · пары: {synergy.unlockPairs.map((p) => p.join(' + ')).join(' | ')}
+              </p>
+              <p>
+                Активаций: <b>{synergy.count}</b>
+              </p>
+              <p>
+                {synergy.lastTime === null
+                  ? 'Ещё не срабатывала'
+                  : `Последняя: ${synergy.lastTime.toFixed(2)} с · цель ${synergy.lastTargetId}`}
+              </p>
+            </div>
+          ))}
+        </fieldset>
+      )}
       <fieldset>
         <legend>Персонаж</legend>
         <label>
@@ -162,6 +217,60 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
             <button onClick={() => send({ type: 'clear-enemies' })}>Убрать врагов</button>
           </fieldset>
           <fieldset>
+            <legend>Навыки</legend>
+            <p>
+              Слоты {w.skills.slots.auto.used}/4 · {w.skills.slots.passive.used}/6 · перебросов{' '}
+              {w.skills.rerolls} · ожидает выборов {w.skills.pendingChoices}
+            </p>
+            <ul aria-label="Приобретённые навыки QA">
+              {w.skills.owned.map((skill) => (
+                <li key={skill.skillId}>
+                  {skill.name} · {['', 'I', 'II', 'III', 'IV', 'V'][skill.rank]}
+                  <button
+                    disabled={skill.rank >= 5}
+                    onClick={() =>
+                      send({ type: 'grant-skill', skillId: skill.skillId, rank: skill.rank + 1 })
+                    }
+                  >
+                    Улучшить {skill.name}
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <label>
+              Навык
+              <select
+                aria-label="DEV навык"
+                value={skillId}
+                onChange={(e) => setSkillId(e.target.value)}
+              >
+                <option value="">—</option>
+                {skillsForClass(w.character.characterClass).map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name} ({d.kind === 'auto' ? 'актив.' : 'пассив.'})
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Ранг
+              <input
+                aria-label="DEV ранг"
+                type="number"
+                min="1"
+                max="5"
+                value={skillRank}
+                onChange={(e) => setSkillRank(Number(e.target.value))}
+              />
+            </label>
+            <button
+              disabled={!skillId}
+              onClick={() => send({ type: 'grant-skill', skillId, rank: skillRank })}
+            >
+              Выдать навык
+            </button>
+          </fieldset>
+          <fieldset>
             <legend>XP и волны</legend>
             <p>
               Забег: уровень {w.progression.level} · {w.progression.xp}/{w.progression.nextXp} XP ·
@@ -179,6 +288,13 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
               />
             </label>
             <button onClick={() => send({ type: 'grant-xp', amount: xpAmount })}>Выдать XP</button>
+            <button
+              onClick={() =>
+                send({ type: 'grant-xp', amount: w.progression.nextXp - w.progression.xp })
+              }
+            >
+              Следующий уровень забега
+            </button>
             <button onClick={() => send({ type: 'xp-crystal', value: xpAmount, distance: 90 })}>
               Кристалл справа
             </button>

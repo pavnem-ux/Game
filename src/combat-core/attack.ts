@@ -1,4 +1,8 @@
-import { applyResistance, calculateCriticalDamage } from '../character-stats';
+import {
+  applyResistance,
+  calculateCriticalDamage,
+  COMBAT_ATTRIBUTE_CAPS,
+} from '../character-stats';
 import type { AttackRequest, AttackSnapshot, CombatEntity, RandomSource } from './types';
 import { damageType, finiteNumber, identifier, nonNegative, rollChance } from './validation';
 
@@ -15,10 +19,16 @@ export function createAttackSnapshot(
   if (!attacker.alive) throw new Error(`Entity ${attacker.id} is combat-inactive.`);
   damageType(request.damageType);
   nonNegative(request.coefficient, 'coefficient');
+  const bonus = request.criticalChanceBonus ?? 0;
+  nonNegative(bonus, 'criticalChanceBonus');
   const stat = request.damageType === 'physical' ? attacker.physicalDamage : attacker.magicalDamage;
   const baseDamage = stat * request.coefficient;
   nonNegative(baseDamage, 'calculated base damage');
-  const critical = rollChance(attacker.criticalChance, random);
+  // Exactly one draw per attack; a bonus never exceeds the central Crit Chance cap.
+  const critical = rollChance(
+    Math.min(COMBAT_ATTRIBUTE_CAPS.criticalChance, attacker.criticalChance + bonus),
+    random,
+  );
   const rawDamage = critical
     ? calculateCriticalDamage(baseDamage, attacker.criticalDamage)
     : baseDamage;

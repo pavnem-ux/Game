@@ -15,6 +15,7 @@ import type {
   PeriodicDamageEvent,
   DeathEvent,
   RevivalResult,
+  ResolveAttackOptions,
 } from './types';
 import { validatePeriodicRequest } from './periodic';
 import { createAttackSnapshot, calculateSuccessfulDamage, validateAttackSnapshot } from './attack';
@@ -33,6 +34,8 @@ function events<T extends CombatEvent>(items: T[]): readonly T[] {
 /** One instance owns one combat session. No renderer, timers, subscriptions or global registry. */
 export class CombatCore {
   private readonly entities = new Map<string, CombatEntity>();
+  /** Task 07: temporary absorb amounts. Kept outside entity snapshots; lifetime owned by caller. */
+  private readonly barriers = new Map<string, number>();
   private nextAttackId = 1;
   private readonly random: RandomSource;
 
@@ -81,8 +84,15 @@ export class CombatCore {
     return attack;
   }
 
-  resolveAttack(attack: AttackSnapshot, targetId: string): DamageResult {
+  resolveAttack(
+    attack: AttackSnapshot,
+    targetId: string,
+    options: ResolveAttackOptions = {},
+  ): DamageResult {
     validateAttackSnapshot(attack);
+    if (!options || typeof options !== 'object') throw new TypeError('options must be an object.');
+    const multiplier = options.damageMultiplier ?? 1;
+    nonNegative(multiplier, 'damageMultiplier');
     const target = this.getEntity(targetId);
     const unchanged = {
       attackId: attack.id,
@@ -103,8 +113,8 @@ export class CombatCore {
         ]),
       });
     }
-    const damage = calculateSuccessfulDamage(attack.rawDamage, target.resistance);
-    const { currentHp, appliedDamage, next } = this.reduceHp(target, damage);
+    const damage = calculateSuccessfulDamage(attack.rawDamage * multiplier, target.resistance);
+    const { currentHp, appliedDamage, absorbed, next } = this.reduceHp(target, damage);
     const emitted: CombatEvent[] = [];
     if (appliedDamage > 0)
       emitted.push({
@@ -129,9 +139,22 @@ export class CombatCore {
       status: 'hit',
       damage,
       appliedDamage,
+      ...(absorbed > 0 ? { absorbed } : {}),
       currentHp,
       events: events(emitted),
     });
+  }
+
+  /** Task 07: replace the entity's temporary barrier; 0 removes it. Caller owns its expiry. */
+  setBarrier(entityId: string, amount: number): void {
+    nonNegative(amount, 'barrier amount');
+    this.getEntity(entityId);
+    if (amount === 0) this.barriers.delete(entityId);
+    else this.barriers.set(entityId, amount);
+  }
+  getBarrier(entityId: string): number {
+    this.getEntity(entityId);
+    return this.barriers.get(entityId) ?? 0;
   }
 
   /** Non-critical and non-dodgeable; this operation never draws RNG. */
@@ -149,7 +172,7 @@ export class CombatCore {
     if (!target.alive)
       return Object.freeze({ ...unchanged, status: 'inactive', events: events([]) });
     const damage = calculateSuccessfulDamage(request.rawDamage, target.resistance);
-    const { currentHp, appliedDamage, next } = this.reduceHp(target, damage);
+    const { currentHp, appliedDamage, absorbed, next } = this.reduceHp(target, damage);
     const periodic = Object.freeze({ effectId: request.effectId, sources: request.sources });
     // Representative legacy source field, not a kill/reward policy. All sources remain attached.
     const sourceId = request.sources[0].sourceId;
@@ -177,6 +200,7 @@ export class CombatCore {
       status: 'hit',
       damage,
       appliedDamage,
+      ...(absorbed > 0 ? { absorbed } : {}),
       currentHp,
       events: events(emitted),
     });
@@ -247,10 +271,21 @@ export class CombatCore {
   }
 
   private reduceHp(target: CombatEntity, damage: number) {
-    const currentHp = Math.max(0, target.currentHp - damage);
+    const barrier = this.barriers.get(target.id) ?? 0;
+    const absorbed = Math.min(barrier, damage);
+    if (absorbed > 0) {
+      if (barrier - absorbed > 0) this.barriers.set(target.id, barrier - absorbed);
+      else this.barriers.delete(target.id);
+    }
+    const currentHp = this.hpAfterDamage(target, damage - absorbed);
     const appliedDamage = target.currentHp - currentHp;
     const next = this.store({ ...target, currentHp, alive: currentHp > 0 });
-    return { currentHp, appliedDamage, next };
+    return { currentHp, appliedDamage, absorbed, next };
+  }
+
+  /** Extension point after mitigation/barriers and before the sole HP mutation. */
+  protected hpAfterDamage(target: CombatEntity, unabsorbedDamage: number): number {
+    return Math.max(0, target.currentHp - unabsorbedDamage);
   }
 
   private store(entity: CombatEntity): CombatEntity {

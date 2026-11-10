@@ -8,6 +8,7 @@ export type {
   CombatEntityInput,
   CombatEntity,
   AttackRequest,
+  ResolveAttackOptions,
   AttackSnapshot,
   CombatEvent,
   DamageEvent,

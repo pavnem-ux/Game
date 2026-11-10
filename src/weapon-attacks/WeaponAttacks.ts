@@ -8,7 +8,10 @@ import type { FlightEvent, ProjectileState } from './projectiles';
 import { compareIds, nearestTarget, validTarget } from './targeting';
 import type {
   CombatBody,
+  DamageModifierContext,
   EquipWeaponInput,
+  ProjectileLaunchInput,
+  WeaponAttacksOptions,
   Point,
   ProjectileSnapshot,
   UpdateOptions,
@@ -58,7 +61,65 @@ export class WeaponAttacks {
   private readonly projectiles = new Map<string, ProjectileState>();
   private clock = 0;
   private nextProjectileId = 1;
-  constructor(private readonly core: CombatCore) {}
+  private readonly options: WeaponAttacksOptions;
+  constructor(
+    private readonly core: CombatCore,
+    options: WeaponAttacksOptions = {},
+  ) {
+    if (!options || typeof options !== 'object') throw new TypeError('options must be an object.');
+    if (options.damageModifier !== undefined && typeof options.damageModifier !== 'function')
+      throw new TypeError('damageModifier must be a function.');
+    this.options = Object.freeze({ ...options });
+  }
+  /** Task 07: fly an ability projectile through the same swept-collision scheduler. */
+  launchProjectile(input: ProjectileLaunchInput): string {
+    if (!input || typeof input !== 'object') throw new TypeError('Launch input must be an object.');
+    const source = this.core.getEntity(input.sourceId);
+    if (!source.alive) throw new Error('A dead source cannot launch projectiles.');
+    if (typeof input.weaponId !== 'string' || input.weaponId.trim() === '')
+      throw new TypeError('weaponId must be a non-empty string.');
+    if (this.weaponIds.has(input.weaponId))
+      throw new Error('Ability projectiles must not reuse an equipped weapon ID.');
+    if (input.attack?.attackerId !== input.sourceId)
+      throw new Error('Projectile attack must belong to its source.');
+    validatePoint(input.origin, 'origin');
+    const direction = normalizedDirection(input.direction);
+    positive(input.speed, 'speed');
+    nonNegative(input.radius, 'radius');
+    positive(input.maxTravelDistance, 'maxTravelDistance');
+    const pierce = input.pierce ?? 0;
+    if (!Number.isInteger(pierce) || pierce < 0 || pierce > 16)
+      throw new RangeError('pierce must be an integer 0–16.');
+    const id = `projectile-${this.nextProjectileId}`,
+      sequence = this.nextProjectileId++;
+    const origin = Object.freeze({ x: input.origin.x, y: input.origin.y });
+    this.projectiles.set(id, {
+      data: Object.freeze({
+        id,
+        weaponId: input.weaponId,
+        sourceId: input.sourceId,
+        direction,
+        speed: input.speed,
+        radius: input.radius,
+        maxTravelDistance: input.maxTravelDistance,
+        attack: input.attack,
+      }),
+      origin,
+      affiliation: source.affiliation,
+      sequence,
+      ...(pierce > 0 ? { pierceRemaining: pierce, hitIds: new Set<string>() } : {}),
+      distanceTraveled: 0,
+      x: origin.x,
+      y: origin.y,
+    });
+    return id;
+  }
+  private resolveHit(context: DamageModifierContext) {
+    const multiplier = this.options.damageModifier ? this.options.damageModifier(context) : 1;
+    return this.core.resolveAttack(context.attack, context.targetId, {
+      damageMultiplier: multiplier,
+    });
+  }
   get time() {
     return this.clock;
   }
@@ -355,7 +416,7 @@ export class WeaponAttacks {
         )
           continue;
         hitIds.add(id);
-        const result = this.core.resolveAttack(attack, id);
+        const result = this.resolveHit({ attack, weaponId: w.weapon.id, targetId: id });
         output.push({
           type: 'impact',
           time: this.clock,
@@ -369,9 +430,17 @@ export class WeaponAttacks {
   }
   private finishFlight(event: FlightEvent, output: WeaponEvent[]) {
     const p = event.projectile;
-    this.projectiles.delete(p.data.id);
+    if (event.kind === 'collision' && p.pierceRemaining && p.pierceRemaining > 0) {
+      p.pierceRemaining--;
+      p.hitIds!.add(event.targetId!);
+    } else this.projectiles.delete(p.data.id);
     if (event.kind === 'collision') {
-      const result = this.core.resolveAttack(p.data.attack, event.targetId!);
+      const result = this.resolveHit({
+        attack: p.data.attack,
+        weaponId: p.data.weaponId,
+        targetId: event.targetId!,
+        projectileId: p.data.id,
+      });
       output.push({
         type: 'impact',
         time: this.clock,

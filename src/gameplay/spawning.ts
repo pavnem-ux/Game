@@ -2,6 +2,8 @@ import type { Point } from '../weapon-attacks';
 import { ALPHA } from './config';
 export interface SpawnSettings {
   readonly enabled: boolean;
+  /** Fraction of normal spawns that are ranged, distributed deterministically across waves. */
+  readonly rangedShare: number;
   readonly interval: number;
   readonly minimumInterval: number;
   readonly count: number;
@@ -18,6 +20,7 @@ export interface ViewportSize {
 }
 export const DEFAULT_SPAWNING: SpawnSettings = Object.freeze({
   enabled: true,
+  rangedShare: 0.18,
   interval: 4,
   minimumInterval: 1.5,
   count: 3,
@@ -39,6 +42,8 @@ export function spawningSettings(input: Partial<SpawnSettings> = {}): SpawnSetti
     if (key !== 'enabled' && (typeof value !== 'number' || !Number.isFinite(value)))
       throw new RangeError(`Invalid spawning ${key}.`);
   if (
+    config.rangedShare < 0 ||
+    config.rangedShare > 1 ||
     config.minimumInterval < 0.25 ||
     config.interval < config.minimumInterval ||
     config.interval > 60 ||

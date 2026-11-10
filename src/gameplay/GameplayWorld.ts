@@ -1,10 +1,15 @@
 import { calculateCharacterStats, scaleMovementSpeed } from '../character-stats';
 import { CombatCore, calculateSuccessfulDamage } from '../combat-core';
-import type { CombatEvent } from '../combat-core';
+import type { CombatEvent, RandomSource } from '../combat-core';
 import { WeaponAttacks } from '../weapon-attacks';
 import type { WeaponEvent, CombatBody, Point } from '../weapon-attacks';
 import { StatusEffects, WeaponStatusAdapter } from '../status-effects';
-import type { EffectApplication, EffectDefinition, StatusEvent } from '../status-effects';
+import type {
+  EffectApplication,
+  EffectDefinition,
+  StatusEvent,
+  OnHitEffectMapping,
+} from '../status-effects';
 import { EnemyAI } from '../enemy-ai';
 import { enemyConfig } from '../enemy-ai/validation';
 import type { EnemyConfig, EnemyEvent } from '../enemy-ai';
@@ -15,10 +20,22 @@ import {
 } from '../player-survival';
 import type { RevivalDecision, SurvivalEvent } from '../player-survival';
 import { sameInstant } from '../simulation-boundary';
-import { ALPHA, ALPHA_ENEMIES, ALPHA_ENEMY_STATS, ALPHA_WEAPONS, defaultOnHit } from './config';
+import {
+  ALPHA,
+  ALPHA_BALANCE,
+  ALPHA_ENEMIES,
+  ALPHA_ENEMY_STATS,
+  ALPHA_WEAPONS,
+  defaultOnHit,
+} from './config';
 import type { GameplayOptions, GameplaySnapshot, WorldEvent } from './types';
 
 import { RunExperience, XP_RULES } from './experience';
+import type { ExperienceEvent } from './experience';
+import { RunSkills, SkillEngine, SYNERGY_RULES, completedPairs } from '../skills';
+import type { SkillEvent } from '../skills';
+import type { CombatAttributes } from '../character-stats';
+import type { EffectType } from '../status-effects';
 import { spawningSettings, wavePressure, offscreenPosition, viewportSize } from './spawning';
 import type { SpawnSettings, ViewportSize } from './spawning';
 /** The sole world scheduler. All damage is resolved by existing modules, one boundary at a time. */
@@ -51,13 +68,28 @@ export class GameplayWorld {
   private adapter: WeaponStatusAdapter;
   private testingProtection = false;
   private readonly random: () => number;
-  constructor(readonly options: GameplayOptions) {
+  /** Task 07: run skills and their boundary module. Separate seeded stream for offers/procs. */
+  readonly run: RunSkills;
+  readonly skills: SkillEngine;
+  private readonly baseOnHit: readonly EffectDefinition[];
+  private onHitDefinitions: readonly EffectDefinition[];
+  private facing: Point = Object.freeze({ x: 1, y: 0 });
+  constructor(
+    readonly options: GameplayOptions,
+    createCore: (random: RandomSource) => CombatCore = (random) => new CombatCore(random),
+  ) {
+    if (typeof createCore !== 'function') throw new TypeError('createCore must be a function.');
     this.character = calculateCharacterStats(options.characterClass, options.level ?? 1);
     let seed = options.seed ?? 1337;
     if (!Number.isSafeInteger(seed) || seed < 0) throw new RangeError('Invalid random seed.');
     this.random = () => {
       seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
       return seed / 4294967296;
+    };
+    let skillSeed = ((options.seed ?? 1337) ^ 0x5bd1e995) >>> 0;
+    const skillRandom = () => {
+      skillSeed = (Math.imul(skillSeed, 1664525) + 1013904223) >>> 0;
+      return skillSeed / 4294967296;
     };
     let spawnSeed = (options.seed ?? 1337) ^ 0x9e3779b9;
     this.spawnRandom = () => {
@@ -67,7 +99,7 @@ export class GameplayWorld {
     this.spawnSettings = spawningSettings(options.spawning);
     this.viewport = viewportSize(options.viewport ?? { width: 1280, height: 720 });
     this.nextSpawnAt = this.spawnSettings.interval;
-    this.core = new CombatCore(this.random);
+    this.core = createCore(this.random);
     this.core.addEntity({
       id: this.playerId,
       affiliation: 'player',
@@ -95,7 +127,9 @@ export class GameplayWorld {
       canResolveDirectDamage: (ctx) =>
         !this.testingProtection && enemyPolicies.canResolveDirectDamage!(ctx),
     });
-    this.weapons = new WeaponAttacks(this.core);
+    this.weapons = new WeaponAttacks(this.core, {
+      damageModifier: (context) => this.skills.damageModifier(context),
+    });
     this.weapons.setBody(this.playerId, this.body);
     const weapon = ALPHA_WEAPONS[options.characterClass];
     this.weapons.equipWeapon({
@@ -105,7 +139,33 @@ export class GameplayWorld {
       attackSpeedPercent: this.character.combatAttributes.attackSpeed,
       fallbackDirection: { x: 1, y: 0 },
     });
-    this.adapter = this.makeAdapter(options.onHit ?? defaultOnHit(options.characterClass));
+    this.run = new RunSkills(options.characterClass, skillRandom);
+    const world = this;
+    this.skills = new SkillEngine(
+      {
+        core: this.core,
+        statuses: this.statuses,
+        weapons: this.weapons,
+        enemies: this.enemies,
+        playerId: this.playerId,
+        characterClass: options.characterClass,
+        primary: this.character.primaryAttributes,
+        basicWeaponId: weapon.id,
+        activationStep: ALPHA.controlStep,
+        playerBody: () => world.body,
+        facing: () => world.facing,
+        enemyIds: () => [...world.enemyIds].filter((id) => world.core.getEntity(id).alive),
+        forwardCombat: (events) => world.forwardCombat(events),
+        recordStatus: (events) => world.record('status', events),
+        recordSkill: (events) => world.record('skill', events),
+        statsChanged: (stats) => world.applyStats(stats),
+      },
+      this.run,
+      skillRandom,
+    );
+    this.baseOnHit = Object.freeze([...(options.onHit ?? defaultOnHit(options.characterClass))]);
+    this.onHitDefinitions = this.baseOnHit;
+    this.adapter = this.makeAdapter(this.baseOnHit);
     if (options.initialEnemies !== false) {
       const count = options.enemyCount ?? 12;
       if (!Number.isInteger(count) || count < 1 || count > 24)
@@ -120,7 +180,13 @@ export class GameplayWorld {
     return this.clock;
   }
   get paused() {
-    return this.manualPause || this.survival.getState().requiresWorldPause;
+    return (
+      this.manualPause || this.survival.getState().requiresWorldPause || this.run.pendingChoices > 0
+    );
+  }
+  /** Effective run stats: permanent Character Stats + passives/buffs, capped centrally. */
+  get stats(): CombatAttributes {
+    return this.skills.effectiveStats;
   }
   getEvents(afterSequence = 0): readonly WorldEvent[] {
     return Object.freeze(this.history.filter((e) => e.sequence > afterSequence));
@@ -131,8 +197,11 @@ export class GameplayWorld {
     this.input = Object.freeze(
       length > 0 ? { x: x / Math.max(1, length), y: y / Math.max(1, length) } : { x: 0, y: 0 },
     );
-    if (Math.hypot(this.input.x, this.input.y) > 0 && this.survival.getState().canPlayerAct)
+    if (Math.hypot(this.input.x, this.input.y) > 0 && this.survival.getState().canPlayerAct) {
       this.weapons.setFallbackDirection(this.playerId, this.input);
+      const l = Math.hypot(this.input.x, this.input.y);
+      this.facing = Object.freeze({ x: this.input.x / l, y: this.input.y / l });
+    }
   }
   setPaused(paused: boolean): void {
     if (typeof paused !== 'boolean') throw new TypeError('paused must be boolean.');
@@ -146,6 +215,9 @@ export class GameplayWorld {
       player: this.core.getEntity(this.playerId),
       playerBody: this.body,
       character: this.character,
+      stats: this.skills.effectiveStats,
+      skills: this.run.getState(),
+      skillCombat: this.skills.snapshot(),
       survival: this.survival.getState(),
       kills: this.kills,
       progression: this.experience.getState(),
@@ -194,7 +266,12 @@ export class GameplayWorld {
       else if (next.kind === 'status') this.consumeStatuses(this.statuses.resolveBoundary());
       else if (next.kind === 'enemy') this.consumeEnemies(this.enemies.resolveBoundary());
       else if (next.kind === 'spawn') this.spawnWave();
-      if (this.survival.getState().requiresWorldPause && pauseAt === null) {
+      else if (next.kind === 'skill') this.skills.resolveBoundary();
+      this.skills.endStep();
+      if (
+        (this.survival.getState().requiresWorldPause || this.run.pendingChoices > 0) &&
+        pauseAt === null
+      ) {
         pauseAt = this.clock;
         this.timeCompensation = 0;
         this.input = Object.freeze({ x: 0, y: 0 });
@@ -204,6 +281,7 @@ export class GameplayWorld {
   decide(decision: RevivalDecision): void {
     const result = this.survival.decide(decision, this.statuses);
     this.record('survival', result.events);
+    if (this.survival.getState().runState === 'ended') this.run.clearPending();
     if (result.revival) this.forwardCombat(result.revival.events);
     if (result.removedEffects) this.record('status', result.removedEffects);
     this.manualPause = false;
@@ -289,7 +367,98 @@ export class GameplayWorld {
       throw new Error('XP testing requires a living active player.');
     if (!Number.isSafeInteger(amount) || amount < 0 || amount > 1_000_000)
       throw new RangeError('Test XP must be 0–1000000.');
-    this.record('progression', this.experience.grantForTesting(amount));
+    this.progression(this.experience.grantForTesting(amount));
+  }
+  /** Choose one card of the pending level-up offer (skill ID or `bonus:<id>`). */
+  chooseSkill(cardKey: string): void {
+    if (typeof cardKey !== 'string') throw new TypeError('Card key must be a string.');
+    if (this.survival.getState().runState === 'ended') throw new Error('The run has ended.');
+    const unlockedBefore = new Set(this.skills.synergies.unlockedIds());
+    const { result, events } = this.run.choose(cardKey);
+    this.record('skill', events);
+    this.skills.applyChoice(result);
+    if (result.type === 'skill') this.recordSynergyUnlocks(unlockedBefore, result.skillId);
+    this.rebuildOnHit();
+    this.prepare();
+  }
+  /** Emit `synergy-unlocked` for rules opened by this acquisition (a rule unlocks only once). */
+  private recordSynergyUnlocks(before: ReadonlySet<string>, skillId: string): void {
+    const owned = this.run.ownedIds();
+    const events: SkillEvent[] = [];
+    for (const rule of SYNERGY_RULES) {
+      if (before.has(rule.id) || !this.skills.synergies.isEligible(rule.id)) continue;
+      const pair = completedPairs(rule, owned).find((p) => p.includes(skillId));
+      if (pair)
+        events.push(
+          Object.freeze({
+            type: 'synergy-unlocked',
+            synergyId: rule.id,
+            pair: Object.freeze([pair[0], pair[1]] as const),
+            skillId,
+          }),
+        );
+    }
+    if (events.length > 0) this.record('skill', events);
+  }
+  /** DEV/tests only: equip a class/universal skill at a rank without an offer (limits still apply). */
+  grantTestSkill(skillId: string, rank = 1): void {
+    if (typeof skillId !== 'string') throw new TypeError('skillId must be a string.');
+    const unlockedBefore = new Set(this.skills.synergies.unlockedIds());
+    this.skills.applyChoice(this.run.grantForTesting(skillId, rank));
+    this.record('skill', [Object.freeze({ type: 'skill-chosen', skillId, rank })]);
+    this.recordSynergyUnlocks(unlockedBefore, skillId);
+    this.rebuildOnHit();
+    this.prepare();
+  }
+  /** Spend one of the run's three rerolls on the current offer; never grants an extra choice. */
+  rerollSkillOffer(): void {
+    this.record('skill', this.run.reroll());
+  }
+  private progression(events: readonly ExperienceEvent[]) {
+    this.record('progression', events);
+    for (const event of events)
+      if (event.type === 'run-level-up') {
+        for (let level = event.previousLevel + 1; level <= event.level; level++) {
+          const player = this.core.getEntity(this.playerId);
+          const requestedHealing = player.maxHp * ALPHA_BALANCE.runLevelHealingFraction;
+          // Preserve no-op entity identity at full HP; only Core may actually change HP.
+          const result =
+            player.currentHp < player.maxHp
+              ? this.core.heal(this.playerId, requestedHealing)
+              : null;
+          if (result) this.forwardCombat(result.events);
+          // Record every gained level, including a capped zero heal. Core owns actual HP/events.
+          this.record('progression', [
+            Object.freeze({
+              type: 'run-level-healed',
+              level,
+              requestedHealing,
+              healed: result?.healed ?? 0,
+            }),
+          ]);
+        }
+        this.record('skill', this.run.queueLevelUps(event.level - event.previousLevel));
+      }
+  }
+  private applyStats(stats: CombatAttributes) {
+    const player = this.core.getEntity(this.playerId);
+    const core = {
+      maxHp: stats.maxHp,
+      physicalDamage: stats.physicalDamage,
+      magicalDamage: stats.magicalDamage,
+      resistance: stats.resistance,
+      criticalChance: stats.criticalChance,
+      criticalDamage: stats.criticalDamage,
+      dodgeChance: player.dodgeChance,
+    };
+    // Only Core-owned fields go to Core; attack/movement speed stay with Weapons/World.
+    if ((Object.keys(core) as (keyof typeof core)[]).some((k) => core[k] !== player[k]))
+      this.forwardCombat(this.core.updateEntityStats(this.playerId, core).events);
+    if (this.weapons.getWeaponState(this.playerId).attackSpeedPercent !== stats.attackSpeed)
+      this.weapons.setAttackSpeed(this.playerId, stats.attackSpeed);
+  }
+  private rebuildOnHit() {
+    this.adapter = this.makeAdapter(this.onHitDefinitions);
   }
   dropTestCrystal(value: number, distance = 60): void {
     if (
@@ -310,7 +479,12 @@ export class GameplayWorld {
     const enemyIds: string[] = [],
       positions: Point[] = [];
     for (let i = 0; i < count && this.enemyIds.size < this.spawnSettings.maxActive; i++) {
-      const kind = this.autoSpawnSequence % 3 === 0 ? 'ranged' : 'melee';
+      const share = this.spawnSettings.rangedShare;
+      const kind =
+        Math.floor((this.autoSpawnSequence + 1) * share) >
+        Math.floor(this.autoSpawnSequence * share)
+          ? 'ranged'
+          : 'melee';
       const position = offscreenPosition(
         this.body,
         this.viewport,
@@ -342,6 +516,7 @@ export class GameplayWorld {
   }
   setOnHit(definitions: readonly EffectDefinition[]): void {
     this.adapter = this.makeAdapter(definitions);
+    this.onHitDefinitions = Object.freeze([...definitions]);
   }
   applyEffect(input: EffectApplication, stacks = 1): void {
     if (!Number.isInteger(stacks) || stacks < 1 || stacks > 20)
@@ -419,17 +594,22 @@ export class GameplayWorld {
     return Math.max(radius, Math.min(ALPHA.arenaSize - radius, value));
   }
   private makeAdapter(definitions: readonly EffectDefinition[]) {
-    return new WeaponStatusAdapter(this.statuses, {
-      [ALPHA_WEAPONS[this.character.characterClass].id]: definitions,
+    // Player basic-weapon effects receive run modifiers (Toxic Mastery, Lingering, Elemental Mastery).
+    const player = this.skills ? definitions.map((d) => this.skills.playerEffect(d)) : definitions;
+    return this.createStatusAdapter({
+      [ALPHA_WEAPONS[this.character.characterClass].id]: player,
       'alpha-enemy': [
         { effectType: 'poison', probabilityPercent: 25, duration: 4, rawDamagePerTick: 2 },
       ],
     });
   }
+  protected createStatusAdapter(mapping: OnHitEffectMapping): WeaponStatusAdapter {
+    return new WeaponStatusAdapter(this.statuses, mapping);
+  }
   private movePlayer() {
     const speed = scaleMovementSpeed(
       ALPHA.baseMovementSpeed,
-      this.character.combatAttributes.movementSpeed,
+      this.skills.effectiveStats.movementSpeed,
     );
     this.body = Object.freeze({
       ...this.body,
@@ -437,9 +617,10 @@ export class GameplayWorld {
       y: this.clamp(this.body.y + this.input.y * speed * ALPHA.controlStep, this.body.radius),
     });
     this.controlIndex++;
-    this.record('progression', this.experience.collect(this.body, this.body.radius));
+    this.progression(this.experience.collect(this.body, this.body.radius));
   }
   private prepare() {
+    this.skills.invalidateGeometry();
     this.record('enemy', this.enemies.prepareBoundary(this.body));
     this.weapons.setBody(this.playerId, this.body);
     for (const enemy of this.enemies.getEnemies())
@@ -455,7 +636,7 @@ export class GameplayWorld {
       const candidates: {
         time: number;
         rank: number;
-        kind: 'control' | 'weapon' | 'status' | 'enemy' | 'spawn' | 'advance';
+        kind: 'control' | 'weapon' | 'status' | 'enemy' | 'spawn' | 'skill' | 'advance';
       }[] = [];
       const add = (time: number, rank: number, kind: (typeof candidates)[number]['kind']) => {
         if (time < horizon || sameInstant(time, horizon))
@@ -471,6 +652,9 @@ export class GameplayWorld {
       if (w) add(w.time, w.priority <= 1 ? 2 : 5, 'weapon');
       if (s) add(s.time, s.priority === 0 ? 3 : 8, 'status');
       if (e) add(e.time, e.priority <= 1 ? 1 : e.priority < 4 ? 4 : 6, 'enemy');
+      // Task 07: skill actions after player strikes, before enemy attacks; expirations after statuses.
+      const k = this.skills.peekBoundary(horizon);
+      if (k) add(k.time, k.priority === 0 ? 5.5 : 8.5, 'skill');
       const next = candidates.sort((a, b) =>
         sameInstant(a.time, b.time) ? a.rank - b.rank : a.time - b.time,
       )[0];
@@ -491,6 +675,7 @@ export class GameplayWorld {
     this.weapons.advanceToBoundary(time);
     this.statuses.advanceToBoundary(time);
     this.enemies.advanceToBoundary(time);
+    this.skills.advanceToBoundary(time);
     this.clock = time;
     // Moving enemy hitboxes must be sampled at the boundary, before collision resolution.
     for (const enemy of this.enemies.getEnemies())
@@ -504,9 +689,13 @@ export class GameplayWorld {
     this.record('weapon', events);
     for (const event of events)
       if (event.type === 'impact') {
+        // Capture the target before this hit's own effects/death cleanup (deterministic snapshot).
+        const pre = this.enemyIds.has(event.targetId) ? this.skills.preHit(event.targetId) : null;
         this.record('status', this.adapter.consumeImpact(event).events);
         this.forwardCombat(event.result.events);
-      }
+        if (pre) this.skills.handleImpact(event, pre);
+      } else if (event.type === 'attack-started') this.skills.onBasicAttack(event);
+      else if (event.type === 'projectile-expired') this.skills.handleProjectileExpired(event);
   }
   private consumeEnemies(events: readonly EnemyEvent[]) {
     this.record('enemy', events);
@@ -533,7 +722,25 @@ export class GameplayWorld {
   private consumeStatuses(events: readonly StatusEvent[]) {
     this.record('status', events);
     for (const event of events)
-      if (event.type === 'status-tick' && event.result) this.forwardCombat(event.result.events);
+      if (event.type === 'status-tick' && event.result) {
+        this.forwardCombat(event.result.events);
+        const death = event.result.events.find((e) => e.type === 'death');
+        if (death && death.type === 'death' && death.periodic && death.entityId !== this.playerId) {
+          // Effects present immediately before death = groups removed because the target died.
+          const effects = new Set<EffectType>(
+            events
+              .filter(
+                (e) =>
+                  e.type === 'status-removed' &&
+                  e.reason === 'target-dead' &&
+                  e.group.targetId === death.entityId,
+              )
+              .map((e) => e.group.effectType),
+          );
+          effects.add(event.group.effectType);
+          this.skills.handlePeriodicKill(death.entityId, effects, death.periodic.sources);
+        }
+      }
   }
   private forwardCombat(events: readonly CombatEvent[]) {
     this.record('combat', events);
@@ -570,6 +777,7 @@ export class GameplayWorld {
             }),
           ]);
         }
+        this.skills.noteDeath(event.entityId, enemy.position);
         this.enemyIds.delete(event.entityId);
         this.enemies.unregisterEnemy(event.entityId);
         this.weapons.removeBody(event.entityId);
@@ -577,8 +785,13 @@ export class GameplayWorld {
     this.record('status', this.statuses.consumeCombatEvents(events));
     this.record('enemy', this.enemies.consumeCombatEvents(events));
     this.record('weapon', this.weapons.update(0, { paused: true }));
+    if (
+      events.some((e) => e.type === 'death' && e.entityId === this.playerId) &&
+      this.survival.getState().runState === 'ended'
+    )
+      this.run.clearPending();
   }
-  private record(channel: WorldEvent['channel'], events: readonly WorldEvent['event'][]) {
+  protected record(channel: WorldEvent['channel'], events: readonly WorldEvent['event'][]) {
     for (const event of events)
       this.history.push(
         Object.freeze({ sequence: ++this.eventSequence, time: this.clock, channel, event }),
