@@ -312,6 +312,8 @@ export const campaignStore = {
         seed,
         // Task 09: the class's talents apply from run start; changes affect the next run.
         talents: { ranks: profile.classes[cls].talents },
+        // Task 11: this class's own loadout; changes apply to the next run.
+        equipment: { loadout: profile.classes[cls].loadout },
         campaign: { mapId, runId: generateRunId() },
       },
     });

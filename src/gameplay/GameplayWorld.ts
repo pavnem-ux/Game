@@ -2,6 +2,7 @@ import { OFFHAND_WEAPON, talentLoadout } from '../talents';
 import { talentWeaponRangeFactor } from '../talents/handlers';
 import type { TalentLoadout } from '../talents';
 import { composeRunStats } from '../skills/stats';
+import type { RunStatModifiers } from '../skills/stats';
 import { DEFAULT_SEED, createRunRandom } from './rng';
 import { RunStats } from './run-stats';
 import type { EnemyType } from './run-stats';
@@ -69,6 +70,8 @@ import type {
   RunInput,
 } from '../campaign';
 import type { DirectDamageObserver, DirectDamagePolicy } from '../enemy-ai';
+import { addModifiers, gearModifiers, validateLoadout } from '../equipment';
+import type { Loadout } from '../equipment';
 /** The sole world scheduler. All damage is resolved by existing modules, one boundary at a time. */
 export class GameplayWorld {
   readonly core: CombatCore;
@@ -97,6 +100,10 @@ export class GameplayWorld {
   private readonly history: WorldEvent[] = [];
   /** Task 09.1: enemies that received statuses during the current boundary. */
   private readonly statusTargets = new Set<string>();
+  /** Task 11: this run's equipped gear (fixed for the run; changes apply to the next run). */
+  readonly loadout: Loadout | null;
+  /** Task 09/11: talent + gear stat layer composed with the class attributes (caps once). */
+  readonly permanentModifiers: RunStatModifiers;
   /** Task 09: this run's talent loadout (fixed for the run; allocation changes affect the next). */
   readonly talents: TalentLoadout;
   /** Task 08.5 run statistics: read-only consumer of every recorded event (new per world). */
@@ -172,7 +179,11 @@ export class GameplayWorld {
       options.talents?.ranks ?? {},
       options.talents?.config,
     );
-    const startStats = composeRunStats(this.character.primaryAttributes, this.talents.modifiers);
+    // Task 11: gear joins the talent stat layer (one permanent layer, caps applied once).
+    if (options.equipment) validateLoadout(options.characterClass, options.equipment.loadout);
+    this.loadout = options.equipment?.loadout ?? null;
+    this.permanentModifiers = addModifiers(this.talents.modifiers, gearModifiers(this.loadout));
+    const startStats = composeRunStats(this.character.primaryAttributes, this.permanentModifiers);
     this.core = createCore(this.random);
     this.core.addEntity({
       id: this.playerId,
@@ -247,7 +258,7 @@ export class GameplayWorld {
         playerId: this.playerId,
         characterClass: options.characterClass,
         primary: this.character.primaryAttributes,
-        talentModifiers: this.talents.modifiers,
+        talentModifiers: this.permanentModifiers,
         talents: {
           ranks: this.talents.ranks,
           ...(options.talents?.config ? { config: options.talents.config } : {}),
