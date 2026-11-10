@@ -73,7 +73,7 @@ import type { DirectDamageObserver, DirectDamagePolicy } from '../enemy-ai';
 import { addModifiers, gearModifiers, validateLoadout } from '../equipment';
 import type { Loadout } from '../equipment';
 import { RunCoins } from './coins';
-import { COIN_RULES, coinValue } from '../equipment/economy';
+import { coinValue, normalChance } from '../equipment/economy';
 /** The sole world scheduler. All damage is resolved by existing modules, one boundary at a time. */
 export class GameplayWorld {
   readonly core: CombatCore;
@@ -948,7 +948,14 @@ export class GameplayWorld {
           elapsed: Math.min(this.clock, this.campaignMap.durationSeconds),
         }),
       ]);
+      // Task 11: a victory pays the coins still on the ground. On maps 1–10 the boss appears at
+      // the end of the timer, so its pile drops at the very moment of victory.
+      if (resolved === 'victory') this.collectRemainingCoins();
     }
+  }
+  private collectRemainingCoins() {
+    const events = this.coins.collectAll();
+    if (events.length) this.record('progression', events);
   }
   // ── Task 08 debug helpers (reachable only through the DEV/QA testing controller) ──
   /** Fires a pending scheduled campaign event now ('boss', 'elite-N', 'end'); exactly once. */
@@ -1195,11 +1202,13 @@ export class GameplayWorld {
     if (!map) return;
     const kind =
       enemyId === this.bossEnemyId ? 'boss' : this.eliteProfiles.has(enemyId) ? 'elite' : 'normal';
-    if (kind === 'normal' && !(this.coinRandom() < COIN_RULES.normalChance)) return;
+    if (kind === 'normal' && !(this.coinRandom() < normalChance(map.id))) return;
     const pile = this.coins.drop(position, coinValue(kind, map.id));
     this.record('progression', [
       Object.freeze({ type: 'coins-dropped', pileId: pile.id, amount: coinValue(kind, map.id) }),
     ]);
+    // A death resolved in the same step after the victory still pays (nothing stays on the ground).
+    if (this.campaignRun.status === 'victory') this.collectRemainingCoins();
   }
   private prepare() {
     this.skills.invalidateGeometry();

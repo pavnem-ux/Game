@@ -77,6 +77,17 @@ export class RunCoins {
       }
     return Object.freeze(events);
   }
+  /** Collects every pile still on the ground (a won run pays them all). */
+  collectAll(): readonly CoinEvent[] {
+    const events: CoinEvent[] = [];
+    for (const pile of this.piles.values()) {
+      this.collectedTotal += pile.value;
+      events.push(Object.freeze({ type: 'coins-collected', pileId: pile.id, amount: pile.value }));
+    }
+    this.piles.clear();
+    this.cells.clear();
+    return Object.freeze(events);
+  }
   private key(p: Point) {
     return `${Math.floor(p.x / XP_RULES.cellSize)},${Math.floor(p.y / XP_RULES.cellSize)}`;
   }

@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { GameplayWorld, ALPHA_ENEMIES } from '../../src/gameplay';
 import { RunCoins } from '../../src/gameplay/coins';
-import { COIN_RULES, coinScale, coinValue, victoryBonus } from '../../src/equipment';
+import {
+  COIN_RULES,
+  coinScale,
+  coinTarget,
+  coinValue,
+  normalChance,
+  victoryBonus,
+} from '../../src/equipment';
+import { campaignSchedule, getCampaignMap } from '../../src/campaign';
 import type { CombatTag } from '../../src/skills';
 import { XP_RULES } from '../../src/gameplay/experience';
 
@@ -68,24 +76,34 @@ describe('Task 11 Phase 4 — coin piles (RunCoins)', () => {
 });
 
 describe('Task 11 Phase 4 — drops in the world', () => {
-  it('values scale with the map like the Task 10 Gold table (map 1 ×1, map 10 ×4, map 40 ×10)', () => {
+  it('values scale with the map: normal piles like the Task 10 Gold table; boss 20% and all elites together 20% of the 60% coin target', () => {
     expect([coinScale(1), coinScale(10), coinScale(40)]).toEqual([1, 4, 10]);
-    expect([1, 10, 40].map((m) => coinValue('boss', m))).toEqual([
-      COIN_RULES.bossValue,
-      COIN_RULES.bossValue * 4,
-      COIN_RULES.bossValue * 10,
-    ]);
+    expect([1, 10, 40].map((m) => coinValue('normal', m))).toEqual([1, 4, 10]);
+    expect([1, 10, 20, 40].map(coinTarget)).toEqual([45, 180, 270, 450]);
+    // Boss: 20% of the coin target (map 1: 9, map 40: 90).
+    expect([1, 10, 40].map((m) => coinValue('boss', m))).toEqual([9, 36, 90]);
+    // Elites: 20% of the target shared by the map's elites (map 1: 4 elites → 2 each; map 40: 20 → 5).
+    expect([1, 10, 20, 25, 40].map((m) => coinValue('elite', m))).toEqual([2, 6, 7, 4, 5]);
+    for (const m of [1, 10, 20, 25, 40]) {
+      const elites = campaignSchedule(getCampaignMap(m)).filter((e) => e.kind === 'elite').length;
+      const target = coinTarget(m) * COIN_RULES.eliteShare;
+      expect(Math.abs(coinValue('elite', m) * elites - target)).toBeLessThanOrEqual(elites * 0.5);
+    }
     expect([1, 40].map(victoryBonus)).toEqual([30, 300]);
+    // Normal chance: 27 piles (60% of the target at scale 1) over 4.7 × spawnRate × duration kills.
+    expect(normalChance(1)).toBeCloseTo(27 / (4.7 * 1 * 600), 10);
+    expect(normalChance(10)).toBeCloseTo(27 / (4.7 * 1.72 * 900), 10);
+    expect(normalChance(40)).toBeCloseTo(normalChance(10), 10);
   });
   it('deterministic per seed: same seed + same kills → identical drops; one roll per normal death', () => {
-    const a = killNormals(world(7), 200);
-    const b = killNormals(world(7), 200);
+    const a = killNormals(world(7), 1500);
+    const b = killNormals(world(7), 1500);
     expect(a).toEqual(b);
     const dropped = a.filter((v) => v > 0);
     expect(dropped.length).toBeGreaterThan(0);
-    expect(dropped.length).toBeLessThan(200 * 0.2); // ≈ 6% chance per normal death
+    expect(dropped.length).toBeLessThan(1500 * normalChance(1) * 2); // ≈ 1% per normal death on map 1
     expect(dropped.every((v) => v === coinValue('normal', 1))).toBe(true);
-    expect(killNormals(world(8), 200)).not.toEqual(a);
+    expect(killNormals(world(8), 1500)).not.toEqual(a);
   });
   it('each death drops at most once (a dead enemy hit again drops nothing); elites and the boss always drop', () => {
     const w = world(3, 20);
@@ -114,5 +132,29 @@ describe('Task 11 Phase 4 — drops in the world', () => {
     for (let i = 0; i < 400 && w.getSnapshot().coins.collected === 0; i++) w.update(0.05);
     expect(w.getSnapshot().coins).toEqual({ collected: coinValue('elite', 1), piles: [] });
     expect(killNormals(world(7, null), 200).every((v) => v === 0)).toBe(true);
+  });
+  it('a victory collects every pile left on the ground (the map 1–10 boss dies at the end); a defeat does not', () => {
+    const w = world(5, 1);
+    w.debugFireCampaignEvent('elite-1');
+    kill(w, w.getSnapshot().campaign!.eliteEnemyIds[0]);
+    w.debugFireCampaignEvent('boss');
+    w.debugFireCampaignEvent('end');
+    expect(w.getSnapshot().campaign!.status).toBe('active');
+    kill(w, w.getSnapshot().campaign!.bossEnemyId!);
+    w.update(0.05);
+    expect(w.getSnapshot().campaign!.status).toBe('victory');
+    expect(w.getSnapshot().coins).toEqual({
+      collected: coinValue('elite', 1) + coinValue('boss', 1),
+      piles: [],
+    });
+    const lost = world(5, 1);
+    lost.debugFireCampaignEvent('elite-1');
+    kill(lost, lost.getSnapshot().campaign!.eliteEnemyIds[0]);
+    lost.setTestProtection(false);
+    lost.debugForceOutcome('defeat');
+    lost.update(0.05);
+    expect(lost.getSnapshot().campaign!.status).toBe('defeat');
+    expect(lost.getSnapshot().coins.collected).toBe(0);
+    expect(lost.getSnapshot().coins.piles.map((p) => p.value)).toEqual([coinValue('elite', 1)]);
   });
 });
