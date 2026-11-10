@@ -57,7 +57,23 @@ try {
   // 5.2 Maps page: lock state; boss hidden while locked; locked maps cannot start.
   await nav.getByRole('button', { name: 'Карты', exact: true }).click();
   const maps = page.locator('.map-card');
+  assert.equal(await maps.count(), 10); // Task 10: Act I tab opens first (10 of 40 maps)
+  // Task 10: act tabs, recommended level, lock reason, modifiers (Russian).
+  const acts = page.getByRole('group', { name: 'Акты кампании' });
+  assert.equal(await acts.getByRole('button').count(), 4);
+  assert.match(await maps.nth(0).innerText(), /Рекомендуемый уровень 1/);
+  assert.match(await maps.nth(1).innerText(), /Рекомендуемый уровень 2 · Победите на карте 1/);
+  await acts.getByRole('button', { name: /Акт II · Заколдованные земли/ }).click();
   assert.equal(await maps.count(), 10);
+  assert.match(await maps.nth(0).innerText(), /Шепчущий бор[\s\S]*Победите на карте 10/);
+  assert.match(await maps.nth(1).innerText(), /Быстрые враги/);
+  assert.match(await maps.nth(1).innerText(), /Босс: \?\?\?/);
+  assert.equal(
+    await page.getByRole('button', { name: 'Играть: карта 11', exact: true }).isDisabled(),
+    true,
+  );
+  await page.screenshot({ path: 'artifacts/campaign-02b-maps-act2.png', fullPage: true });
+  await acts.getByRole('button', { name: /Акт I · Забытые сказки/ }).click();
   assert.match(await maps.nth(0).innerText(), /Открыта[\s\S]*Терновый страж/);
   assert.match(await maps.nth(1).innerText(), /Закрыта[\s\S]*Босс: \?\?\?/);
   assert.equal(
@@ -158,7 +174,7 @@ try {
   await nav.waitFor();
   assert.equal(await page.getByLabel('Золото: 75').count(), 1);
   await nav.getByRole('button', { name: 'Прогресс', exact: true }).click();
-  assert.match(await page.locator('.progression-page').innerText(), /Пройдено карт: 1 \/ 10/);
+  assert.match(await page.locator('.progression-page').innerText(), /Пройдено карт: 1 \/ 40/);
   assert.match(await page.locator('.recent-runs').innerText(), /Победа · карта 1/);
   await page.screenshot({ path: 'artifacts/campaign-04-progression.png', fullPage: true });
   // Task 09 §1.5: talent screen (selected class = archer, level 2 → 1 point).
@@ -348,7 +364,7 @@ try {
   await page.getByLabel('Debug золото').fill('500');
   await devProfile.getByRole('button', { name: 'Выдать золото' }).click();
   const devSave = JSON.parse(await stored());
-  assert.equal(devSave.highestUnlockedMap, 10);
+  assert.equal(devSave.highestUnlockedMap, 40); // Task 10: 40 maps
   assert.equal(devSave.classes[devSave.selectedClass].level, 12);
   const goldBefore = devSave.gold;
   await nav.getByRole('button', { name: 'Карты', exact: true }).click();

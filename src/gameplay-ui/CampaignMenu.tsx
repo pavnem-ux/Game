@@ -1,8 +1,8 @@
 import { useSyncExternalStore } from 'react';
 import { CHARACTER_CLASSES, calculateCharacterStats } from '../character-stats';
-import { CAMPAIGN_MAPS } from '../campaign';
+import { CAMPAIGN_ACTS, CAMPAIGN_MAPS } from '../campaign';
 import { CLASS_LABELS, WEAPON_LABELS } from '../gameplay';
-import { isMapUnlocked } from '../profile';
+import { isMapUnlocked, recommendedLevel } from '../profile';
 import { campaignStore } from './campaign-state';
 import type { MenuPage } from './campaign-state';
 import { displayHp } from './format';
@@ -112,11 +112,19 @@ function PlayPage() {
             disabled={!profile}
             onChange={(e) => campaignStore.selectMap(Number(e.target.value))}
           >
-            {CAMPAIGN_MAPS.map((m) => (
-              <option key={m.id} value={m.id} disabled={!profile || !isMapUnlocked(profile, m.id)}>
-                {m.id}. {m.name}
-                {profile && !isMapUnlocked(profile, m.id) ? ' · закрыта' : ''}
-              </option>
+            {CAMPAIGN_ACTS.map((a) => (
+              <optgroup key={a.id} label={`Акт ${a.roman} · ${a.name}`}>
+                {CAMPAIGN_MAPS.filter((m) => m.act === a.id).map((m) => (
+                  <option
+                    key={m.id}
+                    value={m.id}
+                    disabled={!profile || !isMapUnlocked(profile, m.id)}
+                  >
+                    {m.id}. {m.name}
+                    {profile && !isMapUnlocked(profile, m.id) ? ' · закрыта' : ''}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </label>
@@ -129,7 +137,8 @@ function PlayPage() {
         </button>
         <p className="alpha-note">
           {map.name} · {minutes(map.durationSeconds)} · награда {map.victoryXp} XP /{' '}
-          {map.victoryGold} золота
+          {map.victoryGold} золота · рекомендуемый уровень {recommendedLevel(map.id)}
+          {map.modifiers.length > 0 && <> · {map.modifiers.map((x) => x.label).join('; ')}</>}
           <br />
           Опыт забега растёт от кристаллов и сбрасывается после забега; постоянный уровень класса
           растёт от наград за карты.

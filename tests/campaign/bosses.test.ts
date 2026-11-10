@@ -46,8 +46,9 @@ const hitBoss = (w: GameplayWorld, id: string, coefficient: number) => {
 describe('boss configs (Task 08 §2.3)', () => {
   it('one valid boss per map with ≥2 abilities and a distinct ability combination', () => {
     expect(() => validateBossDefinitions()).not.toThrow();
-    expect(Object.keys(BOSS_DEFINITIONS)).toHaveLength(10);
-    const sigs = CAMPAIGN_MAPS.map((m) => bossSignature(getBossDefinition(m.bossId)));
+    // Task 10: 40 bosses; Act I (Task 08) keeps distinct ability-kind combinations.
+    expect(Object.keys(BOSS_DEFINITIONS)).toHaveLength(40);
+    const sigs = CAMPAIGN_MAPS.slice(0, 10).map((m) => bossSignature(getBossDefinition(m.bossId)));
     expect(new Set(sigs).size).toBe(10);
     for (const m of CAMPAIGN_MAPS)
       expect(getBossDefinition(m.bossId).abilities.length).toBeGreaterThanOrEqual(2);

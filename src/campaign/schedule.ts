@@ -1,5 +1,5 @@
 import { sameInstant } from '../simulation-boundary';
-import { CAMPAIGN_BALANCE, CAMPAIGN_MAPS } from './config';
+import { CAMPAIGN_BALANCE, CAMPAIGN_MAPS, eliteEventTimes } from './config';
 import type { CampaignMap, EliteProfileId } from './config';
 
 /**
@@ -23,17 +23,18 @@ export type ScheduledEvent =
 export function campaignSchedule(map: CampaignMap): readonly ScheduledEvent[] {
   const { elite, boss } = CAMPAIGN_BALANCE;
   const events: ScheduledEvent[] = [];
+  if (boss.spawnTime > map.durationSeconds)
+    throw new Error(`Map ${map.id} has no boss slot before its end.`);
+  // Task 10: the act's elite interval (strictly before the end, never at 10:00) and per-event
+  // count; several elites of one event are separate events at the same time (index order).
   let index = 0;
-  for (let time: number = elite.interval; time <= map.durationSeconds; time += elite.interval) {
-    if (time === boss.spawnTime) events.push(Object.freeze({ id: 'boss', kind: 'boss', time }));
-    else if (time < map.durationSeconds) {
+  for (const time of eliteEventTimes(map.id))
+    for (let n = 0; n < map.elite.perEvent; n++) {
       const profile = elite.profiles[index % elite.profiles.length];
       events.push(Object.freeze({ id: `elite-${index + 1}`, kind: 'elite', time, index, profile }));
       index++;
     }
-  }
-  if (!events.some((e) => e.kind === 'boss'))
-    throw new Error(`Map ${map.id} has no boss slot before its end.`);
+  events.push(Object.freeze({ id: 'boss', kind: 'boss', time: boss.spawnTime }));
   events.push(Object.freeze({ id: 'end', kind: 'end', time: map.durationSeconds }));
   // Stable order: by time; at equal time elites/boss resolve before the end marker.
   return Object.freeze(
@@ -90,5 +91,5 @@ export class CampaignDirector {
 
 // Startup validation: every map's scheduled enemies fit in the reserved slots.
 for (const map of CAMPAIGN_MAPS)
-  if (scheduledEnemyCount(map) > CAMPAIGN_BALANCE.reservedSlots)
+  if (scheduledEnemyCount(map) > map.reservedSlots)
     throw new Error(`Map ${map.id} schedules more enemies than the reserved slots.`);

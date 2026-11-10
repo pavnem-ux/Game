@@ -3,8 +3,9 @@ import type { Point } from '../weapon-attacks';
 export const XP_RULES = Object.freeze({
   baseCost: 20,
   costPerLevel: 10,
-  meleeReward: 10,
-  rangedReward: 15,
+  /** Task 10 §1.3 (provisional): run XP −20% (was 10 / 15). */
+  meleeReward: 8,
+  rangedReward: 12,
   pickupRadius: 42,
   crystalRadius: 5,
   cellSize: 64,

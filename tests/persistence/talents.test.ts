@@ -8,7 +8,12 @@ import {
   prepareImport,
 } from '../../src/persistence';
 import type { StorageLike } from '../../src/persistence';
-import { addClassXp, applyRunResult, createProfile } from '../../src/profile';
+import {
+  PROFILE_SCHEMA_VERSION,
+  addClassXp,
+  applyRunResult,
+  createProfile,
+} from '../../src/profile';
 import type { PlayerProfile } from '../../src/profile';
 
 class MemoryStorage implements StorageLike {
@@ -118,7 +123,7 @@ describe('Task 09 §1.4 talent persistence (schema v2)', () => {
     const r = parseProfileJson(JSON.stringify(v1));
     expect(r.ok && r.migratedFrom).toBe(1);
     if (!r.ok) throw r.error;
-    expect(r.profile).toEqual({ ...v2, schemaVersion: 2 });
+    expect(r.profile).toEqual({ ...v2, schemaVersion: PROFILE_SCHEMA_VERSION });
     for (const c of Object.values(r.profile.classes)) {
       expect(c.talents).toEqual({});
       expect('talentsSpent' in c).toBe(false);

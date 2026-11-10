@@ -78,7 +78,9 @@ describe('elite/boss schedule (Task 08 §1.2)', () => {
       expect(
         events.filter((e) => e.kind === 'elite').every((e) => e.time < m.durationSeconds),
       ).toBe(true);
-      expect(scheduledEnemyCount(m)).toBeLessThanOrEqual(CAMPAIGN_BALANCE.reservedSlots);
+      // Task 10: the reserve is per map (≥ the Task 08 base of 8; Act I maps keep exactly 8).
+      expect(scheduledEnemyCount(m)).toBeLessThanOrEqual(m.reservedSlots);
+      if (m.id <= 10) expect(m.reservedSlots).toBe(CAMPAIGN_BALANCE.reservedSlots);
     }
   });
   it('the director fires each due event once, in order, and nothing early', () => {

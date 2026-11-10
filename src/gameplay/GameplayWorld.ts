@@ -554,10 +554,27 @@ export class GameplayWorld {
     if (elite) return elite === 'melee' ? 'elite-melee' : 'elite-ranged';
     return this.enemies.getEnemy(id).config.behavior;
   }
+  /**
+   * Task 10 §1.2: enemy profiles of this run — the alpha profiles, with the map's movement-speed
+   * modifier (campaign only). Used for automatic waves, boss adds and as the elite base.
+   */
+  private enemyProfiles: Readonly<Record<'melee' | 'ranged', EnemyConfig>> | null = null;
+  private enemyProfile(kind: 'melee' | 'ranged'): EnemyConfig {
+    if (!this.enemyProfiles) {
+      const scale = this.campaignMap?.enemySpeedScale ?? 1;
+      const scaled = (c: EnemyConfig) =>
+        scale === 1 ? c : Object.freeze({ ...c, movementSpeed: c.movementSpeed * scale });
+      this.enemyProfiles = Object.freeze({
+        melee: scaled(ALPHA_ENEMIES.melee),
+        ranged: scaled(ALPHA_ENEMIES.ranged),
+      });
+    }
+    return this.enemyProfiles[kind];
+  }
   private registerEnemy(
     kind: 'melee' | 'ranged',
     position: Point,
-    profile: EnemyConfig = ALPHA_ENEMIES[kind],
+    profile: EnemyConfig = this.enemyProfile(kind),
     stats: CombatAttributes = this.enemyStats,
   ): string {
     const id = `enemy-${++this.enemySequence}`;
@@ -851,12 +868,12 @@ export class GameplayWorld {
     const map = this.campaignMap;
     if (!map) return;
     if (event.kind === 'elite') {
-      const { hpMultiplier, damageMultiplier } = CAMPAIGN_BALANCE.elite;
+      const { hpMultiplier, damageMultiplier } = map.elite;
       const enemyId = this.spawnScheduled(
         event.profile,
         hpMultiplier,
         damageMultiplier,
-        eliteEnemyConfig(ALPHA_ENEMIES[event.profile], event.profile),
+        eliteEnemyConfig(this.enemyProfile(event.profile), event.profile),
       );
       this.eliteEnemyIds.push(enemyId);
       this.eliteProfiles.set(enemyId, event.profile);

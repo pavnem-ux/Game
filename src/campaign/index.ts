@@ -1,13 +1,24 @@
 export {
+  CAMPAIGN_ACTS,
   CAMPAIGN_BALANCE,
   CAMPAIGN_MAPS,
+  DOUBLE_ELITE_MAPS,
+  MAP_MODIFIERS,
+  actOf,
+  eliteEventTimes,
   getCampaignMap,
   mapDifficulty,
+  mapDurationSeconds,
   validateCampaignConfig,
+  victoryGold,
   victoryXp,
 } from './config';
 export type {
+  CampaignAct,
   CampaignMap,
+  MapEliteSettings,
+  MapModifier,
+  MapModifierId,
   DifficultyMultipliers,
   EliteProfileId,
   MapOverrides,
@@ -36,6 +47,8 @@ export type {
 } from './boss-abilities';
 export {
   BOSS_DEFINITIONS,
+  BOSS_ABILITY_COUNTS,
+  bossParamSignature,
   bossSignature,
   getBossDefinition,
   validateBossDefinitions,

@@ -7,22 +7,25 @@ import {
   validateCampaignConfig,
 } from '../../src/campaign';
 
+/** Task 10 keeps Act I (maps 1–10) as specified by Task 08; Acts II–IV are in maps-40.test.ts. */
+const ACT_I = CAMPAIGN_MAPS.slice(0, 10);
+
 describe('campaign config (Task 08 §1.1)', () => {
-  it('has 10 maps with the specified durations', () => {
-    expect(CAMPAIGN_MAPS).toHaveLength(10);
-    expect(CAMPAIGN_MAPS.map((m) => m.durationSeconds / 60)).toEqual([
+  it('Act I has 10 maps with the specified durations', () => {
+    expect(ACT_I).toHaveLength(10);
+    expect(ACT_I.map((m) => m.durationSeconds / 60)).toEqual([
       10, 10, 11, 11, 12, 12, 13, 13, 14, 15,
     ]);
-    expect(CAMPAIGN_MAPS.map((m) => m.id)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(ACT_I.map((m) => m.id)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
   });
-  it('victory XP = 100 + 50i and Gold = XP / 2', () => {
-    for (const m of CAMPAIGN_MAPS) {
+  it('victory XP = 100 + 50i and (Act I, Task 10 table) Gold = XP / 2', () => {
+    for (const m of ACT_I) {
       expect(m.victoryXp).toBe(100 + 50 * m.id);
       expect(m.victoryGold).toBe((100 + 50 * m.id) / 2);
     }
   });
-  it('difficulty scales with k = i − 1', () => {
-    for (const m of CAMPAIGN_MAPS) {
+  it('difficulty scales with k = i − 1 (Act I)', () => {
+    for (const m of ACT_I) {
       const k = m.id - 1;
       expect(m.difficulty.hp).toBeCloseTo(1 + 0.12 * k, 12);
       expect(m.difficulty.damage).toBeCloseTo(1 + 0.08 * k, 12);
@@ -45,12 +48,12 @@ describe('campaign config (Task 08 §1.1)', () => {
       'late',
       'boss',
     ]);
-    expect(new Set(CAMPAIGN_MAPS.map((m) => m.bossId)).size).toBe(10);
+    expect(new Set(CAMPAIGN_MAPS.map((m) => m.bossId)).size).toBe(CAMPAIGN_MAPS.length);
     expect(CAMPAIGN_MAPS.every((m) => m.bossName.length > 0 && m.name.length > 0)).toBe(true);
   });
   it('rejects unknown maps and inconsistent configurations', () => {
     expect(() => getCampaignMap(0)).toThrow();
-    expect(() => getCampaignMap(11)).toThrow();
+    expect(() => getCampaignMap(41)).toThrow();
     expect(() => getCampaignMap(1.5)).toThrow();
     expect(() => validateCampaignConfig()).not.toThrow();
     expect(() => validateCampaignConfig(CAMPAIGN_MAPS.slice(1))).toThrow();
