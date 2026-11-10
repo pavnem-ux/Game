@@ -370,7 +370,39 @@ try {
   const devSave = JSON.parse(await stored());
   assert.equal(devSave.highestUnlockedMap, 40); // Task 10: 40 maps
   assert.equal(devSave.classes[devSave.selectedClass].level, 12);
-  const goldBefore = devSave.gold;
+  // Task 11: shop → buy (with confirmation, one atomic save) → equip on the Character screen.
+  await nav.getByRole('button', { name: 'Магазин', exact: true }).click();
+  const slots = page.getByRole('group', { name: 'Слоты магазина' });
+  assert.equal(await slots.getByRole('button').count(), 4);
+  assert.match(
+    await page.getByRole('listitem', { name: /^Добротный тяжёлый меч:/ }).innerText(),
+    /Откроется после карты 8/,
+  );
+  await slots.getByRole('button', { name: 'Броня' }).click();
+  const plate = page.getByRole('listitem', { name: /^Обычные латы:/ });
+  await plate.getByRole('button', { name: /Купить · 80/ }).click();
+  await page
+    .getByRole('group', { name: 'Подтверждение покупки' })
+    .getByRole('button', { name: 'Подтвердить' })
+    .click();
+  await page.getByText('Куплено: Обычные латы.').waitFor();
+  const bought = JSON.parse(await stored());
+  assert.equal(bought.gold, devSave.gold - 80);
+  assert.deepEqual(bought.ownedItems, ['plate-t1']);
+  await page.screenshot({ path: 'artifacts/campaign-13-shop.png', fullPage: true });
+  await nav.getByRole('button', { name: 'Персонаж', exact: true }).click();
+  const gear = page.getByRole('region', { name: /^Снаряжение:/ });
+  await gear.getByLabel('Выбрать: Броня').selectOption('plate-t1');
+  const preview = gear.getByRole('group', { name: 'Предпросмотр снаряжения' });
+  assert.match(await preview.innerText(), /Здоровье \+\d+/);
+  await preview.getByRole('button', { name: 'Надеть' }).click();
+  await page.waitForFunction(
+    (c) =>
+      JSON.parse(localStorage.getItem('skazki.profile')).classes[c].loadout.armor === 'plate-t1',
+    bought.selectedClass,
+  );
+  await page.screenshot({ path: 'artifacts/campaign-14-equipment.png', fullPage: true });
+  const goldBefore = JSON.parse(await stored()).gold;
   await nav.getByRole('button', { name: 'Карты', exact: true }).click();
   await page.getByRole('button', { name: 'Играть: карта 10', exact: true }).click();
   await page.waitForFunction(() => window.__alpha.state().screen === 'playing');

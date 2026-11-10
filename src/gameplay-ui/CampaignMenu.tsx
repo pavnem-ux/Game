@@ -10,11 +10,13 @@ import { CLASS_SYMBOLS, minutes } from './campaign-format';
 import { CharacterPage, MapsPage, ProgressionPage } from './CampaignPages';
 import { SaveWarning, SettingsPage } from './SaveManagement';
 import { BuildLabel } from './BuildLabel';
+import { ShopPage } from './ShopPages';
 
 const PAGES: readonly { id: MenuPage; label: string }[] = [
   { id: 'play', label: 'Играть' },
   { id: 'character', label: 'Персонаж' },
   { id: 'maps', label: 'Карты' },
+  { id: 'shop', label: 'Магазин' },
   { id: 'progression', label: 'Прогресс' },
   { id: 'settings', label: 'Настройки' },
 ];
@@ -44,6 +46,7 @@ export function CampaignMenu() {
       {ui.page === 'play' && <PlayPage />}
       {ui.page === 'character' && <CharacterPage />}
       {ui.page === 'maps' && <MapsPage />}
+      {ui.page === 'shop' && <ShopPage />}
       {ui.page === 'progression' && <ProgressionPage />}
       {ui.page === 'settings' && <SettingsPage />}
       <BuildLabel className="menu-build-label" />

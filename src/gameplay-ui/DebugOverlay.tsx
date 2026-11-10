@@ -36,6 +36,11 @@ export default function DebugOverlay({ world, fps }: { world: GameplaySnapshot; 
         <dd data-testid="debug-dps">{whole(stats.dps)}</dd>
         <dt>{t.total}</dt>
         <dd>{whole(stats.damageDealt)}</dd>
+        <dt>{t.coinsPerMinute}</dt>
+        <dd data-testid="debug-coins">
+          {world.coins.collected} ·{' '}
+          {whole(world.time > 0 ? (world.coins.collected * 60) / world.time : 0)}/мин
+        </dd>
       </dl>
       <h4>{t.bySource}</h4>
       {stats.bySource.length === 0 ? (

@@ -195,6 +195,13 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
         </label>
         {saveView && <textarea aria-label="Debug сохранение" readOnly rows={10} value={saveView} />}
       </fieldset>
+      <fieldset aria-label="Gear Debug">
+        <legend>Снаряжение и магазин</legend>
+        <button onClick={() => campaignDebug.unlockAllItems()}>Открыть все предметы</button>
+        <button onClick={() => campaignDebug.equipBestTier(characterClass)}>
+          Лучшее снаряжение ({CLASS_LABELS[characterClass]})
+        </button>
+      </fieldset>
       <fieldset aria-label="Talent Debug">
         <legend>Таланты · {CLASS_LABELS[characterClass]}</legend>
         <label>

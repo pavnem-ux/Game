@@ -4,7 +4,7 @@ Spec: [task-11-equipment-shop.md](task-11-equipment-shop.md) (owner's file; Pret
 the table and added blank lines). Branch `task-11-equipment` from `main` at `05b029e` (Task 10
 merged: 40-map config present). All new numbers are **provisional**.
 
-Current: Phase 5 (UI & debug)
+Current: Phase 6 (tuning & delivery)
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/9
 
@@ -22,9 +22,9 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/9
 - [x] 4.3 HUD / results
 - [x] Phase 4 tests (deterministic drops, one drop per death, pile cap, reward math, no duplicate
       Gold)
-- [ ] 5.1 Shop screen
-- [ ] 5.2 Character equipment screen with preview
-- [ ] 5.3 Debug tools
+- [x] 5.1 Shop screen
+- [x] 5.2 Character equipment screen with preview
+- [x] 5.3 Debug tools
 - [ ] 6.1 Measure coin income (maps 1, 10, 20, 40) and tune drops to the 60% target
 - [ ] 6.2 Full checks (AGENTS.md §6 + e2e), docs (`EQUIPMENT_SHOP.md`, README, `playtest.md`)
 - [ ] 6.3 PR description
@@ -58,6 +58,14 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/9
   `RunResult.coins` (validated, default 0) → `runRewards` {xp, gold, coins, bonus}; `runResultFrom`
   sends the collected coins. HUD «◎ N», results «Монеты / Бонус за победу / Золото», piles drawn in
   `AlphaScene`. Tests `tests/gameplay/coins.test.ts`, `tests/persistence/coins-reward.test.ts`.
+- UI (5.1–5.3): `src/profile/equipment.ts` (`buyItem`, `equipItem`, `unequipSlot`, `equipmentStateOf`);
+  `campaignStore.buyItem/equipItem/unequipSlot` (one validated `replaceProfile` save each; a failed
+  write keeps the old profile). `src/gameplay-ui/ShopPages.tsx`: `ShopPage` (menu «Магазин»: slot tabs,
+  weapon class switcher, tier colour, stats, state купить/куплено/надето/откроется после карты N,
+  confirmation), `EquipmentPanel` on the Character page (4 slots, owned eligible items, «Снять»,
+  +/− preview, stats without/with gear). Debug: «Открыть все предметы», «Лучшее снаряжение (класс)»
+  (`campaignDebug.unlockAllItems/equipBestTier`), overlay «Монеты · в минуту». Tests
+  `tests/persistence/shop-store.test.ts`; e2e shop purchase + equip; production markers.
 - Tests `tests/equipment/` (`npm run test:equipment`, included in `npm test`).
 
 ## Decisions
@@ -75,6 +83,8 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/9
 ## Verification log
 
 - Phase 1: typecheck ✓, format ✓, `npm test` 1190 ✓ (equipment 8).
+- Phase 5: typecheck ✓, format ✓, `npm test` 1212 ✓, `npm run build` ✓, `test:production` 2 PASS,
+  `test:e2e` 3 PASS.
 - Phase 4: typecheck ✓, format ✓, `npm test` 1208 ✓, `test:e2e` 3 PASS.
 - Phase 3: typecheck ✓, format ✓, `npm test` 1200 ✓, `test:e2e` 3 PASS.
 - Phase 2: typecheck ✓, format ✓, `npm test` 1194 ✓. Tests pinned to schema v3 now expect v4

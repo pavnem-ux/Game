@@ -7,6 +7,7 @@ import { campaignStore } from './campaign-state';
 import { CLASS_SYMBOLS, clock, factor, minutes } from './campaign-format';
 import { displayHp } from './format';
 import { TalentsPanel } from './TalentsPanel';
+import { EquipmentPanel } from './ShopPages';
 
 const useCampaign = () => useSyncExternalStore(campaignStore.subscribe, campaignStore.getSnapshot);
 
@@ -78,6 +79,7 @@ export function CharacterPage() {
           );
         })}
       </div>
+      <EquipmentPanel characterClass={profile.selectedClass} />
     </div>
   );
 }
