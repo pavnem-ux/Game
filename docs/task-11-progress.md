@@ -4,14 +4,16 @@ Spec: [task-11-equipment-shop.md](task-11-equipment-shop.md) (owner's file; Pret
 the table and added blank lines). Branch `task-11-equipment` from `main` at `05b029e` (Task 10
 merged: 40-map config present). All new numbers are **provisional**.
 
-Current: Phase 1 (data & pure logic)
+Current: Phase 2 (save)
+
+Draft PR: https://github.com/pavnem-ux/Game/pull/9
 
 ## Checklist
 
 - [x] 0.1 Branch from `main`, progress file, draft PR
-- [ ] 1.1 Item templates, tier generation, prices, shop unlock rules (config + validation)
-- [ ] 1.2 Purchase / equip / unequip logic (pure)
-- [ ] Phase 1 tests (85 items, unique ids; tier stats and prices; unlock by map; no double buy, no
+- [x] 1.1 Item templates, tier generation, prices, shop unlock rules (config + validation)
+- [x] 1.2 Purchase / equip / unequip logic (pure)
+- [x] Phase 1 tests (85 items, unique ids; tier stats and prices; unlock by map; no double buy, no
       buy without Gold or with a locked tier; weapon eligibility; per-class loadouts)
 - [ ] 2.1 Save schema, migration, validation (spec 1.6) + tests
 - [ ] 3.1 Gear modifiers in the attribute pipeline + tests
@@ -29,12 +31,22 @@ Current: Phase 1 (data & pure logic)
 
 ## Code map (Task 11)
 
-_Filled in as steps land._
+- `src/equipment/config.ts`: slots, gear stats (named after `RunStatModifiers` keys, plus
+  `areaSizePercent`), tier-1 base values, tier table (name, ×multiplier, price, unlock map, colour,
+  Russian adjective forms), weapon price ×1.25 / second stat ×0.6, 17 templates, starter weapons.
+- `src/equipment/items.ts`: `SHOP_ITEMS` (85 = 17 × 5, ids `<template>-t<tier>`), `STARTER_ITEMS`
+  (tier 0, no stats), `getItem`/`findItem`, `isEligible`, `validateEquipmentConfig` (startup).
+- `src/equipment/logic.ts`: `EquipmentState` {gold, ownedItems, loadouts}, `defaultLoadouts`,
+  `highestClearedMap`, `isTierUnlocked`, `checkPurchase`/`purchase` (atomic: Gold + ownership),
+  `equip`/`unequip` (per-class), `loadoutStats`.
+- Tests `tests/equipment/` (`npm run test:equipment`, included in `npm test`).
 
 ## Decisions
 
-_Filled in as steps land._
+- Item names: tier adjective agreeing with the template's gender + the template name in lower case
+  («Редкий тяжёлый меч», «Легендарная мантия», «Добротные латы», «Эпическое кольцо ярости»).
+- Starter weapons are not stored in `ownedItems`; they are always owned and never sold.
 
 ## Verification log
 
-_Filled in per phase._
+- Phase 1: typecheck ✓, format ✓, `npm test` 1190 ✓ (equipment 8).
