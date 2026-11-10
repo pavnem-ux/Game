@@ -158,6 +158,27 @@ export interface MapOverrides {
   /** Share of automatic spawns that are ranged (existing spawner setting). */
   readonly rangedShare?: number;
 }
+/**
+ * Task 10 §1.2 per-map modifiers (maps 11–40, at most 2 per map), each through one existing lever:
+ * - `swift`: enemy movement speed ×1.1 (normal enemies, elites and boss adds; not the boss);
+ * - `ranged15` / `ranged18`: ranged share of normal spawns 0.15 / 0.18 (baseline 0.12);
+ * - `elites`: elite HP ×1.25 and damage ×1.15 on top of the Task 08 elite multipliers.
+ */
+export type MapModifierId = 'swift' | 'ranged15' | 'ranged18' | 'elites';
+export const MAP_MODIFIERS = Object.freeze({
+  swift: Object.freeze({ label: 'Быстрые враги: скорость ×1,1', enemySpeed: 1.1 }),
+  ranged15: Object.freeze({ label: 'Больше стрелков: 15% врагов', rangedShare: 0.15 }),
+  ranged18: Object.freeze({ label: 'Много стрелков: 18% врагов', rangedShare: 0.18 }),
+  elites: Object.freeze({
+    label: 'Сильные элиты: здоровье ×1,25, урон ×1,15',
+    eliteHp: 1.25,
+    eliteDamage: 1.15,
+  }),
+} satisfies Record<MapModifierId, { label: string; [k: string]: number | string }>);
+export interface MapModifier {
+  readonly id: MapModifierId;
+  readonly label: string;
+}
 /** Elite settings of one map (Act interval; per-event count; strength on top of difficulty). */
 export interface MapEliteSettings {
   readonly interval: number;
@@ -184,6 +205,9 @@ export interface CampaignMap {
    * earlier): max(base reserve, every scheduled enemy), so a scheduled spawn is never skipped.
    */
   readonly reservedSlots: number;
+  /** Task 10: per-map modifiers (Russian labels for the map card) and the enemy speed lever. */
+  readonly modifiers: readonly MapModifier[];
+  readonly enemySpeedScale: number;
 }
 
 const MAP_TEXT: readonly {
@@ -191,6 +215,7 @@ const MAP_TEXT: readonly {
   bossId: string;
   bossName: string;
   overrides?: MapOverrides;
+  mods?: readonly MapModifierId[];
 }[] = [
   { name: 'Опушка забытых сказок', bossId: 'thornwarden', bossName: 'Терновый страж' },
   { name: 'Туманные болота', bossId: 'marsh_witch', bossName: 'Болотная ведьма' },
@@ -204,37 +229,127 @@ const MAP_TEXT: readonly {
   { name: 'Сердце тьмы', bossId: 'last_dark', bossName: 'Владыка последней тьмы' },
   // ── Act II «Заколдованные земли» (Task 10) ──
   { name: 'Шепчущий бор', bossId: 'old_leshy', bossName: 'Леший-старожил' },
-  { name: 'Медвежий лог', bossId: 'giant_bear', bossName: 'Шатун-великан' },
-  { name: 'Ключевая пустошь', bossId: 'key_keeper', bossName: 'Хранитель ключей' },
+  { name: 'Медвежий лог', bossId: 'giant_bear', bossName: 'Шатун-великан', mods: ['swift'] },
+  {
+    name: 'Ключевая пустошь',
+    bossId: 'key_keeper',
+    bossName: 'Хранитель ключей',
+    mods: ['ranged15'],
+  },
   { name: 'Кривое озеро', bossId: 'water_tsar', bossName: 'Водяной царь' },
-  { name: 'Совиная чаща', bossId: 'seer_owl', bossName: 'Сова-вещунья' },
-  { name: 'Пряничная деревня', bossId: 'gingerbread_giant', bossName: 'Пряничный исполин' },
-  { name: 'Медные холмы', bossId: 'copper_serpent', bossName: 'Медный змей' },
+  { name: 'Совиная чаща', bossId: 'seer_owl', bossName: 'Сова-вещунья', mods: ['elites'] },
+  {
+    name: 'Пряничная деревня',
+    bossId: 'gingerbread_giant',
+    bossName: 'Пряничный исполин',
+    mods: ['swift'],
+  },
+  {
+    name: 'Медные холмы',
+    bossId: 'copper_serpent',
+    bossName: 'Медный змей',
+    mods: ['ranged15', 'elites'],
+  },
   { name: 'Заброшенная мельница', bossId: 'midnight_miller', bossName: 'Мельник-полуночник' },
-  { name: 'Вороньи скалы', bossId: 'raven_prince', bossName: 'Вороний князь' },
-  { name: 'Терем вечной зимы', bossId: 'ice_voivode', bossName: 'Ледяной воевода' },
+  {
+    name: 'Вороньи скалы',
+    bossId: 'raven_prince',
+    bossName: 'Вороний князь',
+    mods: ['swift', 'ranged15'],
+  },
+  {
+    name: 'Терем вечной зимы',
+    bossId: 'ice_voivode',
+    bossName: 'Ледяной воевода',
+    mods: ['elites'],
+  },
   // ── Act III «Мёртвое царство» ──
-  { name: 'Костяной мост', bossId: 'bone_warden', bossName: 'Костяной сторож' },
-  { name: 'Чёрная река', bossId: 'shadow_ferryman', bossName: 'Перевозчик теней' },
+  { name: 'Костяной мост', bossId: 'bone_warden', bossName: 'Костяной сторож', mods: ['ranged15'] },
+  { name: 'Чёрная река', bossId: 'shadow_ferryman', bossName: 'Перевозчик теней', mods: ['swift'] },
   { name: 'Серые поля', bossId: 'noon_wraith', bossName: 'Полуденница' },
-  { name: 'Безлунный погост', bossId: 'graveyard_master', bossName: 'Хозяин погоста' },
-  { name: 'Ржавые врата', bossId: 'rusted_gatekeeper', bossName: 'Ржавый привратник' },
-  { name: 'Пепельный тракт', bossId: 'fire_rider', bossName: 'Огненный всадник' },
+  {
+    name: 'Безлунный погост',
+    bossId: 'graveyard_master',
+    bossName: 'Хозяин погоста',
+    mods: ['elites'],
+  },
+  {
+    name: 'Ржавые врата',
+    bossId: 'rusted_gatekeeper',
+    bossName: 'Ржавый привратник',
+    mods: ['ranged18'],
+  },
+  {
+    name: 'Пепельный тракт',
+    bossId: 'fire_rider',
+    bossName: 'Огненный всадник',
+    mods: ['swift', 'elites'],
+  },
   { name: 'Плачущий лес', bossId: 'mourner', bossName: 'Плакальщица' },
-  { name: 'Обсидиановые копи', bossId: 'deep_smith', bossName: 'Подгорный кузнец' },
-  { name: 'Сад увядших роз', bossId: 'withered_tsarevna', bossName: 'Увядшая царевна' },
-  { name: 'Чертоги Бессмертного', bossId: 'deathless_guard', bossName: 'Страж Бессмертного' },
+  {
+    name: 'Обсидиановые копи',
+    bossId: 'deep_smith',
+    bossName: 'Подгорный кузнец',
+    mods: ['ranged15', 'swift'],
+  },
+  {
+    name: 'Сад увядших роз',
+    bossId: 'withered_tsarevna',
+    bossName: 'Увядшая царевна',
+    mods: ['elites'],
+  },
+  {
+    name: 'Чертоги Бессмертного',
+    bossId: 'deathless_guard',
+    bossName: 'Страж Бессмертного',
+    mods: ['swift', 'elites'],
+  },
   // ── Act IV «Последняя сказка» ──
-  { name: 'Расколотое небо', bossId: 'thunder_kite', bossName: 'Громовой коршун' },
+  {
+    name: 'Расколотое небо',
+    bossId: 'thunder_kite',
+    bossName: 'Громовой коршун',
+    mods: ['ranged18'],
+  },
   { name: 'Звёздная пыль', bossId: 'renegade_stargazer', bossName: 'Звездочёт-отступник' },
-  { name: 'Зеркальные топи', bossId: 'mirror_kikimora', bossName: 'Зеркальная кикимора' },
-  { name: 'Обитель бурь', bossId: 'storm_lord', bossName: 'Повелитель бурь' },
-  { name: 'Лабиринт снов', bossId: 'drowse', bossName: 'Дрёма' },
-  { name: 'Остров у края моря', bossId: 'sea_serpent', bossName: 'Морской змей' },
-  { name: 'Кровавая заря', bossId: 'scarlet_knight', bossName: 'Алый витязь' },
+  {
+    name: 'Зеркальные топи',
+    bossId: 'mirror_kikimora',
+    bossName: 'Зеркальная кикимора',
+    mods: ['swift'],
+  },
+  {
+    name: 'Обитель бурь',
+    bossId: 'storm_lord',
+    bossName: 'Повелитель бурь',
+    mods: ['elites', 'ranged15'],
+  },
+  { name: 'Лабиринт снов', bossId: 'drowse', bossName: 'Дрёма', mods: ['swift'] },
+  {
+    name: 'Остров у края моря',
+    bossId: 'sea_serpent',
+    bossName: 'Морской змей',
+    mods: ['ranged18', 'elites'],
+  },
+  {
+    name: 'Кровавая заря',
+    bossId: 'scarlet_knight',
+    bossName: 'Алый витязь',
+    mods: ['swift', 'elites'],
+  },
   { name: 'Безмолвный город', bossId: 'faceless_tsar', bossName: 'Безликий царь' },
-  { name: 'Край мира', bossId: 'edge_warden', bossName: 'Стражник края' },
-  { name: 'Последняя страница', bossId: 'dark_storyteller', bossName: 'Сказочник тьмы' },
+  {
+    name: 'Край мира',
+    bossId: 'edge_warden',
+    bossName: 'Стражник края',
+    mods: ['ranged18', 'swift'],
+  },
+  {
+    name: 'Последняя страница',
+    bossId: 'dark_storyteller',
+    bossName: 'Сказочник тьмы',
+    mods: ['swift', 'elites'],
+  },
 ];
 
 /** Map difficulty from the central formula, then optional overrides. */
@@ -293,6 +408,15 @@ export const CAMPAIGN_MAPS: readonly CampaignMap[] = Object.freeze(
   MAP_TEXT.map((text, i) => {
     const id = i + 1;
     const perEvent = elitesPerEvent(id);
+    const modifiers = (text.mods ?? []).map((m) =>
+      Object.freeze({ id: m, label: MAP_MODIFIERS[m].label }),
+    );
+    const has = (m: MapModifierId) => modifiers.some((x) => x.id === m);
+    const rangedShare = has('ranged18')
+      ? MAP_MODIFIERS.ranged18.rangedShare
+      : has('ranged15')
+        ? MAP_MODIFIERS.ranged15.rangedShare
+        : text.overrides?.rangedShare;
     const scheduled = eliteEventTimes(id).length * perEvent + 1; // + the boss
     return Object.freeze({
       id,
@@ -303,17 +427,20 @@ export const CAMPAIGN_MAPS: readonly CampaignMap[] = Object.freeze(
       victoryGold: victoryGold(id),
       bossId: text.bossId,
       bossName: text.bossName,
-      ...(text.overrides?.rangedShare !== undefined
-        ? { rangedShare: text.overrides.rangedShare }
-        : {}),
+      ...(rangedShare !== undefined ? { rangedShare } : {}),
       act: actOf(id).id,
       elite: Object.freeze({
         interval: actOf(id).eliteInterval,
         perEvent,
-        hpMultiplier: CAMPAIGN_BALANCE.elite.hpMultiplier,
-        damageMultiplier: CAMPAIGN_BALANCE.elite.damageMultiplier,
+        hpMultiplier:
+          CAMPAIGN_BALANCE.elite.hpMultiplier * (has('elites') ? MAP_MODIFIERS.elites.eliteHp : 1),
+        damageMultiplier:
+          CAMPAIGN_BALANCE.elite.damageMultiplier *
+          (has('elites') ? MAP_MODIFIERS.elites.eliteDamage : 1),
       }),
       reservedSlots: Math.max(CAMPAIGN_BALANCE.reservedSlots, scheduled),
+      modifiers: Object.freeze(modifiers),
+      enemySpeedScale: has('swift') ? MAP_MODIFIERS.swift.enemySpeed : 1,
     } satisfies CampaignMap);
   }),
 );
@@ -349,6 +476,12 @@ export function validateCampaignConfig(maps: readonly CampaignMap[] = CAMPAIGN_M
     if (!(e.interval > 0) || !(e.hpMultiplier > 0) || !(e.damageMultiplier > 0))
       throw new Error(`Map ${map.id} elite settings invalid.`);
     if (map.reservedSlots < b.reservedSlots) throw new Error(`Map ${map.id} reserve too small.`);
+    // Task 10 §1.2: at most 2 modifiers, none on Act I, no lever twice.
+    if (map.modifiers.length > 2 || (map.id <= 10 && map.modifiers.length > 0))
+      throw new Error(`Map ${map.id} has too many modifiers.`);
+    if (map.modifiers.filter((m) => m.id.startsWith('ranged')).length > 1)
+      throw new Error(`Map ${map.id} sets the ranged share twice.`);
+    if (!(map.enemySpeedScale >= 1)) throw new Error(`Map ${map.id} enemy speed invalid.`);
     if (!map.bossId || bosses.has(map.bossId))
       throw new Error(`Map ${map.id} boss reference invalid.`);
     bosses.add(map.bossId);

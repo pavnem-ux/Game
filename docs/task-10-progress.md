@@ -4,7 +4,7 @@ Spec: [task-10-maps.md](task-10-maps.md) (owner's file; Prettier only added blan
 lists). Branch `task-10-maps` from `main` at `65c1835` (contains Tasks 08, 08.5, 09, 09.1:
 `src/campaign` and `src/talents` present). All new numbers are **provisional**.
 
-Current: Phase 3 (per-map modifiers)
+Current: Phase 4 (save & UI)
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/8
 
@@ -19,7 +19,7 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/8
 - [x] 2.1 Boss configs 11–40 (landed with 1.1, see commit note)
 - [x] 2.2 Elite interval per act, 2 elites per event where configured
 - [x] Phase 2 tests (`tests/campaign/bosses-elites-40.test.ts`) (boss uniqueness, ability counts, elite times, reserved slots)
-- [ ] 3.1 Per-map modifiers through existing levers + tests
+- [x] 3.1 Per-map modifiers through existing levers + tests (`tests/campaign/modifiers.test.ts`)
 - [ ] 4.1 Save validation/migration for maps 1–40
 - [ ] 4.2 Recommended level function
 - [ ] 4.3 Map selection UI (acts, recommended level, modifiers, boss, lock reason)
@@ -46,6 +46,10 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/8
   validation per act (Act I distinct kind sets; Acts II–IV 2–3 / 3 abilities; no duplicate
   ability set + parameters across all 40; Act IV cooldowns below every Acts II–III cooldown of the
   same kind).
+- Modifiers (3.1): `MAP_MODIFIERS` (`swift` speed ×1.1, `ranged15`/`ranged18` share, `elites` HP ×1.25 /
+  damage ×1.15) in `config.ts`; `CampaignMap.modifiers` (Russian labels) and `enemySpeedScale`;
+  world `enemyProfile(kind)` scales the default enemy profiles (automatic waves, boss adds, elite
+  base); the test API `spawnEnemy` and bosses keep their own configs.
 - Tests: `tests/campaign/maps-40.test.ts` + fixture `tests/campaign/fixtures/act1-task08.json`
   (maps, schedules, spawner settings and XP values dumped from `main` before Task 10).
 
@@ -67,7 +71,12 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/8
   cases moved to map 41/42; crystal-value assertions use the new `XP_RULES` (one test kills 3
   enemies instead of 2 so it still crosses level 2).
 
+- Modifier values (×1.1 speed, 0.15/0.18 ranged, elites ×1.25/×1.15) and which maps get them are
+  provisional choices within the spec (≤ 2 per map, 23 of 30 new maps). `swift` affects normal
+  enemies, elites and boss adds, not the boss itself (bosses have their own speed config).
+
 ## Verification log
 
 - Phase 1: typecheck ✓, format ✓, `npm test` 1160 ✓.
 - Phase 2: typecheck ✓, format ✓, `npm test` 1168 ✓.
+- Phase 3: typecheck ✓, format ✓, `npm test` 1173 ✓.
