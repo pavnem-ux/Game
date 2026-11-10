@@ -44,6 +44,11 @@ export interface EnemyAIOptions {
   readonly separation: SeparationConfig;
   readonly canResolveDirectDamage?: DirectDamagePolicy;
   readonly onDirectDamageResolved?: DirectDamageObserver;
+  /**
+   * Task 09.1 (additive): multiplier on enemy direct hits (contact and projectiles) against the
+   * player, applied by Combat Core before resistance and its single rounding. Pure, ≥ 0; default 1.
+   */
+  readonly playerDamageMultiplier?: (attack: AttackSnapshot) => number;
 }
 export interface EnemySnapshot {
   readonly entityId: string;
@@ -55,6 +60,8 @@ export interface EnemySnapshot {
   readonly nextAttackAt: number;
   /** Task 07: present only while crowd-controlled. */
   readonly control?: EnemyControl;
+  /** Task 08: present only while a boss speed boost (> 1) is active. */
+  readonly speedBoost?: number;
 }
 /** Task 07 crowd-control state supplied by the owner of Slow/Stun timers. */
 export interface EnemyControl {

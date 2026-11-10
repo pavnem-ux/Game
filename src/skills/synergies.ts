@@ -329,6 +329,7 @@ export class SynergyResolver {
     this.cooldowns.set(`${id}:${targetId}`, this.now() + seconds);
   }
   private announce(id: SynergyId, targetId: string, position: Point | null) {
+    this.e.setSource(`synergy:${id}`);
     this.e.host.recordSkill([
       Object.freeze({
         type: 'synergy-triggered',
@@ -389,6 +390,15 @@ export class SynergyResolver {
   }
   onHit(hit: HitInfo): void {
     if (!hit.procs || hit.tags.has('synergy')) return;
+    // Task 08.5: damage created after a synergy announces itself is attributed to it.
+    const source = this.e.currentSource();
+    try {
+      this.resolveHit(hit);
+    } finally {
+      this.e.setSource(source);
+    }
+  }
+  private resolveHit(hit: HitInfo): void {
     const { pre, targetId, tags } = hit;
     const alive = () => this.e.host.core.getEntity(targetId).alive;
     switch (this.cls) {
@@ -571,7 +581,24 @@ export class SynergyResolver {
     cause: { direct: boolean; tags: ReadonlySet<CombatTag>; procs: boolean },
   ): void {
     if (!cause.procs || cause.tags.has('synergy')) return;
+    const source = this.e.currentSource();
+    try {
+      this.resolveKill(targetId, pre, cause);
+    } finally {
+      this.e.setSource(source);
+    }
+  }
+  private resolveKill(
+    targetId: string,
+    pre: PreHit,
+    cause: { direct: boolean; tags: ReadonlySet<CombatTag>; procs: boolean },
+  ): void {
     if (this.isEligible('wildfire') && pre.effects.has('burn') && pre.position) {
+      // Task 09.1: talents naming Wildfire may widen the spread (radius, neighbours); no cascade.
+      const geometry = this.e.talentCombat.synergySpread('wildfire', {
+        radius: T.wildfire.radius,
+        maxTargets: T.wildfire.maxTargets,
+      });
       const n = this.spread(
         'wildfire',
         pre.position,
@@ -579,8 +606,8 @@ export class SynergyResolver {
         'burn',
         T.wildfire.burnDamage,
         T.wildfire.burnDuration,
-        this.e.area(T.wildfire.radius),
-        T.wildfire.maxTargets,
+        this.e.area(geometry.radius),
+        geometry.maxTargets,
       );
       if (n) this.announce('wildfire', targetId, pre.position);
     }

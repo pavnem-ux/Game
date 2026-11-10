@@ -5,7 +5,13 @@ import { edgeDistance, segmentCircleIntersection } from '../weapon-attacks';
 import type { CombatBody } from '../weapon-attacks';
 import { EnemyProjectiles } from './EnemyProjectiles';
 import { SpatialGrid } from './SpatialGrid';
-import { circleCrossings, desiredState, goalVelocity, separatedVelocity } from './movement';
+import {
+  circleCrossings,
+  desiredState,
+  futureCrossings,
+  goalVelocity,
+  separatedVelocity,
+} from './movement';
 import type { EnemyActor } from './movement';
 import type {
   EnemyAIOptions,
@@ -17,6 +23,8 @@ import type {
   EnemyProjectileDue,
   EnemyBehaviorState,
   EnemyControl,
+  EnemyProjectileLaunch,
+  EnemyProjectileLaunchEvent,
 } from './types';
 import {
   EPS,
@@ -78,6 +86,11 @@ export class EnemyAI {
       typeof input.onDirectDamageResolved !== 'function'
     )
       throw new TypeError('Direct damage observer must be a function.');
+    if (
+      input.playerDamageMultiplier !== undefined &&
+      typeof input.playerDamageMultiplier !== 'function'
+    )
+      throw new TypeError('Player damage multiplier must be a function.');
     this.options = Object.freeze({ ...input, separation: separationConfig(input.separation) });
     this.grid = new SpatialGrid(this.options.separation.cellSize);
     this.flights = new EnemyProjectiles(
@@ -85,6 +98,7 @@ export class EnemyAI {
       input.playerId,
       input.canResolveDirectDamage,
       input.onDirectDamageResolved,
+      input.playerDamageMultiplier,
     );
   }
   get time() {
@@ -145,6 +159,7 @@ export class EnemyAI {
       state: !alive ? 'dead' : playerAlive ? actor.state : 'idle',
       alive,
       nextAttackAt: actor.nextAttackAt,
+      ...((actor.speedBoost ?? 1) !== 1 ? { speedBoost: actor.speedBoost } : {}),
       ...(controlled
         ? {
             control: Object.freeze({
@@ -173,6 +188,29 @@ export class EnemyAI {
     actor.speedFactor = control.movementMultiplier;
     actor.stunned = control.stunned;
     this.dirty = true;
+  }
+  /**
+   * Task 08 (additive): temporary speed multiplier ≥ 1 for boss charge/speed abilities, set at a
+   * boundary. Independent of Slow/Stun (which still apply); 1 removes the boost.
+   */
+  setSpeedBoost(id: string, multiplier: number): void {
+    this.active();
+    const actor = this.actors.get(id);
+    if (!actor) throw new Error(`Unknown enemy AI: ${id}.`);
+    finite(multiplier, 'speed boost');
+    if (multiplier < 1 || multiplier > 5) throw new RangeError('Speed boost must be in [1, 5].');
+    if ((actor.speedBoost ?? 1) === multiplier) return;
+    actor.speedBoost = multiplier;
+    this.dirty = true;
+  }
+  /**
+   * Task 08 (additive): launch a hostile projectile from a living enemy at the current boundary
+   * (boss radial burst). Flight, collision and survival policies are the existing ones.
+   */
+  launchProjectile(input: EnemyProjectileLaunch): EnemyProjectileLaunchEvent {
+    this.active();
+    if (!this.actors.has(input.sourceId)) throw new Error(`Unknown enemy AI: ${input.sourceId}.`);
+    return this.flights.launch(this.clock, input);
   }
   getEnemies(): readonly EnemySnapshot[] {
     this.active();
@@ -467,7 +505,10 @@ export class EnemyAI {
       else if (actor.state === 'retreat')
         radius = this.player!.radius + actor.config.retreatDistance + actor.config.hysteresis;
       if (radius !== null) {
-        const crossings = circleCrossings(actor, this.player!, radius, horizon - this.clock);
+        const crossings = futureCrossings(
+          this.clock,
+          circleCrossings(actor, this.player!, radius, horizon - this.clock),
+        );
         if (crossings.length)
           consider({
             kind: 'motion',
@@ -550,7 +591,11 @@ export class EnemyAI {
           damageType: actor.config.damageType,
           coefficient: actor.config.attackCoefficient,
         });
-    const result = attack ? this.core.resolveAttack(attack, this.options.playerId) : null;
+    const result = attack
+      ? this.core.resolveAttack(attack, this.options.playerId, {
+          damageMultiplier: this.options.playerDamageMultiplier?.(attack) ?? 1,
+        })
+      : null;
     actor.nextAttackAt = next;
     if (result)
       this.options.onDirectDamageResolved?.(

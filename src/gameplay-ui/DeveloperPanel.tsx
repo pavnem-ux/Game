@@ -1,12 +1,18 @@
+import { TALENT_CONFIG } from '../talents';
 import { useState } from 'react';
+import { DEBUG_TIME_SCALES } from '../engine/time-scale';
 import { CHARACTER_CLASSES } from '../character-stats';
 import type { CharacterClass } from '../character-stats';
 import { CLASS_LABELS, DEFAULT_SPAWNING } from '../gameplay';
 import { skillsForClass } from '../skills';
 import { alphaBridge } from './store';
+import { campaignDebug } from './campaign-debug';
 import type { AlphaState } from './store';
 export default function DeveloperPanel({ state }: { state: AlphaState }) {
   const w = state.world;
+  // Task 08.5 §3.2: DEV/QA-only crash trigger for testing the error boundary (render error).
+  const [crashNow, setCrashNow] = useState(false);
+  if (crashNow) throw new Error('Debug crash: simulated render error');
   const [characterClass, setClass] = useState<CharacterClass>(
     w?.character.characterClass ?? 'warrior',
   );
@@ -34,6 +40,16 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
     w?.spawning.settings.maxActive ?? DEFAULT_SPAWNING.maxActive,
   );
   const send = (action: unknown) => alphaBridge.send({ type: 'testing', action });
+  const [debugLevel, setDebugLevel] = useState(10),
+    [debugXp, setDebugXp] = useState(500),
+    [debugGold, setDebugGold] = useState(100),
+    [debugSeed, setDebugSeed] = useState(String(w?.seed ?? 1)),
+    [talentNodeChoice, setTalentNode] = useState(''),
+    [talentRank, setTalentRank] = useState(1),
+    [saveView, setSaveView] = useState('');
+  const talentNode = talentNodeChoice.startsWith(`${characterClass}.`)
+    ? talentNodeChoice
+    : `${characterClass}.b1.n01`;
   const restart = () => {
     setProtection(false);
     send({
@@ -64,6 +80,181 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
     <aside className="developer-panel" aria-label="Developer Testing Mode">
       <h2>Developer Testing Mode</h2>
       <p>Временный баланс · изменения класса/уровня начинают новый мир.</p>
+      <fieldset aria-label="Campaign Debug">
+        <legend>Кампания · профиль</legend>
+        <button onClick={() => campaignDebug.unlockMaps()}>Открыть все карты</button>
+        <label>
+          Уровень класса
+          <input
+            aria-label="Debug уровень класса"
+            type="number"
+            min="1"
+            max="50"
+            value={debugLevel}
+            onChange={(e) => setDebugLevel(Number(e.target.value))}
+          />
+        </label>
+        <button
+          onClick={() => {
+            const r = campaignDebug.setClassLevel(characterClass, debugLevel);
+            if (r?.talentsReset) window.alert('Дерево талантов сброшено: не помещается в уровень.');
+          }}
+        >
+          Установить уровень ({CLASS_LABELS[characterClass]})
+        </button>
+
+        <label>
+          XP
+          <input
+            aria-label="Debug XP класса"
+            type="number"
+            min="0"
+            value={debugXp}
+            onChange={(e) => setDebugXp(Number(e.target.value))}
+          />
+        </label>
+        <button onClick={() => campaignDebug.grantXp(characterClass, debugXp)}>
+          Выдать XP классу
+        </button>
+        <label>
+          Золото
+          <input
+            aria-label="Debug золото"
+            type="number"
+            min="0"
+            value={debugGold}
+            onChange={(e) => setDebugGold(Number(e.target.value))}
+          />
+        </label>
+        <button onClick={() => campaignDebug.grantGold(debugGold)}>Выдать золото</button>
+        <label>
+          Сид
+          <input
+            aria-label="Debug сид"
+            inputMode="numeric"
+            value={debugSeed}
+            onChange={(e) => setDebugSeed(e.target.value.trim())}
+          />
+        </label>
+        <button
+          onClick={() => {
+            if (!campaignDebug.startWithSeed(debugSeed))
+              window.alert('Сид: целое число 0–4294967295.');
+          }}
+        >
+          Начать выбранную карту с этим сидом
+        </button>
+        <button onClick={() => setSaveView(saveView ? '' : campaignDebug.inspectSave())}>
+          {saveView ? 'Скрыть сохранение' : 'Показать сохранение'}
+        </button>
+        <button
+          onClick={() => {
+            if (window.confirm('Сбросить тестовый прогресс кампании?'))
+              campaignDebug.resetProgress();
+          }}
+        >
+          Сбросить тестовый прогресс
+        </button>
+        <button onClick={() => setCrashNow(true)}>Сымитировать сбой</button>
+        <label className="debug-file">
+          Загрузить отчёт → импорт сохранения
+          <input
+            type="file"
+            accept="application/json,.json"
+            aria-label="Debug файл отчёта"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              e.target.value = '';
+              if (!f) return;
+              void f.text().then(
+                (text) => campaignDebug.stageReport(text, f.name),
+                () => campaignDebug.stageReport('', f.name),
+              );
+            }}
+          />
+        </label>
+        {saveView && <textarea aria-label="Debug сохранение" readOnly rows={10} value={saveView} />}
+      </fieldset>
+      <fieldset aria-label="Talent Debug">
+        <legend>Таланты · {CLASS_LABELS[characterClass]}</legend>
+        <label>
+          Талант
+          <select
+            aria-label="Debug талант"
+            value={talentNode}
+            onChange={(e) => setTalentNode(e.target.value)}
+          >
+            {TALENT_CONFIG.branchesOf(characterClass).flatMap((b) =>
+              b.nodes.map((n) => (
+                <option key={n.id} value={n.id}>
+                  {b.branch}.{n.order} {n.name}
+                </option>
+              )),
+            )}
+          </select>
+        </label>
+        <label>
+          Ранг
+          <select
+            aria-label="Debug ранг таланта"
+            value={talentRank}
+            onChange={(e) => setTalentRank(Number(e.target.value))}
+          >
+            {[0, 1, 2, 3].map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          onClick={() => {
+            if (!campaignDebug.setTalentRank(characterClass, talentNode, talentRank))
+              window.alert('Ранг не установлен (нужно больше 26 очков?).');
+          }}
+        >
+          Установить ранг таланта
+        </button>
+        <button onClick={() => campaignDebug.resetTalents(characterClass)}>
+          Сбросить дерево талантов
+        </button>
+        <button onClick={() => campaignDebug.toggleSuperpowerPreset(characterClass)}>
+          Пресет сверхспособности вкл/выкл
+        </button>
+      </fieldset>
+      {w?.campaign && (
+        <fieldset aria-label="Campaign Run Debug">
+          <legend>Кампания · забег</legend>
+          <button onClick={() => send({ type: 'campaign-skip' })}>
+            К следующему событию ({w.campaign.nextEvent?.id ?? '—'})
+          </button>
+          <button onClick={() => send({ type: 'campaign-boss-now' })}>Призвать босса</button>
+          <button onClick={() => alphaBridge.send({ type: 'kill-on-screen' })}>
+            Убить всех на экране
+          </button>
+          <button onClick={() => send({ type: 'campaign-boss-hp', fraction: 0.1 })}>
+            HP босса → 10%
+          </button>
+          <button onClick={() => send({ type: 'campaign-force', outcome: 'victory' })}>
+            Победа
+          </button>
+          <button onClick={() => send({ type: 'campaign-force', outcome: 'defeat' })}>
+            Поражение
+          </button>
+          <div role="group" aria-label="Ускорение забега">
+            Ускорение
+            {DEBUG_TIME_SCALES.map((scale) => (
+              <button
+                key={scale}
+                aria-pressed={(state.timeScale ?? 1) === scale}
+                onClick={() => alphaBridge.send({ type: 'time-scale', scale })}
+              >
+                ×{scale}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+      )}
       {w && state.qa && (
         <fieldset>
           <legend>God Mode</legend>

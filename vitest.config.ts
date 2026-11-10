@@ -1,6 +1,8 @@
 import { defineConfig } from 'vitest/config';
+import { buildDefines } from './config/build-info.mjs';
 
 export default defineConfig({
+  define: { __QA_BUILD__: 'false', ...buildDefines() },
   test: {
     environment: 'node',
     include: [
@@ -13,6 +15,10 @@ export default defineConfig({
       'tests/gameplay/**/*.test.ts',
       'tests/skills/**/*.test.ts',
       'tests/engine/**/*.test.ts',
+      'tests/campaign/**/*.test.ts',
+      'tests/profile/**/*.test.ts',
+      'tests/persistence/**/*.test.ts',
+      'tests/talents/**/*.test.ts',
     ],
   },
 });

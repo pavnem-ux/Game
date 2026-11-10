@@ -8,15 +8,19 @@ import {
   useEffect,
 } from 'react';
 import type { CharacterClass } from '../character-stats';
-import { CHARACTER_CLASSES, calculateCharacterStats } from '../character-stats';
 import { CLASS_LABELS, WEAPON_LABELS } from '../gameplay';
 import { alphaBridge } from './store';
 import { AlphaCanvas } from './AlphaCanvas';
-import { LevelUpDialog, PauseDialog, SkillBar } from './SkillPanels';
+import { EnhancedSkillDialog, LevelUpDialog, PauseDialog, SkillBar } from './SkillPanels';
+import { CampaignMenu } from './CampaignMenu';
+import { ResultsScreen } from './ResultsScreen';
+import { CampaignHud } from './CampaignHud';
 import { displayHp } from './format';
 import './alpha.css';
 const DeveloperPanel =
   import.meta.env.DEV || __QA_BUILD__ ? lazy(() => import('./DeveloperPanel')) : null;
+const DebugOverlay =
+  import.meta.env.DEV || __QA_BUILD__ ? lazy(() => import('./DebugOverlay')) : null;
 const time = (seconds: number) =>
   `${Math.floor(seconds / 60)
     .toString()
@@ -31,8 +35,6 @@ const symbols: Record<CharacterClass, string> = {
 };
 export function AlphaApp() {
   const state = useSyncExternalStore(alphaBridge.subscribe, alphaBridge.getSnapshot);
-  const [selected, setSelected] = useState<CharacterClass>('warrior');
-  const [level, setLevel] = useState(1);
   const [debugOpen, setDebugOpen] = useState(false);
   const [skillsOpen, setSkillsOpen] = useState(false);
   const skillsOpener = useRef<HTMLElement | null>(null);
@@ -58,8 +60,6 @@ export function AlphaApp() {
     (import.meta.env.DEV || __QA_BUILD__) && new URLSearchParams(location.search).has('debug');
   const s = state.world;
   const hp = s ? displayHp(s.player.currentHp, s.player.maxHp) : null;
-  const start = () =>
-    alphaBridge.send({ type: 'start', options: { characterClass: selected, level } });
   return (
     <div className="app-shell alpha-shell">
       <header className="topbar">
@@ -71,83 +71,13 @@ export function AlphaApp() {
         </div>
         <span className="header-caption">ХРОНИКИ ПОСЛЕДНЕГО СВЕТА</span>
         <span className="build-badge">
-          {__QA_BUILD__ ? 'QA PREVIEW' : 'COMBAT ALPHA'} <span>07.2 v2</span>
+          {__QA_BUILD__ ? 'QA PREVIEW' : 'COMBAT ALPHA'} <span>08 CAMPAIGN</span>
         </span>
       </header>
       <main className={`arena alpha-arena screen-${state.screen}`}>
         <AlphaCanvas />
         <div className="vignette" />
-        {state.screen === 'menu' && (
-          <section className="overlay alpha-menu" aria-labelledby="alpha-title">
-            <div className="alpha-intro">
-              <div className="eyebrow">ИСПЫТАНИЕ В РУИНАХ · COMBAT ALPHA</div>
-              <h1 id="alpha-title">
-                Выберите
-                <br />
-                <em>свой свет.</em>
-              </h1>
-              <p>
-                Четыре героя. Одно воскрешение.
-                <br />
-                Двигайтесь свободно — оружие атакует само.
-              </p>
-              <p className="alpha-help">
-                WASD / стрелки · P / Esc — пауза
-                <br />
-                На телефоне — джойстик слева внизу
-              </p>
-              <p className="alpha-note">
-                Тестовая арена · предварительный баланс
-                <br />
-                Собирайте XP-кристаллы · на каждом уровне — выбор навыка.
-              </p>
-            </div>
-            <div className="alpha-selection">
-              <div className="class-grid" role="group" aria-label="Выбор класса">
-                {CHARACTER_CLASSES.map((c) => {
-                  const stats = calculateCharacterStats(c, level).combatAttributes;
-                  return (
-                    <button
-                      key={c}
-                      className={`class-choice class-${c} ${selected === c ? 'selected' : ''}`}
-                      aria-pressed={selected === c}
-                      onClick={() => setSelected(c)}
-                    >
-                      <span className="class-symbol">{symbols[c]}</span>
-                      <strong>{CLASS_LABELS[c]}</strong>
-                      <small>{WEAPON_LABELS[c]}</small>
-                      <span>
-                        {displayHp(stats.maxHp, stats.maxHp).max} HP ·{' '}
-                        {c === 'mage' ? stats.magicalDamage : stats.physicalDamage} урона
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-              <button className="button primary" onClick={start}>
-                Начать забег · {CLASS_LABELS[selected]} →
-              </button>
-              <p className="alpha-note">
-                Постоянный уровень {level} · melee + ranged волны
-                <br />
-                Уровень забега растёт от XP; постоянные характеристики сохраняются.
-              </p>
-              {debug && (
-                <label className="alpha-level">
-                  Тестовый уровень (1–50)
-                  <input
-                    aria-label="Стартовый уровень"
-                    type="number"
-                    min="1"
-                    max="50"
-                    value={level}
-                    onChange={(e) => setLevel(Number(e.target.value))}
-                  />
-                </label>
-              )}
-            </div>
-          </section>
-        )}
+        {state.screen === 'menu' && <CampaignMenu />}
         {s && (
           <>
             <div className="hud alpha-hud">
@@ -158,7 +88,8 @@ export function AlphaApp() {
                 <div className="health-details">
                   <div className="health-label">
                     <strong>
-                      {CLASS_LABELS[s.character.characterClass]} · забег {s.progression.level}
+                      {CLASS_LABELS[s.character.characterClass]} · ур. класса{' '}
+                      {s.character.permanentLevel}
                     </strong>
                     <span>
                       {hp!.current} / {hp!.max} HP
@@ -175,8 +106,8 @@ export function AlphaApp() {
                     <div style={{ width: `${(s.player.currentHp / s.player.maxHp) * 100}%` }} />
                   </div>
                   <div className="alpha-run-xp">
-                    <span>
-                      Пост. ур. {s.character.permanentLevel} · XP {s.progression.xp} /{' '}
+                    <span className="run-level-label">
+                      Уровень забега {s.progression.level} · опыт забега {s.progression.xp} /{' '}
                       {s.progression.nextXp}
                     </span>
                     <div
@@ -218,6 +149,7 @@ export function AlphaApp() {
                 </button>
               </div>
             </div>
+            <CampaignHud world={s} />
             <SkillBar
               world={s}
               open={skillsOpen}
@@ -253,7 +185,8 @@ export function AlphaApp() {
                 </div>
               </div>
               <span className="arena-caption">
-                ЗАБЫТАЯ РОЩА <i /> <small>ВОЛНА {s.spawning.waves + 1}</small>
+                {s.campaign ? s.campaign.mapName.toUpperCase() : 'ЗАБЫТАЯ РОЩА'} <i />{' '}
+                <small>ВОЛНА {s.spawning.waves + 1}</small>
               </span>
               <span className="pause-hint">
                 <kbd>P</kbd> ПАУЗА
@@ -261,10 +194,12 @@ export function AlphaApp() {
             </div>
           </>
         )}
+        {state.screen === 'enhanced-skill' && s && <EnhancedSkillDialog world={s} />}
         {state.screen === 'level-up' && s?.skills.offer && (
           <LevelUpDialog world={s} onOpenSkills={openSkills} hiddenBehindSkills={skillsOpen} />
         )}
         {state.screen === 'paused' && s && <PauseDialog world={s} />}
+        {state.screen === 'results' && s?.campaign && <ResultsScreen world={s} />}
         {(state.screen === 'revival' || state.screen === 'ended') && (
           <section
             className="overlay modal-overlay"
@@ -340,6 +275,11 @@ export function AlphaApp() {
           >
             {__QA_BUILD__ ? 'QA' : 'DEV'} · {debugOpen ? 'Закрыть' : 'Тестирование'}
           </button>
+        )}
+        {debug && s && DebugOverlay && (
+          <Suspense fallback={null}>
+            <DebugOverlay world={s} fps={state.fps} />
+          </Suspense>
         )}
         {debug && debugOpen && DeveloperPanel && (
           <Suspense fallback={<div className="developer-panel">Загрузка…</div>}>

@@ -57,6 +57,8 @@ export class WeaponAttacks {
   private readonly bodies = new Map<string, CombatBody>();
   private readonly velocities = new Map<string, Point>();
   private readonly equipped = new Map<string, Equipped>();
+  /** Task 09.1 (additive): secondary weapons by weapon ID (e.g. the Warrior's off-hand sword). */
+  private readonly secondary = new Map<string, Equipped>();
   private readonly weaponIds = new Set<string>();
   private readonly projectiles = new Map<string, ProjectileState>();
   private clock = 0;
@@ -69,6 +71,8 @@ export class WeaponAttacks {
     if (!options || typeof options !== 'object') throw new TypeError('options must be an object.');
     if (options.damageModifier !== undefined && typeof options.damageModifier !== 'function')
       throw new TypeError('damageModifier must be a function.');
+    if (options.attackModifier !== undefined && typeof options.attackModifier !== 'function')
+      throw new TypeError('attackModifier must be a function.');
     this.options = Object.freeze({ ...options });
   }
   /** Task 07: fly an ability projectile through the same swept-collision scheduler. */
@@ -168,11 +172,52 @@ export class WeaponAttacks {
     return this.getWeaponState(input.entityId);
   }
 
+  /**
+   * Task 09.1 (additive): a secondary weapon on an entity that already has its primary weapon.
+   * It has its own cycle timer (starting now), targeting, range and arc, and the entity's attack
+   * speed applies to it once through the same weapon formula. Its events carry its weapon ID.
+   */
+  equipSecondaryWeapon(input: EquipWeaponInput): void {
+    const primary = this.owner(input.entityId);
+    const weapon = validateWeaponConfig(input.weapon);
+    if (weapon.allowedClass !== input.characterClass)
+      throw new TypeError('Weapon is incompatible with character class.');
+    if (weapon.pattern !== 'melee_arc')
+      throw new TypeError('Secondary weapons support the melee_arc pattern only.');
+    if (this.weaponIds.has(weapon.id)) throw new Error(`Weapon ID already equipped: ${weapon.id}.`);
+    const speed = cappedAttackSpeed(input.attackSpeedPercent);
+    this.interval(weapon, speed);
+    this.secondary.set(weapon.id, {
+      entityId: input.entityId,
+      weapon,
+      attackSpeedPercent: speed,
+      fallbackDirection: normalizedDirection(input.fallbackDirection),
+      launchOffset: primary.launchOffset,
+      nextCycleAt: this.clock,
+      pending: null,
+    });
+    this.weaponIds.add(weapon.id);
+  }
+  getSecondaryWeaponState(weaponId: string): WeaponState | null {
+    const w = this.secondary.get(weaponId);
+    return w
+      ? Object.freeze({
+          entityId: w.entityId,
+          weapon: w.weapon,
+          attackSpeedPercent: w.attackSpeedPercent,
+          nextCycleAt: w.nextCycleAt,
+          secondStrikeAt: null,
+        })
+      : null;
+  }
   setAttackSpeed(entityId: string, attackSpeedPercent: number): void {
     const owner = this.owner(entityId),
       speed = cappedAttackSpeed(attackSpeedPercent);
     this.interval(owner.weapon, speed);
+    const extra = [...this.secondary.values()].filter((w) => w.entityId === entityId);
+    for (const w of extra) this.interval(w.weapon, speed);
     owner.attackSpeedPercent = speed;
+    for (const w of extra) w.attackSpeedPercent = speed;
   }
   setFallbackDirection(entityId: string, direction: Point): void {
     this.owner(entityId).fallbackDirection = normalizedDirection(direction);
@@ -274,6 +319,17 @@ export class WeaponAttacks {
       if (this.target(w) !== null)
         consider({ at: w.nextCycleAt, priority: 3, order: w.entityId, kind: 'cycle', equipped: w });
     }
+    // Secondary weapons after their entity's primary at equal times (stable order by weapon ID).
+    for (const w of this.secondary.values()) {
+      if (!this.core.getEntity(w.entityId).alive || this.target(w) === null) continue;
+      consider({
+        at: w.nextCycleAt,
+        priority: 3,
+        order: `${w.entityId}~${w.weapon.id}`,
+        kind: 'cycle',
+        equipped: w,
+      });
+    }
     return next;
   }
   private advance(dt: number) {
@@ -347,10 +403,17 @@ export class WeaponAttacks {
     });
     validatePoint(origin, 'launch origin');
     const direction = aimDirection(origin, target, w.fallbackDirection);
+    const bonus =
+      this.options.attackModifier?.({
+        entityId: w.entityId,
+        weaponId: w.weapon.id,
+        targetId,
+      })?.criticalChanceBonus ?? 0;
     const attack = this.core.createAttack({
       attackerId: w.entityId,
       damageType: w.weapon.damageType,
       coefficient: w.weapon.damageCoefficient,
+      ...(bonus > 0 ? { criticalChanceBonus: bonus } : {}),
     });
     if (w.weapon.pattern === 'projectile') {
       const id = `projectile-${this.nextProjectileId}`,
@@ -398,10 +461,11 @@ export class WeaponAttacks {
         origin,
         direction,
       });
-      const hitIds = new Set<string>();
+      // Targets are selected first (same filter and order), so each hit knows the strike's count.
+      const hitIds: string[] = [];
       for (const id of [...this.bodies.keys()].sort(compareIds)) {
         if (
-          hitIds.has(id) ||
+          hitIds.includes(id) ||
           !validTarget(this.core, w.entityId, this.core.getEntity(w.entityId).affiliation, id)
         )
           continue;
@@ -415,8 +479,15 @@ export class WeaponAttacks {
           )
         )
           continue;
-        hitIds.add(id);
-        const result = this.resolveHit({ attack, weaponId: w.weapon.id, targetId: id });
+        hitIds.push(id);
+      }
+      for (const id of hitIds) {
+        const result = this.resolveHit({
+          attack,
+          weaponId: w.weapon.id,
+          targetId: id,
+          targetCount: hitIds.length,
+        });
         output.push({
           type: 'impact',
           time: this.clock,

@@ -3,26 +3,51 @@ import type { GameplayOptions, GameplaySnapshot, WorldEvent } from '../gameplay'
 import type { QaSnapshot } from '../gameplay/qa';
 export type AlphaCommand =
   | { type: 'start'; options: GameplayOptions }
-  | { type: 'pause' | 'resume' | 'menu' | 'revive' | 'finish' | 'reroll' }
+  | {
+      type:
+        | 'pause'
+        | 'resume'
+        | 'menu'
+        | 'revive'
+        | 'finish'
+        | 'reroll'
+        | 'abandon'
+        | 'kill-on-screen';
+    }
   | { type: 'choose-skill'; card: string }
+  | { type: 'choose-enhanced'; skillId: string }
+  | { type: 'time-scale'; scale: number }
   | { type: 'testing'; action: unknown };
 export interface AlphaState {
-  readonly screen: 'menu' | 'playing' | 'paused' | 'revival' | 'ended' | 'level-up';
+  readonly screen:
+    | 'menu'
+    | 'playing'
+    | 'paused'
+    | 'revival'
+    | 'ended'
+    | 'level-up'
+    | 'enhanced-skill'
+    | 'results';
   readonly world: GameplaySnapshot | null;
   readonly events: readonly WorldEvent[];
   readonly runId: number;
   readonly record: number;
   readonly error: string;
   readonly qa?: QaSnapshot | null;
+  /** DEV/QA only: current debug time scale (×1/×2/×4/×8). */
+  readonly timeScale?: number;
+  /** DEV/QA only: measured frames per second (debug overlay). */
+  readonly fps?: number;
 }
-let snapshot: AlphaState = {
+const INITIAL_STATE: AlphaState = Object.freeze({
   screen: 'menu',
   world: null,
   events: [],
   runId: 0,
   record: 0,
   error: '',
-};
+});
+let snapshot: AlphaState = INITIAL_STATE;
 const listeners = new Set<() => void>(),
   commands = new Set<(command: AlphaCommand) => void>();
 export const alphaBridge = {
@@ -38,6 +63,11 @@ export const alphaBridge = {
     listeners.forEach((fn) => fn());
   },
   send: (command: AlphaCommand) => commands.forEach((fn) => fn(command)),
+  /** Task 08.5 crash recovery: drop the stale run snapshot (the remounted scene publishes anew). */
+  reset: () => {
+    snapshot = INITIAL_STATE;
+    listeners.forEach((fn) => fn());
+  },
   onCommand: (fn: (command: AlphaCommand) => void) => {
     commands.add(fn);
     return () => {

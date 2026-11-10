@@ -1,3 +1,10 @@
+import { OFFHAND_WEAPON, talentLoadout } from '../talents';
+import { talentWeaponRangeFactor } from '../talents/handlers';
+import type { TalentLoadout } from '../talents';
+import { composeRunStats } from '../skills/stats';
+import { DEFAULT_SEED, createRunRandom } from './rng';
+import { RunStats } from './run-stats';
+import type { EnemyType } from './run-stats';
 import { calculateCharacterStats, scaleMovementSpeed } from '../character-stats';
 import { CombatCore, calculateSuccessfulDamage } from '../combat-core';
 import type { CombatEvent, RandomSource } from '../combat-core';
@@ -28,7 +35,7 @@ import {
   ALPHA_WEAPONS,
   defaultOnHit,
 } from './config';
-import type { GameplayOptions, GameplaySnapshot, WorldEvent } from './types';
+import type { CampaignSnapshot, GameplayOptions, GameplaySnapshot, WorldEvent } from './types';
 
 import { RunExperience, XP_RULES } from './experience';
 import type { ExperienceEvent } from './experience';
@@ -38,6 +45,30 @@ import type { CombatAttributes } from '../character-stats';
 import type { EffectType } from '../status-effects';
 import { spawningSettings, wavePressure, offscreenPosition, viewportSize } from './spawning';
 import type { SpawnSettings, ViewportSize } from './spawning';
+import {
+  CAMPAIGN_BALANCE,
+  CampaignDirector,
+  INITIAL_RUN_STATE,
+  campaignSpawning,
+  eliteEnemyConfig,
+  eliteProfile,
+  getBossDefinition,
+  reduceRun,
+  getCampaignMap,
+  runClock,
+  scaleEnemyStats,
+} from '../campaign';
+import { BossController } from '../campaign';
+import type {
+  BossAbilityOutcome,
+  BossDefinition,
+  ScheduledEvent,
+  BossHost,
+  CampaignMap,
+  CampaignRunState,
+  RunInput,
+} from '../campaign';
+import type { DirectDamageObserver, DirectDamagePolicy } from '../enemy-ai';
 /** The sole world scheduler. All damage is resolved by existing modules, one boundary at a time. */
 export class GameplayWorld {
   readonly core: CombatCore;
@@ -64,6 +95,20 @@ export class GameplayWorld {
   private viewport: ViewportSize;
   private readonly spawnRandom: () => number;
   private readonly history: WorldEvent[] = [];
+  /** Task 09.1: enemies that received statuses during the current boundary. */
+  private readonly statusTargets = new Set<string>();
+  /** Task 09: this run's talent loadout (fixed for the run; allocation changes affect the next). */
+  readonly talents: TalentLoadout;
+  /** Task 08.5 run statistics: read-only consumer of every recorded event (new per world). */
+  private readonly runStats = new RunStats({
+    playerId: 'player',
+    attackSource: (attackId) => this.skills?.attackSource(attackId),
+    enemyType: (id) => this.enemyType(id),
+    playerHp: () => {
+      const p = this.core.getEntity(this.playerId);
+      return { hp: p.currentHp, maxHp: p.maxHp };
+    },
+  });
   private readonly enemyIds = new Set<string>();
   private adapter: WeaponStatusAdapter;
   private testingProtection = false;
@@ -74,42 +119,76 @@ export class GameplayWorld {
   private readonly baseOnHit: readonly EffectDefinition[];
   private onHitDefinitions: readonly EffectDefinition[];
   private facing: Point = Object.freeze({ x: 1, y: 0 });
+  /** Task 08: campaign map of this run (null = classic alpha) and its scaled enemy stats. */
+  readonly campaignMap: CampaignMap | null;
+  private readonly enemyStats: CombatAttributes;
+  private readonly director: CampaignDirector | null;
+  private bossEnemyId: string | null = null;
+  private readonly eliteEnemyIds: string[] = [];
+  /** Elite enemy id → profile (kept after death for results/rewards). */
+  private readonly eliteProfiles = new Map<string, 'melee' | 'ranged'>();
+  private campaignRun: CampaignRunState = INITIAL_RUN_STATE;
+  /** Task 08 boss ability controller (boundary module), created when the boss spawns. */
+  private bossController: BossController | null = null;
+  private bossDefinition: BossDefinition | null = null;
+  private bossDefeated = false;
+  /** Hostile direct-damage policies shared by EnemyAI and boss abilities (survival + test guard). */
+  private hostilePolicies!: {
+    readonly canResolveDirectDamage: DirectDamagePolicy;
+    readonly onDirectDamageResolved: DirectDamageObserver;
+  };
   constructor(
     readonly options: GameplayOptions,
     createCore: (random: RandomSource) => CombatCore = (random) => new CombatCore(random),
   ) {
     if (typeof createCore !== 'function') throw new TypeError('createCore must be a function.');
     this.character = calculateCharacterStats(options.characterClass, options.level ?? 1);
-    let seed = options.seed ?? 1337;
-    if (!Number.isSafeInteger(seed) || seed < 0) throw new RangeError('Invalid random seed.');
-    this.random = () => {
-      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-      return seed / 4294967296;
-    };
-    let skillSeed = ((options.seed ?? 1337) ^ 0x5bd1e995) >>> 0;
-    const skillRandom = () => {
-      skillSeed = (Math.imul(skillSeed, 1664525) + 1013904223) >>> 0;
-      return skillSeed / 4294967296;
-    };
-    let spawnSeed = (options.seed ?? 1337) ^ 0x9e3779b9;
-    this.spawnRandom = () => {
-      spawnSeed = (Math.imul(spawnSeed, 1664525) + 1013904223) >>> 0;
-      return spawnSeed / 4294967296;
-    };
-    this.spawnSettings = spawningSettings(options.spawning);
+    // Task 08.5 §4.1: all gameplay randomness comes from the seeded run streams.
+    const rng = createRunRandom(options.seed ?? DEFAULT_SEED);
+    this.random = rng.combat;
+    const skillRandom = rng.skills;
+    this.spawnRandom = rng.spawn;
+    this.campaignMap = options.campaign ? getCampaignMap(options.campaign.mapId) : null;
+    this.director = this.campaignMap ? new CampaignDirector(this.campaignMap) : null;
+    this.enemyStats = this.campaignMap
+      ? scaleEnemyStats(ALPHA_ENEMY_STATS, this.campaignMap.difficulty)
+      : ALPHA_ENEMY_STATS;
+    // Campaign scaling goes through the existing spawner; explicit options still win (tests/QA).
+    this.spawnSettings = spawningSettings(
+      this.campaignMap
+        ? {
+            ...campaignSpawning(this.campaignMap, spawningSettings(), ALPHA.enemyCap),
+            ...options.spawning,
+          }
+        : options.spawning,
+    );
     this.viewport = viewportSize(options.viewport ?? { width: 1280, height: 720 });
     this.nextSpawnAt = this.spawnSettings.interval;
+    // Task 09: validated talent loadout for this class/level (inert while the catalog is not
+    // approved). Its stat layer is composed with the permanent stats once, caps included.
+    this.talents = talentLoadout(
+      options.characterClass,
+      options.level ?? 1,
+      options.talents?.ranks ?? {},
+      options.talents?.config,
+    );
+    const startStats = composeRunStats(this.character.primaryAttributes, this.talents.modifiers);
     this.core = createCore(this.random);
     this.core.addEntity({
       id: this.playerId,
       affiliation: 'player',
-      stats: this.character.combatAttributes,
+      stats: startStats,
     });
     this.survival = new PlayerSurvival(this.core, this.playerId);
     const emit = (events: readonly SurvivalEvent[]) => this.record('survival', events);
     const statusPolicies = createStatusSurvivalPolicies(this.survival, emit);
     this.statuses = new StatusEffects(this.core, {
       random: this.random,
+      // Task 09.1: talent «DoT damage taken» multipliers on enemies (1 when none apply).
+      damageMultiplier: (group) =>
+        group.targetId === this.playerId || !this.skills
+          ? 1
+          : this.skills.talentCombat.dotTakenMultiplier(group.targetId),
       ...statusPolicies,
       canDamage: (ctx) =>
         !(this.testingProtection && ctx.group.targetId === this.playerId) &&
@@ -119,24 +198,42 @@ export class GameplayWorld {
         statusPolicies.canApply!(ctx),
     });
     const enemyPolicies = createEnemySurvivalPolicies(this.survival, emit);
+    this.hostilePolicies = Object.freeze({
+      canResolveDirectDamage: (ctx) =>
+        !this.testingProtection && enemyPolicies.canResolveDirectDamage!(ctx),
+      onDirectDamageResolved: enemyPolicies.onDirectDamageResolved!,
+    });
     this.enemies = new EnemyAI(this.core, {
       playerId: this.playerId,
       movementStep: 1 / 30,
       separation: { cellSize: 64, padding: 8, strength: 0.8 },
-      ...enemyPolicies,
-      canResolveDirectDamage: (ctx) =>
-        !this.testingProtection && enemyPolicies.canResolveDirectDamage!(ctx),
+      ...this.hostilePolicies,
+      // Task 09.1 G12: talent-only reduction of enemy direct hits on the player.
+      playerDamageMultiplier: () => this.skills?.talentCombat.playerDamageTakenMultiplier() ?? 1,
     });
     this.weapons = new WeaponAttacks(this.core, {
       damageModifier: (context) => this.skills.damageModifier(context),
+      // Task 09.1: talent crit-chance bonus for the player's weapon (category, at strike start).
+      attackModifier: (context) =>
+        context.entityId === this.playerId ? this.skills.weaponAttackBonus(context.weaponId) : {},
     });
     this.weapons.setBody(this.playerId, this.body);
-    const weapon = ALPHA_WEAPONS[options.characterClass];
+    // Task 09.1: a talent may extend the basic weapon's range for this run (Archer 2.1).
+    const rangeFactor = talentWeaponRangeFactor(
+      options.characterClass,
+      this.talents.ranks,
+      options.talents?.config,
+    );
+    const baseWeapon = ALPHA_WEAPONS[options.characterClass];
+    const weapon =
+      rangeFactor === 1
+        ? baseWeapon
+        : { ...baseWeapon, attackRange: baseWeapon.attackRange * rangeFactor };
     this.weapons.equipWeapon({
       entityId: this.playerId,
       characterClass: options.characterClass,
       weapon,
-      attackSpeedPercent: this.character.combatAttributes.attackSpeed,
+      attackSpeedPercent: startStats.attackSpeed,
       fallbackDirection: { x: 1, y: 0 },
     });
     this.run = new RunSkills(options.characterClass, skillRandom);
@@ -150,7 +247,15 @@ export class GameplayWorld {
         playerId: this.playerId,
         characterClass: options.characterClass,
         primary: this.character.primaryAttributes,
+        talentModifiers: this.talents.modifiers,
+        talents: {
+          ranks: this.talents.ranks,
+          ...(options.talents?.config ? { config: options.talents.config } : {}),
+          random: rng.talents,
+        },
         basicWeaponId: weapon.id,
+        playerMoving: () =>
+          Math.hypot(world.input.x, world.input.y) > 0 && world.survival.getState().canPlayerAct,
         activationStep: ALPHA.controlStep,
         playerBody: () => world.body,
         facing: () => world.facing,
@@ -159,10 +264,36 @@ export class GameplayWorld {
         recordStatus: (events) => world.record('status', events),
         recordSkill: (events) => world.record('skill', events),
         statsChanged: (stats) => world.applyStats(stats),
+        controlLimits: (targetId) =>
+          targetId === world.bossEnemyId && world.bossDefinition
+            ? world.bossDefinition.control
+            : null,
       },
       this.run,
       skillRandom,
     );
+    // Task 09.1 C1: a talent may add a real automatic slot (Mage superpower) for this run.
+    if (this.skills.talentCombat.extraAutoSlots() > 0) this.run.enableExtraAutoSlot();
+    // Task 09.1 G6/G7: the Warrior superpower's off-hand sword (own timer from run start).
+    const offhand = this.skills.talentCombat.offhand();
+    if (offhand)
+      this.weapons.equipSecondaryWeapon({
+        entityId: this.playerId,
+        characterClass: options.characterClass,
+        weapon: {
+          id: OFFHAND_WEAPON.id,
+          category: 'sword',
+          allowedClass: 'warrior',
+          damageType: 'physical',
+          pattern: 'melee_arc',
+          damageCoefficient: offhand.coefficient,
+          baseAttackInterval: OFFHAND_WEAPON.baseAttackInterval / (1 + offhand.speed / 100),
+          attackRange: OFFHAND_WEAPON.attackRange,
+          arcDegrees: OFFHAND_WEAPON.arcDegrees,
+        },
+        attackSpeedPercent: startStats.attackSpeed,
+        fallbackDirection: { x: 1, y: 0 },
+      });
     this.baseOnHit = Object.freeze([...(options.onHit ?? defaultOnHit(options.characterClass))]);
     this.onHitDefinitions = this.baseOnHit;
     this.adapter = this.makeAdapter(this.baseOnHit);
@@ -181,7 +312,11 @@ export class GameplayWorld {
   }
   get paused() {
     return (
-      this.manualPause || this.survival.getState().requiresWorldPause || this.run.pendingChoices > 0
+      this.manualPause ||
+      this.survival.getState().requiresWorldPause ||
+      this.run.pendingChoices > 0 ||
+      this.run.pendingEnhancedChoice !== null ||
+      this.campaignRun.status !== 'active'
     );
   }
   /** Effective run stats: permanent Character Stats + passives/buffs, capped centrally. */
@@ -208,9 +343,21 @@ export class GameplayWorld {
     this.manualPause = paused;
     this.setMovement(0, 0);
   }
+  private talentSnapshotCache: GameplaySnapshot['talents'] | null = null;
+  private get talentSnapshot(): GameplaySnapshot['talents'] {
+    return (this.talentSnapshotCache ??= Object.freeze({
+      ranks: this.talents.ranks,
+      pointsSpent: this.talents.pointsSpent,
+      activeRanks: this.talents.activeRanks,
+      superpower: this.talents.superpower,
+    }));
+  }
   getSnapshot(): GameplaySnapshot {
     return Object.freeze({
       time: this.clock,
+      seed: this.options.seed ?? DEFAULT_SEED,
+      talents: this.talentSnapshot,
+      runStats: this.runStats.snapshot(this.clock),
       paused: this.paused,
       player: this.core.getEntity(this.playerId),
       playerBody: this.body,
@@ -218,6 +365,13 @@ export class GameplayWorld {
       stats: this.skills.effectiveStats,
       skills: this.run.getState(),
       skillCombat: this.skills.snapshot(),
+      talentEntities: Object.freeze(
+        this.skills.talents
+          .list()
+          .map((e) =>
+            Object.freeze({ id: e.id, kind: e.kind, x: e.x, y: e.y, expiresAt: e.expiresAt }),
+          ),
+      ),
       survival: this.survival.getState(),
       kills: this.kills,
       progression: this.experience.getState(),
@@ -238,12 +392,64 @@ export class GameplayWorld {
       statuses: this.statuses.getGroups(),
       weapon: this.weapons.getWeaponState(this.playerId),
       movement: this.input,
+      campaign: this.campaignSnapshot(),
+    });
+  }
+  private campaignSnapshot(): CampaignSnapshot | null {
+    const map = this.campaignMap;
+    if (!map) return null;
+    const clock = runClock(map, this.clock);
+    return Object.freeze({
+      mapId: map.id,
+      mapName: map.name,
+      duration: clock.duration,
+      elapsed: clock.elapsed,
+      remaining: clock.remaining,
+      durationReached: clock.durationReached || this.campaignRun.durationReached,
+      nextEvent: (() => {
+        const next = this.director!.peek();
+        return next ? Object.freeze({ id: next.id, kind: next.kind, time: next.time }) : null;
+      })(),
+      firedEvents: this.director!.firedIds(),
+      firedLog: this.director!.firedLog(),
+      bossTime: CAMPAIGN_BALANCE.boss.spawnTime,
+      bossEnemyId: this.bossEnemyId,
+      eliteEnemyIds: Object.freeze([...this.eliteEnemyIds]),
+      elites: Object.freeze(
+        this.eliteEnemyIds.map((enemyId) => {
+          const profile = eliteProfile(this.eliteProfiles.get(enemyId)!);
+          return Object.freeze({ enemyId, profile: profile.id, name: profile.name });
+        }),
+      ),
+      runId: this.options.campaign?.runId ?? null,
+      status: this.campaignRun.status,
+      bossKilled: this.campaignRun.bossKilled,
+      eliteKills: this.campaignRun.eliteKills,
+      resolvedAt: this.campaignRun.resolvedAt,
+      boss: this.bossEnemyId
+        ? Object.freeze({
+            enemyId: this.bossEnemyId,
+            bossId: map.bossId,
+            name: map.bossName,
+            hp: this.core.getEntity(this.bossEnemyId).currentHp,
+            maxHp: this.core.getEntity(this.bossEnemyId).maxHp,
+            alive: this.core.getEntity(this.bossEnemyId).alive,
+          })
+        : null,
+      bossCast: this.bossController?.currentCast() ?? null,
+      bossEffects: this.bossController?.activeEffects() ?? Object.freeze([]),
+      stage: Object.freeze({
+        id: clock.stage.id,
+        name: clock.stage.name,
+        index: clock.stage.index,
+      }),
     });
   }
   /** Never carry unconsumed frame time across death or manual pause. */
   update(delta: number): void {
     if (!Number.isFinite(delta) || delta < 0 || !Number.isFinite(this.clock + delta))
       throw new RangeError('delta must be finite and non-negative.');
+    this.cleanupTalentEntities(); // also while frozen (death, revival choice, resolved run)
     if (this.paused) return;
     let end = this.clock;
     if (delta > 0) {
@@ -267,9 +473,21 @@ export class GameplayWorld {
       else if (next.kind === 'enemy') this.consumeEnemies(this.enemies.resolveBoundary());
       else if (next.kind === 'spawn') this.spawnWave();
       else if (next.kind === 'skill') this.skills.resolveBoundary();
+      else if (next.kind === 'campaign') this.resolveCampaignEvent();
+      else if (next.kind === 'boss') this.resolveBossAbility();
+      // Task 09.1: status applications of this boundary (Rogue Deadly Synthesis check).
+      if (this.statusTargets.size) {
+        const targets = [...this.statusTargets];
+        this.statusTargets.clear();
+        this.skills.talentCombat.onStatusesApplied(targets);
+      }
       this.skills.endStep();
+      this.cleanupTalentEntities();
       if (
-        (this.survival.getState().requiresWorldPause || this.run.pendingChoices > 0) &&
+        (this.survival.getState().requiresWorldPause ||
+          this.run.pendingChoices > 0 ||
+          this.run.pendingEnhancedChoice !== null ||
+          this.campaignRun.status !== 'active') &&
         pauseAt === null
       ) {
         pauseAt = this.clock;
@@ -278,10 +496,22 @@ export class GameplayWorld {
       }
     }
   }
+  /** Task 09.1: talent entities never outlive the player's life or the run. */
+  private cleanupTalentEntities(): void {
+    if (
+      !this.core.getEntity(this.playerId).alive ||
+      this.survival.getState().runState === 'ended' ||
+      this.campaignRun.status !== 'active'
+    )
+      this.skills.talents.clearEntities();
+  }
   decide(decision: RevivalDecision): void {
     const result = this.survival.decide(decision, this.statuses);
     this.record('survival', result.events);
-    if (this.survival.getState().runState === 'ended') this.run.clearPending();
+    if (this.survival.getState().runState === 'ended') {
+      this.run.clearPending();
+      this.syncDefeat();
+    }
     if (result.revival) this.forwardCombat(result.revival.events);
     if (result.removedEffects) this.record('status', result.removedEffects);
     this.manualPause = false;
@@ -316,13 +546,22 @@ export class GameplayWorld {
       profile,
     );
   }
+  /** Task 08.5 stats: type of a registered enemy (null = not a registered enemy). */
+  private enemyType(id: string): EnemyType | null {
+    if (!this.enemyIds.has(id)) return null;
+    if (id === this.bossEnemyId) return 'boss';
+    const elite = this.eliteProfiles.get(id);
+    if (elite) return elite === 'melee' ? 'elite-melee' : 'elite-ranged';
+    return this.enemies.getEnemy(id).config.behavior;
+  }
   private registerEnemy(
     kind: 'melee' | 'ranged',
     position: Point,
     profile: EnemyConfig = ALPHA_ENEMIES[kind],
+    stats: CombatAttributes = this.enemyStats,
   ): string {
     const id = `enemy-${++this.enemySequence}`;
-    this.core.addEntity({ id, affiliation: 'enemy', stats: ALPHA_ENEMY_STATS });
+    this.core.addEntity({ id, affiliation: 'enemy', stats });
     this.enemies.registerEnemy({ entityId: id, config: profile, position });
     this.enemyIds.add(id);
     this.prepare();
@@ -404,10 +643,21 @@ export class GameplayWorld {
   grantTestSkill(skillId: string, rank = 1): void {
     if (typeof skillId !== 'string') throw new TypeError('skillId must be a string.');
     const unlockedBefore = new Set(this.skills.synergies.unlockedIds());
-    this.skills.applyChoice(this.run.grantForTesting(skillId, rank));
-    this.record('skill', [Object.freeze({ type: 'skill-chosen', skillId, rank })]);
+    const granted = this.run.grantWithEvents(skillId, rank);
+    this.skills.applyChoice(granted.result);
+    this.record('skill', [
+      Object.freeze({ type: 'skill-chosen', skillId, rank }),
+      ...granted.events,
+    ]);
     this.recordSynergyUnlocks(unlockedBefore, skillId);
     this.rebuildOnHit();
+    this.prepare();
+  }
+  /** Task 09.1 C1: the one-time choice of the enhanced skill among the five actives. */
+  chooseEnhancedSkill(skillId: string): void {
+    if (typeof skillId !== 'string') throw new TypeError('skillId must be a string.');
+    if (this.survival.getState().runState === 'ended') throw new Error('The run has ended.');
+    this.record('skill', this.run.chooseEnhanced(skillId));
     this.prepare();
   }
   /** Spend one of the run's three rerolls on the current offer; never grants an extra choice. */
@@ -449,7 +699,7 @@ export class GameplayWorld {
       resistance: stats.resistance,
       criticalChance: stats.criticalChance,
       criticalDamage: stats.criticalDamage,
-      dodgeChance: player.dodgeChance,
+      dodgeChance: stats.dodgeChance,
     };
     // Only Core-owned fields go to Core; attack/movement speed stay with Weapons/World.
     if ((Object.keys(core) as (keyof typeof core)[]).some((k) => core[k] !== player[k]))
@@ -507,6 +757,253 @@ export class GameplayWorld {
         nextSpawnAt: this.nextSpawnAt,
       }),
     ]);
+  }
+  private bossActive(): boolean {
+    return (
+      !!this.bossController &&
+      !!this.bossEnemyId &&
+      this.campaignRun.status === 'active' &&
+      this.core.getEntity(this.bossEnemyId).alive
+    );
+  }
+  private resolveBossAbility() {
+    if (!this.bossActive()) return;
+    const outcomes = this.bossController!.resolve(this.clock, this.bossHost);
+    this.record('campaign', outcomes as readonly BossAbilityOutcome[]);
+  }
+  /** World implementation of the boss ability host: Core damage, survival policies, EnemyAI. */
+  private readonly bossHost: BossHost = {
+    bossPosition: () => this.enemies.getEnemy(this.bossEnemyId!).position,
+    bossRadius: () => this.enemies.getEnemy(this.bossEnemyId!).config.radius,
+    playerBody: () => this.body,
+    strikePlayer: (_abilityId, coefficient) => {
+      const boss = this.bossEnemyId!;
+      const context = {
+        time: this.clock,
+        sourceId: boss,
+        targetId: this.playerId,
+        kind: 'contact' as const,
+      };
+      if (!this.core.getEntity(this.playerId).alive) return false;
+      if (!this.hostilePolicies.canResolveDirectDamage({ ...context, attack: null })) return false;
+      const attack = this.core.createAttack({
+        attackerId: boss,
+        damageType: 'physical',
+        coefficient,
+      });
+      const result = this.core.resolveAttack(attack, this.playerId);
+      this.hostilePolicies.onDirectDamageResolved({ ...context, attack }, result);
+      this.forwardCombat(result.events);
+      return result.status === 'hit';
+    },
+    launchRadial: (_abilityId, count, coefficient, speed) => {
+      if (!this.core.getEntity(this.playerId).alive) return 0;
+      const boss = this.enemies.getEnemy(this.bossEnemyId!);
+      const events = [];
+      for (let i = 0; i < count; i++) {
+        const angle = (i * Math.PI * 2) / count;
+        const direction = { x: Math.cos(angle), y: Math.sin(angle) };
+        events.push(
+          this.enemies.launchProjectile({
+            sourceId: boss.entityId,
+            origin: boss.position,
+            target: {
+              x: boss.position.x + direction.x * 200,
+              y: boss.position.y + direction.y * 200,
+              radius: 1,
+            },
+            damageType: 'magical',
+            coefficient,
+            projectile: { speed, radius: 7, maxTravelDistance: 650 },
+            fallbackDirection: direction,
+          }),
+        );
+      }
+      this.record('enemy', events);
+      return events.length;
+    },
+    setSpeedBoost: (multiplier) => {
+      if (this.bossEnemyId && this.core.getEntity(this.bossEnemyId).alive)
+        this.enemies.setSpeedBoost(this.bossEnemyId, multiplier);
+    },
+    summon: (_abilityId, count, profile) => {
+      const boss = this.enemies.getEnemy(this.bossEnemyId!);
+      let spawned = 0;
+      for (let i = 0; i < count; i++) {
+        if (this.enemyIds.size >= this.spawnSettings.maxActive) break; // never touches reserved slots
+        const angle = (i * Math.PI * 2) / count;
+        const distance = boss.config.radius + 40;
+        this.registerEnemy(profile, {
+          x: this.clamp(boss.position.x + Math.cos(angle) * distance, 20),
+          y: this.clamp(boss.position.y + Math.sin(angle) * distance, 20),
+        });
+        spawned++;
+      }
+      return spawned;
+    },
+  };
+  /** Fires exactly one due scheduled event (state-based; see CampaignDirector). */
+  private resolveCampaignEvent() {
+    const event = this.director?.fire(this.clock);
+    if (event) this.applyCampaignEvent(event);
+  }
+  private applyCampaignEvent(event: ScheduledEvent) {
+    const map = this.campaignMap;
+    if (!map) return;
+    if (event.kind === 'elite') {
+      const { hpMultiplier, damageMultiplier } = CAMPAIGN_BALANCE.elite;
+      const enemyId = this.spawnScheduled(
+        event.profile,
+        hpMultiplier,
+        damageMultiplier,
+        eliteEnemyConfig(ALPHA_ENEMIES[event.profile], event.profile),
+      );
+      this.eliteEnemyIds.push(enemyId);
+      this.eliteProfiles.set(enemyId, event.profile);
+      this.record('campaign', [
+        Object.freeze({
+          type: 'elite-spawned',
+          eventId: event.id,
+          enemyId,
+          profile: event.profile,
+        }),
+      ]);
+    } else if (event.kind === 'boss') {
+      const def = getBossDefinition(map.bossId);
+      const base = ALPHA_ENEMIES[def.behavior];
+      const enemyId = this.spawnScheduled(
+        def.behavior,
+        def.hpMultiplier,
+        def.damageMultiplier,
+        Object.freeze({
+          ...base,
+          radius: base.radius * def.radiusScale,
+          movementSpeed: base.movementSpeed * def.speedScale,
+        }),
+      );
+      this.bossEnemyId = enemyId;
+      this.bossDefinition = def;
+      this.bossController = new BossController(def.abilities, this.clock);
+      this.record('campaign', [
+        Object.freeze({
+          type: 'boss-spawned',
+          eventId: 'boss',
+          enemyId,
+          bossId: map.bossId,
+          bossName: map.bossName,
+        }),
+      ]);
+    } else {
+      this.record('campaign', [Object.freeze({ type: 'duration-reached', eventId: 'end' })]);
+      this.campaignInput({ type: 'duration-reached', time: this.clock });
+    }
+  }
+  /** Feeds the pure run state machine; records `run-resolved` exactly once. */
+  private campaignInput(input: RunInput) {
+    if (!this.campaignMap) return;
+    const { state, resolved } = reduceRun(this.campaignRun, input);
+    this.campaignRun = state;
+    if (resolved) {
+      this.input = Object.freeze({ x: 0, y: 0 });
+      this.record('campaign', [
+        Object.freeze({
+          type: 'run-resolved',
+          outcome: resolved,
+          runId: this.options.campaign?.runId ?? null,
+          elapsed: Math.min(this.clock, this.campaignMap.durationSeconds),
+        }),
+      ]);
+    }
+  }
+  // ── Task 08 debug helpers (reachable only through the DEV/QA testing controller) ──
+  /** Fires a pending scheduled campaign event now ('boss', 'elite-N', 'end'); exactly once. */
+  debugFireCampaignEvent(id: string): boolean {
+    if (!this.director || this.campaignRun.status !== 'active') return false;
+    const event = this.director.fireNow(id, this.clock);
+    if (!event) return false;
+    this.applyCampaignEvent(event);
+    this.prepare();
+    return true;
+  }
+  /** Lowers the boss to `fraction` of its max HP through Combat Core (never heals). */
+  debugSetBossHpFraction(fraction: number): boolean {
+    if (!Number.isFinite(fraction) || fraction < 0 || fraction > 1)
+      throw new RangeError('fraction must be 0–1.');
+    const id = this.bossEnemyId;
+    if (!id || !this.core.getEntity(id).alive) return false;
+    const boss = this.core.getEntity(id);
+    const loss = boss.currentHp - boss.maxHp * fraction;
+    if (loss <= 0) return true;
+    // Core applies Resistance to periodic damage: pre-scale so the boss lands at the target HP.
+    const raw = fraction === 0 ? Number.MAX_SAFE_INTEGER : (loss * (100 + boss.resistance)) / 100;
+    this.forwardCombat(
+      this.core.applyPeriodicDamage({
+        operationId: `debug-boss-${this.clock}`,
+        targetId: id,
+        effectId: 'debug',
+        rawDamage: raw,
+        sources: [{ applicationId: 'debug-boss', sourceId: this.playerId, rawDamage: raw }],
+      }).events,
+    );
+    return true;
+  }
+  /**
+   * Forces a campaign outcome through the normal pipeline: victory = the boss dies (spawned first
+   * if needed) and the duration is marked reached; defeat = the player dies and the run is
+   * finished without revival. The run then resolves exactly once as usual.
+   */
+  debugForceOutcome(outcome: 'victory' | 'defeat'): void {
+    if (!this.campaignMap || this.campaignRun.status !== 'active') return;
+    if (outcome === 'defeat') {
+      if (this.core.getEntity(this.playerId).alive) this.setPlayerHp(0);
+      if (this.survival.getState().runState === 'awaiting-revival-choice')
+        this.decide('finish-run');
+      return;
+    }
+    if (!this.bossEnemyId) this.debugFireCampaignEvent('boss');
+    this.debugSetBossHpFraction(0);
+    if (this.campaignRun.status === 'active' && !this.campaignRun.durationReached) {
+      this.director?.fireNow('end', this.clock);
+      this.record('campaign', [Object.freeze({ type: 'duration-reached', eventId: 'end' })]);
+      this.campaignInput({ type: 'duration-reached', time: this.clock });
+    }
+  }
+  /** Quit/reload during a campaign run: resolves as abandoned (no rewards); false if not active. */
+  abandonRun(): boolean {
+    if (!this.campaignMap || this.campaignRun.status !== 'active') return false;
+    this.campaignInput({ type: 'abandon', time: this.clock });
+    return true;
+  }
+  private syncDefeat() {
+    if (this.campaignMap && this.survival.getState().runState === 'ended')
+      this.campaignInput({ type: 'player-defeated', time: this.clock });
+  }
+  /**
+   * Scheduled elite/boss spawn: off-screen like waves (spawn RNG stream), stats = map difficulty ×
+   * extra multipliers. Reserved slots guarantee the 120-enemy cap is never exceeded.
+   */
+  private spawnScheduled(
+    kind: 'melee' | 'ranged',
+    hp: number,
+    damage: number,
+    profile: EnemyConfig = ALPHA_ENEMIES[kind],
+  ): string {
+    const position = offscreenPosition(
+      this.body,
+      this.viewport,
+      profile.radius,
+      this.spawnSettings,
+      this.spawnRandom,
+    ) ?? {
+      x: this.clamp(this.body.x + 420, 20),
+      y: this.clamp(this.body.y, 20),
+    };
+    return this.registerEnemy(
+      kind,
+      position,
+      profile,
+      scaleEnemyStats(this.enemyStats, { hp, damage }),
+    );
   }
   private spawnWave() {
     const pressure = wavePressure(this.clock, this.spawnSettings);
@@ -575,27 +1072,60 @@ export class GameplayWorld {
     this.testingProtection = enabled;
   }
   clearEnemies(): void {
-    for (const id of this.enemyIds) {
+    this.killEnemies([...this.enemyIds], 'clear', 'test-clear');
+  }
+  /**
+   * Debug (Task 08.5 §1.2): kills every live enemy overlapping the visible area through Combat
+   * Core, so deaths, crystals, kill counts, elite/boss kills and campaign events are the normal
+   * ones. `view` is the camera's world rectangle; default = the player-centred viewport (the
+   * same view off-screen spawning uses). Returns the number of enemies killed.
+   */
+  debugKillInView(
+    view?: Readonly<{ x: number; y: number; width: number; height: number }>,
+  ): number {
+    const v = view ?? {
+      x: this.body.x - this.viewport.width / 2,
+      y: this.body.y - this.viewport.height / 2,
+      width: this.viewport.width,
+      height: this.viewport.height,
+    };
+    if (![v.x, v.y, v.width, v.height].every(Number.isFinite) || v.width <= 0 || v.height <= 0)
+      throw new RangeError('View must be a finite rectangle with a positive size.');
+    const ids = [...this.enemyIds].filter((id) => {
+      const enemy = this.enemies.getEnemy(id);
+      const r = enemy.config.radius;
+      const { x, y } = enemy.position;
+      return x + r >= v.x && x - r <= v.x + v.width && y + r >= v.y && y - r <= v.y + v.height;
+    });
+    return this.killEnemies(ids, 'debug-kill', 'debug-kill');
+  }
+  private killEnemies(ids: readonly string[], operation: string, effectId: string): number {
+    let killed = 0;
+    for (const id of ids) {
       if (this.core.getEntity(id).alive) {
         const raw = Number.MAX_SAFE_INTEGER;
         const result = this.core.applyPeriodicDamage({
-          operationId: `clear-${id}`,
+          operationId: `${operation}-${id}`,
           targetId: id,
-          effectId: 'test-clear',
+          effectId,
           rawDamage: raw,
-          sources: [{ applicationId: 'test-clear', sourceId: this.playerId, rawDamage: raw }],
+          sources: [{ applicationId: effectId, sourceId: this.playerId, rawDamage: raw }],
         });
         this.forwardCombat(result.events);
+        if (!this.core.getEntity(id).alive) killed++;
       }
     }
     this.prepare();
+    return killed;
   }
   private clamp(value: number, radius: number) {
     return Math.max(radius, Math.min(ALPHA.arenaSize - radius, value));
   }
   private makeAdapter(definitions: readonly EffectDefinition[]) {
     // Player basic-weapon effects receive run modifiers (Toxic Mastery, Lingering, Elemental Mastery).
-    const player = this.skills ? definitions.map((d) => this.skills.playerEffect(d)) : definitions;
+    const player = this.skills
+      ? definitions.map((d) => this.skills.playerEffect(d, { basic: true }))
+      : definitions;
     return this.createStatusAdapter({
       [ALPHA_WEAPONS[this.character.characterClass].id]: player,
       'alpha-enemy': [
@@ -636,7 +1166,16 @@ export class GameplayWorld {
       const candidates: {
         time: number;
         rank: number;
-        kind: 'control' | 'weapon' | 'status' | 'enemy' | 'spawn' | 'skill' | 'advance';
+        kind:
+          | 'control'
+          | 'weapon'
+          | 'status'
+          | 'enemy'
+          | 'spawn'
+          | 'skill'
+          | 'boss'
+          | 'campaign'
+          | 'advance';
       }[] = [];
       const add = (time: number, rank: number, kind: (typeof candidates)[number]['kind']) => {
         if (time < horizon || sameInstant(time, horizon))
@@ -647,7 +1186,12 @@ export class GameplayWorld {
       const w = this.weapons.peekBoundary(horizon),
         s = this.statuses.peekBoundary(horizon),
         e = this.enemies.peekBoundary(horizon);
-      if (this.spawnSettings.enabled && this.survival.getState().canPlayerAct)
+      // Task 08: no new waves at or after the campaign duration (existing enemies keep acting).
+      if (
+        this.spawnSettings.enabled &&
+        this.survival.getState().canPlayerAct &&
+        (!this.campaignMap || this.nextSpawnAt < this.campaignMap.durationSeconds)
+      )
         add(this.nextSpawnAt, 9, 'spawn');
       if (w) add(w.time, w.priority <= 1 ? 2 : 5, 'weapon');
       if (s) add(s.time, s.priority === 0 ? 3 : 8, 'status');
@@ -655,6 +1199,14 @@ export class GameplayWorld {
       // Task 07: skill actions after player strikes, before enemy attacks; expirations after statuses.
       const k = this.skills.peekBoundary(horizon);
       if (k) add(k.time, k.priority === 0 ? 5.5 : 8.5, 'skill');
+      // Task 08: boss ability actions rank with enemy attacks (after skill actions and enemy attacks).
+      if (this.bossActive() && this.survival.getState().canPlayerAct) {
+        const bossAt = this.bossController!.peek();
+        if (bossAt !== null) add(bossAt, 6.5, 'boss');
+      }
+      // Task 08: scheduled elite/boss/end events resolve last at equal time (after reinforcements).
+      const scheduled = this.director?.peek();
+      if (scheduled) add(scheduled.time, 9.5, 'campaign');
       const next = candidates.sort((a, b) =>
         sameInstant(a.time, b.time) ? a.rank - b.rank : a.time - b.time,
       )[0];
@@ -694,8 +1246,12 @@ export class GameplayWorld {
         this.record('status', this.adapter.consumeImpact(event).events);
         this.forwardCombat(event.result.events);
         if (pre) this.skills.handleImpact(event, pre);
-      } else if (event.type === 'attack-started') this.skills.onBasicAttack(event);
-      else if (event.type === 'projectile-expired') this.skills.handleProjectileExpired(event);
+      } else if (event.type === 'attack-started') {
+        // Task 09.1: off-hand damage is its own talent source in run stats.
+        if (event.weaponId === OFFHAND_WEAPON.id)
+          this.skills.tagTalentAttack(event.attack.id, 'warrior.b3.n01');
+        this.skills.onBasicAttack(event);
+      } else if (event.type === 'projectile-expired') this.skills.handleProjectileExpired(event);
   }
   private consumeEnemies(events: readonly EnemyEvent[]) {
     this.record('enemy', events);
@@ -717,6 +1273,8 @@ export class GameplayWorld {
           }).events,
         );
         this.forwardCombat(event.result.events);
+        // Task 09.1: a dodged enemy direct attack (counterattack, shadow copy, Elusive).
+        if (event.result.status === 'dodged') this.skills.onPlayerDodged(attack.attackerId);
       }
   }
   private consumeStatuses(events: readonly StatusEvent[]) {
@@ -744,8 +1302,26 @@ export class GameplayWorld {
   }
   private forwardCombat(events: readonly CombatEvent[]) {
     this.record('combat', events);
+    // Task 09.1: player HP changes feed HP-threshold talents (after Core resolved them).
+    if (this.skills)
+      for (const event of events)
+        if (
+          ((event.type === 'damage' || event.type === 'periodic-damage') &&
+            event.targetId === this.playerId) ||
+          ((event.type === 'healing' ||
+            event.type === 'revived' ||
+            event.type === 'max-hp-changed') &&
+            event.entityId === this.playerId)
+        )
+          this.skills.onPlayerHpChanged(
+            event.type === 'damage' || event.type === 'periodic-damage',
+          );
     for (const event of events)
-      if (
+      if (event.type === 'damage' && event.targetId === this.playerId) {
+        // Task 09.1: real direct damage taken (after mitigation/barrier), e.g. Mage Protective Seal.
+        if (event.appliedDamage > 0 && this.skills)
+          this.skills.onPlayerDirectDamage(event.sourceId);
+      } else if (
         event.type === 'death' &&
         event.entityId !== this.playerId &&
         this.enemyIds.has(event.entityId)
@@ -760,8 +1336,14 @@ export class GameplayWorld {
         ]);
         if (contributors.includes(this.playerId)) {
           this.kills++;
+          const elite = this.eliteProfiles.get(event.entityId);
+          // Task 08: elites drop their normal crystal plus the profile's extra run XP.
           const xp =
-            enemy.config.behavior === 'melee' ? XP_RULES.meleeReward : XP_RULES.rangedReward;
+            (enemy.config.behavior === 'melee' ? XP_RULES.meleeReward : XP_RULES.rangedReward) +
+            (elite ? eliteProfile(elite).extraXp : 0) +
+            (event.entityId === this.bossEnemyId && this.bossDefinition
+              ? this.bossDefinition.xpReward
+              : 0);
           const crystal = this.experience.drop(enemy.position, xp);
           this.record('progression', [
             Object.freeze({
@@ -778,6 +1360,19 @@ export class GameplayWorld {
           ]);
         }
         this.skills.noteDeath(event.entityId, enemy.position);
+        if (event.entityId === this.bossEnemyId && !this.bossDefeated) {
+          this.bossDefeated = true;
+          this.record('campaign', [
+            Object.freeze({
+              type: 'boss-defeated',
+              enemyId: event.entityId,
+              bossId: this.campaignMap!.bossId,
+              bossName: this.campaignMap!.bossName,
+            }),
+          ]);
+          this.campaignInput({ type: 'boss-killed', time: this.clock });
+        } else if (this.eliteEnemyIds.includes(event.entityId))
+          this.campaignInput({ type: 'elite-killed', time: this.clock });
         this.enemyIds.delete(event.entityId);
         this.enemies.unregisterEnemy(event.entityId);
         this.weapons.removeBody(event.entityId);
@@ -788,14 +1383,29 @@ export class GameplayWorld {
     if (
       events.some((e) => e.type === 'death' && e.entityId === this.playerId) &&
       this.survival.getState().runState === 'ended'
-    )
+    ) {
       this.run.clearPending();
+      this.syncDefeat();
+    }
   }
   protected record(channel: WorldEvent['channel'], events: readonly WorldEvent['event'][]) {
-    for (const event of events)
-      this.history.push(
-        Object.freeze({ sequence: ++this.eventSequence, time: this.clock, channel, event }),
-      );
+    for (const event of events) {
+      const entry: WorldEvent = Object.freeze({
+        sequence: ++this.eventSequence,
+        time: this.clock,
+        channel,
+        event,
+      });
+      this.history.push(entry);
+      if (
+        channel === 'status' &&
+        event.type === 'status-applied' &&
+        event.group.targetId !== this.playerId
+      )
+        this.statusTargets.add(event.group.targetId);
+      if (channel === 'combat' || channel === 'weapon' || channel === 'progression')
+        this.runStats.consume(entry);
+    }
     if (this.history.length > ALPHA.eventHistoryLimit)
       this.history.splice(0, this.history.length - ALPHA.eventHistoryLimit);
   }

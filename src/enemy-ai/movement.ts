@@ -15,10 +15,14 @@ export interface EnemyActor {
   /** Task 07 crowd control: 1 = unaffected; 0 while stunned. Changed only at boundaries. */
   speedFactor?: number;
   stunned?: boolean;
+  /** Task 08 boss abilities (charge, speed buff): multiplier ≥ 1, independent of Slow. */
+  speedBoost?: number;
 }
-/** Effective movement speed after Slow/Stun. */
+/** Effective movement speed after Slow/Stun and any boss speed boost. */
 export function actorSpeed(actor: EnemyActor): number {
-  return actor.stunned ? 0 : actor.config.movementSpeed * (actor.speedFactor ?? 1);
+  return actor.stunned
+    ? 0
+    : actor.config.movementSpeed * (actor.speedFactor ?? 1) * (actor.speedBoost ?? 1);
 }
 export function desiredState(actor: EnemyActor, player: CombatBody): EnemyBehaviorState {
   if (actor.config.behavior === 'melee') return 'chase';
@@ -82,6 +86,18 @@ export function separatedVelocity(
   return { velocity: { x, y }, checks };
 }
 /** Positive crossing times of a moving point and circle, for steering thresholds/arrival. */
+/**
+ * Crossing offsets that are a representable later instant than `clock`. A root closer than the
+ * clock's resolution (e.g. an enemy sitting on the player's centre with a separation velocity at
+ * t ≈ 368 s) cannot advance time; resolving it would re-create the same root forever. Regular
+ * steering (every movementStep) already handles such an actor.
+ */
+export function futureCrossings(clock: number, crossings: readonly number[]): readonly number[] {
+  return crossings.filter((t) => !sameTimeAbs(clock + t, clock));
+}
+function sameTimeAbs(a: number, b: number) {
+  return Math.abs(a - b) <= Number.EPSILON * 8 * Math.max(1, Math.abs(a), Math.abs(b));
+}
 export function circleCrossings(
   actor: EnemyActor,
   center: Point,

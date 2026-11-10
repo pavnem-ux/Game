@@ -16,6 +16,9 @@ import {
 } from '../skills';
 import { useEffect, useRef } from 'react';
 import { alphaBridge } from './store';
+import { BuildLabel } from './BuildLabel';
+import { ReportButton } from './ReportButton';
+import { campaignStore } from './campaign-state';
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
 /** Force monochrome text presentation so symbols never render as colour emoji. */
@@ -157,6 +160,71 @@ export function LevelUpDialog({
   );
 }
 
+/**
+ * Task 09.1 C1 (Mage superpower «Пятый круг»): the one-time choice of the enhanced skill among
+ * the five actives, shown when the 5th active is acquired. Time stays stopped until a choice.
+ */
+export function EnhancedSkillDialog({ world }: { world: GameplaySnapshot }) {
+  const { enhancedChoice, enhancedSkillId, owned } = world.skills;
+  if (!enhancedChoice) return null;
+  return (
+    <section
+      className="overlay modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="enhanced-title"
+    >
+      <div className="upgrade-panel skill-panel">
+        <div className="modal-sigil">✶</div>
+        <div className="eyebrow centered">ПЯТЫЙ КРУГ</div>
+        <h2 id="enhanced-title">
+          Усиленный навык<span>.</span>
+        </h2>
+        <p className="modal-description">
+          Пятый активный слот открыт. Выберите один из пяти активных навыков — он станет усиленным
+          (таланты ветки «Верховный маг»). Выбор разовый; по умолчанию усилен последний полученный
+          навык.
+        </p>
+        <div className="upgrade-grid" role="list">
+          {enhancedChoice.map((id, i) => {
+            const skill = owned.find((o) => o.skillId === id);
+            const current = id === enhancedSkillId;
+            return (
+              <button
+                key={id}
+                className={`upgrade-card skill-card kind-auto${current ? ' enhanced' : ''}`}
+                autoFocus={current}
+                role="listitem"
+                aria-label={`${skill?.name ?? id}${current ? ', сейчас усилен' : ''}`}
+                onClick={() => alphaBridge.send({ type: 'choose-enhanced', skillId: id })}
+              >
+                <div className="card-top">
+                  <span>{current ? 'ПО УМОЛЧАНИЮ' : 'АКТИВНЫЙ'}</span>
+                  <small>0{i + 1}</small>
+                </div>
+                <div className="upgrade-icon">{textGlyph(skill?.icon ?? '✶')}</div>
+                <h3>
+                  {skill?.name ?? id}
+                  {skill && <em> {ROMAN[skill.rank]}</em>}
+                </h3>
+                <div className="card-bottom">
+                  <span>
+                    {getSkill(id)
+                      .tags.filter((t) => t === 'fire' || t === 'ice')
+                      .join(' · ')}
+                  </span>
+                  <b>Усилить →</b>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        <p className="faint">Время остановлено. Выбирайте без спешки.</p>
+      </div>
+    </section>
+  );
+}
+
 /** Equipped skills with ranks and remaining cooldowns, plus gold and barrier. */
 export function SkillBar({
   world,
@@ -189,8 +257,8 @@ export function SkillBar({
         {owned.map((s) => (
           <span
             key={s.skillId}
-            className={`skill-chip kind-${s.kind}`}
-            title={`${s.name} ${ROMAN[s.rank]}`}
+            className={`skill-chip kind-${s.kind}${s.skillId === world.skills.enhancedSkillId ? ' enhanced' : ''}`}
+            title={`${s.name} ${ROMAN[s.rank]}${s.skillId === world.skills.enhancedSkillId ? ' · усиленный' : ''}`}
           >
             <i>{textGlyph(s.icon)}</i>
             <b>{ROMAN[s.rank]}</b>
@@ -475,9 +543,16 @@ export function PauseDialog({ world }: { world: GameplaySnapshot }) {
             >
               Продолжить →
             </button>
-            <button className="text-button" onClick={() => alphaBridge.send({ type: 'menu' })}>
-              Выбрать класс
+            <button className="text-button" onClick={() => campaignStore.quitToMenu()}>
+              {world.campaign ? 'Выйти в меню · забег не засчитается' : 'Выбрать класс'}
             </button>
+            {world.campaign && (
+              <p className="faint pause-forfeit-note">
+                Сохранения внутри забега нет: выход или перезагрузка страницы — отказ без награды.
+              </p>
+            )}
+            <ReportButton />
+            <BuildLabel />
           </div>
         </div>
         <section className="pause-skills" aria-label="Обзор навыков">

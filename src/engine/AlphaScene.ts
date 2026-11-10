@@ -1,4 +1,9 @@
+import { FLOATING_LIMITS, FloatingNumbers, HitFlashes, shakeFor } from './game-feel';
+import type { FloatingKind } from './game-feel';
+import { uiSettings } from '../gameplay-ui/ui-settings';
 import Phaser from 'phaser';
+import { frameStep, isDebugTimeScale } from './time-scale';
+import type { DebugTimeScale } from './time-scale';
 import { GameplayWorld, ALPHA, CLASS_LABELS } from '../gameplay';
 import type { GameplayOptions, GameplaySnapshot, WorldEvent } from '../gameplay';
 import { alphaBridge, CLASS_COLORS } from '../gameplay-ui/store';
@@ -8,6 +13,17 @@ import { createWorld } from './World';
 import type { TestingController } from '../gameplay/testing';
 import { stunIndicator } from './stun-indicator';
 import { oncePerKeyEvent } from './key-event-once';
+import { OFFHAND_WEAPON } from '../talents';
+
+/** Task 08.5 §5.1: floating-number styles (crit larger and gold, player damage red). */
+const FLOAT_STYLES: Record<FloatingKind, { color: string; size: number }> = {
+  normal: { color: '#fff3d6', size: 12 },
+  crit: { color: '#ffd24a', size: 16 },
+  player: { color: '#ff6b6b', size: 14 },
+  dodge: { color: '#b9c7c0', size: 11 },
+};
+/** Seconds the red edge vignette stays after the player loses HP. */
+const PLAYER_HIT_VIGNETTE = 0.3;
 
 export class AlphaScene extends Phaser.Scene {
   private world: GameplayWorld | null = null;
@@ -21,10 +37,20 @@ export class AlphaScene extends Phaser.Scene {
   private stick = { active: false, id: -1, x: 0, y: 0, dx: 0, dy: 0 };
   private hudTimer = 0;
   private lastEvent = 0;
+  /** Task 08.5 §5 game feel (presentation only): pooled numbers, hit flashes, vignette. */
+  private readonly floating = new FloatingNumbers();
+  private floatLabels: Phaser.GameObjects.Text[] = [];
+  private readonly flashes = new HitFlashes();
+  private vignette!: Phaser.GameObjects.Graphics;
+  private playerHitAt = Number.NEGATIVE_INFINITY;
   private fx: { event: WorldEvent; until: number; x: number; y: number; text?: string }[] = [];
   private labels: Phaser.GameObjects.Text[] = [];
   private damageLabels: Phaser.GameObjects.Text[] = [];
   private stunLabels: Phaser.GameObjects.Text[] = [];
+  /** Task 08: name tags of elites/bosses (pooled). */
+  private nameLabels: Phaser.GameObjects.Text[] = [];
+  /** Task 08 debug accelerated mode (DEV/QA only): frame time multiplier for the same simulation. */
+  private timeScale: DebugTimeScale = 1;
   private testing?: TestingController;
   private testingWorld?: (options: GameplayOptions) => GameplayWorld;
   private testingReady: Promise<void> = Promise.resolve();
@@ -35,6 +61,7 @@ export class AlphaScene extends Phaser.Scene {
     createWorld(this);
     this.graphics = this.add.graphics().setDepth(5);
     this.joystick = this.add.graphics().setDepth(100).setScrollFactor(0);
+    this.vignette = this.add.graphics().setDepth(90).setScrollFactor(0);
     this.cameras.main.setBounds(0, 0, ALPHA.arenaSize, ALPHA.arenaSize).centerOn(1800, 1800);
     this.keys = this.input.keyboard!.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT') as typeof this.keys;
     // DOM controls retain their own key input. Phaser must not capture arrows/space in forms.
@@ -44,7 +71,8 @@ export class AlphaScene extends Phaser.Scene {
       if (
         this.world &&
         !this.world.survival.getState().requiresWorldPause &&
-        this.world.run.pendingChoices === 0
+        this.world.run.pendingChoices === 0 &&
+        this.world.run.pendingEnhancedChoice === null
       ) {
         this.world.setPaused(!this.world.paused);
         this.clearInput();
@@ -135,6 +163,7 @@ export class AlphaScene extends Phaser.Scene {
         ? this.testingWorld(input)
         : new GameplayWorld(input); // Validate before replacing a session.
     this.world = next;
+    this.resetFeel();
     this.runId++;
     this.lastEvent = 0;
     this.fx = [];
@@ -163,10 +192,12 @@ export class AlphaScene extends Phaser.Scene {
           break;
         case 'menu':
           this.world = null;
+          this.resetFeel();
           this.clearInput();
           this.labels.forEach((t) => t.setVisible(false));
           this.damageLabels.forEach((t) => t.setVisible(false));
           this.stunLabels.forEach((t) => t.setVisible(false));
+          this.nameLabels.forEach((t) => t.setVisible(false));
           this.joystick.clear();
           break;
         case 'pause':
@@ -183,15 +214,37 @@ export class AlphaScene extends Phaser.Scene {
         case 'finish':
           this.world?.decide('finish-run');
           break;
+        case 'abandon':
+          // Task 08: quitting a campaign run resolves it as abandoned (no rewards).
+          this.world?.abandonRun();
+          this.clearInput();
+          break;
         case 'choose-skill':
           this.world?.chooseSkill(command.card);
+          this.clearInput();
+          break;
+        case 'choose-enhanced':
+          this.world?.chooseEnhancedSkill(command.skillId);
           this.clearInput();
           break;
         case 'reroll':
           this.world?.rerollSkillOffer();
           break;
+        case 'time-scale':
+          if (import.meta.env.DEV || __QA_BUILD__) {
+            if (!isDebugTimeScale(command.scale))
+              throw new RangeError('Time scale must be ×1, ×2, ×4 or ×8.');
+            this.timeScale = command.scale;
+          }
+          break;
         case 'testing':
           if (import.meta.env.DEV || __QA_BUILD__) this.testing?.(command.action);
+          break;
+        case 'kill-on-screen':
+          if (import.meta.env.DEV || __QA_BUILD__) {
+            const { x, y, width, height } = this.cameras.main.worldView;
+            this.testing?.({ type: 'kill-in-view', view: { x, y, width, height } });
+          }
           break;
       }
     } catch (e) {
@@ -206,7 +259,7 @@ export class AlphaScene extends Phaser.Scene {
     this.input.keyboard?.resetKeys();
   }
   update(_time: number, delta: number) {
-    const dt = Math.min(0.05, delta / 1000);
+    const dt = frameStep(delta, import.meta.env.DEV || __QA_BUILD__ ? this.timeScale : 1);
     if (this.world) {
       let dx =
         Number(this.keys.D.isDown || this.keys.RIGHT.isDown) -
@@ -249,6 +302,14 @@ export class AlphaScene extends Phaser.Scene {
           y: e.position.y - 18,
           text: SYNERGY_LABELS[e.synergyId] ?? e.synergyId,
         });
+      if (event.channel === 'campaign' && (e.type === 'boss-spawned' || e.type === 'boss-defeated'))
+        this.fx.push({
+          event,
+          until: event.time + 3,
+          x: s.playerBody.x,
+          y: s.playerBody.y - 70,
+          text: e.type === 'boss-spawned' ? `⚠ Босс: ${e.bossName}` : `✦ ${e.bossName} повержен`,
+        });
       if (event.channel === 'skill' && e.type === 'synergy-unlocked')
         this.fx.push({
           event,
@@ -261,20 +322,32 @@ export class AlphaScene extends Phaser.Scene {
         event.channel === 'combat' &&
         (e.type === 'damage' || e.type === 'periodic-damage' || e.type === 'dodge')
       ) {
-        const target =
-          e.targetId === 'player'
-            ? s.playerBody
-            : s.enemies.find((v) => v.entityId === e.targetId)?.position;
-        if (target)
-          this.fx.push({
-            event,
-            until: event.time + 0.6,
-            ...target,
-            text:
-              e.type === 'dodge'
-                ? 'DODGE'
-                : `${e.type === 'damage' && e.critical ? 'CRIT ' : ''}−${e.appliedDamage}`,
-          });
+        const player = e.targetId === 'player';
+        const target = player
+          ? s.playerBody
+          : s.enemies.find((v) => v.entityId === e.targetId)?.position;
+        const amount = e.type === 'dodge' ? 0 : e.appliedDamage;
+        if (target && (e.type === 'dodge' || amount > 0)) {
+          const kind =
+            e.type === 'dodge'
+              ? 'dodge'
+              : player
+                ? 'player'
+                : e.type === 'damage' && e.critical
+                  ? 'crit'
+                  : 'normal';
+          this.floating.spawn(kind, target.x, target.y - 30, amount, event.time);
+          if (amount > 0) {
+            if (player) this.playerHitAt = event.time;
+            else this.flashes.hit(e.targetId, event.time);
+          }
+        }
+      }
+      if (event.channel === 'combat' || event.channel === 'campaign') {
+        const shake = uiSettings.get().screenShake
+          ? shakeFor(e as Parameters<typeof shakeFor>[0])
+          : null;
+        if (shake) this.cameras.main.shake(shake.duration, shake.intensity);
       }
     }
     this.fx = this.fx.filter((f) => f.until > s.time).slice(-64);
@@ -283,6 +356,16 @@ export class AlphaScene extends Phaser.Scene {
       const armed = z.armedAt === undefined || z.armedAt <= s.time;
       g.fillStyle(c, armed ? 0.12 : 0.05).fillCircle(z.center.x, z.center.y, z.radius);
       g.lineStyle(1, c, armed ? 0.55 : 0.3).strokeCircle(z.center.x, z.center.y, z.radius);
+    }
+    // Task 09.1: talent entities (Rogue shadow copy, Archer ballistae) — original simple shapes.
+    for (const t of s.talentEntities ?? []) {
+      if (t.kind === 'ballista') {
+        g.fillStyle(0x8a6a3e, 0.9).fillRect(t.x - 10, t.y - 10, 20, 20);
+        g.lineStyle(2, 0xe8c36a, 0.9).strokeRect(t.x - 10, t.y - 10, 20, 20);
+      } else {
+        g.fillStyle(0x9a8cff, 0.35).fillCircle(t.x, t.y, 13);
+        g.lineStyle(1, 0xc9c0ff, 0.6).strokeCircle(t.x, t.y, 13);
+      }
     }
     for (const crystal of s.crystals) {
       const { x, y } = crystal;
@@ -295,25 +378,64 @@ export class AlphaScene extends Phaser.Scene {
     let stunLabel = 0;
     let label = 0,
       damageLabel = 0;
+    let nameLabel = 0;
+    const elites = s.campaign?.elites;
     for (const enemy of s.enemies) {
       if (!enemy.alive) continue;
       const { x, y } = enemy.position;
       const ranged = enemy.config.behavior === 'ranged';
-      g.fillStyle(0x060c0c, 0.4).fillEllipse(x, y + 15, 34, 12);
-      g.fillStyle(ranged ? 0xb2739b : 0x87996e);
-      if (ranged) g.fillTriangle(x, y - 18, x - 17, y + 14, x + 17, y + 14);
-      else g.fillEllipse(x, y, 30, 33);
-      g.fillStyle(0x18231f).fillEllipse(x, y - 3, 18, 11);
-      g.fillStyle(ranged ? 0xffbebf : 0xe9d497)
-        .fillRect(x - 6, y - 6, 4, 3)
-        .fillRect(x + 3, y - 6, 4, 3);
-      g.fillStyle(0x19201b).fillRect(x - 17, y - 25, 34, 3);
-      g.fillStyle(ranged ? 0xe09ac1 : 0xc8d79c).fillRect(
-        x - 17,
-        y - 25,
-        (34 * enemy.entity.currentHp) / enemy.entity.maxHp,
-        3,
+      // Task 08: elites are bigger, glow in their profile colour and carry a name + wide HP bar.
+      let eliteName: string | null = null;
+      const isBoss = s.campaign?.boss?.enemyId === enemy.entityId;
+      if (isBoss) eliteName = s.campaign!.boss!.name;
+      else if (elites)
+        for (const elite of elites) if (elite.enemyId === enemy.entityId) eliteName = elite.name;
+      const f = eliteName ? enemy.config.radius / (ranged ? 15 : 14) : 1;
+      const hpWidth = isBoss ? 120 : eliteName ? 64 : 34;
+      const barY = y - 25 * f;
+      if (eliteName)
+        g.lineStyle(isBoss ? 4 : 3, isBoss ? 0xff3b5c : ranged ? 0xb68cff : 0xff8a3d, 0.85)
+          .strokeCircle(x, y, enemy.config.radius + 7)
+          .lineStyle(1, 0xfff0c4, 0.5)
+          .strokeCircle(x, y, enemy.config.radius + 11);
+      g.fillStyle(0x060c0c, 0.4).fillEllipse(x, y + 15 * f, 34 * f, 12 * f);
+      g.fillStyle(
+        isBoss
+          ? 0x8e1f3a
+          : eliteName
+            ? ranged
+              ? 0x7d4fc0
+              : 0xb5532b
+            : ranged
+              ? 0xb2739b
+              : 0x87996e,
       );
+      if (ranged) g.fillTriangle(x, y - 18 * f, x - 17 * f, y + 14 * f, x + 17 * f, y + 14 * f);
+      else g.fillEllipse(x, y, 30 * f, 33 * f);
+      g.fillStyle(0x18231f).fillEllipse(x, y - 3 * f, 18 * f, 11 * f);
+      g.fillStyle(ranged ? 0xffbebf : 0xe9d497)
+        .fillRect(x - 6 * f, y - 6 * f, 4 * f, 3 * f)
+        .fillRect(x + 3 * f, y - 6 * f, 4 * f, 3 * f);
+      const flash = this.flashes.strength(enemy.entityId, s.time);
+      if (flash > 0) {
+        g.fillStyle(0xffffff, 0.6 * flash);
+        if (ranged) g.fillTriangle(x, y - 18 * f, x - 17 * f, y + 14 * f, x + 17 * f, y + 14 * f);
+        else g.fillEllipse(x, y, 30 * f, 33 * f);
+      }
+      g.fillStyle(0x19201b).fillRect(x - hpWidth / 2, barY, hpWidth, eliteName ? 5 : 3);
+      g.fillStyle(isBoss ? 0xff4d6d : eliteName ? 0xffb347 : ranged ? 0xe09ac1 : 0xc8d79c).fillRect(
+        x - hpWidth / 2,
+        barY,
+        (hpWidth * enemy.entity.currentHp) / enemy.entity.maxHp,
+        eliteName ? 5 : 3,
+      );
+      if (eliteName)
+        this.label(this.nameLabels, nameLabel++)
+          .setText(eliteName)
+          .setColor(isBoss ? '#ffb3c1' : ranged ? '#d9c4ff' : '#ffd0a8')
+          .setPosition(x, barY - 10)
+          .setDepth(11)
+          .setVisible(true);
       const mark = s.skillCombat.marks.find((m) => m.targetId === enemy.entityId);
       if (mark)
         g.lineStyle(2, mark.kind === 'hunter' ? 0xffd27a : 0xd690ff, 0.9)
@@ -353,6 +475,44 @@ export class AlphaScene extends Phaser.Scene {
     }
     for (; stunLabel < this.stunLabels.length; stunLabel++)
       this.stunLabels[stunLabel].setVisible(false);
+    for (; nameLabel < this.nameLabels.length; nameLabel++)
+      this.nameLabels[nameLabel].setVisible(false);
+    // Task 08: boss telegraphs (dangerous attacks are announced before they resolve).
+    const cast = s.campaign?.bossCast;
+    if (cast && cast.center) {
+      const span = Math.max(1e-6, cast.executeAt - cast.startedAt);
+      const progress = Math.min(1, Math.max(0, (s.time - cast.startedAt) / span));
+      if (cast.kind === 'circle_aoe' && cast.radius) {
+        g.fillStyle(0xff4a3d, 0.12 + 0.18 * progress).fillCircle(
+          cast.center.x,
+          cast.center.y,
+          cast.radius * progress,
+        );
+        g.lineStyle(3, 0xff5a45, 0.95).strokeCircle(cast.center.x, cast.center.y, cast.radius);
+      } else if (cast.kind === 'charge' && cast.direction) {
+        const len = 320;
+        const ex = cast.center.x + cast.direction.x * len,
+          ey = cast.center.y + cast.direction.y * len;
+        g.lineStyle(14, 0xff5a45, 0.18 + 0.25 * progress).lineBetween(
+          cast.center.x,
+          cast.center.y,
+          ex,
+          ey,
+        );
+        g.lineStyle(2, 0xffb199, 0.9).lineBetween(cast.center.x, cast.center.y, ex, ey);
+      } else if (cast.kind === 'radial_burst')
+        g.lineStyle(2, 0xd99bff, 0.4 + 0.5 * progress).strokeCircle(
+          cast.center.x,
+          cast.center.y,
+          36 + 40 * progress,
+        );
+      else if (cast.kind === 'summon')
+        g.lineStyle(2, 0x9ad48a, 0.4 + 0.5 * progress).strokeCircle(
+          cast.center.x,
+          cast.center.y,
+          60,
+        );
+    }
     const { x, y } = s.playerBody,
       color = CLASS_COLORS[s.character.characterClass];
     g.fillStyle(0x030d0c, 0.45).fillEllipse(x, y + 17, 38, 13);
@@ -411,7 +571,11 @@ export class AlphaScene extends Phaser.Scene {
     for (const f of this.fx) {
       const e = f.event.event;
       if (e.type === 'attack-started' && !e.projectileId) {
-        const w = s.weapon.weapon;
+        // Task 09.1 G6: the off-hand sword draws its own (shorter, narrower) swing.
+        const w =
+          e.weaponId === OFFHAND_WEAPON.id
+            ? { ...OFFHAND_WEAPON, pattern: 'melee_arc' as const }
+            : s.weapon.weapon;
         if (w.pattern !== 'projectile') {
           const a = Math.atan2(e.direction.y, e.direction.x),
             half = (w.arcDegrees * Math.PI) / 360;
@@ -454,6 +618,7 @@ export class AlphaScene extends Phaser.Scene {
     }
     this.labels.slice(label).forEach((t) => t.setVisible(false));
     this.damageLabels.slice(damageLabel).forEach((t) => t.setVisible(false));
+    this.drawFeel(s);
     this.joystick.clear();
     if (this.stick.active) {
       const d = Math.hypot(this.stick.dx, this.stick.dy),
@@ -464,6 +629,55 @@ export class AlphaScene extends Phaser.Scene {
         .fillStyle(0xc6edce, 0.3)
         .fillCircle(this.stick.x + Math.cos(a) * r, this.stick.y + Math.sin(a) * r, 20);
     }
+  }
+  /** Task 08.5 §5: floating numbers (pooled, capped) and the player-hit vignette. */
+  private drawFeel(s: GameplaySnapshot) {
+    for (let i = 0; i < this.floating.capacity; i++) this.floatLabels[i]?.setVisible(false);
+    this.floating.forEachActive(s.time, (entry, progress, i) => {
+      const t =
+        this.floatLabels[i] ??
+        (this.floatLabels[i] = this.add
+          .text(0, 0, '', {
+            fontFamily: 'monospace',
+            fontSize: '12px',
+            fontStyle: 'bold',
+            color: '#ffffff',
+            stroke: '#17251c',
+            strokeThickness: 3,
+          })
+          .setOrigin(0.5)
+          .setDepth(13));
+      const style = FLOAT_STYLES[entry.kind];
+      const pop = entry.kind === 'crit' && progress < 0.15 ? 1.35 - progress * 2.3 : 1;
+      t.setText(entry.text)
+        .setColor(style.color)
+        .setFontSize(style.size)
+        .setScale(pop)
+        .setAlpha(progress > 0.6 ? (1 - progress) / 0.4 : 1)
+        .setPosition(entry.x + entry.drift, entry.y - progress * FLOATING_LIMITS.rise)
+        .setVisible(true);
+    });
+    const v = this.vignette.clear();
+    const hitAge = s.time - this.playerHitAt;
+    if (hitAge >= 0 && hitAge < PLAYER_HIT_VIGNETTE) {
+      const strength = 1 - hitAge / PLAYER_HIT_VIGNETTE;
+      const w = this.scale.width,
+        h = this.scale.height;
+      for (let i = 0; i < 6; i++)
+        v.lineStyle(14, 0xd8323c, 0.32 * strength * (1 - i / 6)).strokeRect(
+          7 + i * 14,
+          7 + i * 14,
+          w - 14 - i * 28,
+          h - 14 - i * 28,
+        );
+    }
+  }
+  private resetFeel() {
+    this.floating.clear();
+    this.flashes.clear();
+    this.playerHitAt = Number.NEGATIVE_INFINITY;
+    this.floatLabels.forEach((t) => t.setVisible(false));
+    this.vignette?.clear();
   }
   private label(pool: Phaser.GameObjects.Text[], i: number) {
     return (
@@ -483,23 +697,34 @@ export class AlphaScene extends Phaser.Scene {
   private publish() {
     const world = this.world?.getSnapshot() ?? null;
     const run = world?.survival.runState;
+    const outcome = world?.campaign?.status;
     const screen = !world
       ? 'menu'
-      : run === 'awaiting-revival-choice'
-        ? 'revival'
-        : run === 'ended'
-          ? 'ended'
-          : world.skills.offer
-            ? 'level-up'
-            : world.paused
-              ? 'paused'
-              : 'playing';
-    if (screen === 'ended' && this.recordedRun !== this.runId) {
+      : outcome === 'victory' || outcome === 'defeat'
+        ? 'results'
+        : run === 'awaiting-revival-choice'
+          ? 'revival'
+          : run === 'ended'
+            ? 'ended'
+            : world.skills.enhancedChoice
+              ? 'enhanced-skill'
+              : world.skills.offer
+                ? 'level-up'
+                : world.paused
+                  ? 'paused'
+                  : 'playing';
+    if (screen === 'ended' && !world?.campaign && this.recordedRun !== this.runId) {
       this.record = saveRun(world!.time, world!.kills).bestSeconds;
       this.recordedRun = this.runId;
     }
     alphaBridge.publish({
-      ...(import.meta.env.DEV || __QA_BUILD__ ? { qa: this.testing?.snapshot() ?? null } : {}),
+      ...(import.meta.env.DEV || __QA_BUILD__
+        ? {
+            qa: this.testing?.snapshot() ?? null,
+            timeScale: this.timeScale,
+            fps: Math.round(this.game.loop.actualFps),
+          }
+        : {}),
       screen,
       world,
       runId: this.runId,

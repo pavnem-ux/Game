@@ -312,15 +312,18 @@ export class StatusEffects {
       output.push(this.removeGroup(group, 'expired'));
       return;
     }
-    const rawDamage = group.stacks.reduce((sum, stack) => sum + stack.rawDamagePerTick, 0);
     const view = snapshot(group);
+    const factor = this.options.damageMultiplier ? this.options.damageMultiplier(view) : 1;
+    if (!Number.isFinite(factor) || factor < 0)
+      throw new RangeError('damageMultiplier must return a finite number ≥ 0.');
+    const rawDamage = group.stacks.reduce((sum, stack) => sum + stack.rawDamagePerTick * factor, 0);
     const allowed = this.options.canDamage
       ? booleanResult(
           this.options.canDamage(Object.freeze({ group: view, rawDamage, time: event.at })),
           'canDamage',
         )
       : true;
-    const request = this.periodicRequest(group, rawDamage);
+    const request = this.periodicRequest(group, rawDamage, factor);
     // Core validates/calculates before HP mutation; do not advance our schedule on failure.
     const result = allowed ? this.core.applyPeriodicDamage(request) : null;
     this.clock = event.at;
@@ -344,7 +347,11 @@ export class StatusEffects {
       );
     }
   }
-  private periodicRequest(group: StatusGroup, rawDamage: number): PeriodicDamageRequest {
+  private periodicRequest(
+    group: StatusGroup,
+    rawDamage: number,
+    factor = 1,
+  ): PeriodicDamageRequest {
     return {
       operationId: `${group.id}:tick-${group.tickIndex}`,
       targetId: group.targetId,
@@ -354,7 +361,7 @@ export class StatusEffects {
         applicationId: stack.id,
         sourceId: stack.sourceId,
         ...(stack.originId === undefined ? {} : { originId: stack.originId }),
-        rawDamage: stack.rawDamagePerTick,
+        rawDamage: stack.rawDamagePerTick * factor,
       })),
     };
   }

@@ -1,3 +1,8 @@
+import { TalentCombat } from '../talents/combat';
+import { TALENT_HANDLERS } from '../talents/handlers';
+import { TalentRuntime } from '../talents/runtime';
+import { OFFHAND_TAGS, OFFHAND_WEAPON } from '../talents/offhand';
+import type { TalentConfig, TalentRanks } from '../talents/types';
 import { scaleCircularAoeRadius, scaleCooldown } from '../character-stats';
 import type { CharacterClass, CombatAttributes, PrimaryAttributes } from '../character-stats';
 import type {
@@ -48,7 +53,20 @@ export interface SkillHost {
   readonly playerId: string;
   readonly characterClass: CharacterClass;
   readonly primary: PrimaryAttributes;
+  /**
+   * Task 09: permanent talent stat layer for this run (optional; absent = none). It is the base
+   * of `modifiers()`, so talents combine with passives/buffs and are capped once.
+   */
+  readonly talentModifiers?: RunStatModifiers;
+  /** Task 09.1: this run's talent ranks (+ test config) and the seeded talent stream. */
+  readonly talents?: Readonly<{
+    ranks: TalentRanks;
+    config?: TalentConfig;
+    random?: () => number;
+  }>;
   readonly basicWeaponId: string;
+  /** Task 09.1 (optional): the player has a non-zero movement input this step. */
+  playerMoving?(): boolean;
   /**
    * Fixed simulation grid (the world's control step). Automatic activations happen only on this
    * grid, so frame endpoints never decide when a moving target became eligible.
@@ -64,6 +82,15 @@ export interface SkillHost {
   recordSkill(events: readonly SkillEvent[]): void;
   /** Called when passive/buff changes alter effective stats or on-hit definitions. */
   statsChanged(stats: CombatAttributes): void;
+  /**
+   * Task 08 (optional, additive): stricter crowd-control limits for specific targets (bosses).
+   * Values can only tighten the global CONTROL_RULES; null/absent = global rules.
+   */
+  controlLimits?(targetId: string): Readonly<{
+    maxSlow: number;
+    stunScale: number;
+    stunImmunity: number;
+  }> | null;
 }
 /** Target state captured immediately before a hit; synergies and kill rules read only this. */
 export interface PreHit {
@@ -96,6 +123,10 @@ export interface ProjectilePayload {
   readonly limit?: Readonly<{ key: string; max: number }>;
   readonly onHit?: (hit: HitInfo, engine: SkillEngine) => void;
   readonly onEnd?: (position: Point, engine: SkillEngine) => void;
+  /** Task 08.5: damage attribution of the skill/synergy that launched it. */
+  readonly source?: string;
+  /** Task 09.1 G11: damage falloff per previous hit of this projectile (0–1; default none). */
+  readonly falloff?: number;
 }
 export interface MarkState {
   readonly kind: 'hunter' | 'death';
@@ -131,10 +162,14 @@ export interface ZoneState extends ZoneSpec {
   readonly createdAt: number;
   readonly expiresAt: number;
   readonly firstTickAt: number;
+  /** Task 08.5: damage attribution of the skill/synergy that created the zone. */
+  readonly source?: string;
   tickIndex: number;
   nextTickAt: number;
   ended: boolean;
 }
+/** Task 08.5: attribution entries kept for attack snapshots still in flight. */
+const ATTACK_SOURCE_LIMIT = 1024;
 interface Scheduled {
   readonly at: number;
   readonly sequence: number;
@@ -164,6 +199,13 @@ export class SkillEngine {
   private readonly autos = new Map<string, AutoState>();
   private readonly queue: Scheduled[] = [];
   private readonly zones = new Map<string, ZoneState>();
+  /**
+   * Task 08.5 run statistics: the skill/synergy whose code is executing (`skill:<id>` or
+   * `synergy:<id>`) and the source of each attack snapshot the engine created. Read-only
+   * metadata — never affects resolution. Bounded (oldest entries dropped).
+   */
+  private source: string | null = null;
+  private readonly attackSources = new Map<string, string>();
   private readonly controls = new Map<string, ControlState>();
   private readonly marks = new Map<string, MarkState>();
   private readonly buffs = new Map<string, BuffState>();
@@ -174,12 +216,200 @@ export class SkillEngine {
   private barrierUntil: number | null = null;
   private stats: CombatAttributes;
   readonly synergies: SynergyResolver;
+  /** Task 09.1: talent runtime (cooldowns, buffs, proc guard, entities) on simulation time. */
+  readonly talents: TalentRuntime;
+  /** Task 09.1: talent combat hooks (direct-hit bonuses, crit, DoT, reactions). */
+  readonly talentCombat: TalentCombat;
+  // ── TalentEngine view (read-only helpers for talent handlers) ──
+  get statuses() {
+    return this.host.statuses;
+  }
+  entity(id: string) {
+    return this.host.core.getEntity(id);
+  }
+  enemiesInCircle(center: Point, radius: number): string[] {
+    return this.inCircle(center, radius);
+  }
+  enemyPosition(id: string): Point | null {
+    const b = this.body(id);
+    return b ? { x: b.x, y: b.y } : null;
+  }
+  playerPosition(): Point {
+    return { x: this.player.x, y: this.player.y };
+  }
+  facing(): Point {
+    return this.host.facing();
+  }
+  get playerId(): string {
+    return this.host.playerId;
+  }
+  enhancedSkillId(): string | null {
+    return this.run.enhancedSkillId;
+  }
+  skillParams(skillId: string): Readonly<Record<string, number>> | null {
+    return this.rank(skillId) > 0 ? this.params(skillId) : null;
+  }
+  nearestEnemy(from: Point): string | null {
+    return this.nearest(Infinity, from);
+  }
+  private talentShots = 0;
+  /** Task 09.1: a talent projectile (ballista bolt), `procs=false`, attributed to the talent. */
+  talentProjectile(
+    nodeId: string,
+    origin: Point,
+    targetId: string,
+    spec: Readonly<{ speed: number; radius: number; range: number; baseDamage: number }>,
+    extraTags: readonly CombatTag[],
+    onHit?: (targetId: string) => void,
+  ): void {
+    const body = this.body(targetId);
+    const phys = this.host.core.getEntity(this.host.playerId).physicalDamage;
+    if (!body || !(phys > 0) || !(spec.baseDamage >= 0)) return;
+    const source = `talent:${nodeId}`;
+    const attack = this.host.core.createAttack({
+      attackerId: this.host.playerId,
+      damageType: 'physical',
+      coefficient: spec.baseDamage / phys,
+      noCritical: true,
+    });
+    this.tagAttack(attack.id, source);
+    const tags = new Set<CombatTag>([
+      'talent',
+      'secondary',
+      'physical',
+      'projectile',
+      ...extraTags,
+    ]);
+    const id = this.host.weapons.launchProjectile({
+      sourceId: this.host.playerId,
+      weaponId: `${source}#${++this.talentShots}`,
+      origin,
+      direction: this.directionTo(body, origin),
+      speed: spec.speed,
+      radius: spec.radius,
+      maxTravelDistance: spec.range,
+      attack,
+    });
+    this.projectiles.set(id, {
+      key: source,
+      tags,
+      procs: false,
+      hits: 0,
+      maxHits: 1,
+      source,
+      ...(onHit ? { onHit: (hit: HitInfo) => onHit(hit.targetId) } : {}),
+    });
+  }
+  /** Task 09.1: talent healing of the player through Combat Core (never revives). */
+  healPlayer(amount: number): void {
+    if (!(amount > 0) || !this.host.core.getEntity(this.host.playerId).alive) return;
+    this.host.forwardCombat(this.host.core.heal(this.host.playerId, amount).events);
+  }
+  /** Task 09.1: player HP last seen by talent threshold rules (percent of Max HP). */
+  private playerHpSeen = 100;
+  private conditionalKey = '';
+  /**
+   * Task 09.1: the world reports every change of the player's HP. Threshold talents react
+   * (e.g. heal on crossing below 30%), and HP-conditional stats are recomposed once when their
+   * condition flips (caps still applied once by composeRunStats).
+   */
+  onPlayerHpChanged(damage: boolean): void {
+    const p = this.host.core.getEntity(this.host.playerId);
+    const now = p.maxHp > 0 ? (p.currentHp / p.maxHp) * 100 : 0;
+    const before = this.playerHpSeen;
+    this.playerHpSeen = now;
+    if (!this.talents.anyActive) return;
+    if (now !== before) this.talentCombat.onPlayerHpChanged(before, now, damage);
+    const key = JSON.stringify(this.talentCombat.conditionalStats());
+    if (key !== this.conditionalKey) {
+      this.conditionalKey = key;
+      this.refreshStats();
+    }
+  }
+  /** Targets of the area/melee attack currently being resolved (talent «2+ targets» rules). */
+  private targetCount = 1;
+  withTargetCount<T>(count: number, run: () => T): T {
+    const previous = this.targetCount;
+    this.targetCount = Math.max(1, count);
+    try {
+      return run();
+    } finally {
+      this.targetCount = previous;
+    }
+  }
+  controlState(id: string): {
+    readonly slowed: boolean;
+    readonly stunned: boolean;
+    readonly marked: boolean;
+  } {
+    const pre = this.preHit(id);
+    return { slowed: pre.slowed, stunned: pre.stunned, marked: pre.mark !== null };
+  }
+  playerMoving(): boolean {
+    return this.host.playerMoving?.() ?? false;
+  }
+  /** Task 09.1: shortens an owned automatic skill's remaining cooldown (not below ready now). */
+  reduceSkillCooldown(skillId: string, seconds: number): void {
+    const state = this.autos.get(skillId);
+    if (!state || !(seconds > 0) || state.readyAt <= this.clock) return;
+    state.readyAt = Math.max(this.clock, state.readyAt - seconds);
+  }
+  /**
+   * Task 09.1 C2: the one barrier slot shared by the bonus Barrier and talent barriers. A stronger
+   * (or equal) new barrier replaces strength and expiry; a weaker one never lowers the active
+   * barrier's HP and only extends its expiry to max(existing, new).
+   */
+  grantBarrier(amount: number, duration: number): void {
+    const current = this.barrierUntil === null ? 0 : this.host.core.getBarrier(this.host.playerId);
+    const until = this.clock + duration;
+    if (current > amount) this.barrierUntil = Math.max(this.barrierUntil!, until);
+    else {
+      this.host.core.setBarrier(this.host.playerId, amount);
+      this.barrierUntil = until;
+    }
+  }
+  /** Task 09.1: the player took real direct damage (world forwards Core damage events). */
+  onPlayerDirectDamage(attackerId: string): void {
+    this.talentCombat.onPlayerDirectDamage(attackerId);
+  }
+  /** Task 09.1: a dodge by the player (enemy direct attack missed). */
+  onPlayerDodged(attackerId: string): void {
+    this.talentCombat.onPlayerDodged(attackerId);
+  }
+  /** Task 09.1: crit-chance bonus for the player's equipped weapon at strike creation. */
+  weaponAttackBonus(weaponId?: string): { criticalChanceBonus?: number } {
+    const bonus =
+      weaponId === OFFHAND_WEAPON.id
+        ? this.talentCombat.offhandCritChance()
+        : this.talentCombat.critChance(new Set(BASIC_TAGS[this.host.characterClass]));
+    return bonus > 0 ? { criticalChanceBonus: bonus } : {};
+  }
+  /** Task 09.1: attributes an attack snapshot to a talent (run stats source `talent:<node>`). */
+  tagTalentAttack(attackId: string, nodeId: string): void {
+    this.tagAttack(attackId, `talent:${nodeId}`);
+  }
   constructor(
     readonly host: SkillHost,
     readonly run: RunSkills,
     private readonly random: () => number,
   ) {
-    this.stats = composeRunStats(host.primary, NO_MODIFIERS);
+    this.stats = composeRunStats(host.primary, host.talentModifiers ?? NO_MODIFIERS);
+    this.talents = new TalentRuntime({
+      ranks: host.talents?.ranks,
+      config: host.talents?.config,
+      now: () => this.clock,
+      random:
+        host.talents?.random ??
+        (() => {
+          throw new Error('Talent RNG used without a seeded stream.');
+        }),
+    });
+    this.talents.onBuffsChanged = () => this.refreshStats();
+    this.talentCombat = new TalentCombat(
+      this,
+      TALENT_HANDLERS[host.characterClass],
+      host.characterClass,
+    );
     this.synergies = new SynergyResolver(this);
   }
   get time() {
@@ -224,9 +454,8 @@ export class SkillEngine {
       this.host.forwardCombat(healed.events);
     } else if (bonusId === 'barrier') {
       amount = (player.maxHp * BONUS_TUNING.barrierMaxHpPercent) / 100;
-      // A new barrier replaces the old one; it never stacks without limit.
-      this.host.core.setBarrier(this.host.playerId, amount);
-      this.barrierUntil = this.clock + BONUS_TUNING.barrierDuration;
+      // One shared slot (Task 09.1 C2): never stacks; a weaker barrier only extends the expiry.
+      this.grantBarrier(amount, BONUS_TUNING.barrierDuration);
     } else {
       amount = BONUS_TUNING.gold;
       this.run.addGold(amount);
@@ -236,7 +465,15 @@ export class SkillEngine {
 
   // ───────────────────────────── stats and on-hit modifiers ─────────────────────────────
   private modifiers(): RunStatModifiers {
-    const m = { ...NO_MODIFIERS };
+    const m: Record<keyof RunStatModifiers, number> = {
+      ...(this.host.talentModifiers ?? NO_MODIFIERS),
+    };
+    // Task 09.1: timed talent stat buffs (refresh, don't stack) join the same composition.
+    for (const [stat, value] of Object.entries(this.talents.statBuffs()))
+      m[stat as keyof RunStatModifiers] += value ?? 0;
+    // Task 09.1: HP-conditional talent stats (e.g. Resistance while HP < 30%).
+    for (const [stat, value] of Object.entries(this.talentCombat?.conditionalStats() ?? {}))
+      m[stat as keyof RunStatModifiers] += value;
     const add = (key: keyof RunStatModifiers, skillId: string, param: string) => {
       if (this.rank(skillId) > 0) m[key] += this.params(skillId)[param];
     };
@@ -254,7 +491,13 @@ export class SkillEngine {
         m.attackSpeed += p.attackSpeed;
         m.resistance += p.resistance;
       } else if (id === 'battle_fury')
-        m.physicalDamagePercent += buff.stacks * this.params('battle_fury').damagePerStack;
+        m.physicalDamagePercent +=
+          buff.stacks * this.params('battle_fury').damagePerStack +
+          this.talentCombat.buffStackBonus(
+            'battle_fury',
+            buff.stacks,
+            this.params('battle_fury').maxStacks,
+          );
       else if (id === 'battle_momentum' || id === 'blood_frenzy') m.attackSpeed += buff.value;
     }
     return m;
@@ -268,8 +511,27 @@ export class SkillEngine {
     if (changed) this.host.statsChanged(next);
   }
   /** Player status applications: Toxic Mastery, Lingering Effects and Elemental Mastery Burn. */
-  playerEffect(definition: EffectDefinition): EffectDefinition {
-    return modifyPlayerEffect(definition, this.rankOf);
+  playerEffect(
+    definition: EffectDefinition,
+    origin?: Readonly<{ basic?: boolean }>,
+  ): EffectDefinition {
+    const base = modifyPlayerEffect(definition, this.rankOf);
+    // Task 09.1: talent DoT factors (e.g. Bleed applied by daggers). Origin: the basic weapon or
+    // the skill currently executing.
+    const skillId = this.source?.startsWith('skill:') ? this.source.slice(6) : null;
+    const dagger =
+      (origin?.basic && BASIC_TAGS[this.host.characterClass].includes('dagger')) ||
+      (!!skillId && getSkill(skillId).tags.includes('dagger'));
+    const origin2 = { dagger, skillId };
+    const factor = this.talentCombat.dotFactor(base.effectType, origin2);
+    const duration = this.talentCombat.dotDuration(base.effectType, origin2);
+    return factor === 1 && duration === 1
+      ? base
+      : Object.freeze({
+          ...base,
+          rawDamagePerTick: base.rawDamagePerTick * factor,
+          duration: base.duration * duration,
+        });
   }
   private readonly rankOf = (skillId: string) => this.rank(skillId);
   /** Target multiplier for every player hit: marks, focus bonus and per-enemy hit limits. Pure. */
@@ -277,6 +539,8 @@ export class SkillEngine {
     attack: AttackSnapshot,
     targetId: string,
     limit?: Readonly<{ key: string; max: number }>,
+    tags?: ReadonlySet<CombatTag>,
+    targets = this.targetCount,
   ): number {
     if (attack.attackerId !== this.host.playerId) return 1;
     if (limit && this.counted(limit.key, targetId) >= limit.max) return 0;
@@ -287,11 +551,29 @@ export class SkillEngine {
     if (mark?.kind === 'death')
       multiplier *= 1 + getSkill('death_mark').ranks[mark.rank - 1].bonusPercent / 100;
     multiplier *= this.synergies.focusMultiplier(targetId);
+    // Task 09.1: talent direct-hit / crit-damage bonuses (never on talent or secondary hits).
+    multiplier *= this.talentCombat.hitMultiplier(attack, targetId, tags, targets);
     return multiplier;
   }
   damageModifier(context: DamageModifierContext): number {
     const payload = context.projectileId ? this.projectiles.get(context.projectileId) : undefined;
-    return this.targetMultiplier(context.attack, context.targetId, payload?.limit);
+    const tags =
+      context.weaponId === this.host.basicWeaponId
+        ? new Set<CombatTag>(BASIC_TAGS[this.host.characterClass])
+        : context.weaponId === OFFHAND_WEAPON.id
+          ? new Set<CombatTag>(OFFHAND_TAGS)
+          : payload?.tags;
+    // G11: a piercing projectile loses `falloff` per target it already hit (1, 0.8, 0.64 …).
+    const falloff = payload?.falloff ? (1 - payload.falloff) ** payload.hits : 1;
+    return (
+      this.targetMultiplier(
+        context.attack,
+        context.targetId,
+        payload?.limit,
+        tags,
+        context.targetCount ?? 1,
+      ) * falloff
+    );
   }
   /** Short-lived per-activation counters (hit limits); pruned after a few seconds. */
   count(key: string, targetId: string): number {
@@ -419,7 +701,19 @@ export class SkillEngine {
     return d > 1e-9 ? { x: dx / d, y: dy / d } : this.host.facing();
   }
   area(radius: number): number {
-    return scaleCircularAoeRadius(radius, this.stats.areaSize);
+    // Task 09.1: a talent radius bonus for the executing skill's AoE (never synergy/talent areas).
+    const tags = this.sourceSkillTags();
+    const factor = tags ? this.talentCombat.skillAreaFactor(tags, this.source!.slice(6)) : 1;
+    return scaleCircularAoeRadius(radius * factor, this.stats.areaSize);
+  }
+  private zoneDurationFactor(): number {
+    const tags = this.sourceSkillTags();
+    return tags ? this.talentCombat.zoneDurationFactor(tags) : 1;
+  }
+  /** Tags of the skill whose code is executing (null outside a skill). */
+  private sourceSkillTags(): ReadonlySet<CombatTag> | null {
+    if (!this.source?.startsWith('skill:')) return null;
+    return new Set(getSkill(this.source.slice(6)).tags);
   }
 
   // ───────────────────────────── attacks and hits ─────────────────────────────
@@ -438,12 +732,74 @@ export class SkillEngine {
     damageType: DamageType,
     criticalChanceBonus = 0,
   ): AttackSnapshot {
-    return this.host.core.createAttack({
+    const critBonus = criticalChanceBonus + this.talentCombat.critChance(tags);
+    const attack = this.host.core.createAttack({
       attackerId: this.host.playerId,
       damageType,
       coefficient: coefficient * this.elementalMultiplier(tags),
-      ...(criticalChanceBonus > 0 ? { criticalChanceBonus } : {}),
+      ...(critBonus > 0 ? { criticalChanceBonus: critBonus } : {}),
     });
+    if (this.source) this.tagAttack(attack.id, this.source);
+    return attack;
+  }
+  private tagAttack(attackId: string, source: string) {
+    this.attackSources.set(attackId, source);
+    if (this.attackSources.size > ATTACK_SOURCE_LIMIT)
+      this.attackSources.delete(this.attackSources.keys().next().value!);
+  }
+  /**
+   * Task 09 §1.2 talent secondary attack (counterattacks, shadow copies, off-hand, ballistae).
+   * Attributed to `talent:<nodeId>` (separate in run stats/DPS), tagged `talent` + `secondary`
+   * and resolved with `procs: false`: it never triggers passives, synergies or kill reactions,
+   * so a talent hit can never start a chain. Core resolves all damage as usual.
+   */
+  talentStrike(
+    nodeId: string,
+    targetId: string,
+    coefficient: number,
+    damageType: DamageType,
+    extraTags: readonly CombatTag[] = [],
+    options: { noCritical?: boolean } = {},
+  ): HitInfo | null {
+    if (!/^(warrior|mage|archer|rogue)\.b[1-3]\.n0[1-5]$/.test(nodeId))
+      throw new RangeError(`Unknown talent source ${nodeId}.`);
+    if (!Number.isFinite(coefficient) || coefficient < 0)
+      throw new RangeError('Talent strike coefficient must be ≥ 0.');
+    let hit: HitInfo | null = null;
+    this.withSource(`talent:${nodeId}`, () => {
+      const tags = new Set<CombatTag>(['talent', 'secondary', damageType, ...extraTags]);
+      const attack = options.noCritical
+        ? this.host.core.createAttack({
+            attackerId: this.host.playerId,
+            damageType,
+            coefficient,
+            noCritical: true,
+          })
+        : this.attack(new Set(), coefficient, damageType);
+      if (options.noCritical) this.tagAttack(attack.id, `talent:${nodeId}`);
+      hit = this.hit(targetId, attack, tags, { procs: false });
+    });
+    return hit;
+  }
+  /** Task 08.5: which skill/synergy created this attack snapshot (undefined = not the engine). */
+  attackSource(attackId: string): string | undefined {
+    return this.attackSources.get(attackId);
+  }
+  /** Task 08.5: current attribution (used by synergies to mark their own damage). */
+  currentSource(): string | null {
+    return this.source;
+  }
+  setSource(source: string | null): void {
+    this.source = source;
+  }
+  private withSource(source: string | null | undefined, run: () => void): void {
+    const previous = this.source;
+    this.source = source ?? null;
+    try {
+      run();
+    } finally {
+      this.source = previous;
+    }
   }
   preHit(targetId: string): PreHit {
     const entity = this.host.core.getEntity(targetId);
@@ -479,7 +835,8 @@ export class SkillEngine {
     if (!this.host.core.getEntity(targetId).alive) return null;
     const pre = this.preHit(targetId);
     const result = this.host.core.resolveAttack(attack, targetId, {
-      damageMultiplier: this.targetMultiplier(attack, targetId) * (options.multiplier ?? 1),
+      damageMultiplier:
+        this.targetMultiplier(attack, targetId, undefined, tags) * (options.multiplier ?? 1),
     });
     this.host.forwardCombat(result.events);
     const hit: HitInfo = Object.freeze({
@@ -499,8 +856,19 @@ export class SkillEngine {
   handleImpact(event: WeaponImpactEvent, pre: PreHit): void {
     const payload = event.projectileId ? this.projectiles.get(event.projectileId) : undefined;
     const basic = event.weaponId === this.host.basicWeaponId;
+    // Task 09.1: sword hits for the off-hand rules (C4); the off-hand itself never procs.
+    if (event.result.status === 'hit') {
+      if (event.weaponId === OFFHAND_WEAPON.id) {
+        this.talentCombat.onSwordHit('offhand', event.targetId);
+        return;
+      }
+      if (basic && this.host.characterClass === 'warrior')
+        this.talentCombat.onSwordHit('main', event.targetId);
+    }
     if (!basic && !payload) return;
     const tags = basic ? new Set(BASIC_TAGS[this.host.characterClass]) : payload!.tags;
+    // Task 09.1: basic-weapon hit reactions (e.g. Rogue superpower Poison/Burn procs).
+    if (basic && event.result.status === 'hit') this.talentCombat.onBasicHit(event.targetId);
     const hit: HitInfo = Object.freeze({
       targetId: event.targetId,
       attack: event.attack,
@@ -510,22 +878,24 @@ export class SkillEngine {
       ...(event.projectileId ? { projectileKey: event.projectileId } : {}),
       pre,
     });
-    if (payload) {
-      payload.hits++;
-      if (payload.limit) this.count(payload.limit.key, event.targetId);
-      if (event.result.status === 'hit') payload.onHit?.(hit, this);
-      if (payload.hits >= payload.maxHits) {
-        this.projectiles.delete(event.projectileId!);
-        payload.onEnd?.(pre.position ?? this.player, this);
+    this.withSource(payload?.source, () => {
+      if (payload) {
+        payload.hits++;
+        if (payload.limit) this.count(payload.limit.key, event.targetId);
+        if (event.result.status === 'hit') payload.onHit?.(hit, this);
+        if (payload.hits >= payload.maxHits) {
+          this.projectiles.delete(event.projectileId!);
+          payload.onEnd?.(pre.position ?? this.player, this);
+        }
       }
-    }
-    this.afterHit(hit);
+      this.afterHit(hit);
+    });
   }
   handleProjectileExpired(event: ProjectileExpiredEvent): void {
     const payload = this.projectiles.get(event.projectileId);
     if (!payload) return;
     this.projectiles.delete(event.projectileId);
-    payload.onEnd?.(event.position, this);
+    if (payload.onEnd) this.withSource(payload.source, () => payload.onEnd!(event.position, this));
   }
   /** Multishot: extra arrows for each basic bow attack. */
   onBasicAttack(event: AttackStartedEvent): void {
@@ -534,9 +904,23 @@ export class SkillEngine {
   }
   private afterHit(hit: HitInfo) {
     const killed = hit.result.events.some((e) => e.type === 'death' && e.entityId === hit.targetId);
+    // Task 09.1: direct-hit reactions (Archer focus/kill rules); secondary hits are ignored.
+    if (hit.result.status === 'hit')
+      this.talentCombat.onDirectHit({ targetId: hit.targetId, tags: hit.tags, killed });
+    // Task 09.1: a critical direct hit of an executing skill (e.g. Mage Arcane Supremacy).
+    if (
+      hit.result.status === 'hit' &&
+      hit.attack.critical &&
+      hit.procs &&
+      this.source?.startsWith('skill:')
+    )
+      this.talentCombat.onSkillCrit(this.source.slice(6), hit.tags);
     // Secondary hits and synergy procs never re-enter passive reactions or synergies.
     if (hit.result.status === 'hit' && hit.procs) {
-      for (const id of this.run.ownedIds()) ABILITIES[id]?.onPlayerHit?.(hit, this);
+      for (const id of this.run.ownedIds()) {
+        const onPlayerHit = ABILITIES[id]?.onPlayerHit;
+        if (onPlayerHit) this.withSource(`skill:${id}`, () => onPlayerHit(hit, this));
+      }
       this.synergies.onHit(hit);
       this.trackElement(hit);
     }
@@ -597,6 +981,7 @@ export class SkillEngine {
       );
     this.marks.delete(targetId);
     if (!cause.procs) return;
+    this.talentCombat.onKill({ targetId, direct: cause.direct, tags: cause.tags });
     if (cause.direct && cause.tags.has('melee') && this.rank('battle_fury') > 0)
       ABILITIES.battle_fury?.onMeleeKill?.(this);
     this.synergies.onKill(targetId, pre, cause);
@@ -617,12 +1002,14 @@ export class SkillEngine {
     if (!this.host.core.getEntity(targetId).alive || stacks < 1) return 0;
     const effect = this.playerEffect(definition);
     let applied = 0;
+    // Task 08.5: an unlabelled skill/synergy status carries its attribution as the origin.
+    const origin = originId ?? this.source ?? undefined;
     for (let i = 0; i < stacks; i++) {
       const result = this.host.statuses.apply({
         ...effect,
         targetId,
         sourceId: this.host.playerId,
-        ...(originId ? { originId } : {}),
+        ...(origin ? { originId: origin } : {}),
       });
       this.host.recordStatus(result.events);
       if (result.status === 'applied') applied++;
@@ -637,9 +1024,13 @@ export class SkillEngine {
   }
   slow(targetId: string, strength: number, duration: number): void {
     if (!this.host.core.getEntity(targetId).alive || duration <= 0 || strength <= 0) return;
+    const tags = this.sourceSkillTags();
     const bonus =
-      this.rank('elemental_mastery') > 0 ? this.params('elemental_mastery').slowBonus : 0;
-    const s = Math.min(CONTROL_RULES.maxSlow, strength + bonus);
+      (this.rank('elemental_mastery') > 0 ? this.params('elemental_mastery').slowBonus : 0) +
+      (tags ? this.talentCombat.slowBonus(tags) : 0);
+    const limits = this.host.controlLimits?.(targetId) ?? null;
+    const cap = limits ? Math.min(CONTROL_RULES.maxSlow, limits.maxSlow) : CONTROL_RULES.maxSlow;
+    const s = Math.min(cap, strength + bonus);
     const c = this.control(targetId);
     const active = c.slowUntil > this.clock;
     c.slow = active ? Math.max(c.slow, s) : s;
@@ -654,9 +1045,21 @@ export class SkillEngine {
     if (!this.host.core.getEntity(targetId).alive || duration <= 0) return false;
     const c = this.control(targetId);
     if (c.stunUntil > this.clock || c.stunImmuneUntil > this.clock) return false;
-    const d = Math.min(CONTROL_RULES.maxStunDuration, duration);
+    const limits = this.host.controlLimits?.(targetId) ?? null;
+    // Task 09.1: talent Stun bonus of the executing skill, inside the existing duration limit.
+    const tags = this.sourceSkillTags();
+    const d =
+      Math.min(
+        CONTROL_RULES.maxStunDuration,
+        duration + (tags ? this.talentCombat.stunBonus(tags) : 0),
+      ) * (limits ? Math.min(1, limits.stunScale) : 1);
+    if (d <= 0) return false;
     c.stunUntil = this.clock + d;
-    c.stunImmuneUntil = c.stunUntil + CONTROL_RULES.stunImmunity;
+    c.stunImmuneUntil =
+      c.stunUntil +
+      (limits
+        ? Math.max(CONTROL_RULES.stunImmunity, limits.stunImmunity)
+        : CONTROL_RULES.stunImmunity);
     this.syncControl(targetId);
     this.host.recordSkill([
       Object.freeze({ type: 'control-applied', targetId, control: 'stun', until: c.stunUntil }),
@@ -740,11 +1143,18 @@ export class SkillEngine {
       attack,
       ...(spec.pierce ? { pierce: spec.pierce } : {}),
     });
-    this.projectiles.set(id, { ...payload, hits: 0, maxHits: 1 + (spec.pierce ?? 0) });
+    const source = this.source ?? `skill:${payload.key.split('#')[0]}`;
+    if (!this.attackSources.has(attack.id)) this.tagAttack(attack.id, source);
+    this.projectiles.set(id, { ...payload, hits: 0, maxHits: 1 + (spec.pierce ?? 0), source });
     return id;
   }
   schedule(delay: number, run: () => void): void {
-    this.queue.push({ at: this.clock + delay, sequence: ++this.sequence, run });
+    const source = this.source;
+    this.queue.push({
+      at: this.clock + delay,
+      sequence: ++this.sequence,
+      run: source ? () => this.withSource(source, run) : run,
+    });
   }
   zone(spec: ZoneSpec): ZoneState {
     const id = `zone-${++this.zoneSequence}`;
@@ -754,8 +1164,10 @@ export class SkillEngine {
       ...spec,
       id,
       createdAt: this.clock,
-      expiresAt: this.clock + spec.duration,
+      // Task 09.1: talent zone-duration bonus of the executing skill.
+      expiresAt: this.clock + spec.duration * this.zoneDurationFactor(),
       firstTickAt,
+      ...(this.source ? { source: this.source } : {}),
       tickIndex: 1,
       nextTickAt: firstTickAt,
       ended: false,
@@ -767,7 +1179,7 @@ export class SkillEngine {
     if (zone.ended) return;
     zone.ended = true;
     this.zones.delete(zone.id);
-    zone.onEnd?.(zone, this);
+    if (zone.onEnd) this.withSource(zone.source, () => zone.onEnd!(zone, this));
   }
   recordArea(
     sourceKey: string,
@@ -849,6 +1261,14 @@ export class SkillEngine {
     }
     for (const [id, b] of this.buffs) consider(b.expiresAt, 1, 1, () => this.expireBuff(id));
     for (const [id, m] of this.marks) consider(m.expiresAt, 1, 2, () => this.marks.delete(id));
+    // Task 09.1: talent automatic actions (ballista summon), same grid rule as automatic skills.
+    if (includeAutos && this.host.core.getEntity(this.host.playerId).alive)
+      for (const a of this.talentCombat.autoActions()) {
+        order++;
+        if (a.canAct()) consider(this.gridCeil(Math.max(this.clock, a.readyAt)), 0, order, a.run);
+      }
+    // Task 09.1: talent entity actions/expirations and talent buff expirations.
+    for (const t of this.talents.scheduled()) consider(t.at, t.priority, 3e9 + t.order, t.run);
     if (this.barrierUntil !== null)
       consider(this.barrierUntil, 1, 3, () => {
         this.host.core.setBarrier(this.host.playerId, 0);
@@ -884,7 +1304,8 @@ export class SkillEngine {
   private tickZone(z: ZoneState) {
     z.tickIndex++;
     z.nextTickAt = z.firstTickAt + (z.tickIndex - 1) * z.tickInterval;
-    if (this.host.core.getEntity(this.host.playerId).alive) z.onTick(z, this);
+    if (this.host.core.getEntity(this.host.playerId).alive)
+      this.withSource(z.source, () => z.onTick(z, this));
   }
   private activate(skillId: string) {
     const state = this.autos.get(skillId)!;
@@ -893,7 +1314,11 @@ export class SkillEngine {
     const before = this.clock;
     if (!behavior?.activate) throw new Error(`No behavior for ${skillId}.`);
     state.activationCount++;
-    state.readyAt = before + scaleCooldown(p.cooldown, this.stats.cooldownReduction);
+    // Task 09.1: talent cooldown reductions apply to the already CDR-scaled cooldown.
+    state.readyAt =
+      before +
+      scaleCooldown(p.cooldown, this.cooldownReduction()) *
+        this.talentCombat.cooldownMultiplier(skillId);
     this.host.recordSkill([
       Object.freeze({
         type: 'skill-activated',
@@ -902,7 +1327,19 @@ export class SkillEngine {
         origin: Object.freeze({ x: this.player.x, y: this.player.y }),
       }),
     ]);
-    behavior.activate(this, p, `${skillId}#${state.activationCount}`);
+    this.withSource(`skill:${skillId}`, () =>
+      behavior.activate!(this, p, `${skillId}#${state.activationCount}`),
+    );
+  }
+  /** CDR for a cooldown starting now: conditional talent CDR is composed with the stats (caps once). */
+  private cooldownReduction(): number {
+    const bonus = this.talentCombat.cooldownReductionBonus();
+    if (!bonus) return this.stats.cooldownReduction;
+    const m = this.modifiers();
+    return composeRunStats(this.host.primary, {
+      ...m,
+      cooldownReduction: m.cooldownReduction + bonus,
+    }).cooldownReduction;
   }
   private expireControl(id: string) {
     const c = this.controls.get(id)!;
@@ -930,6 +1367,7 @@ export class SkillEngine {
       if ((!living.has(id) && !this.deaths.has(id)) || m.expiresAt < this.clock)
         this.marks.delete(id);
     for (const [key, c] of this.counters) if (c.at < this.clock - 5) this.counters.delete(key);
+    this.talents.prune();
     this.synergies.prune(living);
   }
   /** World calls this after finishing each boundary so death positions never accumulate. */

@@ -72,11 +72,17 @@ function areaHit(
   if (coefficient <= 0) return hitIds;
   const t = tags(skillId, ...(options.extraTags ?? []));
   const attack = e.attack(t, coefficient, type(skillId));
-  for (const id of ids) {
-    if (options.filter && !options.filter(id)) continue;
-    const hit = e.hit(id, attack, t, { procs: options.procs ?? true, onHit: options.onHit });
-    if (hit) hitIds.push(id);
-  }
+  // Task 09.1: the hit count of this area attack is known before resolution («2+ targets»).
+  const targets = ids.filter(
+    (id) => (!options.filter || options.filter(id)) && e.host.core.getEntity(id).alive,
+  );
+  e.withTargetCount(targets.length, () => {
+    for (const id of ids) {
+      if (options.filter && !options.filter(id)) continue;
+      const hit = e.hit(id, attack, t, { procs: options.procs ?? true, onHit: options.onHit });
+      if (hit) hitIds.push(id);
+    }
+  });
   return hitIds;
 }
 function fan(base: Point, count: number, spread: number): Point[] {
@@ -516,13 +522,15 @@ export const ABILITIES: Readonly<Record<string, AbilityBehavior>> = Object.freez
           speed: p.speed,
           radius: p.radius,
           range: p.range,
-          pierce: p.pierce,
+          // Task 09.1 G11: talent extra targets for Piercing Arrow only.
+          pierce: p.pierce + e.talentCombat.skillParamBonus('piercing_arrow', 'pierce'),
         },
         e.attack(t, p.coefficient, 'physical'),
         {
           key,
           tags: t,
           procs: true,
+          falloff: e.talentCombat.pierceFalloff('piercing_arrow'),
           onHit: (hit) => {
             lastHit = { id: hit.targetId, at: hit.pre.position ?? e.player };
           },
@@ -698,7 +706,13 @@ export const ABILITIES: Readonly<Record<string, AbilityBehavior>> = Object.freez
             radius: weapon.projectile.radius,
             range: weapon.projectile.maxTravelDistance,
           },
-          e.attack(t, weapon.damageCoefficient * p.coefficientFactor, 'physical'),
+          e.attack(
+            t,
+            weapon.damageCoefficient *
+              (p.coefficientFactor +
+                e.talentCombat.skillParamBonus('multishot', 'coefficientFactor')),
+            'physical',
+          ),
           { key: 'multishot', tags: t, procs: true },
         );
       }

@@ -116,10 +116,19 @@ export interface DamageModifierContext {
   readonly weaponId: string;
   readonly targetId: string;
   readonly projectileId?: string;
+  /** Task 09.1 (additive): number of targets this melee strike hits (known before resolution). */
+  readonly targetCount?: number;
 }
 export interface WeaponAttacksOptions {
   /** Must be pure for the given context: no HP, RNG or scheduling side effects. */
   readonly damageModifier?: (context: DamageModifierContext) => number;
+  /**
+   * Task 09.1 (additive): extra crit chance for an equipped weapon's attack, decided when the
+   * attack snapshot is created (talent category bonuses). Pure; default none.
+   */
+  readonly attackModifier?: (
+    context: Readonly<{ entityId: string; weaponId: string; targetId: string }>,
+  ) => Readonly<{ criticalChanceBonus?: number }>;
 }
 /** Task 07: an externally created projectile flown by the shared swept-collision engine. */
 export interface ProjectileLaunchInput {
