@@ -1,6 +1,6 @@
 import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, readFile } from 'node:fs/promises';
 
 /** Task 08 campaign UI (dev server): menu, pages, campaign runs, results, persistence. */
 const base = process.env.GAME_URL || 'http://127.0.0.1:5173';
@@ -30,6 +30,11 @@ try {
   for (const tab of ['Играть', 'Персонаж', 'Карты', 'Прогресс', 'Настройки'])
     assert.equal(await nav.getByRole('button', { name: tab, exact: true }).count(), 1, tab);
   assert.equal(await page.getByLabel('Золото: 0').count(), 1);
+  assert.equal(
+    await page.getByLabel(/^Версия сборки: v\d+\.\d+\.\d+ · ([0-9a-f]{7}|unknown)$/).count(),
+    1,
+    'build label on the main menu',
+  );
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.profile')));
   assert.equal(saved.highestUnlockedMap, 1, 'a new profile is persisted on first launch');
 
@@ -93,6 +98,16 @@ try {
     document.querySelector('.campaign-alert')?.textContent?.includes('Элита через'),
   );
   await page.screenshot({ path: 'artifacts/campaign-05-hud-elite.png' });
+  // Task 08.5 §2.3 debug overlay: live DPS and damage per source (?debug only).
+  const overlay = page.getByRole('complementary', { name: 'Debug Overlay' });
+  await overlay.waitFor();
+  assert.match(await overlay.innerText(), /Урон по источникам[\s\S]*Лук/i);
+  const overlayTotal = await overlay.innerText();
+  assert.match(overlayTotal, /Всего урона\s+[1-9]/);
+  // Task 08.5 §4.2: each run has its own seed, shown in the overlay.
+  const runSeed = (await state()).world.seed;
+  assert.ok(Number.isSafeInteger(runSeed) && runSeed >= 0 && runSeed <= 4294967295);
+  assert.equal(await page.getByTestId('debug-seed').innerText(), String(runSeed));
   await fastForward(121);
   await page.waitForFunction(() =>
     document.querySelector('.campaign-alert')?.textContent?.includes('Элита: Свирепый громила'),
@@ -118,12 +133,21 @@ try {
   assert.match(text, /Очки талантов\s+\+1/);
   assert.match(text, /Открыта карта 2: Туманные болота/);
   assert.match(text, /Терновый страж повержен/);
+  // Task 08.5 §2.2: compact run statistics on the results screen.
+  const statsPanel = results.getByRole('region', { name: 'Статистика забега' });
+  const statsText = await statsPanel.innerText();
+  assert.equal(await results.getByLabel(`Сид забега: ${runSeed}`).count(), 1);
+  assert.match(statsText, /Главные источники урона[\s\S]*Лук[\s\S]*\d+%/i);
+  assert.match(statsText, /Получено урона/);
+  assert.match(statsText, /Гибель\s+не погибали/);
   await page.screenshot({ path: 'artifacts/campaign-03-victory.png' });
   const afterWin = await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.profile')));
   assert.equal(afterWin.gold, 75);
   assert.equal(afterWin.highestUnlockedMap, 2);
   assert.equal(afterWin.classes.archer.level, 2);
   assert.equal(afterWin.stats.wins, 1);
+  assert.ok(afterWin.recentRuns[0].stats.damageDealt > 0, 'recent run keeps the stats summary');
+  assert.ok(afterWin.recentRuns[0].stats.topSources.length >= 1);
   await results.getByRole('button', { name: 'В меню' }).click();
   await nav.waitFor();
   assert.equal(await page.getByLabel('Золото: 75').count(), 1);
@@ -149,6 +173,28 @@ try {
 
   // Quit mid-run: abandoned, no rewards, recorded once.
   await page.getByRole('button', { name: 'Пауза', exact: true }).click();
+  const buildLabel = /^Версия сборки: v\d+\.\d+\.\d+ · ([0-9a-f]{7}|unknown)$/;
+  await page.getByRole('dialog').getByLabel(buildLabel).waitFor(); // 3.1 pause screen
+  // 3.3 «Сообщить о проблеме» from the pause screen: a JSON report with every field.
+  const [reportDownload] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Сообщить о проблеме' }).click(),
+  ]);
+  assert.match(reportDownload.suggestedFilename(), /^skazki-report-\d{4}-\d\d-\d\d-\d{4}\.json$/);
+  const reportPath = await reportDownload.path();
+  const report = JSON.parse(await readFile(reportPath, 'utf8'));
+  assert.equal(report.format, 'skazki-report');
+  assert.match(report.build.label, /^v\d+\.\d+\.\d+ · /);
+  assert.equal(report.run.mapId, 2);
+  assert.equal(report.run.characterClass, 'mage');
+  assert.equal(typeof report.run.seed, 'number');
+  assert.ok(report.run.time > 0);
+  assert.ok(report.run.stats && Array.isArray(report.run.stats.bySource));
+  assert.ok(Array.isArray(report.errors));
+  assert.equal(report.save.ok, true);
+  assert.equal(report.save.profile.gold, 75);
+  assert.match(report.userAgent, /Chrome/);
+  await page.getByRole('status').filter({ hasText: 'Отчёт сохранён' }).waitFor();
   await page.getByRole('button', { name: /Выйти в меню · забег не засчитается/ }).click();
   await nav.waitFor();
   const afterQuit = await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.profile')));
@@ -272,10 +318,25 @@ try {
   await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
   assert.equal((await state()).world.character.permanentLevel, 12);
   const devRun = page.getByRole('group', { name: 'Campaign Run Debug' });
+  const killsBefore = (await state()).world.kills;
+  await page.evaluate(() =>
+    window.__alpha.command({ type: 'spawning', settings: { enabled: false } }),
+  );
+  await page.evaluate(() =>
+    window.__alpha.command({ type: 'spawn', kind: 'melee', distance: 150 }),
+  );
+  await devRun.getByRole('button', { name: 'Убить всех на экране' }).click();
+  await page.waitForFunction((k) => window.__alpha.state().world.kills > k, killsBefore);
   await devRun.getByRole('button', { name: 'Призвать босса' }).click();
   await page.getByRole('progressbar', { name: 'Здоровье босса' }).waitFor();
   await devRun.getByRole('button', { name: 'HP босса → 10%' }).click();
-  await page.getByLabel('Ускорение забега').fill('5');
+  const speed = page.getByRole('group', { name: 'Ускорение забега' });
+  await speed.getByRole('button', { name: '×8' }).click();
+  await page.waitForFunction(() => window.__alpha.state().timeScale === 8);
+  assert.equal(
+    await speed.getByRole('button', { name: '×8' }).getAttribute('aria-pressed'),
+    'true',
+  );
   await devRun.getByRole('button', { name: 'Победа', exact: true }).click();
   const devResults = page.getByRole('dialog', { name: 'Победа.' });
   await devResults.waitFor();
@@ -294,6 +355,75 @@ try {
   assert.equal(JSON.parse(await stored()).highestUnlockedMap, 1);
   await page.getByRole('button', { name: /DEV · Закрыть/ }).click();
 
+  // Task 08.5 §3.2: a crash mid-run shows the friendly screen, logs the error in its own key,
+  // leaves the save byte-identical and «Вернуться в меню» recovers a working game.
+  await page.evaluate(() => localStorage.removeItem('skazki.errors'));
+  await page.getByRole('button', { name: 'Начать забег' }).click();
+  await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
+  const saveBeforeCrash = await stored();
+  page.once('pageerror', () => {}); // the simulated error is expected
+  const expectedErrors = errors.length;
+  await page.getByRole('button', { name: /DEV · Тестирование/ }).click();
+  await page.getByRole('button', { name: 'Сымитировать сбой' }).click();
+  const crashDialog = page.getByRole('alertdialog', { name: 'Что-то пошло не так.' });
+  await crashDialog.waitFor();
+  assert.match(await crashDialog.innerText(), /сохранение не изменено/);
+  await page.screenshot({ path: 'artifacts/campaign-11-crash.png' });
+  const errorLog = await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.errors')));
+  assert.ok(errorLog.length >= 1 && errorLog.length <= 5);
+  assert.match(errorLog.at(-1).message, /Debug crash/);
+  assert.equal(await stored(), saveBeforeCrash, 'the crash never writes the save');
+  await crashDialog.getByRole('button', { name: 'Вернуться в меню' }).click();
+  await nav.waitFor();
+  assert.equal(await stored(), saveBeforeCrash, 'recovery never writes the save');
+  await page.waitForFunction(() => window.__alpha?.state().screen === 'menu');
+  await page.getByRole('button', { name: 'Начать забег' }).click();
+  await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
+  await page.getByRole('button', { name: 'Пауза', exact: true }).click();
+  await page.getByRole('button', { name: /Выйти в меню · забег не засчитается/ }).click();
+  await nav.waitFor();
+  errors.length = expectedErrors; // drop the simulated crash from the unexpected-error list
+
+  // Task 08.5 §4.2 (DEV): start the selected map with a given seed.
+  await page.getByRole('button', { name: /DEV · Тестирование/ }).click();
+  await page.getByLabel('Debug сид').fill('424242');
+  await page.getByRole('button', { name: 'Начать выбранную карту с этим сидом' }).click();
+  await page.waitForFunction(() => window.__alpha.state().world?.seed === 424242);
+  await page.getByRole('button', { name: /DEV · Закрыть/ }).click();
+  await page.getByRole('button', { name: 'Пауза', exact: true }).click();
+  await page.getByRole('button', { name: /Выйти в меню · забег не засчитается/ }).click();
+  await nav.waitFor();
+
+  // Task 08.5 §3.4 (DEV): load the earlier report → its save goes through the normal import.
+  const saveBeforeReport = await stored();
+  await page.getByRole('button', { name: /DEV · Тестирование/ }).click();
+  await page.getByLabel('Debug файл отчёта').setInputFiles(reportPath);
+  const replace = page.getByRole('button', { name: 'Заменить сохранение' });
+  await replace.waitFor();
+  assert.equal(await stored(), saveBeforeReport, 'nothing changes before confirmation');
+  await replace.click();
+  await page.getByText('Сохранение импортировано.').waitFor();
+  const imported = JSON.parse(await stored());
+  assert.equal(imported.profileId, report.save.profile.profileId);
+  assert.equal(imported.gold, 75);
+  await page.getByRole('button', { name: /DEV · Закрыть/ }).click();
+
+  // Task 08.5 §5.3: «Тряска экрана» (on by default) lives in its own settings key.
+  await nav.getByRole('button', { name: 'Настройки', exact: true }).click();
+  const shake = page.getByRole('checkbox', { name: 'Тряска экрана' });
+  assert.equal(await shake.isChecked(), true);
+  const saveBeforeSetting = await stored();
+  await shake.uncheck();
+  assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.settings'))), {
+    screenShake: false,
+  });
+  assert.equal(await stored(), saveBeforeSetting, 'settings never touch the save');
+  await page.reload();
+  await page.waitForFunction(() => !!window.__alpha);
+  await nav.getByRole('button', { name: 'Настройки', exact: true }).click();
+  assert.equal(await page.getByRole('checkbox', { name: 'Тряска экрана' }).isChecked(), false);
+  await page.getByRole('checkbox', { name: 'Тряска экрана' }).check();
+
   // Phone width: every menu page fits without horizontal scrolling.
   await page.setViewportSize({ width: 390, height: 844 });
   for (const tab of ['Играть', 'Персонаж', 'Карты', 'Прогресс', 'Настройки']) {
@@ -308,7 +438,7 @@ try {
 
   if (errors.length) throw new Error(errors.join('\n'));
   console.log(
-    'PASS campaign: menu/Gold, Character, Maps (lock/boss reveal), Map 1 win → results/rewards/unlock/save, reload keeps progress, Map 2 with another class (separate XP, shared Gold), quit/reload = abandoned without rewards, Save Management (export, invalid/newer import unchanged, confirm/cancel/replace, round-trip), write-failure warning + retry, DEV campaign tools (unlock/level/Gold, boss, forced Map 10 win, reset).',
+    'PASS campaign: menu/Gold, Character, Maps (lock/boss reveal), Map 1 win → results/rewards/unlock/save, reload keeps progress, Map 2 with another class (separate XP, shared Gold), quit/reload = abandoned without rewards, Save Management (export, invalid/newer import unchanged, confirm/cancel/replace, round-trip), write-failure warning + retry, DEV campaign tools (unlock/level/Gold, boss, forced Map 10 win, reset); 08.5: time scale, kill-all, stats panel, debug overlay, build label, report download, crash recovery (save untouched), report → save import.',
   );
 } finally {
   await browser.close();

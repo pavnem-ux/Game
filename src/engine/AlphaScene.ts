@@ -1,4 +1,9 @@
+import { FLOATING_LIMITS, FloatingNumbers, HitFlashes, shakeFor } from './game-feel';
+import type { FloatingKind } from './game-feel';
+import { uiSettings } from '../gameplay-ui/ui-settings';
 import Phaser from 'phaser';
+import { frameStep, isDebugTimeScale } from './time-scale';
+import type { DebugTimeScale } from './time-scale';
 import { GameplayWorld, ALPHA, CLASS_LABELS } from '../gameplay';
 import type { GameplayOptions, GameplaySnapshot, WorldEvent } from '../gameplay';
 import { alphaBridge, CLASS_COLORS } from '../gameplay-ui/store';
@@ -8,6 +13,16 @@ import { createWorld } from './World';
 import type { TestingController } from '../gameplay/testing';
 import { stunIndicator } from './stun-indicator';
 import { oncePerKeyEvent } from './key-event-once';
+
+/** Task 08.5 §5.1: floating-number styles (crit larger and gold, player damage red). */
+const FLOAT_STYLES: Record<FloatingKind, { color: string; size: number }> = {
+  normal: { color: '#fff3d6', size: 12 },
+  crit: { color: '#ffd24a', size: 16 },
+  player: { color: '#ff6b6b', size: 14 },
+  dodge: { color: '#b9c7c0', size: 11 },
+};
+/** Seconds the red edge vignette stays after the player loses HP. */
+const PLAYER_HIT_VIGNETTE = 0.3;
 
 export class AlphaScene extends Phaser.Scene {
   private world: GameplayWorld | null = null;
@@ -21,6 +36,12 @@ export class AlphaScene extends Phaser.Scene {
   private stick = { active: false, id: -1, x: 0, y: 0, dx: 0, dy: 0 };
   private hudTimer = 0;
   private lastEvent = 0;
+  /** Task 08.5 §5 game feel (presentation only): pooled numbers, hit flashes, vignette. */
+  private readonly floating = new FloatingNumbers();
+  private floatLabels: Phaser.GameObjects.Text[] = [];
+  private readonly flashes = new HitFlashes();
+  private vignette!: Phaser.GameObjects.Graphics;
+  private playerHitAt = Number.NEGATIVE_INFINITY;
   private fx: { event: WorldEvent; until: number; x: number; y: number; text?: string }[] = [];
   private labels: Phaser.GameObjects.Text[] = [];
   private damageLabels: Phaser.GameObjects.Text[] = [];
@@ -28,7 +49,7 @@ export class AlphaScene extends Phaser.Scene {
   /** Task 08: name tags of elites/bosses (pooled). */
   private nameLabels: Phaser.GameObjects.Text[] = [];
   /** Task 08 debug accelerated mode (DEV/QA only): frame time multiplier for the same simulation. */
-  private timeScale = 1;
+  private timeScale: DebugTimeScale = 1;
   private testing?: TestingController;
   private testingWorld?: (options: GameplayOptions) => GameplayWorld;
   private testingReady: Promise<void> = Promise.resolve();
@@ -39,6 +60,7 @@ export class AlphaScene extends Phaser.Scene {
     createWorld(this);
     this.graphics = this.add.graphics().setDepth(5);
     this.joystick = this.add.graphics().setDepth(100).setScrollFactor(0);
+    this.vignette = this.add.graphics().setDepth(90).setScrollFactor(0);
     this.cameras.main.setBounds(0, 0, ALPHA.arenaSize, ALPHA.arenaSize).centerOn(1800, 1800);
     this.keys = this.input.keyboard!.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT') as typeof this.keys;
     // DOM controls retain their own key input. Phaser must not capture arrows/space in forms.
@@ -139,6 +161,7 @@ export class AlphaScene extends Phaser.Scene {
         ? this.testingWorld(input)
         : new GameplayWorld(input); // Validate before replacing a session.
     this.world = next;
+    this.resetFeel();
     this.runId++;
     this.lastEvent = 0;
     this.fx = [];
@@ -167,6 +190,7 @@ export class AlphaScene extends Phaser.Scene {
           break;
         case 'menu':
           this.world = null;
+          this.resetFeel();
           this.clearInput();
           this.labels.forEach((t) => t.setVisible(false));
           this.damageLabels.forEach((t) => t.setVisible(false));
@@ -202,13 +226,19 @@ export class AlphaScene extends Phaser.Scene {
           break;
         case 'time-scale':
           if (import.meta.env.DEV || __QA_BUILD__) {
-            if (!Number.isFinite(command.scale) || command.scale < 1 || command.scale > 20)
-              throw new RangeError('Time scale must be 1–20.');
+            if (!isDebugTimeScale(command.scale))
+              throw new RangeError('Time scale must be ×1, ×2, ×4 or ×8.');
             this.timeScale = command.scale;
           }
           break;
         case 'testing':
           if (import.meta.env.DEV || __QA_BUILD__) this.testing?.(command.action);
+          break;
+        case 'kill-on-screen':
+          if (import.meta.env.DEV || __QA_BUILD__) {
+            const { x, y, width, height } = this.cameras.main.worldView;
+            this.testing?.({ type: 'kill-in-view', view: { x, y, width, height } });
+          }
           break;
       }
     } catch (e) {
@@ -223,8 +253,7 @@ export class AlphaScene extends Phaser.Scene {
     this.input.keyboard?.resetKeys();
   }
   update(_time: number, delta: number) {
-    const dt =
-      Math.min(0.05, delta / 1000) * (import.meta.env.DEV || __QA_BUILD__ ? this.timeScale : 1);
+    const dt = frameStep(delta, import.meta.env.DEV || __QA_BUILD__ ? this.timeScale : 1);
     if (this.world) {
       let dx =
         Number(this.keys.D.isDown || this.keys.RIGHT.isDown) -
@@ -287,20 +316,32 @@ export class AlphaScene extends Phaser.Scene {
         event.channel === 'combat' &&
         (e.type === 'damage' || e.type === 'periodic-damage' || e.type === 'dodge')
       ) {
-        const target =
-          e.targetId === 'player'
-            ? s.playerBody
-            : s.enemies.find((v) => v.entityId === e.targetId)?.position;
-        if (target)
-          this.fx.push({
-            event,
-            until: event.time + 0.6,
-            ...target,
-            text:
-              e.type === 'dodge'
-                ? 'DODGE'
-                : `${e.type === 'damage' && e.critical ? 'CRIT ' : ''}−${e.appliedDamage}`,
-          });
+        const player = e.targetId === 'player';
+        const target = player
+          ? s.playerBody
+          : s.enemies.find((v) => v.entityId === e.targetId)?.position;
+        const amount = e.type === 'dodge' ? 0 : e.appliedDamage;
+        if (target && (e.type === 'dodge' || amount > 0)) {
+          const kind =
+            e.type === 'dodge'
+              ? 'dodge'
+              : player
+                ? 'player'
+                : e.type === 'damage' && e.critical
+                  ? 'crit'
+                  : 'normal';
+          this.floating.spawn(kind, target.x, target.y - 30, amount, event.time);
+          if (amount > 0) {
+            if (player) this.playerHitAt = event.time;
+            else this.flashes.hit(e.targetId, event.time);
+          }
+        }
+      }
+      if (event.channel === 'combat' || event.channel === 'campaign') {
+        const shake = uiSettings.get().screenShake
+          ? shakeFor(e as Parameters<typeof shakeFor>[0])
+          : null;
+        if (shake) this.cameras.main.shake(shake.duration, shake.intensity);
       }
     }
     this.fx = this.fx.filter((f) => f.until > s.time).slice(-64);
@@ -359,6 +400,12 @@ export class AlphaScene extends Phaser.Scene {
       g.fillStyle(ranged ? 0xffbebf : 0xe9d497)
         .fillRect(x - 6 * f, y - 6 * f, 4 * f, 3 * f)
         .fillRect(x + 3 * f, y - 6 * f, 4 * f, 3 * f);
+      const flash = this.flashes.strength(enemy.entityId, s.time);
+      if (flash > 0) {
+        g.fillStyle(0xffffff, 0.6 * flash);
+        if (ranged) g.fillTriangle(x, y - 18 * f, x - 17 * f, y + 14 * f, x + 17 * f, y + 14 * f);
+        else g.fillEllipse(x, y, 30 * f, 33 * f);
+      }
       g.fillStyle(0x19201b).fillRect(x - hpWidth / 2, barY, hpWidth, eliteName ? 5 : 3);
       g.fillStyle(isBoss ? 0xff4d6d : eliteName ? 0xffb347 : ranged ? 0xe09ac1 : 0xc8d79c).fillRect(
         x - hpWidth / 2,
@@ -551,6 +598,7 @@ export class AlphaScene extends Phaser.Scene {
     }
     this.labels.slice(label).forEach((t) => t.setVisible(false));
     this.damageLabels.slice(damageLabel).forEach((t) => t.setVisible(false));
+    this.drawFeel(s);
     this.joystick.clear();
     if (this.stick.active) {
       const d = Math.hypot(this.stick.dx, this.stick.dy),
@@ -561,6 +609,55 @@ export class AlphaScene extends Phaser.Scene {
         .fillStyle(0xc6edce, 0.3)
         .fillCircle(this.stick.x + Math.cos(a) * r, this.stick.y + Math.sin(a) * r, 20);
     }
+  }
+  /** Task 08.5 §5: floating numbers (pooled, capped) and the player-hit vignette. */
+  private drawFeel(s: GameplaySnapshot) {
+    for (let i = 0; i < this.floating.capacity; i++) this.floatLabels[i]?.setVisible(false);
+    this.floating.forEachActive(s.time, (entry, progress, i) => {
+      const t =
+        this.floatLabels[i] ??
+        (this.floatLabels[i] = this.add
+          .text(0, 0, '', {
+            fontFamily: 'monospace',
+            fontSize: '12px',
+            fontStyle: 'bold',
+            color: '#ffffff',
+            stroke: '#17251c',
+            strokeThickness: 3,
+          })
+          .setOrigin(0.5)
+          .setDepth(13));
+      const style = FLOAT_STYLES[entry.kind];
+      const pop = entry.kind === 'crit' && progress < 0.15 ? 1.35 - progress * 2.3 : 1;
+      t.setText(entry.text)
+        .setColor(style.color)
+        .setFontSize(style.size)
+        .setScale(pop)
+        .setAlpha(progress > 0.6 ? (1 - progress) / 0.4 : 1)
+        .setPosition(entry.x + entry.drift, entry.y - progress * FLOATING_LIMITS.rise)
+        .setVisible(true);
+    });
+    const v = this.vignette.clear();
+    const hitAge = s.time - this.playerHitAt;
+    if (hitAge >= 0 && hitAge < PLAYER_HIT_VIGNETTE) {
+      const strength = 1 - hitAge / PLAYER_HIT_VIGNETTE;
+      const w = this.scale.width,
+        h = this.scale.height;
+      for (let i = 0; i < 6; i++)
+        v.lineStyle(14, 0xd8323c, 0.32 * strength * (1 - i / 6)).strokeRect(
+          7 + i * 14,
+          7 + i * 14,
+          w - 14 - i * 28,
+          h - 14 - i * 28,
+        );
+    }
+  }
+  private resetFeel() {
+    this.floating.clear();
+    this.flashes.clear();
+    this.playerHitAt = Number.NEGATIVE_INFINITY;
+    this.floatLabels.forEach((t) => t.setVisible(false));
+    this.vignette?.clear();
   }
   private label(pool: Phaser.GameObjects.Text[], i: number) {
     return (
@@ -599,7 +696,13 @@ export class AlphaScene extends Phaser.Scene {
       this.recordedRun = this.runId;
     }
     alphaBridge.publish({
-      ...(import.meta.env.DEV || __QA_BUILD__ ? { qa: this.testing?.snapshot() ?? null } : {}),
+      ...(import.meta.env.DEV || __QA_BUILD__
+        ? {
+            qa: this.testing?.snapshot() ?? null,
+            timeScale: this.timeScale,
+            fps: Math.round(this.game.loop.actualFps),
+          }
+        : {}),
       screen,
       world,
       runId: this.runId,

@@ -20,6 +20,60 @@ export interface RunResult {
   readonly bossKilled: boolean;
   /** In-run level reached (display only; never converted to permanent XP). */
   readonly runLevel: number;
+  /** Task 08.5: optional run-statistics summary, stored with the recent run (display only). */
+  readonly stats?: RunStatsSummary;
+}
+/**
+ * Task 08.5 §2: the only run statistics that are persisted (in `recentRuns`). Whole numbers for
+ * damage; source ids as produced by the run-stats collector. Never affects rewards.
+ */
+export interface RunStatsSummary {
+  readonly damageDealt: number;
+  readonly damageTaken: number;
+  /** Up to 3 highest damage sources. */
+  readonly topSources: readonly Readonly<{ source: string; damage: number }>[];
+  readonly deathTime: number | null;
+  readonly reviveUsed: boolean;
+  readonly lowHpMoments: number;
+}
+export const RUN_STATS_SUMMARY_LIMITS = Object.freeze({ topSources: 3, sourceLength: 64 });
+const SOURCE_ID = /^[a-z]+(:[a-z0-9_-]+)?$/;
+/** Throws on an invalid summary (shared by run results and save parsing). */
+export function validateRunStatsSummary(stats: unknown, what = 'stats'): RunStatsSummary {
+  const fail = (field: string): never => {
+    throw new RangeError(`Invalid ${what}.${field}.`);
+  };
+  if (!stats || typeof stats !== 'object' || Array.isArray(stats)) fail('summary');
+  const v = stats as Record<string, unknown>;
+  const whole = (x: unknown, field: string) =>
+    Number.isSafeInteger(x) && (x as number) >= 0 ? (x as number) : fail(field);
+  const sources = Array.isArray(v.topSources) ? v.topSources : fail('topSources');
+  if (sources.length > RUN_STATS_SUMMARY_LIMITS.topSources) fail('topSources');
+  const death = v.deathTime ?? null;
+  if (death !== null && !(Number.isFinite(death) && (death as number) >= 0)) fail('deathTime');
+  if (typeof v.reviveUsed !== 'boolean') fail('reviveUsed');
+  return Object.freeze({
+    damageDealt: whole(v.damageDealt, 'damageDealt'),
+    damageTaken: whole(v.damageTaken, 'damageTaken'),
+    topSources: Object.freeze(
+      sources.map((s: unknown, i: number) => {
+        const e = (s && typeof s === 'object' ? s : fail(`topSources[${i}]`)) as Record<
+          string,
+          unknown
+        >;
+        const source =
+          typeof e.source === 'string' &&
+          e.source.length <= RUN_STATS_SUMMARY_LIMITS.sourceLength &&
+          SOURCE_ID.test(e.source)
+            ? e.source
+            : fail(`topSources[${i}].source`);
+        return Object.freeze({ source, damage: whole(e.damage, `topSources[${i}].damage`) });
+      }),
+    ),
+    deathTime: death as number | null,
+    reviveUsed: v.reviveUsed as boolean,
+    lowHpMoments: whole(v.lowHpMoments, 'lowHpMoments'),
+  });
 }
 export interface RunRewards {
   readonly xp: number;

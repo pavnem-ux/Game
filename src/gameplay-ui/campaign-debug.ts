@@ -1,6 +1,14 @@
 import type { CharacterClass } from '../character-stats';
 import { CAMPAIGN_MAPS } from '../campaign';
-import { BACKUP_KEY, QUARANTINE_KEY, SAVE_KEY, createSaveStore } from '../persistence';
+import {
+  BACKUP_KEY,
+  MAX_IMPORT_BYTES,
+  QUARANTINE_KEY,
+  SAVE_KEY,
+  createSaveStore,
+} from '../persistence';
+import { REPORT_FORMAT } from './bug-report';
+import { MAX_UI_SEED } from '../gameplay';
 import { NEW_CLASS_PROGRESS, addClassXp, createProfile } from '../profile';
 import type { PlayerProfile } from '../profile';
 import { campaignStore } from './campaign-state';
@@ -14,6 +22,29 @@ function edit(change: (p: PlayerProfile) => PlayerProfile): boolean {
   const profile = campaignStore.getSnapshot().progression.profile;
   if (!profile) return false;
   return campaignStore.service().replaceProfile(change(profile)).ok;
+}
+/**
+ * Task 08.5 §3.4: extracts the embedded save from a «Сообщить о проблеме» report. Only the
+ * report envelope is checked here; the save itself then goes through the normal import
+ * validation (`prepareImport` via `campaignStore.stageImport`) and its confirmation.
+ */
+export function saveFromReport(
+  text: string,
+): { ok: true; saveJson: string } | { ok: false; reason: string } {
+  if (typeof text !== 'string' || text.length > MAX_IMPORT_BYTES)
+    return { ok: false, reason: 'Файл слишком большой или пустой.' };
+  let report: unknown;
+  try {
+    report = JSON.parse(text);
+  } catch {
+    return { ok: false, reason: 'Файл не является JSON.' };
+  }
+  const r = report as { format?: unknown; save?: { ok?: unknown; profile?: unknown } } | null;
+  if (!r || typeof r !== 'object' || r.format !== REPORT_FORMAT)
+    return { ok: false, reason: 'Это не файл отчёта (skazki-report).' };
+  if (!r.save || r.save.ok !== true || !r.save.profile || typeof r.save.profile !== 'object')
+    return { ok: false, reason: 'В отчёте нет корректного сохранения.' };
+  return { ok: true, saveJson: JSON.stringify(r.save.profile) };
 }
 export const campaignDebug = {
   unlockMaps(upTo = CAMPAIGN_MAPS.length) {
@@ -52,6 +83,31 @@ export const campaignDebug = {
     createSaveStore().clearForDev();
     const now = new Date().toISOString();
     return campaignStore.service().replaceProfile(createProfile(`dev-${Date.now()}`, now)).ok;
+  },
+  /**
+   * Task 08.5 §3.4: load a report → stage its save through the normal validated import. Nothing
+   * is replaced until the player confirms on the Settings page (same flow as a save file).
+   */
+  stageReport(text: string, fileName: string): boolean {
+    const extracted = saveFromReport(text);
+    campaignStore.setPage('settings');
+    if (!extracted.ok) {
+      campaignStore.stageImport('', fileName); // shows the standard "not imported" message
+      return false;
+    }
+    campaignStore.stageImport(extracted.saveJson, fileName);
+    return campaignStore.getSnapshot().pendingImport !== null;
+  },
+  /**
+   * Task 08.5 §4.2: start the selected map with a given seed (replays a reported run: same seed
+   * + same inputs → same spawns and level-up cards). Returns false for an invalid seed.
+   */
+  startWithSeed(text: string): boolean {
+    if (!/^\d{1,10}$/.test(text)) return false;
+    const seed = Number(text);
+    if (seed > MAX_UI_SEED) return false;
+    const ui = campaignStore.getSnapshot();
+    return campaignStore.startRun(ui.selectedMapId, undefined, seed);
   },
   /** Read-only view of the stored keys (inspection only). */
   inspectSave(): string {

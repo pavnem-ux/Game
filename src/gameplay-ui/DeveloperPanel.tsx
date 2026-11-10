@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { DEBUG_TIME_SCALES } from '../engine/time-scale';
 import { CHARACTER_CLASSES } from '../character-stats';
 import type { CharacterClass } from '../character-stats';
 import { CLASS_LABELS, DEFAULT_SPAWNING } from '../gameplay';
@@ -8,6 +9,9 @@ import { campaignDebug } from './campaign-debug';
 import type { AlphaState } from './store';
 export default function DeveloperPanel({ state }: { state: AlphaState }) {
   const w = state.world;
+  // Task 08.5 §3.2: DEV/QA-only crash trigger for testing the error boundary (render error).
+  const [crashNow, setCrashNow] = useState(false);
+  if (crashNow) throw new Error('Debug crash: simulated render error');
   const [characterClass, setClass] = useState<CharacterClass>(
     w?.character.characterClass ?? 'warrior',
   );
@@ -38,7 +42,7 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
   const [debugLevel, setDebugLevel] = useState(10),
     [debugXp, setDebugXp] = useState(500),
     [debugGold, setDebugGold] = useState(100),
-    [timeScale, setTimeScale] = useState(1),
+    [debugSeed, setDebugSeed] = useState(String(w?.seed ?? 1)),
     [saveView, setSaveView] = useState('');
   const restart = () => {
     setProtection(false);
@@ -111,6 +115,23 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
           />
         </label>
         <button onClick={() => campaignDebug.grantGold(debugGold)}>Выдать золото</button>
+        <label>
+          Сид
+          <input
+            aria-label="Debug сид"
+            inputMode="numeric"
+            value={debugSeed}
+            onChange={(e) => setDebugSeed(e.target.value.trim())}
+          />
+        </label>
+        <button
+          onClick={() => {
+            if (!campaignDebug.startWithSeed(debugSeed))
+              window.alert('Сид: целое число 0–4294967295.');
+          }}
+        >
+          Начать выбранную карту с этим сидом
+        </button>
         <button onClick={() => setSaveView(saveView ? '' : campaignDebug.inspectSave())}>
           {saveView ? 'Скрыть сохранение' : 'Показать сохранение'}
         </button>
@@ -122,6 +143,24 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
         >
           Сбросить тестовый прогресс
         </button>
+        <button onClick={() => setCrashNow(true)}>Сымитировать сбой</button>
+        <label className="debug-file">
+          Загрузить отчёт → импорт сохранения
+          <input
+            type="file"
+            accept="application/json,.json"
+            aria-label="Debug файл отчёта"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              e.target.value = '';
+              if (!f) return;
+              void f.text().then(
+                (text) => campaignDebug.stageReport(text, f.name),
+                () => campaignDebug.stageReport('', f.name),
+              );
+            }}
+          />
+        </label>
         {saveView && <textarea aria-label="Debug сохранение" readOnly rows={10} value={saveView} />}
       </fieldset>
       {w?.campaign && (
@@ -131,6 +170,9 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
             К следующему событию ({w.campaign.nextEvent?.id ?? '—'})
           </button>
           <button onClick={() => send({ type: 'campaign-boss-now' })}>Призвать босса</button>
+          <button onClick={() => alphaBridge.send({ type: 'kill-on-screen' })}>
+            Убить всех на экране
+          </button>
           <button onClick={() => send({ type: 'campaign-boss-hp', fraction: 0.1 })}>
             HP босса → 10%
           </button>
@@ -140,20 +182,18 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
           <button onClick={() => send({ type: 'campaign-force', outcome: 'defeat' })}>
             Поражение
           </button>
-          <label>
-            Ускорение ×{timeScale}
-            <input
-              aria-label="Ускорение забега"
-              type="range"
-              min="1"
-              max="20"
-              value={timeScale}
-              onChange={(e) => {
-                setTimeScale(Number(e.target.value));
-                alphaBridge.send({ type: 'time-scale', scale: Number(e.target.value) });
-              }}
-            />
-          </label>
+          <div role="group" aria-label="Ускорение забега">
+            Ускорение
+            {DEBUG_TIME_SCALES.map((scale) => (
+              <button
+                key={scale}
+                aria-pressed={(state.timeScale ?? 1) === scale}
+                onClick={() => alphaBridge.send({ type: 'time-scale', scale })}
+              >
+                ×{scale}
+              </button>
+            ))}
+          </div>
         </fieldset>
       )}
       {w && state.qa && (

@@ -2,11 +2,31 @@ import { useRef, useSyncExternalStore } from 'react';
 import { CHARACTER_CLASSES } from '../character-stats';
 import { CLASS_LABELS } from '../gameplay';
 import { campaignStore } from './campaign-state';
+import { uiSettings } from './ui-settings';
+import { RU } from './strings-ru';
 import { statusText } from './save-messages';
 
 const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString('ru-RU') : 'ещё не было');
 
 /** Settings → Save Management (export, import with confirmation, status, warnings). */
+/** Task 08.5 §5.3: presentation preferences (own key, never the save). */
+function GameplaySettings() {
+  const settings = useSyncExternalStore(uiSettings.subscribe, uiSettings.get);
+  return (
+    <section className="gameplay-settings" aria-label={RU.settings.title}>
+      <h3>{RU.settings.title}</h3>
+      <label className="settings-toggle">
+        <input
+          type="checkbox"
+          checked={settings.screenShake}
+          onChange={(e) => uiSettings.set({ screenShake: e.target.checked })}
+        />
+        {RU.settings.screenShake}
+      </label>
+      <p className="faint">{RU.settings.screenShakeHint}</p>
+    </section>
+  );
+}
 export function SettingsPage() {
   const ui = useSyncExternalStore(campaignStore.subscribe, campaignStore.getSnapshot);
   const file = useRef<HTMLInputElement>(null);
@@ -15,6 +35,7 @@ export function SettingsPage() {
   return (
     <div className="campaign-page settings-page">
       <h2>Настройки</h2>
+      <GameplaySettings />
       <section className="save-management" aria-label="Управление сохранением">
         <h3>Управление сохранением</h3>
         <p className={`save-status save-${status.state}`} role="status">

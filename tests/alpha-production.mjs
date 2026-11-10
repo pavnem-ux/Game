@@ -96,6 +96,13 @@ try {
   assert.equal(await page.locator('.synergy-entry').count(), 3);
   await page.waitForTimeout(100);
   assert.equal(await page.getByTestId('alpha-timer').innerText(), pauseTime);
+  // Task 08.5 §3.1: production build label on the pause screen.
+  await page.getByLabel(/^Версия сборки: v\d+\.\d+\.\d+ · ([0-9a-f]{7}|unknown)$/).waitFor();
+  assert.equal(
+    await page.getByRole('button', { name: 'Сообщить о проблеме' }).count(),
+    1,
+    'bug report is a player feature: present in production',
+  );
   await page.getByRole('button', { name: 'Продолжить' }).click();
   await page.screenshot({ path: 'artifacts/alpha-09-production.png' });
   for (const file of await readdir('dist/assets'))
@@ -123,6 +130,16 @@ try {
         'campaign-force',
         'campaign-boss-now',
         'Time scale must be',
+        'kill-in-view',
+        'Убить всех на экране',
+        'Debug Overlay',
+        'Debug crash',
+        'Сымитировать сбой',
+        'Debug файл отчёта',
+        'Debug сид',
+        'Начать выбранную карту с этим сидом',
+        'Это не файл отчёта',
+        'Урон в секунду (5 с)',
       ])
         assert.ok(
           !source.includes(marker),

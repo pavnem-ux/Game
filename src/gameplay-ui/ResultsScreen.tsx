@@ -5,6 +5,9 @@ import type { GameplaySnapshot } from '../gameplay';
 import { campaignStore } from './campaign-state';
 import { clock } from './campaign-format';
 import { SaveWarning } from './SaveManagement';
+import { RunStatsPanel } from './RunStatsPanel';
+import { RU } from './strings-ru';
+import { ReportButton } from './ReportButton';
 
 /** Results of a finished campaign run. Rewards come from the committed summary only. */
 export function ResultsScreen({ world }: { world: GameplaySnapshot }) {
@@ -60,6 +63,10 @@ export function ResultsScreen({ world }: { world: GameplaySnapshot }) {
           </p>
         )}
         {!victory && <p className="results-note">Поражение не открывает следующую карту.</p>}
+        <RunStatsPanel stats={world.runStats} />
+        <p className="results-seed" aria-label={`${RU.seed.label}: ${world.seed}`}>
+          {RU.seed.label}: <code>{world.seed}</code>
+        </p>
         <p className={`results-save save-${saveState}`} role="status">
           {last?.commit.saved
             ? 'Прогресс сохранён.'
@@ -81,6 +88,7 @@ export function ResultsScreen({ world }: { world: GameplaySnapshot }) {
           <button className="text-button" onClick={() => campaignStore.quitToMenu()}>
             В меню
           </button>
+          <ReportButton />
         </div>
       </div>
     </section>

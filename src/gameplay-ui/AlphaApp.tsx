@@ -19,6 +19,8 @@ import { displayHp } from './format';
 import './alpha.css';
 const DeveloperPanel =
   import.meta.env.DEV || __QA_BUILD__ ? lazy(() => import('./DeveloperPanel')) : null;
+const DebugOverlay =
+  import.meta.env.DEV || __QA_BUILD__ ? lazy(() => import('./DebugOverlay')) : null;
 const time = (seconds: number) =>
   `${Math.floor(seconds / 60)
     .toString()
@@ -272,6 +274,11 @@ export function AlphaApp() {
           >
             {__QA_BUILD__ ? 'QA' : 'DEV'} · {debugOpen ? 'Закрыть' : 'Тестирование'}
           </button>
+        )}
+        {debug && s && DebugOverlay && (
+          <Suspense fallback={null}>
+            <DebugOverlay world={s} fps={state.fps} />
+          </Suspense>
         )}
         {debug && debugOpen && DeveloperPanel && (
           <Suspense fallback={<div className="developer-panel">Загрузка…</div>}>

@@ -9,6 +9,7 @@ import { displayHp } from './format';
 import { CLASS_SYMBOLS, minutes } from './campaign-format';
 import { CharacterPage, MapsPage, ProgressionPage } from './CampaignPages';
 import { SaveWarning, SettingsPage } from './SaveManagement';
+import { BuildLabel } from './BuildLabel';
 
 const PAGES: readonly { id: MenuPage; label: string }[] = [
   { id: 'play', label: 'Играть' },
@@ -45,6 +46,7 @@ export function CampaignMenu() {
       {ui.page === 'maps' && <MapsPage />}
       {ui.page === 'progression' && <ProgressionPage />}
       {ui.page === 'settings' && <SettingsPage />}
+      <BuildLabel className="menu-build-label" />
     </section>
   );
 }

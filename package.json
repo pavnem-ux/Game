@@ -25,7 +25,7 @@
     "test:persistence": "vitest run tests/persistence",
     "test:production": "node tests/alpha-production.mjs",
     "build:qa": "npm run typecheck && vite build --mode qa",
-    "test:build-policy": "node tests/qa-build.test.mjs",
+    "test:build-policy": "node tests/qa-build.test.mjs && node tests/build-info.test.mjs",
     "test:qa": "node tests/alpha-qa.mjs"
   },
   "dependencies": {

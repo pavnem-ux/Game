@@ -1,3 +1,6 @@
+import { DEFAULT_SEED, createRunRandom } from './rng';
+import { RunStats } from './run-stats';
+import type { EnemyType } from './run-stats';
 import { calculateCharacterStats, scaleMovementSpeed } from '../character-stats';
 import { CombatCore, calculateSuccessfulDamage } from '../combat-core';
 import type { CombatEvent, RandomSource } from '../combat-core';
@@ -88,6 +91,16 @@ export class GameplayWorld {
   private viewport: ViewportSize;
   private readonly spawnRandom: () => number;
   private readonly history: WorldEvent[] = [];
+  /** Task 08.5 run statistics: read-only consumer of every recorded event (new per world). */
+  private readonly runStats = new RunStats({
+    playerId: 'player',
+    attackSource: (attackId) => this.skills?.attackSource(attackId),
+    enemyType: (id) => this.enemyType(id),
+    playerHp: () => {
+      const p = this.core.getEntity(this.playerId);
+      return { hp: p.currentHp, maxHp: p.maxHp };
+    },
+  });
   private readonly enemyIds = new Set<string>();
   private adapter: WeaponStatusAdapter;
   private testingProtection = false;
@@ -122,22 +135,11 @@ export class GameplayWorld {
   ) {
     if (typeof createCore !== 'function') throw new TypeError('createCore must be a function.');
     this.character = calculateCharacterStats(options.characterClass, options.level ?? 1);
-    let seed = options.seed ?? 1337;
-    if (!Number.isSafeInteger(seed) || seed < 0) throw new RangeError('Invalid random seed.');
-    this.random = () => {
-      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-      return seed / 4294967296;
-    };
-    let skillSeed = ((options.seed ?? 1337) ^ 0x5bd1e995) >>> 0;
-    const skillRandom = () => {
-      skillSeed = (Math.imul(skillSeed, 1664525) + 1013904223) >>> 0;
-      return skillSeed / 4294967296;
-    };
-    let spawnSeed = (options.seed ?? 1337) ^ 0x9e3779b9;
-    this.spawnRandom = () => {
-      spawnSeed = (Math.imul(spawnSeed, 1664525) + 1013904223) >>> 0;
-      return spawnSeed / 4294967296;
-    };
+    // Task 08.5 §4.1: all gameplay randomness comes from the seeded run streams.
+    const rng = createRunRandom(options.seed ?? DEFAULT_SEED);
+    this.random = rng.combat;
+    const skillRandom = rng.skills;
+    this.spawnRandom = rng.spawn;
     this.campaignMap = options.campaign ? getCampaignMap(options.campaign.mapId) : null;
     this.director = this.campaignMap ? new CampaignDirector(this.campaignMap) : null;
     this.enemyStats = this.campaignMap
@@ -276,6 +278,8 @@ export class GameplayWorld {
   getSnapshot(): GameplaySnapshot {
     return Object.freeze({
       time: this.clock,
+      seed: this.options.seed ?? DEFAULT_SEED,
+      runStats: this.runStats.snapshot(this.clock),
       paused: this.paused,
       player: this.core.getEntity(this.playerId),
       playerBody: this.body,
@@ -438,6 +442,14 @@ export class GameplayWorld {
       },
       profile,
     );
+  }
+  /** Task 08.5 stats: type of a registered enemy (null = not a registered enemy). */
+  private enemyType(id: string): EnemyType | null {
+    if (!this.enemyIds.has(id)) return null;
+    if (id === this.bossEnemyId) return 'boss';
+    const elite = this.eliteProfiles.get(id);
+    if (elite) return elite === 'melee' ? 'elite-melee' : 'elite-ranged';
+    return this.enemies.getEnemy(id).config.behavior;
   }
   private registerEnemy(
     kind: 'melee' | 'ranged',
@@ -946,20 +958,51 @@ export class GameplayWorld {
     this.testingProtection = enabled;
   }
   clearEnemies(): void {
-    for (const id of this.enemyIds) {
+    this.killEnemies([...this.enemyIds], 'clear', 'test-clear');
+  }
+  /**
+   * Debug (Task 08.5 §1.2): kills every live enemy overlapping the visible area through Combat
+   * Core, so deaths, crystals, kill counts, elite/boss kills and campaign events are the normal
+   * ones. `view` is the camera's world rectangle; default = the player-centred viewport (the
+   * same view off-screen spawning uses). Returns the number of enemies killed.
+   */
+  debugKillInView(
+    view?: Readonly<{ x: number; y: number; width: number; height: number }>,
+  ): number {
+    const v = view ?? {
+      x: this.body.x - this.viewport.width / 2,
+      y: this.body.y - this.viewport.height / 2,
+      width: this.viewport.width,
+      height: this.viewport.height,
+    };
+    if (![v.x, v.y, v.width, v.height].every(Number.isFinite) || v.width <= 0 || v.height <= 0)
+      throw new RangeError('View must be a finite rectangle with a positive size.');
+    const ids = [...this.enemyIds].filter((id) => {
+      const enemy = this.enemies.getEnemy(id);
+      const r = enemy.config.radius;
+      const { x, y } = enemy.position;
+      return x + r >= v.x && x - r <= v.x + v.width && y + r >= v.y && y - r <= v.y + v.height;
+    });
+    return this.killEnemies(ids, 'debug-kill', 'debug-kill');
+  }
+  private killEnemies(ids: readonly string[], operation: string, effectId: string): number {
+    let killed = 0;
+    for (const id of ids) {
       if (this.core.getEntity(id).alive) {
         const raw = Number.MAX_SAFE_INTEGER;
         const result = this.core.applyPeriodicDamage({
-          operationId: `clear-${id}`,
+          operationId: `${operation}-${id}`,
           targetId: id,
-          effectId: 'test-clear',
+          effectId,
           rawDamage: raw,
-          sources: [{ applicationId: 'test-clear', sourceId: this.playerId, rawDamage: raw }],
+          sources: [{ applicationId: effectId, sourceId: this.playerId, rawDamage: raw }],
         });
         this.forwardCombat(result.events);
+        if (!this.core.getEntity(id).alive) killed++;
       }
     }
     this.prepare();
+    return killed;
   }
   private clamp(value: number, radius: number) {
     return Math.max(radius, Math.min(ALPHA.arenaSize - radius, value));
@@ -1206,10 +1249,17 @@ export class GameplayWorld {
     }
   }
   protected record(channel: WorldEvent['channel'], events: readonly WorldEvent['event'][]) {
-    for (const event of events)
-      this.history.push(
-        Object.freeze({ sequence: ++this.eventSequence, time: this.clock, channel, event }),
-      );
+    for (const event of events) {
+      const entry: WorldEvent = Object.freeze({
+        sequence: ++this.eventSequence,
+        time: this.clock,
+        channel,
+        event,
+      });
+      this.history.push(entry);
+      if (channel === 'combat' || channel === 'weapon' || channel === 'progression')
+        this.runStats.consume(entry);
+    }
     if (this.history.length > ALPHA.eventHistoryLimit)
       this.history.splice(0, this.history.length - ALPHA.eventHistoryLimit);
   }

@@ -1,5 +1,5 @@
-export { runRewards } from './rewards';
-export type { RunOutcome, RunResult, RunRewards } from './rewards';
+export { RUN_STATS_SUMMARY_LIMITS, runRewards, validateRunStatsSummary } from './rewards';
+export type { RunOutcome, RunResult, RunRewards, RunStatsSummary } from './rewards';
 export {
   MAX_CLASS_LEVEL,
   NEW_CLASS_PROGRESS,

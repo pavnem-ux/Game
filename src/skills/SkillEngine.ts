@@ -105,6 +105,8 @@ export interface ProjectilePayload {
   readonly limit?: Readonly<{ key: string; max: number }>;
   readonly onHit?: (hit: HitInfo, engine: SkillEngine) => void;
   readonly onEnd?: (position: Point, engine: SkillEngine) => void;
+  /** Task 08.5: damage attribution of the skill/synergy that launched it. */
+  readonly source?: string;
 }
 export interface MarkState {
   readonly kind: 'hunter' | 'death';
@@ -140,10 +142,14 @@ export interface ZoneState extends ZoneSpec {
   readonly createdAt: number;
   readonly expiresAt: number;
   readonly firstTickAt: number;
+  /** Task 08.5: damage attribution of the skill/synergy that created the zone. */
+  readonly source?: string;
   tickIndex: number;
   nextTickAt: number;
   ended: boolean;
 }
+/** Task 08.5: attribution entries kept for attack snapshots still in flight. */
+const ATTACK_SOURCE_LIMIT = 1024;
 interface Scheduled {
   readonly at: number;
   readonly sequence: number;
@@ -173,6 +179,13 @@ export class SkillEngine {
   private readonly autos = new Map<string, AutoState>();
   private readonly queue: Scheduled[] = [];
   private readonly zones = new Map<string, ZoneState>();
+  /**
+   * Task 08.5 run statistics: the skill/synergy whose code is executing (`skill:<id>` or
+   * `synergy:<id>`) and the source of each attack snapshot the engine created. Read-only
+   * metadata — never affects resolution. Bounded (oldest entries dropped).
+   */
+  private source: string | null = null;
+  private readonly attackSources = new Map<string, string>();
   private readonly controls = new Map<string, ControlState>();
   private readonly marks = new Map<string, MarkState>();
   private readonly buffs = new Map<string, BuffState>();
@@ -447,12 +460,39 @@ export class SkillEngine {
     damageType: DamageType,
     criticalChanceBonus = 0,
   ): AttackSnapshot {
-    return this.host.core.createAttack({
+    const attack = this.host.core.createAttack({
       attackerId: this.host.playerId,
       damageType,
       coefficient: coefficient * this.elementalMultiplier(tags),
       ...(criticalChanceBonus > 0 ? { criticalChanceBonus } : {}),
     });
+    if (this.source) this.tagAttack(attack.id, this.source);
+    return attack;
+  }
+  private tagAttack(attackId: string, source: string) {
+    this.attackSources.set(attackId, source);
+    if (this.attackSources.size > ATTACK_SOURCE_LIMIT)
+      this.attackSources.delete(this.attackSources.keys().next().value!);
+  }
+  /** Task 08.5: which skill/synergy created this attack snapshot (undefined = not the engine). */
+  attackSource(attackId: string): string | undefined {
+    return this.attackSources.get(attackId);
+  }
+  /** Task 08.5: current attribution (used by synergies to mark their own damage). */
+  currentSource(): string | null {
+    return this.source;
+  }
+  setSource(source: string | null): void {
+    this.source = source;
+  }
+  private withSource(source: string | null | undefined, run: () => void): void {
+    const previous = this.source;
+    this.source = source ?? null;
+    try {
+      run();
+    } finally {
+      this.source = previous;
+    }
   }
   preHit(targetId: string): PreHit {
     const entity = this.host.core.getEntity(targetId);
@@ -519,22 +559,24 @@ export class SkillEngine {
       ...(event.projectileId ? { projectileKey: event.projectileId } : {}),
       pre,
     });
-    if (payload) {
-      payload.hits++;
-      if (payload.limit) this.count(payload.limit.key, event.targetId);
-      if (event.result.status === 'hit') payload.onHit?.(hit, this);
-      if (payload.hits >= payload.maxHits) {
-        this.projectiles.delete(event.projectileId!);
-        payload.onEnd?.(pre.position ?? this.player, this);
+    this.withSource(payload?.source, () => {
+      if (payload) {
+        payload.hits++;
+        if (payload.limit) this.count(payload.limit.key, event.targetId);
+        if (event.result.status === 'hit') payload.onHit?.(hit, this);
+        if (payload.hits >= payload.maxHits) {
+          this.projectiles.delete(event.projectileId!);
+          payload.onEnd?.(pre.position ?? this.player, this);
+        }
       }
-    }
-    this.afterHit(hit);
+      this.afterHit(hit);
+    });
   }
   handleProjectileExpired(event: ProjectileExpiredEvent): void {
     const payload = this.projectiles.get(event.projectileId);
     if (!payload) return;
     this.projectiles.delete(event.projectileId);
-    payload.onEnd?.(event.position, this);
+    if (payload.onEnd) this.withSource(payload.source, () => payload.onEnd!(event.position, this));
   }
   /** Multishot: extra arrows for each basic bow attack. */
   onBasicAttack(event: AttackStartedEvent): void {
@@ -545,7 +587,10 @@ export class SkillEngine {
     const killed = hit.result.events.some((e) => e.type === 'death' && e.entityId === hit.targetId);
     // Secondary hits and synergy procs never re-enter passive reactions or synergies.
     if (hit.result.status === 'hit' && hit.procs) {
-      for (const id of this.run.ownedIds()) ABILITIES[id]?.onPlayerHit?.(hit, this);
+      for (const id of this.run.ownedIds()) {
+        const onPlayerHit = ABILITIES[id]?.onPlayerHit;
+        if (onPlayerHit) this.withSource(`skill:${id}`, () => onPlayerHit(hit, this));
+      }
       this.synergies.onHit(hit);
       this.trackElement(hit);
     }
@@ -626,12 +671,14 @@ export class SkillEngine {
     if (!this.host.core.getEntity(targetId).alive || stacks < 1) return 0;
     const effect = this.playerEffect(definition);
     let applied = 0;
+    // Task 08.5: an unlabelled skill/synergy status carries its attribution as the origin.
+    const origin = originId ?? this.source ?? undefined;
     for (let i = 0; i < stacks; i++) {
       const result = this.host.statuses.apply({
         ...effect,
         targetId,
         sourceId: this.host.playerId,
-        ...(originId ? { originId } : {}),
+        ...(origin ? { originId: origin } : {}),
       });
       this.host.recordStatus(result.events);
       if (result.status === 'applied') applied++;
@@ -759,11 +806,18 @@ export class SkillEngine {
       attack,
       ...(spec.pierce ? { pierce: spec.pierce } : {}),
     });
-    this.projectiles.set(id, { ...payload, hits: 0, maxHits: 1 + (spec.pierce ?? 0) });
+    const source = this.source ?? `skill:${payload.key.split('#')[0]}`;
+    if (!this.attackSources.has(attack.id)) this.tagAttack(attack.id, source);
+    this.projectiles.set(id, { ...payload, hits: 0, maxHits: 1 + (spec.pierce ?? 0), source });
     return id;
   }
   schedule(delay: number, run: () => void): void {
-    this.queue.push({ at: this.clock + delay, sequence: ++this.sequence, run });
+    const source = this.source;
+    this.queue.push({
+      at: this.clock + delay,
+      sequence: ++this.sequence,
+      run: source ? () => this.withSource(source, run) : run,
+    });
   }
   zone(spec: ZoneSpec): ZoneState {
     const id = `zone-${++this.zoneSequence}`;
@@ -775,6 +829,7 @@ export class SkillEngine {
       createdAt: this.clock,
       expiresAt: this.clock + spec.duration,
       firstTickAt,
+      ...(this.source ? { source: this.source } : {}),
       tickIndex: 1,
       nextTickAt: firstTickAt,
       ended: false,
@@ -786,7 +841,7 @@ export class SkillEngine {
     if (zone.ended) return;
     zone.ended = true;
     this.zones.delete(zone.id);
-    zone.onEnd?.(zone, this);
+    if (zone.onEnd) this.withSource(zone.source, () => zone.onEnd!(zone, this));
   }
   recordArea(
     sourceKey: string,
@@ -903,7 +958,8 @@ export class SkillEngine {
   private tickZone(z: ZoneState) {
     z.tickIndex++;
     z.nextTickAt = z.firstTickAt + (z.tickIndex - 1) * z.tickInterval;
-    if (this.host.core.getEntity(this.host.playerId).alive) z.onTick(z, this);
+    if (this.host.core.getEntity(this.host.playerId).alive)
+      this.withSource(z.source, () => z.onTick(z, this));
   }
   private activate(skillId: string) {
     const state = this.autos.get(skillId)!;
@@ -921,7 +977,9 @@ export class SkillEngine {
         origin: Object.freeze({ x: this.player.x, y: this.player.y }),
       }),
     ]);
-    behavior.activate(this, p, `${skillId}#${state.activationCount}`);
+    this.withSource(`skill:${skillId}`, () =>
+      behavior.activate!(this, p, `${skillId}#${state.activationCount}`),
+    );
   }
   private expireControl(id: string) {
     const c = this.controls.get(id)!;

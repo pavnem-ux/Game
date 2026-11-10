@@ -1,6 +1,8 @@
 import { defineConfig } from 'vitest/config';
+import { buildDefines } from './config/build-info.mjs';
 
 export default defineConfig({
+  define: { __QA_BUILD__: 'false', ...buildDefines() },
   test: {
     environment: 'node',
     include: [
