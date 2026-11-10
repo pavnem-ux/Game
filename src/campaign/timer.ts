@@ -75,8 +75,9 @@ export function campaignSpawning(
   return Object.freeze({
     interval: Math.max(minimumInterval, base.interval / rate),
     minimumInterval,
-    rangedShare: map.rangedShare ?? base.rangedShare,
-    maxActive: enemyCap - CAMPAIGN_BALANCE.reservedSlots,
+    // Task 10 §1.3: the campaign's own baseline ranged share (0.12), per-map overrides on top.
+    rangedShare: map.rangedShare ?? CAMPAIGN_BALANCE.rangedShare,
+    maxActive: enemyCap - map.reservedSlots,
   });
 }
 

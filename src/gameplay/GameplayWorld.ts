@@ -851,7 +851,7 @@ export class GameplayWorld {
     const map = this.campaignMap;
     if (!map) return;
     if (event.kind === 'elite') {
-      const { hpMultiplier, damageMultiplier } = CAMPAIGN_BALANCE.elite;
+      const { hpMultiplier, damageMultiplier } = map.elite;
       const enemyId = this.spawnScheduled(
         event.profile,
         hpMultiplier,

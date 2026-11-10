@@ -1,0 +1,667 @@
+{
+  "maps": [
+    {
+      "map": {
+        "id": 1,
+        "name": "Опушка забытых сказок",
+        "durationSeconds": 600,
+        "difficulty": {
+          "hp": 1,
+          "damage": 1,
+          "spawnRate": 1
+        },
+        "victoryXp": 150,
+        "victoryGold": 75,
+        "bossId": "thornwarden",
+        "bossName": "Терновый страж"
+      },
+      "schedule": [
+        {
+          "id": "elite-1",
+          "kind": "elite",
+          "time": 120,
+          "index": 0,
+          "profile": "melee"
+        },
+        {
+          "id": "elite-2",
+          "kind": "elite",
+          "time": 240,
+          "index": 1,
+          "profile": "ranged"
+        },
+        {
+          "id": "elite-3",
+          "kind": "elite",
+          "time": 360,
+          "index": 2,
+          "profile": "melee"
+        },
+        {
+          "id": "elite-4",
+          "kind": "elite",
+          "time": 480,
+          "index": 3,
+          "profile": "ranged"
+        },
+        {
+          "id": "boss",
+          "kind": "boss",
+          "time": 600
+        },
+        {
+          "id": "end",
+          "kind": "end",
+          "time": 600
+        }
+      ],
+      "spawning": {
+        "interval": 4,
+        "minimumInterval": 1.5,
+        "rangedShare": 0.18,
+        "maxActive": 112
+      }
+    },
+    {
+      "map": {
+        "id": 2,
+        "name": "Туманные болота",
+        "durationSeconds": 600,
+        "difficulty": {
+          "hp": 1.12,
+          "damage": 1.08,
+          "spawnRate": 1.08
+        },
+        "victoryXp": 200,
+        "victoryGold": 100,
+        "bossId": "marsh_witch",
+        "bossName": "Болотная ведьма"
+      },
+      "schedule": [
+        {
+          "id": "elite-1",
+          "kind": "elite",
+          "time": 120,
+          "index": 0,
+          "profile": "melee"
+        },
+        {
+          "id": "elite-2",
+          "kind": "elite",
+          "time": 240,
+          "index": 1,
+          "profile": "ranged"
+        },
+        {
+          "id": "elite-3",
+          "kind": "elite",
+          "time": 360,
+          "index": 2,
+          "profile": "melee"
+        },
+        {
+          "id": "elite-4",
+          "kind": "elite",
+          "time": 480,
+          "index": 3,
+          "profile": "ranged"
+        },
+        {
+          "id": "boss",
+          "kind": "boss",
+          "time": 600
+        },
+        {
+          "id": "end",
+          "kind": "end",
+          "time": 600
+        }
+      ],
+      "spawning": {
+        "interval": 3.7037037037037033,
+        "minimumInterval": 1.3888888888888888,
+        "rangedShare": 0.18,
+        "maxActive": 112
+      }
+    },
+    {
+      "map": {
+        "id": 3,
+        "name": "Каменный перевал",
+        "durationSeconds": 660,
+        "difficulty": {
+          "hp": 1.24,
+          "damage": 1.16,
+          "spawnRate": 1.16
+        },
+        "victoryXp": 250,
+        "victoryGold": 125,
+        "bossId": "stone_colossus",
+        "bossName": "Каменный колосс"
+      },
+      "schedule": [
+        {
+          "id": "elite-1",
+          "kind": "elite",
+          "time": 120,
+          "index": 0,
+          "profile": "melee"
+        },
+        {
+          "id": "elite-2",
+          "kind": "elite",
+          "time": 240,
+          "index": 1,
+          "profile": "ranged"
+        },
+        {
+          "id": "elite-3",
+          "kind": "elite",
+          "time": 360,
+          "index": 2,
+          "profile": "melee"
+        },
+        {
+          "id": "elite-4",
+          "kind": "elite",
+          "time": 480,
+          "index": 3,
+          "profile": "ranged"
+        },
+        {
+          "id": "boss",
+          "kind": "boss",
+          "time": 600
+        },
+        {
+          "id": "end",
+          "kind": "end",
+          "time": 660
+        }
+      ],
+      "spawning": {
+        "interval": 3.4482758620689657,
+        "minimumInterval": 1.293103448275862,
+        "rangedShare": 0.18,
+        "maxActive": 112
+      }
+    },
+    {
+      "map": {
+        "id": 4,
+        "name": "Пепельная роща",
+        "durationSeconds": 660,
+        "difficulty": {
+          "hp": 1.3599999999999999,
+          "damage": 1.24,
+          "spawnRate": 1.24
+        },
+        "victoryXp": 300,
+        "victoryGold": 150,
+        "bossId": "ash_wolf",
+        "bossName": "Пепельный волк"
+      },
+      "schedule": [
+        {
+          "id": "elite-1",
+          "kind": "elite",
+          "time": 120,
+          "index": 0,
+          "profile": "melee"
+        },
+        {
+          "id": "elite-2",
+          "kind": "elite",
+          "time": 240,
+          "index": 1,
+          "profile": "ranged"
+        },
+        {
+          "id": "elite-3",
+          "kind": "elite",
+          "time": 360,
+          "index": 2,
+          "profile": "melee"
+        },
+        {
+          "id": "elite-4",
+          "kind": "elite",
+          "time": 480,
+          "index": 3,
+          "profile": "ranged"
+        },
+        {
+          "id": "boss",
+          "kind": "boss",
+          "time": 600
+        },
+        {
+          "id": "end",
+          "kind": "end",
+          "time": 660
+        }
+      ],
+      "spawning": {
+        "interval": 3.2258064516129035,
+        "minimumInterval": 1.2096774193548387,
+        "rangedShare": 0.18,
+        "maxActive": 112
+      }
+    },
+    {
+      "map": {
+        "id": 5,
+        "name": "Ледяные курганы",
+        "durationSeconds": 720,
+        "difficulty": {
+          "hp": 1.48,
+          "damage": 1.32,
+          "spawnRate": 1.32
+        },
+        "victoryXp": 350,
+        "victoryGold": 175,
+        "bossId": "barrow_king",
+        "bossName": "Курганный король"
+      },
+      "schedule": [
+        {
+          "id": "elite-1",
+          "kind": "elite",
+          "time": 120,
+          "index": 0,
+          "profile": "melee"
+        },
+        {
+          "id": "elite-2",
+          "kind": "elite",
+          "time": 240,
+          "index": 1,
+          "profile": "ranged"
+        },
+        {
+          "id": "elite-3",
+          "kind": "elite",
+          "time": 360,
+          "index": 2,
+          "profile": "melee"
+        },
+        {
+          "id": "elite-4",
+          "kind": "elite",
+          "time": 480,
+          "index": 3,
+          "profile": "ranged"
+        },
+        {
+          "id": "boss",
+          "kind": "boss",
+          "time": 600
+        },
+        {
+          "id": "end",
+          "kind": "end",
+          "time": 720
+        }
+      ],
+      "spawning": {
+        "interval": 3.0303030303030303,
+        "minimumInterval": 1.1363636363636362,
+        "rangedShare": 0.18,
+        "maxActive": 112
+      }
+    },
+    {
+      "map": {
+        "id": 6,
+        "name": "Гиблые топи",
+        "durationSeconds": 720,
+        "difficulty": {
+          "hp": 1.6,
+          "damage": 1.4,
+          "spawnRate": 1.4
+        },
+        "victoryXp": 400,
+        "victoryGold": 200,
+        "bossId": "mire_serpent",
+        "bossName": "Топяной змей"
+      },
+      "schedule": [
+        {
+          "id": "elite-1",
+          "kind": "elite",
+          "time": 120,
+          "index": 0,
+          "profile": "melee"
+        },
+        {
+          "id": "elite-2",
+          "kind": "elite",
+          "time": 240,
+          "index": 1,
+          "profile": "ranged"
+        },
+        {
+          "id": "elite-3",
+          "kind": "elite",
+          "time": 360,
+          "index": 2,
+          "profile": "melee"
+        },
+        {
+          "id": "elite-4",
+          "kind": "elite",
+          "time": 480,
+          "index": 3,
+          "profile": "ranged"
+        },
+        {
+          "id": "boss",
+          "kind": "boss",
+          "time": 600
+        },
+        {
+          "id": "end",
+          "kind": "end",
+          "time": 720
+        }
+      ],
+      "spawning": {
+        "interval": 2.857142857142857,
+        "minimumInterval": 1.0714285714285714,
+        "rangedShare": 0.18,
+        "maxActive": 112
+      }
+    },
+    {
+      "map": {
+        "id": 7,
+        "name": "Руины часовни",
+        "durationSeconds": 780,
+        "difficulty": {
+          "hp": 1.72,
+          "damage": 1.48,
+          "spawnRate": 1.48
+        },
+        "victoryXp": 450,
+        "victoryGold": 225,
+        "bossId": "fallen_bellringer",
+        "bossName": "Падший звонарь"
+      },
+      "schedule": [
+        {
+          "id": "elite-1",
+          "kind": "elite",
+          "time": 120,
+          "index": 0,
+          "profile": "melee"
+        },
+        {
+          "id": "elite-2",
+          "kind": "elite",
+          "time": 240,
+          "index": 1,
+          "profile": "ranged"
+        },
+        {
+          "id": "elite-3",
+          "kind": "elite",
+          "time": 360,
+          "index": 2,
+          "profile": "melee"
+        },
+        {
+          "id": "elite-4",
+          "kind": "elite",
+          "time": 480,
+          "index": 3,
+          "profile": "ranged"
+        },
+        {
+          "id": "boss",
+          "kind": "boss",
+          "time": 600
+        },
+        {
+          "id": "elite-5",
+          "kind": "elite",
+          "time": 720,
+          "index": 4,
+          "profile": "melee"
+        },
+        {
+          "id": "end",
+          "kind": "end",
+          "time": 780
+        }
+      ],
+      "spawning": {
+        "interval": 2.7027027027027026,
+        "minimumInterval": 1.0135135135135136,
+        "rangedShare": 0.18,
+        "maxActive": 112
+      }
+    },
+    {
+      "map": {
+        "id": 8,
+        "name": "Багровые пустоши",
+        "durationSeconds": 780,
+        "difficulty": {
+          "hp": 1.8399999999999999,
+          "damage": 1.56,
+          "spawnRate": 1.56
+        },
+        "victoryXp": 500,
+        "victoryGold": 250,
+        "bossId": "crimson_reaper",
+        "bossName": "Багровый жнец"
+      },
+      "schedule": [
+        {
+          "id": "elite-1",
+          "kind": "elite",
+          "time": 120,
+          "index": 0,
+          "profile": "melee"
+        },
+        {
+          "id": "elite-2",
+          "kind": "elite",
+          "time": 240,
+          "index": 1,
+          "profile": "ranged"
+        },
+        {
+          "id": "elite-3",
+          "kind": "elite",
+          "time": 360,
+          "index": 2,
+          "profile": "melee"
+        },
+        {
+          "id": "elite-4",
+          "kind": "elite",
+          "time": 480,
+          "index": 3,
+          "profile": "ranged"
+        },
+        {
+          "id": "boss",
+          "kind": "boss",
+          "time": 600
+        },
+        {
+          "id": "elite-5",
+          "kind": "elite",
+          "time": 720,
+          "index": 4,
+          "profile": "melee"
+        },
+        {
+          "id": "end",
+          "kind": "end",
+          "time": 780
+        }
+      ],
+      "spawning": {
+        "interval": 2.564102564102564,
+        "minimumInterval": 0.9615384615384615,
+        "rangedShare": 0.18,
+        "maxActive": 112
+      }
+    },
+    {
+      "map": {
+        "id": 9,
+        "name": "Сумрачная цитадель",
+        "durationSeconds": 840,
+        "difficulty": {
+          "hp": 1.96,
+          "damage": 1.6400000000000001,
+          "spawnRate": 1.6400000000000001
+        },
+        "victoryXp": 550,
+        "victoryGold": 275,
+        "bossId": "dusk_knight",
+        "bossName": "Сумрачный рыцарь"
+      },
+      "schedule": [
+        {
+          "id": "elite-1",
+          "kind": "elite",
+          "time": 120,
+          "index": 0,
+          "profile": "melee"
+        },
+        {
+          "id": "elite-2",
+          "kind": "elite",
+          "time": 240,
+          "index": 1,
+          "profile": "ranged"
+        },
+        {
+          "id": "elite-3",
+          "kind": "elite",
+          "time": 360,
+          "index": 2,
+          "profile": "melee"
+        },
+        {
+          "id": "elite-4",
+          "kind": "elite",
+          "time": 480,
+          "index": 3,
+          "profile": "ranged"
+        },
+        {
+          "id": "boss",
+          "kind": "boss",
+          "time": 600
+        },
+        {
+          "id": "elite-5",
+          "kind": "elite",
+          "time": 720,
+          "index": 4,
+          "profile": "melee"
+        },
+        {
+          "id": "end",
+          "kind": "end",
+          "time": 840
+        }
+      ],
+      "spawning": {
+        "interval": 2.4390243902439024,
+        "minimumInterval": 0.9146341463414633,
+        "rangedShare": 0.18,
+        "maxActive": 112
+      }
+    },
+    {
+      "map": {
+        "id": 10,
+        "name": "Сердце тьмы",
+        "durationSeconds": 900,
+        "difficulty": {
+          "hp": 2.08,
+          "damage": 1.72,
+          "spawnRate": 1.72
+        },
+        "victoryXp": 600,
+        "victoryGold": 300,
+        "bossId": "last_dark",
+        "bossName": "Владыка последней тьмы"
+      },
+      "schedule": [
+        {
+          "id": "elite-1",
+          "kind": "elite",
+          "time": 120,
+          "index": 0,
+          "profile": "melee"
+        },
+        {
+          "id": "elite-2",
+          "kind": "elite",
+          "time": 240,
+          "index": 1,
+          "profile": "ranged"
+        },
+        {
+          "id": "elite-3",
+          "kind": "elite",
+          "time": 360,
+          "index": 2,
+          "profile": "melee"
+        },
+        {
+          "id": "elite-4",
+          "kind": "elite",
+          "time": 480,
+          "index": 3,
+          "profile": "ranged"
+        },
+        {
+          "id": "boss",
+          "kind": "boss",
+          "time": 600
+        },
+        {
+          "id": "elite-5",
+          "kind": "elite",
+          "time": 720,
+          "index": 4,
+          "profile": "melee"
+        },
+        {
+          "id": "elite-6",
+          "kind": "elite",
+          "time": 840,
+          "index": 5,
+          "profile": "ranged"
+        },
+        {
+          "id": "end",
+          "kind": "end",
+          "time": 900
+        }
+      ],
+      "spawning": {
+        "interval": 2.3255813953488373,
+        "minimumInterval": 0.872093023255814,
+        "rangedShare": 0.18,
+        "maxActive": 112
+      }
+    }
+  ],
+  "xp": {
+    "melee": 10,
+    "ranged": 15
+  },
+  "eliteXp": {
+    "melee": 40,
+    "ranged": 40
+  }
+}

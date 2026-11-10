@@ -1,13 +1,21 @@
 export {
+  CAMPAIGN_ACTS,
   CAMPAIGN_BALANCE,
   CAMPAIGN_MAPS,
+  DOUBLE_ELITE_MAPS,
+  actOf,
+  eliteEventTimes,
   getCampaignMap,
   mapDifficulty,
+  mapDurationSeconds,
   validateCampaignConfig,
+  victoryGold,
   victoryXp,
 } from './config';
 export type {
+  CampaignAct,
   CampaignMap,
+  MapEliteSettings,
   DifficultyMultipliers,
   EliteProfileId,
   MapOverrides,

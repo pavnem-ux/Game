@@ -1,7 +1,10 @@
 /**
- * Task 08 campaign + balance configuration — the single place for campaign numbers.
- * Every value here is PROVISIONAL (owner-controlled tuning; see docs/task-08.md §1.1–1.3).
- * Framework-independent: no Phaser/React/storage imports.
+ * Task 08 / Task 10 campaign + balance configuration — the single place for campaign numbers.
+ * Every value here is PROVISIONAL (owner-controlled tuning; see docs/task-08.md §1.1–1.3 and
+ * docs/task-10-maps.md §1). Framework-independent: no Phaser/React/storage imports.
+ *
+ * Act I = maps 1–10 (Task 08, unchanged except the Task 10 §1.3 rebalance); Acts II–IV = maps
+ * 11–40 (Task 10), built only from existing mechanics.
  */
 
 export type StageId = 'opening' | 'escalation' | 'midgame' | 'late' | 'boss';
@@ -10,6 +13,17 @@ export type EliteProfileId = 'melee' | 'ranged';
 export const CAMPAIGN_BALANCE = Object.freeze({
   /** Map i (1–10) duration in minutes. */
   durationsMinutes: Object.freeze([10, 10, 11, 11, 12, 12, 13, 13, 14, 15] as const),
+  /** Task 10: maps 11–40 last 15 minutes. */
+  laterDurationMinutes: 15,
+  /**
+   * Task 10 §1.2, maps 11–40: spawn rate stays at map 10's value; HP and damage grow linearly
+   * from map 10's multipliers: HP ×(m10 + hpPerMap·(id − 10)), damage ×(m10 + damagePerMap·(id − 10)).
+   */
+  laterDifficulty: Object.freeze({ hpPerMap: 0.15, damagePerMap: 0.1 }),
+  /** Task 10 §1.3: baseline share of ranged enemies in normal campaign spawns (was 0.18). */
+  rangedShare: 0.12,
+  /** Task 10 §1.2: per-map ranged-share overrides may not exceed this. */
+  maxRangedShare: 0.18,
   /** k = mapId − 1: HP ×(1 + hpPerMap·k), damage ×(1 + damagePerMap·k), spawn rate ×(1 + …·k). */
   difficulty: Object.freeze({ hpPerMap: 0.12, damagePerMap: 0.08, spawnRatePerMap: 0.08 }),
   /** Stage boundaries as fractions of map duration (start of each stage, ascending). */
@@ -39,7 +53,7 @@ export const CAMPAIGN_BALANCE = Object.freeze({
         movementScale: 1.3,
         attackIntervalScale: 0.75,
         attackRangeScale: 1,
-        extraXp: 40,
+        extraXp: 32, // Task 10 §1.3: −20% (was 40)
       }),
       ranged: Object.freeze({
         name: 'Тёмный ворожей',
@@ -47,7 +61,7 @@ export const CAMPAIGN_BALANCE = Object.freeze({
         movementScale: 1,
         attackIntervalScale: 0.8,
         attackRangeScale: 1.2,
-        extraXp: 40,
+        extraXp: 32, // Task 10 §1.3: −20% (was 40)
       }),
     }),
   }),
@@ -64,12 +78,74 @@ export const CAMPAIGN_BALANCE = Object.freeze({
   rewards: Object.freeze({
     victoryXpBase: 100,
     victoryXpPerMap: 50,
-    /** Gold = XP × goldPerXp. */
-    goldPerXp: 0.5,
+    /**
+     * Task 10 §1.3: victory Gold has its own table (no longer derived from XP). Maps 1–10 keep the
+     * Task 08 values (= floor(XP × 0.5)); maps 11–40: laterGoldBase + laterGoldPerMap·(id − 10).
+     */
+    victoryGold: Object.freeze([75, 100, 125, 150, 175, 200, 225, 250, 275, 300] as const),
+    laterGoldBase: 300,
+    laterGoldPerMap: 15,
     /** Defeat: floor(reward × defeatShare × min(elapsed / duration, 1)). */
     defeatShare: 0.25,
   }),
 });
+
+/**
+ * Task 10 acts: 4 × 10 maps. The elite interval is per act (strictly before the map end; the boss
+ * keeps its own 10:00 event). Elites per event: 1, or 2 on the maps listed in `doubleElites`.
+ */
+export interface CampaignAct {
+  readonly id: 1 | 2 | 3 | 4;
+  readonly roman: 'I' | 'II' | 'III' | 'IV';
+  readonly name: string;
+  readonly firstMap: number;
+  readonly lastMap: number;
+  readonly eliteInterval: number;
+}
+export const CAMPAIGN_ACTS: readonly CampaignAct[] = Object.freeze([
+  Object.freeze({
+    id: 1,
+    roman: 'I',
+    name: 'Забытые сказки',
+    firstMap: 1,
+    lastMap: 10,
+    eliteInterval: 120,
+  }),
+  Object.freeze({
+    id: 2,
+    roman: 'II',
+    name: 'Заколдованные земли',
+    firstMap: 11,
+    lastMap: 20,
+    eliteInterval: 105,
+  }),
+  Object.freeze({
+    id: 3,
+    roman: 'III',
+    name: 'Мёртвое царство',
+    firstMap: 21,
+    lastMap: 30,
+    eliteInterval: 90,
+  }),
+  Object.freeze({
+    id: 4,
+    roman: 'IV',
+    name: 'Последняя сказка',
+    firstMap: 31,
+    lastMap: 40,
+    eliteInterval: 75,
+  }),
+] as const);
+/** Task 10 §1.2: two elites per event on maps 25–30 and 35–40. */
+export const DOUBLE_ELITE_MAPS: readonly (readonly [number, number])[] = Object.freeze([
+  Object.freeze([25, 30] as const),
+  Object.freeze([35, 40] as const),
+]);
+export function actOf(mapId: number): CampaignAct {
+  const act = CAMPAIGN_ACTS.find((a) => mapId >= a.firstMap && mapId <= a.lastMap);
+  if (!act) throw new RangeError(`Unknown campaign map: ${mapId}.`);
+  return act;
+}
 
 export interface DifficultyMultipliers {
   readonly hp: number;
@@ -82,6 +158,13 @@ export interface MapOverrides {
   /** Share of automatic spawns that are ranged (existing spawner setting). */
   readonly rangedShare?: number;
 }
+/** Elite settings of one map (Act interval; per-event count; strength on top of difficulty). */
+export interface MapEliteSettings {
+  readonly interval: number;
+  readonly perEvent: 1 | 2;
+  readonly hpMultiplier: number;
+  readonly damageMultiplier: number;
+}
 export interface CampaignMap {
   readonly id: number;
   readonly name: string;
@@ -93,6 +176,14 @@ export interface CampaignMap {
   readonly bossId: string;
   readonly bossName: string;
   readonly rangedShare?: number;
+  /** Task 10: act (1–4) and elite settings of this map. */
+  readonly act: CampaignAct['id'];
+  readonly elite: MapEliteSettings;
+  /**
+   * Alpha enemy slots kept free for this map's scheduled elites and boss (automatic waves stop
+   * earlier): max(base reserve, every scheduled enemy), so a scheduled spawn is never skipped.
+   */
+  readonly reservedSlots: number;
 }
 
 const MAP_TEXT: readonly {
@@ -111,39 +202,118 @@ const MAP_TEXT: readonly {
   { name: 'Багровые пустоши', bossId: 'crimson_reaper', bossName: 'Багровый жнец' },
   { name: 'Сумрачная цитадель', bossId: 'dusk_knight', bossName: 'Сумрачный рыцарь' },
   { name: 'Сердце тьмы', bossId: 'last_dark', bossName: 'Владыка последней тьмы' },
+  // ── Act II «Заколдованные земли» (Task 10) ──
+  { name: 'Шепчущий бор', bossId: 'old_leshy', bossName: 'Леший-старожил' },
+  { name: 'Медвежий лог', bossId: 'giant_bear', bossName: 'Шатун-великан' },
+  { name: 'Ключевая пустошь', bossId: 'key_keeper', bossName: 'Хранитель ключей' },
+  { name: 'Кривое озеро', bossId: 'water_tsar', bossName: 'Водяной царь' },
+  { name: 'Совиная чаща', bossId: 'seer_owl', bossName: 'Сова-вещунья' },
+  { name: 'Пряничная деревня', bossId: 'gingerbread_giant', bossName: 'Пряничный исполин' },
+  { name: 'Медные холмы', bossId: 'copper_serpent', bossName: 'Медный змей' },
+  { name: 'Заброшенная мельница', bossId: 'midnight_miller', bossName: 'Мельник-полуночник' },
+  { name: 'Вороньи скалы', bossId: 'raven_prince', bossName: 'Вороний князь' },
+  { name: 'Терем вечной зимы', bossId: 'ice_voivode', bossName: 'Ледяной воевода' },
+  // ── Act III «Мёртвое царство» ──
+  { name: 'Костяной мост', bossId: 'bone_warden', bossName: 'Костяной сторож' },
+  { name: 'Чёрная река', bossId: 'shadow_ferryman', bossName: 'Перевозчик теней' },
+  { name: 'Серые поля', bossId: 'noon_wraith', bossName: 'Полуденница' },
+  { name: 'Безлунный погост', bossId: 'graveyard_master', bossName: 'Хозяин погоста' },
+  { name: 'Ржавые врата', bossId: 'rusted_gatekeeper', bossName: 'Ржавый привратник' },
+  { name: 'Пепельный тракт', bossId: 'fire_rider', bossName: 'Огненный всадник' },
+  { name: 'Плачущий лес', bossId: 'mourner', bossName: 'Плакальщица' },
+  { name: 'Обсидиановые копи', bossId: 'deep_smith', bossName: 'Подгорный кузнец' },
+  { name: 'Сад увядших роз', bossId: 'withered_tsarevna', bossName: 'Увядшая царевна' },
+  { name: 'Чертоги Бессмертного', bossId: 'deathless_guard', bossName: 'Страж Бессмертного' },
+  // ── Act IV «Последняя сказка» ──
+  { name: 'Расколотое небо', bossId: 'thunder_kite', bossName: 'Громовой коршун' },
+  { name: 'Звёздная пыль', bossId: 'renegade_stargazer', bossName: 'Звездочёт-отступник' },
+  { name: 'Зеркальные топи', bossId: 'mirror_kikimora', bossName: 'Зеркальная кикимора' },
+  { name: 'Обитель бурь', bossId: 'storm_lord', bossName: 'Повелитель бурь' },
+  { name: 'Лабиринт снов', bossId: 'drowse', bossName: 'Дрёма' },
+  { name: 'Остров у края моря', bossId: 'sea_serpent', bossName: 'Морской змей' },
+  { name: 'Кровавая заря', bossId: 'scarlet_knight', bossName: 'Алый витязь' },
+  { name: 'Безмолвный город', bossId: 'faceless_tsar', bossName: 'Безликий царь' },
+  { name: 'Край мира', bossId: 'edge_warden', bossName: 'Стражник края' },
+  { name: 'Последняя страница', bossId: 'dark_storyteller', bossName: 'Сказочник тьмы' },
 ];
 
 /** Map difficulty from the central formula, then optional overrides. */
 export function mapDifficulty(mapId: number, overrides?: MapOverrides): DifficultyMultipliers {
-  const k = mapId - 1;
   const d = CAMPAIGN_BALANCE.difficulty;
-  return Object.freeze({
-    hp: 1 + d.hpPerMap * k,
-    damage: 1 + d.damagePerMap * k,
-    spawnRate: 1 + d.spawnRatePerMap * k,
-    ...overrides?.difficulty,
-  });
+  const at = (id: number) => {
+    const k = id - 1;
+    return {
+      hp: 1 + d.hpPerMap * k,
+      damage: 1 + d.damagePerMap * k,
+      spawnRate: 1 + d.spawnRatePerMap * k,
+    };
+  };
+  // Task 10 §1.2: after map 10, spawn rate is frozen and HP/damage grow from map 10's values.
+  const base =
+    mapId <= 10
+      ? at(mapId)
+      : {
+          hp: at(10).hp + CAMPAIGN_BALANCE.laterDifficulty.hpPerMap * (mapId - 10),
+          damage: at(10).damage + CAMPAIGN_BALANCE.laterDifficulty.damagePerMap * (mapId - 10),
+          spawnRate: at(10).spawnRate,
+        };
+  return Object.freeze({ ...base, ...overrides?.difficulty });
 }
 export function victoryXp(mapId: number): number {
   return CAMPAIGN_BALANCE.rewards.victoryXpBase + CAMPAIGN_BALANCE.rewards.victoryXpPerMap * mapId;
+}
+/** Task 10 §1.3: victory Gold from its own table (maps 1–10) or formula (maps 11–40). */
+export function victoryGold(mapId: number): number {
+  const r = CAMPAIGN_BALANCE.rewards;
+  return mapId <= 10
+    ? r.victoryGold[mapId - 1]
+    : r.laterGoldBase + r.laterGoldPerMap * (mapId - 10);
+}
+export function mapDurationSeconds(mapId: number): number {
+  return (
+    (mapId <= 10
+      ? CAMPAIGN_BALANCE.durationsMinutes[mapId - 1]
+      : CAMPAIGN_BALANCE.laterDurationMinutes) * 60
+  );
+}
+/** Elite event times of a map: multiples of the act interval strictly before the end, except 10:00. */
+export function eliteEventTimes(mapId: number): readonly number[] {
+  const interval = actOf(mapId).eliteInterval;
+  const end = mapDurationSeconds(mapId);
+  const times: number[] = [];
+  for (let t = interval; t < end; t += interval)
+    if (t !== CAMPAIGN_BALANCE.boss.spawnTime) times.push(t);
+  return Object.freeze(times);
+}
+function elitesPerEvent(mapId: number): 1 | 2 {
+  return DOUBLE_ELITE_MAPS.some(([a, b]) => mapId >= a && mapId <= b) ? 2 : 1;
 }
 
 export const CAMPAIGN_MAPS: readonly CampaignMap[] = Object.freeze(
   MAP_TEXT.map((text, i) => {
     const id = i + 1;
-    const xp = victoryXp(id);
+    const perEvent = elitesPerEvent(id);
+    const scheduled = eliteEventTimes(id).length * perEvent + 1; // + the boss
     return Object.freeze({
       id,
       name: text.name,
-      durationSeconds: CAMPAIGN_BALANCE.durationsMinutes[i] * 60,
+      durationSeconds: mapDurationSeconds(id),
       difficulty: mapDifficulty(id, text.overrides),
-      victoryXp: xp,
-      victoryGold: Math.floor(xp * CAMPAIGN_BALANCE.rewards.goldPerXp),
+      victoryXp: victoryXp(id),
+      victoryGold: victoryGold(id),
       bossId: text.bossId,
       bossName: text.bossName,
       ...(text.overrides?.rangedShare !== undefined
         ? { rangedShare: text.overrides.rangedShare }
         : {}),
+      act: actOf(id).id,
+      elite: Object.freeze({
+        interval: actOf(id).eliteInterval,
+        perEvent,
+        hpMultiplier: CAMPAIGN_BALANCE.elite.hpMultiplier,
+        damageMultiplier: CAMPAIGN_BALANCE.elite.damageMultiplier,
+      }),
+      reservedSlots: Math.max(CAMPAIGN_BALANCE.reservedSlots, scheduled),
     } satisfies CampaignMap);
   }),
 );
@@ -157,7 +327,7 @@ export function getCampaignMap(mapId: number): CampaignMap {
 /** Startup validation: rejects an inconsistent configuration before any run can use it. */
 export function validateCampaignConfig(maps: readonly CampaignMap[] = CAMPAIGN_MAPS): void {
   const b = CAMPAIGN_BALANCE;
-  if (maps.length !== 10) throw new Error('The campaign must have exactly 10 maps.');
+  if (maps.length !== 40) throw new Error('The campaign must have exactly 40 maps.');
   const bosses = new Set<string>();
   maps.forEach((map, i) => {
     if (map.id !== i + 1) throw new Error(`Map ${i + 1} has id ${map.id}.`);
@@ -167,8 +337,18 @@ export function validateCampaignConfig(maps: readonly CampaignMap[] = CAMPAIGN_M
     for (const value of Object.values(map.difficulty))
       if (!Number.isFinite(value) || value <= 0)
         throw new Error(`Map ${map.id} difficulty invalid.`);
-    if (map.rangedShare !== undefined && !(map.rangedShare >= 0 && map.rangedShare <= 1))
+    if (
+      map.rangedShare !== undefined &&
+      !(map.rangedShare >= 0 && map.rangedShare <= b.maxRangedShare)
+    )
       throw new Error(`Map ${map.id} rangedShare invalid.`);
+    if (map.act !== actOf(map.id).id) throw new Error(`Map ${map.id} act invalid.`);
+    if (!(map.victoryGold > 0) || !Number.isInteger(map.victoryGold))
+      throw new Error(`Map ${map.id} victory Gold invalid.`);
+    const e = map.elite;
+    if (!(e.interval > 0) || !(e.hpMultiplier > 0) || !(e.damageMultiplier > 0))
+      throw new Error(`Map ${map.id} elite settings invalid.`);
+    if (map.reservedSlots < b.reservedSlots) throw new Error(`Map ${map.id} reserve too small.`);
     if (!map.bossId || bosses.has(map.bossId))
       throw new Error(`Map ${map.id} boss reference invalid.`);
     bosses.add(map.bossId);
@@ -176,7 +356,14 @@ export function validateCampaignConfig(maps: readonly CampaignMap[] = CAMPAIGN_M
   const starts = b.stages.map((s) => s.start);
   if (starts[0] !== 0 || starts.some((s, i) => i > 0 && !(s > starts[i - 1] && s < 1)))
     throw new Error('Stage boundaries must start at 0 and increase below 1.');
+  // Act I keeps the Task 08 rule: the boss replaces a scheduled elite slot at 10:00.
   if (b.elite.interval <= 0 || b.boss.spawnTime % b.elite.interval !== 0)
     throw new Error('The boss must replace a scheduled elite slot.');
+  if (CAMPAIGN_ACTS[0].eliteInterval !== b.elite.interval)
+    throw new Error('Act I must keep the Task 08 elite interval.');
+  CAMPAIGN_ACTS.forEach((act, i) => {
+    if (act.firstMap !== i * 10 + 1 || act.lastMap !== i * 10 + 10 || !(act.eliteInterval > 0))
+      throw new Error(`Act ${act.roman} invalid.`);
+  });
 }
 validateCampaignConfig();

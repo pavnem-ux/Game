@@ -73,7 +73,7 @@ describe('saveSchema (Task 08 §1.4, step 4.1)', () => {
     const cases: Record<string, unknown>[] = [
       { ...base, gold: -1 },
       { ...base, gold: 1.5 },
-      { ...base, highestUnlockedMap: 11 },
+      { ...base, highestUnlockedMap: 41 },
       { ...base, highestUnlockedMap: 1 }, // completed maps 1–3 imply map 4 unlocked
       { ...base, selectedClass: 'bard' },
       { ...base, profileId: '' },
@@ -89,7 +89,7 @@ describe('saveSchema (Task 08 §1.4, step 4.1)', () => {
       { ...base, processedRunIds: ['a', 'a'] },
       { ...base, processedRunIds: Array.from({ length: 51 }, (_, i) => `r${i}`) },
       { ...base, recentRuns: [{ runId: 'x' }] },
-      { ...base, bestResults: { '12': {} } },
+      { ...base, bestResults: { '42': {} } },
       { ...base, completedMaps: 'all' },
       { ...base, schemaVersion: 0 },
       { ...base, schemaVersion: 'one' },

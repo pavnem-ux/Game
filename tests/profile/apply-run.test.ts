@@ -8,6 +8,7 @@ import {
   talentPoints,
 } from '../../src/profile';
 import type { PlayerProfile, RunResult } from '../../src/profile';
+import { getCampaignMap } from '../../src/campaign';
 
 const NOW = '2026-11-02T10:00:00.000Z';
 const fresh = () => createProfile('profile-test', NOW);
@@ -124,13 +125,17 @@ describe('applyRunResult (Task 08 §1.3, step 3.3)', () => {
     expect(p.highestUnlockedMap).toBe(3);
   });
   it('replaying a completed map never lowers unlocks; the last map unlocks nothing new', () => {
+    // Task 10: 40 maps; map 10 now unlocks map 11 and map 40 is the last.
     let p = fresh();
-    for (let m = 1; m <= 10; m++) p = win(p, { mapId: m, elapsed: m === 10 ? 900 : 700 });
-    expect(p.highestUnlockedMap).toBe(10);
-    expect(p.completedMaps).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    for (let m = 1; m <= 40; m++)
+      p = win(p, { mapId: m, elapsed: getCampaignMap(m).durationSeconds });
+    expect(p.highestUnlockedMap).toBe(40);
+    expect(p.completedMaps).toEqual(Array.from({ length: 40 }, (_, i) => i + 1));
     const replay = applyRunResult(p, run({ mapId: 3, elapsed: 660 }), NOW);
     expect(replay.summary.newlyUnlockedMap).toBeNull();
-    expect(replay.profile.highestUnlockedMap).toBe(10);
+    expect(replay.profile.highestUnlockedMap).toBe(40);
+    const last = applyRunResult(p, run({ mapId: 40, elapsed: 900, runId: 'again-40' }), NOW);
+    expect(last.summary.newlyUnlockedMap).toBeNull();
   });
   it('locked maps cannot be applied; invalid results are rejected without changes', () => {
     const p = fresh();

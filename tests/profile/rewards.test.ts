@@ -3,8 +3,8 @@ import { CAMPAIGN_MAPS } from '../../src/campaign';
 import { runRewards } from '../../src/profile';
 
 describe('run rewards (Task 08 §1.3)', () => {
-  it('victory gives the full map XP and Gold = XP / 2', () => {
-    for (const m of CAMPAIGN_MAPS)
+  it('victory gives the full map XP and (Act I) Gold = XP / 2', () => {
+    for (const m of CAMPAIGN_MAPS.slice(0, 10))
       expect(runRewards({ mapId: m.id, outcome: 'victory', elapsed: m.durationSeconds })).toEqual({
         xp: 100 + 50 * m.id,
         gold: (100 + 50 * m.id) / 2,
@@ -30,7 +30,7 @@ describe('run rewards (Task 08 §1.3)', () => {
       expect(runRewards({ mapId: 4, outcome: 'abandoned', elapsed })).toEqual({ xp: 0, gold: 0 });
   });
   it('rejects invalid input', () => {
-    expect(() => runRewards({ mapId: 11, outcome: 'victory', elapsed: 1 })).toThrow();
+    expect(() => runRewards({ mapId: 41, outcome: 'victory', elapsed: 1 })).toThrow();
     expect(() => runRewards({ mapId: 1, outcome: 'victory', elapsed: -1 })).toThrow();
     expect(() => runRewards({ mapId: 1, outcome: 'victory', elapsed: NaN })).toThrow();
     expect(() => runRewards({ mapId: 1, outcome: 'won' as never, elapsed: 1 })).toThrow();

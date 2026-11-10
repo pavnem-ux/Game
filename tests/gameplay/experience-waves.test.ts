@@ -85,20 +85,21 @@ describe('authoritative death rewards, attribution and run progression', () => {
     const w = isolated(50),
       player = w.core.getEntity('player'),
       character = w.character;
-    for (let i = 0; i < 2; i++) w.spawnEnemy('melee', 30, 0, stationary);
+    // Task 10 §1.3: melee crystals are worth 8 (was 10); three kills still pass level 2 (cost 20).
+    for (let i = 0; i < 3; i++) w.spawnEnemy('melee', 30, 0, stationary);
     w.update(0);
-    expect(w.getSnapshot().kills).toBe(2);
-    expect(rewards(w)).toHaveLength(2);
+    expect(w.getSnapshot().kills).toBe(3);
+    expect(rewards(w)).toHaveLength(3);
     expect(w.getSnapshot().progression.totalXp).toBe(0);
-    expect(w.getSnapshot().crystals.reduce((s, c) => s + c.value, 0)).toBe(20);
+    expect(w.getSnapshot().crystals.reduce((s, c) => s + c.value, 0)).toBe(24);
     w.update(1 / 60);
-    expect(w.getSnapshot().progression).toEqual({ level: 2, xp: 0, nextXp: 30, totalXp: 20 });
+    expect(w.getSnapshot().progression).toEqual({ level: 2, xp: 4, nextXp: 30, totalXp: 24 });
     expect(w.core.getEntity('player')).toBe(player);
     expect(w.character).toBe(character);
     expect(w.character.permanentLevel).toBe(50);
     w.clearEnemies();
     w.update(1);
-    expect(rewards(w)).toHaveLength(2);
+    expect(rewards(w)).toHaveLength(3);
   });
   it('credits a lethal DoT tick once, using positive contributors even if Core representative source is another enemy', () => {
     const w = isolated();
@@ -114,11 +115,15 @@ describe('authoritative death rewards, attribution and run progression', () => {
       sourceId: source,
       cause: 'periodic',
       effectId: 'burn',
-      xp: 10,
+      xp: XP_RULES.meleeReward,
       contributors: [source, 'player'],
     });
     expect(w.getSnapshot().kills).toBe(1);
-    expect(w.getSnapshot().crystals[0]).toMatchObject({ x: 2800, y: 1800, value: 10 });
+    expect(w.getSnapshot().crystals[0]).toMatchObject({
+      x: 2800,
+      y: 1800,
+      value: XP_RULES.meleeReward,
+    });
     w.update(20);
     expect(w.getSnapshot().kills).toBe(1);
     expect(rewards(w)).toHaveLength(1);
@@ -178,7 +183,7 @@ describe('authoritative death rewards, attribution and run progression', () => {
     expect(w.time).toBe(1);
     expect(w.survival.getState().runState).toBe('awaiting-revival-choice');
     expect(w.getSnapshot().kills).toBe(1);
-    expect(w.getSnapshot().crystals[0].value).toBe(10);
+    expect(w.getSnapshot().crystals[0].value).toBe(XP_RULES.meleeReward);
     expect(w.getSnapshot().progression.totalXp).toBe(0);
   });
 });
