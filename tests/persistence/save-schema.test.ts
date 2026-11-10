@@ -36,9 +36,9 @@ const code = (raw: unknown) => {
 };
 
 describe('saveSchema (Task 08 §1.4, step 4.1)', () => {
-  it('v2 is current (Task 09 talents) and the migrations map upgrades v1 → v2', () => {
-    expect(SAVE_SCHEMA_VERSION).toBe(2);
-    expect(Object.keys(migrations)).toEqual(['1']);
+  it('v3 is current (Task 10 maps) and the migrations map upgrades v1 → v2 → v3', () => {
+    expect(SAVE_SCHEMA_VERSION).toBe(3);
+    expect(Object.keys(migrations)).toEqual(['1', '2']);
   });
   it('a valid profile round-trips through JSON unchanged', () => {
     const p = played();
@@ -99,7 +99,7 @@ describe('saveSchema (Task 08 §1.4, step 4.1)', () => {
     expect(code([base])).toBe('not-an-object');
   });
   it('newer-version and malformed JSON are reported with distinct codes', () => {
-    expect(code({ ...json(played()), schemaVersion: 3 })).toBe('newer-version');
+    expect(code({ ...json(played()), schemaVersion: 4 })).toBe('newer-version');
     const bad = parseProfileJson('{"schemaVersion": 1,');
     expect(!bad.ok && bad.error.code).toBe('malformed-json');
   });

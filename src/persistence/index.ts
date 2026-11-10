@@ -1,6 +1,7 @@
 export {
   SAVE_SCHEMA_VERSION,
   SaveDataError,
+  migrateV2toV3,
   migrations,
   normalizeProfile,
   parseProfile,

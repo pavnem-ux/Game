@@ -9,7 +9,8 @@ import type { RunOutcome, RunStatsSummary } from './rewards';
  * Only source data is stored — never derived values (combat stats, talent points).
  */
 /** v2 (Task 09): per-class `talents` ranks replace the `talentsSpent` placeholder. */
-export const PROFILE_SCHEMA_VERSION = 2;
+/** v3 (Task 10): 40 maps; a completed map 10 now unlocks map 11 (see migrateV2toV3). */
+export const PROFILE_SCHEMA_VERSION = 3;
 export const MAX_RECENT_RUNS = 20;
 export const MAX_PROCESSED_RUN_IDS = 50;
 
@@ -58,7 +59,7 @@ export interface PlayerProfile {
   /** Highest playable map id (Map 1 is always unlocked). */
   readonly highestUnlockedMap: number;
   readonly completedMaps: readonly number[];
-  /** Keyed by map id as a string ("1".."10"). */
+  /** Keyed by map id as a string ("1".."40"). */
   readonly bestResults: Readonly<Record<string, MapBest>>;
   readonly stats: ProfileStats;
   /** Newest first, at most MAX_RECENT_RUNS. */

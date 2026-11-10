@@ -20,7 +20,7 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/8
 - [x] 2.2 Elite interval per act, 2 elites per event where configured
 - [x] Phase 2 tests (`tests/campaign/bosses-elites-40.test.ts`) (boss uniqueness, ability counts, elite times, reserved slots)
 - [x] 3.1 Per-map modifiers through existing levers + tests (`tests/campaign/modifiers.test.ts`)
-- [ ] 4.1 Save validation/migration for maps 1–40
+- [x] 4.1 Save validation/migration for maps 1–40 (schema v3, `migrateV2toV3`)
 - [ ] 4.2 Recommended level function
 - [ ] 4.3 Map selection UI (acts, recommended level, modifiers, boss, lock reason)
 - [ ] 4.4 Debug: unlock all 40 maps, jump to any map
@@ -50,6 +50,8 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/8
   damage ×1.15) in `config.ts`; `CampaignMap.modifiers` (Russian labels) and `enemySpeedScale`;
   world `enemyProfile(kind)` scales the default enemy profiles (automatic waves, boss adds, elite
   base); the test API `spawnEnemy` and bosses keep their own configs.
+- Save (4.1): `PROFILE_SCHEMA_VERSION` 3; `migrateV2toV3` in `src/persistence/saveSchema.ts`;
+  map ids validated against `CAMPAIGN_MAPS.length` (40). Tests `tests/persistence/maps-40.test.ts`.
 - Tests: `tests/campaign/maps-40.test.ts` + fixture `tests/campaign/fixtures/act1-task08.json`
   (maps, schedules, spawner settings and XP values dumped from `main` before Task 10).
 
@@ -74,6 +76,11 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/8
 - Modifier values (×1.1 speed, 0.15/0.18 ranged, elites ×1.25/×1.15) and which maps get them are
   provisional choices within the spec (≤ 2 per map, 23 of 30 new maps). `swift` affects normal
   enemies, elites and boss adds, not the boss itself (bosses have their own speed config).
+
+- 4.1 schema bump is required: the save rule «a completed map unlocks the next» now makes a Task
+  08–09 save that finished map 10 (`highestUnlockedMap` 10) inconsistent, so v2 → v3 unlocks map 11
+  for exactly those saves; every other field is kept. Older builds will refuse a v3 save
+  (`newer-version`), as designed.
 
 ## Verification log
 

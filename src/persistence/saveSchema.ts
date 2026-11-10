@@ -41,7 +41,21 @@ export function migrateV1toV2(data: Json): Json {
   }
   return { ...data, classes };
 }
-export const migrations: Readonly<Record<number, Migration>> = Object.freeze({ 1: migrateV1toV2 });
+/**
+ * v2 → v3 (Task 10): the campaign grows from 10 to 40 maps and a map 10 victory now unlocks map
+ * 11. A v2 save that completed map 10 (so stopped at `highestUnlockedMap` 10, the old last map)
+ * gets map 11 unlocked; nothing else changes (Gold, XP, levels, talents, results, runs).
+ */
+export function migrateV2toV3(data: Json): Json {
+  const completed = Array.isArray(data.completedMaps) ? data.completedMaps : [];
+  if (completed.includes(10) && data.highestUnlockedMap === 10)
+    return { ...data, highestUnlockedMap: 11 };
+  return { ...data };
+}
+export const migrations: Readonly<Record<number, Migration>> = Object.freeze({
+  1: migrateV1toV2,
+  2: migrateV2toV3,
+});
 
 export type SaveErrorCode =
   | 'malformed-json'
