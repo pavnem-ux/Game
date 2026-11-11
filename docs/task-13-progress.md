@@ -4,15 +4,15 @@ Spec: [task-13-ui-redesign.md](task-13-ui-redesign.md) (owner's file; Prettier o
 Branch `task-13-ui` from `main` at `095ec2d` (Tasks 11 and 12 merged). Presentation only — no
 gameplay changes.
 
-Current: Phase 1 (kit)
+Current: Phase 2 (screens)
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/12
 
 ## Checklist
 
 - [x] 0.1 Branch from `main`, progress file, draft PR, "before" screenshots (1280×720)
-- [ ] 1.1 Tokens + background
-- [ ] 1.2 Components + unit tests (compare tooltip values, disabled states)
+- [x] 1.1 Tokens + background
+- [x] 1.2 Components + unit tests (compare tooltip values, disabled states)
 - [ ] 2.1 Hub
 - [ ] 2.2 Character select
 - [ ] 2.3 Equipment
@@ -37,7 +37,22 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/12
   Настройки, Gold), `CampaignPages.tsx` (Character, Maps, Progression with `TalentsPanel`),
   `ShopPages.tsx` (Shop, `EquipmentPanel` on the Character page), `SaveManagement.tsx` (Settings),
   styles in `alpha.css`, Russian text in `strings-ru.ts`.
+- Kit (1.1–1.2): `src/gameplay-ui/kit/` — `tokens.css` (palette night-blue/ink, candle-gold,
+  parchment; tier colours; class accents; spacing, radii, shadows; motion 150/200/250 ms, 0 with
+  `prefers-reduced-motion`; serif headings / sans body), `kit.css`, `components.tsx` (`Backdrop`
+  with vignette and deterministic drifting motes, `Button` primary/secondary/danger/ghost with
+  `disabledReason` → disabled + title + accessible description, `Panel` with ornamental corners,
+  `Tabs` (aria-pressed group, arrow keys), `ConfirmModal` (focus to confirm, Enter/Esc, focus
+  return), `Tooltip`, `CompareList`, `ProgressBar`, `CurrencyBadge` («Золото: N»), `TierFrame`),
+  `ClassEmblem.tsx` (original inline SVG crest per class), `logic.ts` (`STAT_ROWS`,
+  `compareStats`, `disabledReason`, `progressFraction`, `formatGold`, `formatStat`, `romanRank`).
+  Everything is scoped to `.meta-ui` (the menu root), so the in-run HUD is untouched.
+- Strings: `RU.meta` in `strings-ru.ts` (nav, hub, character, stats, equipment, talents, shop,
+  maps, modal).
+- Tests: `tests/ui-kit/kit-logic.test.ts` (vitest include `tests/ui-kit/**`).
 
 ## Decisions
 
 ## Verification log
+
+- Phase 1: typecheck ✓, format ✓, `npm test` 1252 ✓ (kit 8), build ✓.

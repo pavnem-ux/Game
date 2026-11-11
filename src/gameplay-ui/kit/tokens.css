@@ -1,0 +1,85 @@
+/*
+ * Task 13 — «Последний свет» design tokens (meta screens only; the in-run HUD keeps its styles).
+ * Every redesigned screen sits inside `.meta-ui` and reads these variables.
+ */
+.meta-ui {
+  /* Palette: deep night-blue / ink, warm candle-gold accent, parchment panels. */
+  --night-950: #070b16;
+  --night-900: #0b1222;
+  --night-800: #111a30;
+  --night-700: #18233f;
+  --night-600: #22304f;
+  --ink: #0d1324;
+  --ink-line: rgba(214, 186, 128, 0.22);
+  --ink-line-strong: rgba(232, 196, 120, 0.5);
+  --gold-300: #f6dc9c;
+  --gold-400: #ecc46f;
+  --gold-500: #d9a441;
+  --gold-600: #b07d26;
+  --gold-glow: rgba(245, 196, 98, 0.45);
+  --parchment-100: #f4ead2;
+  --parchment-200: #e6d6b2;
+  --parchment-300: #c8b48a;
+  --text: #ece4d0;
+  --text-muted: #b2a88f;
+  --text-faint: #837b68;
+  --danger: #e2675b;
+  --danger-strong: #b8443a;
+  --success: #7fd29a;
+  --up: #7fd29a;
+  --down: #ef7d6f;
+  --focus: #ffe7a3;
+  /* Tier colours (equipment): Обычный grey, Добротный green, Редкий blue, Эпический purple,
+     Легендарный orange (same hues as TIER_CONFIG). */
+  --tier-0: #8d96a6;
+  --tier-1: #c9c9c0;
+  --tier-2: #7fc77a;
+  --tier-3: #6fa8e8;
+  --tier-4: #b67ae6;
+  --tier-5: #f0b54a;
+  /* Class accents. */
+  --class-warrior: #e8b16c;
+  --class-mage: #8fd3f0;
+  --class-archer: #a8d98a;
+  --class-rogue: #c9a2ef;
+  /* Spacing, radii, shadows. */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+  --radius-s: 4px;
+  --radius-m: 8px;
+  --radius-l: 14px;
+  --radius-round: 999px;
+  --shadow-panel: 0 10px 30px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(255, 236, 190, 0.06) inset;
+  --shadow-lift: 0 14px 34px rgba(0, 0, 0, 0.55), 0 0 18px var(--gold-glow);
+  --shadow-glow: 0 0 24px var(--gold-glow);
+  /* Motion. */
+  --dur-fast: 150ms;
+  --dur: 200ms;
+  --dur-slow: 250ms;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  /* Typography: system serif for headings, system sans for body and numbers. */
+  --font-serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif;
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --fs-xs: 11px;
+  --fs-s: 13px;
+  --fs-m: 15px;
+  --fs-l: 19px;
+  --fs-xl: 26px;
+  --fs-xxl: clamp(40px, 4.6vw, 72px);
+
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+@media (prefers-reduced-motion: reduce) {
+  .meta-ui {
+    --dur-fast: 0ms;
+    --dur: 0ms;
+    --dur-slow: 0ms;
+  }
+}

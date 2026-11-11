@@ -11,6 +11,7 @@ import { CharacterPage, MapsPage, ProgressionPage } from './CampaignPages';
 import { SaveWarning, SettingsPage } from './SaveManagement';
 import { BuildLabel } from './BuildLabel';
 import { ShopPage } from './ShopPages';
+import { Backdrop } from './kit';
 
 const PAGES: readonly { id: MenuPage; label: string }[] = [
   { id: 'play', label: 'Играть' },
@@ -26,7 +27,8 @@ export function CampaignMenu() {
   const ui = useSyncExternalStore(campaignStore.subscribe, campaignStore.getSnapshot);
   const profile = ui.progression.profile;
   return (
-    <section className="overlay alpha-menu campaign-menu" aria-labelledby="alpha-title">
+    <section className="overlay alpha-menu campaign-menu meta-ui" aria-labelledby="alpha-title">
+      <Backdrop />
       <nav className="campaign-nav" aria-label="Главное меню">
         {PAGES.map((p) => (
           <button
