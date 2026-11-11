@@ -157,6 +157,24 @@ export class PlayerSurvival {
       }),
     ]);
   }
+  /**
+   * Task 14 (additive): the same hit protection a hit grants (direct hostile damage blocked), for
+   * `seconds` from now — the dash i-frames. Extends, never shortens, the current protection.
+   * Only while the run is active and the player alive.
+   */
+  grantProtection(seconds: number, source: 'dash'): SurvivalResult {
+    nonNegative(seconds, 'protection seconds');
+    if (source !== 'dash') throw new TypeError('Unknown protection source.');
+    const state = this.getState();
+    if (!state.canPlayerAct) return this.result([]);
+    const expiresAt = this.clock + seconds;
+    if (!Number.isFinite(expiresAt) || sameTime(expiresAt, this.clock))
+      throw new RangeError('Protection time is not representable.');
+    if (this.directUntil === null || this.directUntil < expiresAt) this.directUntil = expiresAt;
+    return this.result([
+      Object.freeze({ ...this.base(), type: 'protection-granted', source, expiresAt }),
+    ]);
+  }
   consumeCombatEvents(time: number, events: readonly CombatEvent[]): SurvivalResult {
     this.assertTime(time);
     validateEvents(events, this.core);

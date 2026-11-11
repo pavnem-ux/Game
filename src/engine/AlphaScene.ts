@@ -81,6 +81,14 @@ export class AlphaScene extends Phaser.Scene {
       }
     });
     this.input.keyboard!.on('keydown-P', toggle).on('keydown-ESC', toggle);
+    // Task 14: Space / Shift dash (resolved by the world at its next input sample).
+    const dash = (e: KeyboardEvent) => {
+      if (e.repeat || (e.target as HTMLElement)?.matches('input,select,textarea')) return;
+      if (!this.world || this.world.paused) return;
+      e.preventDefault(); // a focused HUD button must not also receive Space during play
+      if (this.world.requestDash()) this.publish();
+    };
+    this.input.keyboard!.on('keydown-SPACE', dash).on('keydown-SHIFT', dash);
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
       if (
         this.world &&
@@ -620,6 +628,35 @@ export class AlphaScene extends Phaser.Scene {
     }
     const { x, y } = s.playerBody,
       color = CLASS_COLORS[s.character.characterClass];
+    // Task 14: dash afterimages (fading ghosts along the dash line) and the cooldown ring.
+    const dash = s.dash;
+    if (dash.startedAt !== null && dash.from) {
+      const age = s.time - dash.startedAt;
+      if (age >= 0 && age < 0.4) {
+        const fade = 1 - age / 0.4;
+        for (let i = 0; i < 4; i++) {
+          const t = i / 4;
+          const gx = dash.from.x + (x - dash.from.x) * t,
+            gy = dash.from.y + (y - dash.from.y) * t;
+          g.fillStyle(color, 0.12 + 0.12 * t * fade).fillTriangle(
+            gx,
+            gy - 12,
+            gx - 15,
+            gy + 17,
+            gx + 15,
+            gy + 17,
+          );
+        }
+      }
+    }
+    if (s.time < dash.readyAt && dash.cooldown > 0) {
+      const done = 1 - (dash.readyAt - s.time) / dash.cooldown;
+      g.lineStyle(3, 0x0b1222, 0.6).strokeCircle(x, y, 34);
+      g.lineStyle(3, 0xecc46f, 0.85)
+        .beginPath()
+        .arc(x, y, 34, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.max(0, done))
+        .strokePath();
+    }
     g.fillStyle(0x030d0c, 0.45).fillEllipse(x, y + 17, 38, 13);
     g.fillStyle(color, s.player.alive ? 1 : 0.4).fillTriangle(
       x,

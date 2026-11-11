@@ -5,6 +5,7 @@ export {
   ALPHA_WEAPONS,
   ALPHA_ENEMIES,
   ALPHA_ENEMY_STATS,
+  DASH_RULES,
   CLASS_LABELS,
   WEAPON_LABELS,
 } from './config';

@@ -324,6 +324,18 @@ try {
     2,
   );
 
+  // Task 14: Space dashes (140 units, cooldown shown in the skill bar); Shift on cooldown does not.
+  const dashStart = (await state()).world.playerBody.x;
+  await page.keyboard.press('Space');
+  await page.evaluate(() => window.__alpha.advance(0.3));
+  s = await state();
+  assert.equal(s.world.dash.used, 1);
+  assert.ok(s.world.playerBody.x - dashStart >= 139, 'dash moved the player ~140 units');
+  await page.getByLabel(/^Рывок: \d+\.\d с$/).waitFor();
+  await page.keyboard.press('Shift');
+  await page.evaluate(() => window.__alpha.advance(0.1));
+  assert.equal((await state()).world.dash.used, 1, 'no dash on cooldown');
+
   await command({ type: 'restart', options: { characterClass: 'mage', initialEnemies: false } });
   await command({ type: 'protection', enabled: true });
   for (let i = 0; i < 5; i++) await command({ type: 'group', count: 24, distance: 550 });

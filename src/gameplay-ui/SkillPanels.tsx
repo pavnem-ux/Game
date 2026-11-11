@@ -355,6 +355,20 @@ export function SkillBar({
         </span>
         {gold > 0 && <span className="skill-gold">◎ {gold}</span>}
         {barrier > 0 && <span className="skill-barrier">◈ {Math.ceil(barrier)}</span>}
+        {/* Task 14: dash readiness (Space / Shift). */}
+        <span
+          className={`skill-dash ${world.time < world.dash.readyAt ? 'cooling' : 'ready'}`}
+          aria-label={
+            world.time < world.dash.readyAt
+              ? `Рывок: ${(world.dash.readyAt - world.time).toFixed(1)} с`
+              : 'Рывок готов (Пробел / Shift)'
+          }
+        >
+          ⇢{' '}
+          {world.time < world.dash.readyAt
+            ? `${(world.dash.readyAt - world.time).toFixed(1)} с`
+            : 'Рывок'}
+        </span>
         {buffs.map((b) => (
           <span key={b.id} className="skill-buff">
             {b.id.replace(/_/g, ' ')}

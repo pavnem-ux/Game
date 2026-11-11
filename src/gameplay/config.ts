@@ -119,3 +119,15 @@ export function defaultOnHit(characterClass: CharacterClass): readonly EffectDef
     },
   ];
 }
+
+/**
+ * Task 14 dash (provisional): Space / Shift dashes `distance` units in the current movement
+ * direction (last direction when standing; right at the start) over `duration` seconds; `cooldown`
+ * from the dash start; `invulnerability` seconds of the existing Player Survival hit protection.
+ */
+export const DASH_RULES = Object.freeze({
+  distance: 140,
+  duration: 0.15,
+  cooldown: 3,
+  invulnerability: 0.2,
+});

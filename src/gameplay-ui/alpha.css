@@ -1476,3 +1476,16 @@ p.damage-note {
 .skill-card.banish-target:disabled {
   opacity: 0.45;
 }
+/* Task 14: dash readiness in the skill bar. */
+.skill-dash {
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(236, 196, 111, 0.6);
+  color: #f6dc9c;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.skill-dash.cooling {
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #8f978f;
+}

@@ -58,7 +58,8 @@ export interface WorldEvent {
     | 'spawning'
     | 'skill'
     | 'campaign'
-    | 'chests';
+    | 'chests'
+    | 'movement';
   readonly event:
     | CombatEvent
     | WeaponEvent
@@ -72,7 +73,8 @@ export interface WorldEvent {
     | SkillEvent
     | CampaignEvent
     | CoinEvent
-    | ChestEvent;
+    | ChestEvent
+    | DashEvent;
 }
 export interface GameplaySnapshot {
   readonly time: number;
@@ -138,6 +140,20 @@ export interface GameplaySnapshot {
       time: number;
     }> | null;
   }> | null;
+  /**
+   * Task 14 dash: whether a dash is under way (its start, from / to), when the next one is ready,
+   * the cooldown length, dashes used and direct hits avoided during dash i-frames.
+   */
+  readonly dash: Readonly<{
+    active: boolean;
+    startedAt: number | null;
+    from: Point | null;
+    to: Point | null;
+    readyAt: number;
+    cooldown: number;
+    used: number;
+    hitsAvoided: number;
+  }>;
   /** Task 12: pending artillery strikes (telegraph circles of the bombard). */
   readonly artilleryStrikes: readonly ArtilleryStrikeSnapshot[];
   readonly statuses: readonly StatusGroupSnapshot[];
@@ -250,3 +266,16 @@ export interface RunLevelHealingEvent {
   readonly requestedHealing: number;
   readonly healed: number;
 }
+
+/** Task 14: dash events (channel `movement`). */
+export type DashEvent =
+  | {
+      readonly type: 'dash-started';
+      readonly from: Point;
+      readonly to: Point;
+      readonly direction: Point;
+      readonly endsAt: number;
+    }
+  | { readonly type: 'dash-ended'; readonly at: Point }
+  | { readonly type: 'dash-ready' }
+  | { readonly type: 'dash-hit-avoided'; readonly sourceId: string };
