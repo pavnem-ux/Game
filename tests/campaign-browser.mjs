@@ -27,7 +27,17 @@ try {
 
   // 5.1 Main menu: navigation and Gold.
   await nav.waitFor();
-  for (const tab of ['Играть', 'Персонаж', 'Карты', 'Прогресс', 'Настройки'])
+  // Task 13: hub + separate Equipment / Talents pages + the map path.
+  for (const tab of [
+    'Главная',
+    'Персонаж',
+    'Экипировка',
+    'Таланты',
+    'Магазин',
+    'Карта похода',
+    'Прогресс',
+    'Настройки',
+  ])
     assert.equal(await nav.getByRole('button', { name: tab, exact: true }).count(), 1, tab);
   assert.equal(await page.getByLabel('Золото: 0').count(), 1);
   assert.equal(
@@ -37,13 +47,36 @@ try {
   );
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.profile')));
   assert.equal(saved.highestUnlockedMap, 1, 'a new profile is persisted on first launch');
+  /** Task 13: open the map path, pick map `id` and press «В бой» in its side panel. */
+  const openMap = async (id) => {
+    await nav.getByRole('button', { name: 'Карта похода', exact: true }).click();
+    await page.getByRole('button', { name: new RegExp(`^Карта ${id}: `) }).click();
+    return page.getByRole('button', { name: `Играть: карта ${id}`, exact: true });
+  };
+  const mapPanel = () => page.locator('.map-panel');
+
+  // Task 13 hub: «В бой» opens the map path; Esc goes back to the hub.
+  await page.getByRole('button', { name: /В бой/ }).first().click();
+  assert.equal(await page.locator('.map-node').count(), 40);
+  assert.equal(
+    await nav
+      .getByRole('button', { name: 'Карта похода', exact: true })
+      .getAttribute('aria-current'),
+    'page',
+  );
+  await page.keyboard.press('Escape');
+  await page.getByRole('heading', { name: 'Последний свет', level: 1 }).waitFor();
 
   // 5.2 Character page.
   await nav.getByRole('button', { name: 'Персонаж', exact: true }).click();
+  // Task 13: a card's quick link opens Equipment for that class (without selecting it).
+  await page.getByRole('button', { name: 'Экипировка: Маг', exact: true }).click();
+  await page.getByRole('region', { name: 'Снаряжение: Маг' }).waitFor();
+  await nav.getByRole('button', { name: 'Персонаж', exact: true }).click();
   const cards = page.locator('.character-card');
   assert.equal(await cards.count(), 4);
-  assert.match(await cards.first().innerText(), /Уровень 1 \/ 50 · XP 0 \/ 100/);
-  assert.match(await cards.first().innerText(), /Очки талантов\s+0/);
+  assert.match(await cards.first().innerText(), /Уровень 1 \/ 50 · Опыт 0 \/ 100/);
+  assert.equal(await cards.first().getByLabel('Очки талантов: 0').count(), 1);
   await page
     .getByRole('article', { name: /Лучник/ })
     .getByRole('button', { name: 'Выбрать' })
@@ -54,34 +87,32 @@ try {
   );
   await page.screenshot({ path: 'artifacts/campaign-01-character.png', fullPage: true });
 
-  // 5.2 Maps page: lock state; boss hidden while locked; locked maps cannot start.
-  await nav.getByRole('button', { name: 'Карты', exact: true }).click();
-  const maps = page.locator('.map-card');
-  assert.equal(await maps.count(), 10); // Task 10: Act I tab opens first (10 of 40 maps)
-  // Task 10: act tabs, recommended level, lock reason, modifiers (Russian).
-  const acts = page.getByRole('group', { name: 'Акты кампании' });
-  assert.equal(await acts.getByRole('button').count(), 4);
-  assert.match(await maps.nth(0).innerText(), /Рекомендуемый уровень 1/);
-  assert.match(await maps.nth(1).innerText(), /Рекомендуемый уровень 2 · Победите на карте 1/);
-  await acts.getByRole('button', { name: /Акт II · Заколдованные земли/ }).click();
-  assert.equal(await maps.count(), 10);
-  assert.match(await maps.nth(0).innerText(), /Шепчущий бор[\s\S]*Победите на карте 10/);
-  assert.match(await maps.nth(1).innerText(), /Быстрые враги/);
-  assert.match(await maps.nth(1).innerText(), /Босс: \?\?\?/);
-  assert.equal(
-    await page.getByRole('button', { name: 'Играть: карта 11', exact: true }).isDisabled(),
-    true,
+  // 5.2 Map path (Task 13): 40 nodes in 4 act regions; the side panel shows the lock reason,
+  // recommended level, modifiers and the boss (hidden while locked); locked maps cannot start.
+  await nav.getByRole('button', { name: 'Карта похода', exact: true }).click();
+  assert.equal(await page.locator('.map-node').count(), 40);
+  for (const act of ['Акт I · Забытые сказки', 'Акт II · Заколдованные земли'])
+    assert.equal(await page.getByRole('region', { name: act, exact: true }).count(), 1, act);
+  assert.equal(await page.getByRole('button', { name: /^Карта 1: .*, открыта$/ }).count(), 1);
+  assert.equal(await page.getByRole('button', { name: /^Карта 2: .*, закрыта$/ }).count(), 1);
+  assert.match(await mapPanel().innerText(), /Рекомендуемый уровень\s+1 ·/);
+  const play2 = await openMap(2);
+  assert.match(
+    await mapPanel().innerText(),
+    /Победите на карте 1[\s\S]*Рекомендуемый уровень\s+2 ·/,
   );
+  assert.match(await mapPanel().innerText(), /Босс\s+♚ \?\?\?/);
+  assert.equal(await play2.isDisabled(), true);
+  const play11 = await openMap(11);
+  assert.match(await mapPanel().innerText(), /Шепчущий бор[\s\S]*Победите на карте 10/);
+  assert.equal(await play11.isDisabled(), true);
+  await openMap(12);
+  assert.match(await mapPanel().innerText(), /Быстрые враги/);
   await page.screenshot({ path: 'artifacts/campaign-02b-maps-act2.png', fullPage: true });
-  await acts.getByRole('button', { name: /Акт I · Забытые сказки/ }).click();
-  assert.match(await maps.nth(0).innerText(), /Открыта[\s\S]*Терновый страж/);
-  assert.match(await maps.nth(1).innerText(), /Закрыта[\s\S]*Босс: \?\?\?/);
-  assert.equal(
-    await page.getByRole('button', { name: 'Играть: карта 2', exact: true }).isDisabled(),
-    true,
-  );
+  const play1 = await openMap(1);
+  assert.match(await mapPanel().innerText(), /Босс\s+♚ Терновый страж/);
   await page.screenshot({ path: 'artifacts/campaign-02-maps.png', fullPage: true });
-  await page.getByRole('button', { name: 'Играть: карта 1', exact: true }).click();
+  await play1.click();
   await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
   let s = await state();
   assert.equal(s.world.campaign.mapId, 1);
@@ -181,26 +212,26 @@ try {
   assert.match(await page.locator('.progression-page').innerText(), /Пройдено карт: 1 \/ 40/);
   assert.match(await page.locator('.recent-runs').innerText(), /Победа · карта 1/);
   await page.screenshot({ path: 'artifacts/campaign-04-progression.png', fullPage: true });
-  // Task 09 §1.5: talent screen (selected class = archer, level 2 → 1 point).
+  // Task 09 §1.5: talent screen (selected class = archer, level 2 → 1 point). Task 13: own page;
+  // a node opens its ranks in the detail panel, which holds the «Изучить» button.
+  await nav.getByRole('button', { name: 'Таланты', exact: true }).click();
   const talents = page.getByRole('region', { name: 'Таланты', exact: true });
-  assert.equal(await page.getByRole('button', { name: 'Таланты — скоро' }).count(), 0);
+  const detail = page.getByRole('region', { name: 'Описание таланта' });
+  const pick = (item) => item.locator('.talent-orb').click();
   assert.match(await talents.innerText(), /Свободно очков: 1 из 1/);
   // Task 09.1 G0: the catalog is approved; not-yet-implemented ranks are flagged instead.
   assert.match(await talents.innerText(), /Часть рангов пока не действует в бою/);
   const superBranch = talents.getByRole('region', { name: /^Ветка 3\./ });
   assert.match(await superBranch.innerText(), /доступно с 30 уровня/);
-  assert.equal(
-    await superBranch
-      .getByRole('button', { name: /Изучить/ })
-      .first()
-      .isDisabled(),
-    true,
-  );
+  await pick(superBranch.getByRole('listitem').first());
+  assert.equal(await detail.getByRole('button', { name: /Изучить/ }).isDisabled(), true);
   const eye = talents.getByRole('listitem', { name: /^Меткий глаз: Ранг 0$/ });
   const next = talents.getByRole('listitem', { name: /^Слабая точка: Ранг 0$/ });
-  assert.equal(await next.getByRole('button', { name: 'Изучить ранг I' }).isDisabled(), true);
-  assert.match(await next.innerText(), /Сначала изучите предыдущий талант до ранга II/);
-  await eye.getByRole('button', { name: 'Изучить ранг I' }).click();
+  await pick(next);
+  assert.equal(await detail.getByRole('button', { name: 'Изучить ранг I' }).isDisabled(), true);
+  assert.match(await detail.innerText(), /Сначала изучите предыдущий талант до ранга II/);
+  await pick(eye);
+  await detail.getByRole('button', { name: 'Изучить ранг I' }).click();
   await talents.getByText(/Свободно очков: 0 из 1/).waitFor();
   assert.deepEqual(
     await page.evaluate(
@@ -208,21 +239,21 @@ try {
     ),
     { 'archer.b1.n01': 1 },
   );
+  assert.equal(await talents.getByRole('listitem', { name: /^Меткий глаз: Ранг I$/ }).count(), 1);
   assert.equal(
-    await talents
-      .getByRole('listitem', { name: /^Меткий глаз: Ранг I$/ })
-      .getByRole('button', { name: 'Изучить ранг II' })
-      .isDisabled(),
+    await detail.getByRole('button', { name: 'Изучить ранг II' }).isDisabled(),
     true,
     'no points left',
   );
-  await talents.getByRole('button', { name: /Маг/ }).click();
+  await talents
+    .getByRole('group', { name: 'Класс дерева талантов' })
+    .getByRole('button', { name: 'Маг' })
+    .click();
   assert.match(await talents.innerText(), /Свободно очков: 0 из 0/);
   await page.screenshot({ path: 'artifacts/campaign-12-talents.png', fullPage: true });
   await nav.getByRole('button', { name: 'Персонаж', exact: true }).click();
   await page.getByRole('article', { name: /Маг/ }).getByRole('button', { name: 'Выбрать' }).click();
-  await nav.getByRole('button', { name: 'Карты', exact: true }).click();
-  await page.getByRole('button', { name: 'Играть: карта 2', exact: true }).click();
+  await (await openMap(2)).click();
   await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
   s = await state();
   assert.equal(s.world.campaign.mapId, 2);
@@ -380,9 +411,9 @@ try {
   );
   await slots.getByRole('button', { name: 'Броня' }).click();
   const plate = page.getByRole('listitem', { name: /^Обычные латы:/ });
-  await plate.getByRole('button', { name: /Купить · 80/ }).click();
+  await plate.getByRole('button', { name: /Купить · ◎ 80/ }).click();
   await page
-    .getByRole('group', { name: 'Подтверждение покупки' })
+    .getByRole('dialog', { name: /Купить «Обычные латы» за 80 золота\?/ })
     .getByRole('button', { name: 'Подтвердить' })
     .click();
   await page.getByText('Куплено: Обычные латы.').waitFor();
@@ -390,11 +421,11 @@ try {
   assert.equal(bought.gold, devSave.gold - 80);
   assert.deepEqual(bought.ownedItems, ['plate-t1']);
   await page.screenshot({ path: 'artifacts/campaign-13-shop.png', fullPage: true });
-  await nav.getByRole('button', { name: 'Персонаж', exact: true }).click();
+  await nav.getByRole('button', { name: 'Экипировка', exact: true }).click();
   const gear = page.getByRole('region', { name: /^Снаряжение:/ });
-  await gear.getByLabel('Выбрать: Броня').selectOption('plate-t1');
+  await gear.getByRole('button', { name: /^Обычные латы/ }).click();
   const preview = gear.getByRole('group', { name: 'Предпросмотр снаряжения' });
-  assert.match(await preview.innerText(), /Здоровье \+\d+/);
+  assert.match(await preview.innerText(), /Здоровье\s+\+\d+/);
   await preview.getByRole('button', { name: 'Надеть' }).click();
   await page.waitForFunction(
     (c) =>
@@ -403,9 +434,11 @@ try {
   );
   await page.screenshot({ path: 'artifacts/campaign-14-equipment.png', fullPage: true });
   const goldBefore = JSON.parse(await stored()).gold;
-  await nav.getByRole('button', { name: 'Карты', exact: true }).click();
-  await page.getByRole('button', { name: 'Играть: карта 10', exact: true }).click();
+  // The DEV panel covers the map panel's «В бой» (right side): close it, start, reopen it.
+  await page.getByRole('button', { name: /DEV · Закрыть/ }).click();
+  await (await openMap(10)).click();
   await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
+  await page.getByRole('button', { name: /DEV · Тестирование/ }).click();
   assert.equal((await state()).world.character.permanentLevel, 12);
   const devRun = page.getByRole('group', { name: 'Campaign Run Debug' });
   const killsBefore = (await state()).world.kills;
@@ -547,14 +580,23 @@ try {
 
   // Phone width: every menu page fits without horizontal scrolling.
   await page.setViewportSize({ width: 390, height: 844 });
-  for (const tab of ['Играть', 'Персонаж', 'Карты', 'Прогресс', 'Настройки']) {
+  for (const tab of [
+    'Главная',
+    'Персонаж',
+    'Экипировка',
+    'Таланты',
+    'Магазин',
+    'Карта похода',
+    'Прогресс',
+    'Настройки',
+  ]) {
     await nav.getByRole('button', { name: tab, exact: true }).click();
     assert.ok(
       await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
       `${tab} fits a phone`,
     );
   }
-  await nav.getByRole('button', { name: 'Карты', exact: true }).click();
+  await nav.getByRole('button', { name: 'Карта похода', exact: true }).click();
   await page.screenshot({ path: 'artifacts/campaign-09-maps-mobile.png', fullPage: true });
 
   if (errors.length) throw new Error(errors.join('\n'));

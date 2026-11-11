@@ -41,7 +41,7 @@ export const crashState = {
     crash = null;
     generation++;
     alphaBridge.reset();
-    campaignStore.setPage('play');
+    campaignStore.setPage('hub');
     emit();
   },
 };

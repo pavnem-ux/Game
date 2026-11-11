@@ -90,7 +90,7 @@ export function Panel({
   className = '',
   children,
   ...rest
-}: React.HTMLAttributes<HTMLElement> & { title?: ReactNode; actions?: ReactNode }) {
+}: Omit<React.HTMLAttributes<HTMLElement>, 'title'> & { title?: ReactNode; actions?: ReactNode }) {
   return (
     <section {...rest} className={`kit-panel ${className}`}>
       <span className="kit-corner tl" aria-hidden="true" />
