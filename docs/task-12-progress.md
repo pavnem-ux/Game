@@ -177,3 +177,4 @@ victory bonus 30 / 120 / 186 / 300). Buff uptime 13–60 s per buff per run.
 - Phase 2: typecheck ✓, format ✓, `npm test` 1228 ✓, build ✓, `test:e2e` 3 PASS; screenshot of
   the new shapes and a strike circle checked (DEV build).
 - Phase 1: typecheck ✓, format ✓, `npm test` 1217 ✓, `test:e2e` 3 PASS.
+- Production redeploy trigger (Workers Builds missed the PR #10 merge).
