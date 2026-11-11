@@ -6,7 +6,7 @@ byte-identical (listed in `.prettierignore`). Engine conflicts: `docs/synergies-
 when the first gap is found). Branch `task-15-synergies` from `main` at `e40d7a8` (Task 14 merged).
 All numbers are **provisional** (alpha balance) and come only from the catalog.
 
-Current: Phase 2 (awakening)
+Current: Phase 3 (feedback & QA)
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/14
 
@@ -16,11 +16,11 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/14
 - [x] 1.1 `synergyLevel` + resolver integration (level available at trigger time)
 - [x] 1.2 Level II multipliers for all 12
 - [x] Phase 1 tests
-- [ ] 2.1 Mage awakenings (thermal_shock, wildfire, shattered_ice)
-- [ ] 2.2 Warrior awakenings (skull_crusher, battle_momentum, seismic_impact)
-- [ ] 2.3 Archer awakenings (toxic_barrage, plague_chain, deadly_precision)
-- [ ] 2.4 Rogue awakenings (blood_frenzy, deep_wounds, final_cut)
-- [ ] Phase 2 tests
+- [x] 2.1 Mage awakenings (thermal_shock, wildfire, shattered_ice)
+- [x] 2.2 Warrior awakenings (skull_crusher, battle_momentum, seismic_impact)
+- [x] 2.3 Archer awakenings (toxic_barrage, plague_chain, deadly_precision)
+- [x] 2.4 Rogue awakenings (blood_frenzy, deep_wounds, final_cut)
+- [x] Phase 2 tests
 - [ ] 3.1 Banners, card hints, panel pips
 - [ ] 3.2 VFX + sounds
 - [ ] 3.3 Debug controls
@@ -52,6 +52,18 @@ Earlier maps: `docs/task-14-progress.md`, `docs/SYNERGIES_V2_DAMAGE.md`.
   `level(id)`, private `tuning(id)` (II/III → Level II table) used by every trigger branch,
   `setLevelOverride(id, level|null)` + `hasLevelOverride`; world `setTestSynergyLevel`.
 - Tests: `tests/skills/synergy-levels.test.ts`.
+- Awakenings (2.1–2.4): `SYNERGY_AWAKENING` (config.ts; default Slow 30% / 2 s and each III
+  property). Resolver helpers: `awake(id)`, `burst()` (one shared attack snapshot, one hit per
+  living enemy in the circle, `procs=false`, `recordArea`), `nearestAround()` (nearest first, ties by
+  id), `defaultSlow()`, `rift()` (Seismic zone: `SkillEngine.zone`, 0.5 s ticks), `spread(…, stacks)`,
+  `onDeath()` (Deadly Precision transfer, called from `SkillEngine.onKill` before the procs guard).
+  Engine (additive): `PreHit.stacks` (stack counts; world passes them for Poison-tick kills),
+  `extendStun(id, s)` (once per Stun via `stunStartedAt` / `stunExtendedFor`, total ≤ 1.5 s ×
+  stun scale, immunity moves), `setBuff(…, {movementSpeedPercent})`, Battle Momentum attack speed ×
+  stacks. Event `synergy-triggered` gains `level` and `awakened`. Blood Feast heals through
+  `healPlayer` (Combat Core, never revives) with a resolver cooldown key `@heal`.
+- Tests: `tests/skills/synergy-awakening.test.ts` (14).
+- Gaps: [synergies-v3-gaps.md](synergies-v3-gaps.md) (4 interpretation rows, none blocking).
 
 ## Decisions
 
@@ -61,5 +73,7 @@ Earlier maps: `docs/task-14-progress.md`, `docs/SYNERGIES_V2_DAMAGE.md`.
   returns to the ranks. Only tests and the DEV/QA controller use it.
 
 ## Verification log
+
+- Phase 2: typecheck ✓, format ✓, `npm test` 1300 ✓.
 
 - Phase 1: typecheck ✓, format ✓, `npm test` 1286 ✓.
