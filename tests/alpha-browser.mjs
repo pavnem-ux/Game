@@ -163,17 +163,19 @@ try {
       );
   }
   // Real enemy deaths drop persistent crystals; collect them by moving, without granting XP.
+  // Task 12: the pickup radius is 74, so the kills happen at range (archer, enemies far away)
+  // and the crystals stay outside the pickup reach until the player walks to them.
   await command({
     type: 'restart',
     options: {
-      characterClass: 'warrior',
+      characterClass: 'archer',
       level: 50,
       initialEnemies: false,
       spawning: { enabled: false },
     },
   });
   await page.getByRole('button', { name: 'Пауза', exact: true }).click();
-  await command({ type: 'group', count: 2, distance: 80 });
+  await command({ type: 'group', count: 2, distance: 250 });
   await page.getByRole('button', { name: 'Продолжить' }).click();
   await page.evaluate(() => window.__alpha.advance(1));
   s = await state();

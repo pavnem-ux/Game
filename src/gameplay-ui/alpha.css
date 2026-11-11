@@ -1865,3 +1865,71 @@ p.damage-note {
 .equipment-stats .changed {
   color: #f4e3b0;
 }
+/* Task 12: chest buffs and pickup popups. */
+.buff-bar {
+  position: absolute;
+  top: 176px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  z-index: 6;
+  pointer-events: none;
+}
+.buff {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #1b1630e6;
+  border: 1px solid #b68cff;
+  color: #e7dcff;
+  font-size: 12px;
+}
+.buff small {
+  font-variant-numeric: tabular-nums;
+  color: #c9b8ff;
+}
+.buff-fury {
+  border-color: #ff7a5c;
+}
+.buff-haste {
+  border-color: #ffd36a;
+}
+.buff-lightStep {
+  border-color: #7fe0c4;
+}
+.chest-popup {
+  position: absolute;
+  top: 210px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 5px 14px;
+  border-radius: 6px;
+  font-weight: 700;
+  z-index: 6;
+  pointer-events: none;
+  background: #2c2112e6;
+  border: 1px solid #d9a35a;
+  color: #ffe0a8;
+}
+.chest-popup-enchanted {
+  background: #1d1533e6;
+  border-color: #b68cff;
+  color: #e7dcff;
+}
+@media (max-width: 640px) {
+  .buff-bar {
+    top: 150px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: calc(100vw - 32px);
+  }
+  .chest-popup {
+    top: 188px;
+  }
+}

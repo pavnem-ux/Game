@@ -10,7 +10,7 @@ import {
   getCampaignMap,
   mapDifficulty,
 } from '../../src/campaign';
-import { ALPHA, ALPHA_ENEMIES, GameplayWorld } from '../../src/gameplay';
+import { ALPHA, ALPHA_ENEMIES, GameplayWorld, enemyKindConfig } from '../../src/gameplay';
 import { spawningSettings } from '../../src/gameplay/spawning';
 
 const has = (id: number, m: string) => getCampaignMap(id).modifiers.some((x) => x.id === m);
@@ -65,9 +65,12 @@ describe('Task 10 Phase 3 — per-map modifiers (existing levers only)', () => {
     expect(has(12, 'swift') && !has(11, 'swift')).toBe(true);
     swift['spawnOffscreen'](3, 0);
     plain['spawnOffscreen'](3, 0);
-    const speeds = (w: GameplayWorld) => alive(w).map((e) => e.config.movementSpeed);
-    expect(new Set(speeds(swift))).toEqual(new Set([ALPHA_ENEMIES.melee.movementSpeed * 1.1]));
-    expect(new Set(speeds(plain))).toEqual(new Set([ALPHA_ENEMIES.melee.movementSpeed]));
+    // Task 12: the first waves of Act II also mix in new kinds; each kind gets the ×1.1.
+    const speeds = (w: GameplayWorld, scale: number) =>
+      alive(w).map((e) => e.config.movementSpeed / (enemyKindConfig(e.kind).movementSpeed * scale));
+    expect(alive(swift).map((e) => e.kind)).toContain('melee');
+    for (const r of speeds(swift, 1.1)) expect(r).toBeCloseTo(1, 10);
+    for (const r of speeds(plain, 1)) expect(r).toBeCloseTo(1, 10);
     for (const w of [swift, plain]) w.clearEnemies();
     swift.debugFireCampaignEvent('elite-1');
     const elite = alive(swift)[0];

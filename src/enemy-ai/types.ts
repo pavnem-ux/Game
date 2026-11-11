@@ -18,7 +18,19 @@ export interface RangedEnemyConfig extends EnemyConfigBase {
   readonly hysteresis: number;
   readonly projectile: ProjectileConfig;
 }
-export type EnemyConfig = MeleeEnemyConfig | RangedEnemyConfig;
+/**
+ * Task 12 (additive): keeps range like the ranged enemy, then marks the player's current position
+ * with a telegraph circle; after `telegraph.delay` the circle deals the enemy's damage to the
+ * player if the player's body overlaps it. The mark never follows the player.
+ */
+export interface ArtilleryEnemyConfig extends EnemyConfigBase {
+  readonly behavior: 'artillery';
+  readonly attackRange: number;
+  readonly retreatDistance: number;
+  readonly hysteresis: number;
+  readonly telegraph: Readonly<{ radius: number; delay: number }>;
+}
+export type EnemyConfig = MeleeEnemyConfig | RangedEnemyConfig | ArtilleryEnemyConfig;
 export interface EnemyRegistration {
   readonly entityId: string;
   readonly position: Point;
@@ -33,7 +45,7 @@ export interface EnemyDamageContext {
   readonly time: number;
   readonly sourceId: string;
   readonly targetId: string;
-  readonly kind: 'contact' | 'projectile';
+  readonly kind: 'contact' | 'projectile' | 'artillery';
   readonly attack: AttackSnapshot | null;
 }
 export type DirectDamagePolicy = (context: EnemyDamageContext) => boolean;
@@ -119,7 +131,40 @@ export type EnemyProjectileEvent =
   | EnemyProjectileLaunchEvent
   | EnemyProjectileImpactEvent
   | EnemyProjectileExpiredEvent;
-export type EnemyEvent = EnemyStateEvent | ContactAttackEvent | EnemyProjectileEvent;
+/** Task 12: a pending artillery strike (telegraph circle on the ground). */
+export interface ArtilleryStrikeSnapshot {
+  readonly id: string;
+  readonly sourceId: string;
+  readonly center: Point;
+  readonly radius: number;
+  readonly markedAt: number;
+  readonly landsAt: number;
+}
+export interface ArtilleryMarkedEvent {
+  readonly type: 'artillery-marked';
+  readonly time: number;
+  readonly strike: ArtilleryStrikeSnapshot;
+}
+/**
+ * The strike landed: `hit` when the player overlapped the circle and the source was alive;
+ * `cancelled` when the source died or was removed first (no damage).
+ */
+export interface ArtilleryStrikeEvent {
+  readonly type: 'artillery-strike';
+  readonly time: number;
+  readonly strike: ArtilleryStrikeSnapshot;
+  readonly hit: boolean;
+  readonly cancelled: boolean;
+  readonly blocked: boolean;
+  readonly attack: AttackSnapshot | null;
+  readonly result: DamageResult | null;
+}
+export type EnemyEvent =
+  | EnemyStateEvent
+  | ContactAttackEvent
+  | EnemyProjectileEvent
+  | ArtilleryMarkedEvent
+  | ArtilleryStrikeEvent;
 export interface EnemyUpdateOptions {
   readonly paused?: boolean;
   readonly shouldPause?: () => boolean;

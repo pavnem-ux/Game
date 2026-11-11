@@ -4,6 +4,17 @@ import { damageSourceLabel } from './strings-ru';
 import { RU_DEBUG } from './strings-ru-debug';
 
 const whole = (n: number) => Math.round(n).toLocaleString('ru-RU');
+/** Run level reached by 5:00, 10:00 and 15:00 of simulation time ('—' = not reached yet). */
+export function levelMarks(world: GameplaySnapshot): string {
+  return [300, 600, 900]
+    .map((at) => {
+      if (world.time < at) return '—';
+      let level = 1;
+      for (const step of world.runStats.levelTimeline) if (step.time <= at) level = step.level;
+      return String(level);
+    })
+    .join(' / ');
+}
 
 /**
  * Task 08.5 §2.3 debug overlay (`/?debug`, DEV/QA builds only; lazy-loaded). Reads the throttled
@@ -41,6 +52,9 @@ export default function DebugOverlay({ world, fps }: { world: GameplaySnapshot; 
           {world.coins.collected} ·{' '}
           {whole(world.time > 0 ? (world.coins.collected * 60) / world.time : 0)}/мин
         </dd>
+        {/* Task 12 §1.5: run-level timeline (level reached by 5:00 / 10:00 / 15:00). */}
+        <dt>{t.levelTimeline}</dt>
+        <dd data-testid="debug-level-timeline">{levelMarks(world)}</dd>
       </dl>
       <h4>{t.bySource}</h4>
       {stats.bySource.length === 0 ? (

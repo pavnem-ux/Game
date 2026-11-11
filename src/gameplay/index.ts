@@ -34,3 +34,16 @@ export {
   validateSeed,
 } from './rng';
 export type { RunRandom } from './rng';
+export {
+  ARTILLERY,
+  ENEMY_KINDS,
+  ENEMY_MIX,
+  NEW_ENEMY_KINDS,
+  NEW_ENEMY_TYPES,
+  enemyKindConfig,
+  enemyKindStats,
+  enemyKindXp,
+  enemyMix,
+  isEnemyKind,
+} from './enemy-types';
+export type { EnemyKind, NewEnemyKind, NewEnemyType } from './enemy-types';

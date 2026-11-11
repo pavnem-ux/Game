@@ -33,7 +33,7 @@ describe('Task 07.1 run-level healing', () => {
     const w = isolated();
     const max = w.core.getEntity('player').maxHp;
     w.setPlayerHp(max * 0.1);
-    w.grantTestXp(90);
+    w.grantTestXp(92); // levels 2, 3, 4: 20 + 30 + 42
     expect(w.getSnapshot().progression.level).toBe(4);
     expect(w.run.pendingChoices).toBe(3);
     expect(w.core.getEntity('player').currentHp).toBeCloseTo(max * 0.55, 10);
@@ -53,7 +53,7 @@ describe('Task 07.1 run-level healing', () => {
     const w = isolated();
     const max = w.core.getEntity('player').maxHp;
     w.setPlayerHp(max - 1);
-    w.grantTestXp(90);
+    w.grantTestXp(92); // levels 2, 3, 4: 20 + 30 + 42
     expect(w.core.getEntity('player').currentHp).toBe(max);
     expect(heals(w)).toHaveLength(1); // Core only emits healing when HP actually increases.
     expect(levelHeals(w)).toHaveLength(3);

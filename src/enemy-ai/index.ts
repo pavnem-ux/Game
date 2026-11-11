@@ -1,10 +1,15 @@
 export { EnemyAI } from './EnemyAI';
 export { EnemyProjectiles } from './EnemyProjectiles';
 export { SpatialGrid } from './SpatialGrid';
+export { circleHitsBody } from './telegraph';
 export type {
   EnemyBehaviorState,
   MeleeEnemyConfig,
   RangedEnemyConfig,
+  ArtilleryEnemyConfig,
+  ArtilleryStrikeSnapshot,
+  ArtilleryMarkedEvent,
+  ArtilleryStrikeEvent,
   EnemyConfig,
   EnemyRegistration,
   SeparationConfig,

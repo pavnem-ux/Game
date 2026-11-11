@@ -44,8 +44,8 @@ export function projectile(value: ProjectileConfig): ProjectileConfig {
 }
 export function enemyConfig(value: EnemyConfig): EnemyConfig {
   if (!value || typeof value !== 'object') throw new TypeError('Enemy config is required.');
-  if (value.behavior !== 'melee' && value.behavior !== 'ranged')
-    throw new TypeError('behavior must be melee or ranged.');
+  if (value.behavior !== 'melee' && value.behavior !== 'ranged' && value.behavior !== 'artillery')
+    throw new TypeError('behavior must be melee, ranged or artillery.');
   nonNegative(value.movementSpeed, 'movementSpeed');
   nonNegative(value.radius, 'radius');
   positive(value.attackInterval, 'attackInterval');
@@ -63,6 +63,16 @@ export function enemyConfig(value: EnemyConfig): EnemyConfig {
     throw new RangeError(
       'Ranged thresholds need retreatDistance < attackRange and a nonempty hysteresis band.',
     );
+  if (value.behavior === 'artillery') {
+    if (!value.telegraph || typeof value.telegraph !== 'object')
+      throw new TypeError('artillery telegraph is required.');
+    positive(value.telegraph.radius, 'telegraph.radius');
+    positive(value.telegraph.delay, 'telegraph.delay');
+    return Object.freeze({
+      ...value,
+      telegraph: Object.freeze({ radius: value.telegraph.radius, delay: value.telegraph.delay }),
+    });
+  }
   return Object.freeze({ ...value, projectile: projectile(value.projectile) });
 }
 export function separationConfig(value: SeparationConfig): SeparationConfig {

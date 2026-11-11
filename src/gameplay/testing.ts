@@ -1,6 +1,8 @@
 import type { GameplayWorld, GameplayOptions } from './index';
 import { QaGameplayWorld } from './qa';
 import type { QaSnapshot } from './qa';
+import type { EnemyKind } from './enemy-types';
+import type { BuffId, ChestContent, ChestType } from './chests';
 export const createTestingWorld = (options: GameplayOptions): GameplayWorld =>
   new QaGameplayWorld(options);
 export interface TestingController {
@@ -26,7 +28,27 @@ export function createTestingController(
     if (!w) throw new Error('Start a run first.');
     switch (a.type) {
       case 'spawn':
-        w.spawnEnemy(a.kind as 'melee' | 'ranged', a.distance as number);
+        w.spawnEnemy(a.kind as EnemyKind, a.distance as number);
+        break;
+      // Task 12 §1.5: N enemies of a given kind, a chest of a given type/content, any buff,
+      // auto-collect (pacing measurement).
+      case 'spawn-n': {
+        const count = a.count as number;
+        if (!Number.isInteger(count) || count < 1 || count > 24)
+          throw new RangeError('Count must be 1–24.');
+        for (let i = 0; i < count; i++)
+          w.spawnEnemy(a.kind as EnemyKind, a.distance as number, (i * Math.PI * 2) / count);
+        break;
+      }
+      case 'chest':
+        if (!w.debugSpawnChest(a.chestType as ChestType, a.content as ChestContent | undefined))
+          throw new Error('No chest: campaign run only, at most 3 on the map.');
+        break;
+      case 'buff':
+        if (!w.debugGrantBuff(a.buff as BuffId)) throw new Error('Buffs: campaign run only.');
+        break;
+      case 'auto-collect':
+        w.setDebugAutoCollect(a.enabled as boolean);
         break;
       case 'group':
         w.spawnGroup(a.count as number, a.distance as number);

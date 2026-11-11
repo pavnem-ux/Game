@@ -73,6 +73,20 @@ import type { DirectDamageObserver, DirectDamagePolicy } from '../enemy-ai';
 import { addModifiers, gearModifiers, validateLoadout } from '../equipment';
 import type { Loadout } from '../equipment';
 import { RunCoins } from './coins';
+import { BUFFS, CHEST_RULES, RunChests, buffModifiers, chestGold } from './chests';
+const CHEST_HEAL_FRACTION = CHEST_RULES.healFraction;
+const CHEST_BLINK_FOR = CHEST_RULES.blinkFor;
+import type { BuffId, Chest, ChestContent, ChestType } from './chests';
+import {
+  ENEMY_KINDS,
+  NEW_ENEMY_KINDS,
+  enemyKindConfig,
+  enemyKindStats,
+  enemyKindXp,
+  enemyMix,
+  isEnemyKind,
+} from './enemy-types';
+import type { EnemyKind, NewEnemyKind } from './enemy-types';
 import { coinValue, normalChance } from '../equipment/economy';
 /** The sole world scheduler. All damage is resolved by existing modules, one boundary at a time. */
 export class GameplayWorld {
@@ -95,6 +109,8 @@ export class GameplayWorld {
   private readonly experience = new RunExperience();
   /** Task 11: Gold coins of this run (campaign only) and their seeded drop stream. */
   private readonly coins = new RunCoins();
+  /** Task 12: chests and their buffs (campaign runs only; own seeded stream). */
+  private readonly chests: RunChests | null;
   private readonly coinRandom: () => number;
   private spawnSettings: SpawnSettings;
   private nextSpawnAt: number;
@@ -163,6 +179,10 @@ export class GameplayWorld {
     this.coinRandom = rng.coins;
     this.campaignMap = options.campaign ? getCampaignMap(options.campaign.mapId) : null;
     this.director = this.campaignMap ? new CampaignDirector(this.campaignMap) : null;
+    this.chests = this.campaignMap ? new RunChests(rng.chests, ALPHA.arenaSize) : null;
+    this.kindShares = this.campaignMap
+      ? enemyMix(this.campaignMap.id)
+      : Object.freeze({ swift: 0, brute: 0, bombard: 0 });
     this.enemyStats = this.campaignMap
       ? scaleEnemyStats(ALPHA_ENEMY_STATS, this.campaignMap.difficulty)
       : ALPHA_ENEMY_STATS;
@@ -401,12 +421,41 @@ export class GameplayWorld {
         viewport: this.viewport,
       }),
       enemies: Object.freeze(
-        this.enemies
-          .getEnemies()
-          .map((e) => Object.freeze({ ...e, entity: this.core.getEntity(e.entityId) })),
+        this.enemies.getEnemies().map((e) =>
+          Object.freeze({
+            ...e,
+            entity: this.core.getEntity(e.entityId),
+            kind: this.enemyKinds.get(e.entityId) ?? ('melee' as EnemyKind),
+          }),
+        ),
       ),
       playerProjectiles: this.weapons.getProjectiles(),
       enemyProjectiles: this.enemies.getProjectiles(),
+      artilleryStrikes: this.enemies.getStrikes(),
+      chests: this.chests
+        ? Object.freeze({
+            items: Object.freeze(
+              this.chests.getChests().map((c) =>
+                Object.freeze({
+                  ...c,
+                  blinking: c.expiresAt - this.clock <= CHEST_BLINK_FOR + 1e-9,
+                }),
+              ),
+            ),
+            buffs: Object.freeze(
+              this.chests.getBuffs().map((b) =>
+                Object.freeze({
+                  id: b.id,
+                  name: BUFFS[b.id].name,
+                  remaining: Math.max(0, b.expiresAt - this.clock),
+                  expiresAt: b.expiresAt,
+                }),
+              ),
+            ),
+            nextSpawnAt: this.chests.nextSpawnAt,
+            lastOpened: this.lastChestOpened,
+          })
+        : null,
       statuses: this.statuses.getGroups(),
       weapon: this.weapons.getWeaponState(this.playerId),
       movement: this.input,
@@ -493,6 +542,9 @@ export class GameplayWorld {
       else if (next.kind === 'skill') this.skills.resolveBoundary();
       else if (next.kind === 'campaign') this.resolveCampaignEvent();
       else if (next.kind === 'boss') this.resolveBossAbility();
+      else if (next.kind === 'chest-spawn')
+        this.record('chests', [this.chests!.spawnDue(this.clock, this.body)]);
+      else if (next.kind === 'chest-expire') this.expireChests();
       // Task 09.1: status applications of this boundary (Rogue Deadly Synthesis check).
       if (this.statusTargets.size) {
         const targets = [...this.statusTargets];
@@ -535,13 +587,8 @@ export class GameplayWorld {
     this.manualPause = false;
     this.prepare();
   }
-  spawnEnemy(
-    kind: 'melee' | 'ranged',
-    distance = 240,
-    angle?: number,
-    config?: EnemyConfig,
-  ): string {
-    if (kind !== 'melee' && kind !== 'ranged') throw new TypeError('Invalid enemy kind.');
+  spawnEnemy(kind: EnemyKind, distance = 240, angle?: number, config?: EnemyConfig): string {
+    if (!isEnemyKind(kind)) throw new TypeError('Invalid enemy kind.');
     if (
       !Number.isFinite(distance) ||
       distance < 0 ||
@@ -552,8 +599,9 @@ export class GameplayWorld {
     if (this.enemies.getEnemies().filter((e) => e.alive).length >= this.spawnSettings.maxActive)
       throw new RangeError('Alpha enemy cap reached.');
     // Validate the optional test profile before changing RNG, IDs or authoritative entities.
-    const profile = enemyConfig(config ?? ALPHA_ENEMIES[kind]);
-    if (profile.behavior !== kind) throw new TypeError('Enemy kind/profile mismatch.');
+    const profile = enemyConfig(config ?? this.enemyProfile(kind));
+    if (profile.behavior !== enemyKindConfig(kind).behavior)
+      throw new TypeError('Enemy kind/profile mismatch.');
     const a = angle ?? this.spawnRandom() * Math.PI * 2;
     return this.registerEnemy(
       kind,
@@ -570,35 +618,53 @@ export class GameplayWorld {
     if (id === this.bossEnemyId) return 'boss';
     const elite = this.eliteProfiles.get(id);
     if (elite) return elite === 'melee' ? 'elite-melee' : 'elite-ranged';
-    return this.enemies.getEnemy(id).config.behavior;
+    return this.enemyKinds.get(id) ?? 'melee';
+  }
+  /** Task 12: normal kind of each registered enemy (elites/bosses keep their base kind). */
+  private readonly enemyKinds = new Map<string, EnemyKind>();
+  /** Task 12: shares of the new kinds in automatic waves (campaign map mix; 0 elsewhere). */
+  private readonly kindShares: Readonly<Record<NewEnemyKind, number>>;
+  private readonly autoSpawnedByKind: Record<EnemyKind, number> = {
+    melee: 0,
+    ranged: 0,
+    swift: 0,
+    brute: 0,
+    bombard: 0,
+  };
+  /** Task 12: automatic (wave) spawns of this run per kind. */
+  autoSpawnCounts(): Readonly<Record<EnemyKind, number>> {
+    return Object.freeze({ ...this.autoSpawnedByKind });
   }
   /**
    * Task 10 §1.2: enemy profiles of this run — the alpha profiles, with the map's movement-speed
    * modifier (campaign only). Used for automatic waves, boss adds and as the elite base.
    */
-  private enemyProfiles: Readonly<Record<'melee' | 'ranged', EnemyConfig>> | null = null;
-  private enemyProfile(kind: 'melee' | 'ranged'): EnemyConfig {
+  private enemyProfiles: Readonly<Record<EnemyKind, EnemyConfig>> | null = null;
+  private enemyProfile(kind: EnemyKind): EnemyConfig {
     if (!this.enemyProfiles) {
       const scale = this.campaignMap?.enemySpeedScale ?? 1;
       const scaled = (c: EnemyConfig) =>
         scale === 1 ? c : Object.freeze({ ...c, movementSpeed: c.movementSpeed * scale });
-      this.enemyProfiles = Object.freeze({
-        melee: scaled(ALPHA_ENEMIES.melee),
-        ranged: scaled(ALPHA_ENEMIES.ranged),
-      });
+      this.enemyProfiles = Object.freeze(
+        Object.fromEntries(ENEMY_KINDS.map((k) => [k, scaled(enemyKindConfig(k))])) as Record<
+          EnemyKind,
+          EnemyConfig
+        >,
+      );
     }
     return this.enemyProfiles[kind];
   }
   private registerEnemy(
-    kind: 'melee' | 'ranged',
+    kind: EnemyKind,
     position: Point,
     profile: EnemyConfig = this.enemyProfile(kind),
-    stats: CombatAttributes = this.enemyStats,
+    stats: CombatAttributes = enemyKindStats(kind, this.enemyStats),
   ): string {
     const id = `enemy-${++this.enemySequence}`;
     this.core.addEntity({ id, affiliation: 'enemy', stats });
     this.enemies.registerEnemy({ entityId: id, config: profile, position });
     this.enemyIds.add(id);
+    this.enemyKinds.set(id, kind);
     this.prepare();
     return id;
   }
@@ -760,27 +826,49 @@ export class GameplayWorld {
       value,
     );
   }
+  /**
+   * Kind of the next automatic spawn, deterministic like the Task 06 ranged share:
+   * 1. ranged keeps its existing rule (⌊(n+1)·s⌋ > ⌊n·s⌋), so maps without new kinds keep their
+   *    exact sequence;
+   * 2. otherwise the new kind furthest behind (n + 1)·share by at least ½ spawns (rounding rule;
+   *    ties in the order swift, brute, bombard);
+   * 3. otherwise melee.
+   * Every kind stays within ±1 of n·share over any prefix of spawns (≤ 0.64 for the new kinds).
+   */
+  private nextSpawnKind(): EnemyKind {
+    const next = this.autoSpawnSequence + 1;
+    const share = this.spawnSettings.rangedShare; // the exact Task 06 expression
+    if (Math.floor(next * share) > Math.floor((next - 1) * share)) return 'ranged';
+    let best: EnemyKind = 'melee',
+      lead = -1e-9;
+    for (const kind of NEW_ENEMY_KINDS) {
+      const d = next * this.kindShares[kind] - this.autoSpawnedByKind[kind] - 0.5;
+      if (d > lead) {
+        best = kind;
+        lead = d;
+      }
+    }
+    return best;
+  }
   private spawnOffscreen(count: number, stage: number) {
     const enemyIds: string[] = [],
-      positions: Point[] = [];
+      positions: Point[] = [],
+      kinds: EnemyKind[] = [];
     for (let i = 0; i < count && this.enemyIds.size < this.spawnSettings.maxActive; i++) {
-      const share = this.spawnSettings.rangedShare;
-      const kind =
-        Math.floor((this.autoSpawnSequence + 1) * share) >
-        Math.floor(this.autoSpawnSequence * share)
-          ? 'ranged'
-          : 'melee';
+      const kind = this.nextSpawnKind();
       const position = offscreenPosition(
         this.body,
         this.viewport,
-        ALPHA_ENEMIES[kind].radius,
+        this.enemyProfile(kind).radius,
         this.spawnSettings,
         this.spawnRandom,
       );
       if (!position) break;
       this.autoSpawnSequence++;
+      this.autoSpawnedByKind[kind]++;
       enemyIds.push(this.registerEnemy(kind, position));
       positions.push(position);
+      kinds.push(kind);
     }
     this.record('spawning', [
       Object.freeze({
@@ -789,6 +877,7 @@ export class GameplayWorld {
         stage,
         enemyIds: Object.freeze(enemyIds),
         positions: Object.freeze(positions),
+        kinds: Object.freeze(kinds),
         nextSpawnAt: this.nextSpawnAt,
       }),
     ]);
@@ -948,6 +1037,14 @@ export class GameplayWorld {
           elapsed: Math.min(this.clock, this.campaignMap.durationSeconds),
         }),
       ]);
+      // Task 12: buffs end with the run.
+      if (this.chests) {
+        const ended = this.chests.endRun(this.clock);
+        if (ended.length) {
+          this.record('chests', ended);
+          this.syncBuffs();
+        }
+      }
       // Task 11: a victory pays the coins still on the ground. On maps 1–10 the boss appears at
       // the end of the timer, so its pile drops at the very moment of victory.
       if (resolved === 'victory') this.collectRemainingCoins();
@@ -994,6 +1091,47 @@ export class GameplayWorld {
    * if needed) and the duration is marked reached; defeat = the player dies and the run is
    * finished without revival. The run then resolves exactly once as usual.
    */
+  // ── Task 12 debug helpers (reachable only through the DEV/QA testing controller) ──
+  /** Contents forced by `debugSpawnChest` (chest id → content). */
+  private readonly forcedChestContent = new Map<string, ChestContent>();
+  private lastChestOpened: Readonly<{
+    chestType: ChestType;
+    content: ChestContent;
+    amount: number;
+    time: number;
+  }> | null = null;
+  /**
+   * Spawns a chest of `type` now (normal placement rules and limit); `content` forces what it
+   * gives when opened. Returns the chest id, or null if the limit/space skipped it.
+   */
+  debugSpawnChest(type: ChestType, content?: ChestContent): string | null {
+    if (!this.chests || this.campaignRun.status !== 'active') return null;
+    if (type !== 'wooden' && type !== 'enchanted') throw new TypeError('Invalid chest type.');
+    const event = this.chests.spawnAt(this.clock, this.body, type);
+    this.record('chests', [event]);
+    if (event.type !== 'chest-spawned') return null;
+    if (content) this.forcedChestContent.set(event.chest.id, content);
+    this.prepare();
+    return event.chest.id;
+  }
+  /** Grants (or refreshes) a chest buff now, like opening an enchanted chest. */
+  debugGrantBuff(id: BuffId): boolean {
+    if (!this.chests || this.campaignRun.status !== 'active') return false;
+    if (!(id in BUFFS)) throw new TypeError('Invalid buff.');
+    this.record('chests', [this.chests.grantBuff(id, this.clock)]);
+    this.syncBuffs();
+    this.prepare();
+    return true;
+  }
+  /** Debug auto-collect (pacing measurement): pulls every crystal and coin once per second. */
+  private autoCollectAt: number | null = null;
+  setDebugAutoCollect(enabled: boolean): void {
+    if (typeof enabled !== 'boolean') throw new TypeError('enabled must be boolean.');
+    this.autoCollectAt = enabled ? this.clock + 1 : null;
+  }
+  get debugAutoCollect(): boolean {
+    return this.autoCollectAt !== null;
+  }
   debugForceOutcome(outcome: 'victory' | 'defeat'): void {
     if (!this.campaignMap || this.campaignRun.status !== 'active') return;
     if (outcome === 'defeat') {
@@ -1192,6 +1330,75 @@ export class GameplayWorld {
     this.progression(this.experience.collect(this.body, this.body.radius));
     const coins = this.coins.collect(this.body, this.body.radius);
     if (coins.length) this.record('progression', coins);
+    // Task 12 debug: auto-collect everything once per second (measurement only; off by default).
+    if (this.autoCollectAt !== null && this.clock >= this.autoCollectAt - 1e-9) {
+      this.autoCollectAt += 1;
+      this.progression(this.experience.collectAll());
+      const all = this.coins.collectAll();
+      if (all.length) this.record('progression', all);
+    }
+    // Task 12: chests open by touch (player radius + chest radius), as a pickup of this step.
+    if (this.chests && this.campaignRun.status === 'active')
+      for (const chest of this.chests.touched(this.body)) this.openChest(chest);
+  }
+  private expireChests() {
+    const events = this.chests!.expireDue(this.clock);
+    for (const e of events)
+      if (e.type === 'chest-expired') this.forcedChestContent.delete(e.chest.id);
+    this.record('chests', events);
+    if (events.some((e) => e.type === 'buff-ended')) this.syncBuffs();
+  }
+  /** Task 12: chest buffs are temporary run modifiers composed with the stats (caps once). */
+  private syncBuffs() {
+    this.skills.setExternalModifiers(buffModifiers(this.chests!.activeBuffIds()));
+  }
+  /**
+   * Task 12 §1.4: opens a touched chest. Wooden: heal 15% Max HP through Combat Core (never
+   * revives) or a coin pile at the chest; enchanted: «Магнит» (all crystals and coins through the
+   * normal collection path) or a 20 s buff. `forced` is the debug path.
+   */
+  private openChest(chest: Chest, forced?: ChestContent) {
+    const player = this.core.getEntity(this.playerId);
+    const preset = forced ?? this.forcedChestContent.get(chest.id);
+    this.forcedChestContent.delete(chest.id);
+    const content = this.chests!.open(
+      chest,
+      player.alive && player.currentHp < player.maxHp,
+      preset,
+    );
+    let amount = 0;
+    const extra: Parameters<typeof this.record>[1][number][] = [];
+    if (content === 'heal') {
+      if (player.alive) {
+        const result = this.core.heal(this.playerId, player.maxHp * CHEST_HEAL_FRACTION);
+        amount = result.healed;
+        this.forwardCombat(result.events);
+      }
+    } else if (content === 'gold') {
+      amount = chestGold(this.campaignMap!.victoryGold);
+      const pile = this.coins.drop(chest, amount);
+      this.record('progression', [
+        Object.freeze({ type: 'coins-dropped', pileId: pile.id, amount }),
+      ]);
+    } else if (content === 'magnet') {
+      const xp = this.experience.collectAll();
+      const coins = this.coins.collectAll();
+      for (const e of xp) if (e.type === 'xp-collected') amount += e.amount;
+      for (const e of coins) if (e.type === 'coins-collected') amount += e.amount;
+      this.progression(xp);
+      if (coins.length) this.record('progression', coins);
+    } else extra.push(this.chests!.grantBuff(content, this.clock));
+    this.record('chests', [
+      Object.freeze({ type: 'chest-opened', chest, content, amount }),
+      ...extra,
+    ]);
+    this.lastChestOpened = Object.freeze({
+      chestType: chest.type,
+      content,
+      amount,
+      time: this.clock,
+    });
+    if (extra.length) this.syncBuffs();
   }
   /**
    * Task 11 §1.4: campaign coin drop of one rewarded death — boss: large pile, elite: guaranteed
@@ -1236,6 +1443,8 @@ export class GameplayWorld {
           | 'skill'
           | 'boss'
           | 'campaign'
+          | 'chest-spawn'
+          | 'chest-expire'
           | 'advance';
       }[] = [];
       const add = (time: number, rank: number, kind: (typeof candidates)[number]['kind']) => {
@@ -1264,6 +1473,17 @@ export class GameplayWorld {
       if (this.bossActive() && this.survival.getState().canPlayerAct) {
         const bossAt = this.bossController!.peek();
         if (bossAt !== null) add(bossAt, 6.5, 'boss');
+      }
+      // Task 12 (owner-approved slots): chest/buff expiry with the skill expirations (after them);
+      // chest spawn right after reinforcement spawning (before the scheduled campaign events).
+      if (
+        this.chests &&
+        this.campaignRun.status === 'active' &&
+        this.survival.getState().canPlayerAct
+      ) {
+        const expiry = this.chests.nextExpiryAt();
+        if (expiry !== null) add(expiry, 8.6, 'chest-expire');
+        add(this.chests.nextSpawnAt, 9.25, 'chest-spawn');
       }
       // Task 08: scheduled elite/boss/end events resolve last at equal time (after reinforcements).
       const scheduled = this.director?.peek();
@@ -1318,10 +1538,13 @@ export class GameplayWorld {
     this.record('enemy', events);
     for (const event of events)
       if (
-        (event.type === 'contact-attempt' || event.type === 'enemy-projectile-impact') &&
+        (event.type === 'contact-attempt' ||
+          event.type === 'enemy-projectile-impact' ||
+          event.type === 'artillery-strike') &&
         event.result
       ) {
-        const attack = event.type === 'contact-attempt' ? event.attack! : event.projectile.attack;
+        const attack =
+          event.type === 'enemy-projectile-impact' ? event.projectile.attack : event.attack!;
         this.record(
           'status',
           this.adapter.consumeImpact({
@@ -1400,7 +1623,7 @@ export class GameplayWorld {
           const elite = this.eliteProfiles.get(event.entityId);
           // Task 08: elites drop their normal crystal plus the profile's extra run XP.
           const xp =
-            (enemy.config.behavior === 'melee' ? XP_RULES.meleeReward : XP_RULES.rangedReward) +
+            enemyKindXp(this.enemyKinds.get(event.entityId) ?? 'melee') +
             (elite ? eliteProfile(elite).extraXp : 0) +
             (event.entityId === this.bossEnemyId && this.bossDefinition
               ? this.bossDefinition.xpReward
@@ -1437,6 +1660,7 @@ export class GameplayWorld {
         } else if (this.eliteEnemyIds.includes(event.entityId))
           this.campaignInput({ type: 'elite-killed', time: this.clock });
         this.enemyIds.delete(event.entityId);
+        this.enemyKinds.delete(event.entityId);
         this.enemies.unregisterEnemy(event.entityId);
         this.weapons.removeBody(event.entityId);
       }
@@ -1466,7 +1690,12 @@ export class GameplayWorld {
         event.group.targetId !== this.playerId
       )
         this.statusTargets.add(event.group.targetId);
-      if (channel === 'combat' || channel === 'weapon' || channel === 'progression')
+      if (
+        channel === 'combat' ||
+        channel === 'weapon' ||
+        channel === 'progression' ||
+        channel === 'chests'
+      )
         this.runStats.consume(entry);
     }
     if (this.history.length > ALPHA.eventHistoryLimit)

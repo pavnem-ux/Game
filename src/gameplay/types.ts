@@ -8,7 +8,14 @@ import type { CharacterClass, CharacterStatsSnapshot, CombatAttributes } from '.
 import type { BossAbilityOutcome, BossCastState } from '../campaign';
 import type { RunSkillsSnapshot, SkillCombatSnapshot, SkillEvent } from '../skills';
 import type { CombatEntity, CombatEvent } from '../combat-core';
-import type { EnemyEvent, EnemySnapshot, EnemyProjectileSnapshot } from '../enemy-ai';
+import type {
+  ArtilleryStrikeSnapshot,
+  EnemyEvent,
+  EnemySnapshot,
+  EnemyProjectileSnapshot,
+} from '../enemy-ai';
+import type { EnemyKind } from './enemy-types';
+import type { BuffId, Chest, ChestContent, ChestEvent, ChestType } from './chests';
 import type { PlayerSurvivalState, SurvivalEvent } from '../player-survival';
 import type { StatusEvent, StatusGroupSnapshot, EffectDefinition } from '../status-effects';
 import type {
@@ -50,7 +57,8 @@ export interface WorldEvent {
     | 'progression'
     | 'spawning'
     | 'skill'
-    | 'campaign';
+    | 'campaign'
+    | 'chests';
   readonly event:
     | CombatEvent
     | WeaponEvent
@@ -63,7 +71,8 @@ export interface WorldEvent {
     | WaveEvent
     | SkillEvent
     | CampaignEvent
-    | CoinEvent;
+    | CoinEvent
+    | ChestEvent;
 }
 export interface GameplaySnapshot {
   readonly time: number;
@@ -106,9 +115,31 @@ export interface GameplaySnapshot {
     waves: number;
     viewport: ViewportSize;
   }>;
-  readonly enemies: readonly (EnemySnapshot & { readonly entity: CombatEntity })[];
+  /** Task 12: `kind` = the enemy's normal kind (elites/bosses: their base melee/ranged kind). */
+  readonly enemies: readonly (EnemySnapshot & {
+    readonly entity: CombatEntity;
+    readonly kind: EnemyKind;
+  })[];
   readonly playerProjectiles: readonly ProjectileSnapshot[];
   readonly enemyProjectiles: readonly EnemyProjectileSnapshot[];
+  /**
+   * Task 12: chests on the map (`blinking` in their last 5 s), active buffs with remaining time and
+   * the next spawn attempt. Null outside campaign runs.
+   */
+  readonly chests: Readonly<{
+    items: readonly (Chest & { readonly blinking: boolean })[];
+    buffs: readonly Readonly<{ id: BuffId; name: string; remaining: number; expiresAt: number }>[];
+    nextSpawnAt: number;
+    /** The latest opened chest (pickup popup). */
+    lastOpened: Readonly<{
+      chestType: ChestType;
+      content: ChestContent;
+      amount: number;
+      time: number;
+    }> | null;
+  }> | null;
+  /** Task 12: pending artillery strikes (telegraph circles of the bombard). */
+  readonly artilleryStrikes: readonly ArtilleryStrikeSnapshot[];
   readonly statuses: readonly StatusGroupSnapshot[];
   readonly weapon: WeaponState;
   readonly movement: Point;
@@ -207,6 +238,8 @@ export interface WaveEvent {
   readonly stage: number;
   readonly enemyIds: readonly string[];
   readonly positions: readonly Point[];
+  /** Task 12: kind of each spawned enemy (same order as `enemyIds`). */
+  readonly kinds: readonly EnemyKind[];
   readonly nextSpawnAt: number;
 }
 

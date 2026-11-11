@@ -123,7 +123,8 @@ export async function checkSkillsAccess(page) {
       type: 'restart',
       options: { characterClass: 'mage', initialEnemies: false, spawning: { enabled: false } },
     });
-    await command({ type: 'grant-xp', amount: 90 });
+    // Task 12: levels 2, 3, 4 cost 20 + 30 + 42 (quadratic run level cost).
+    await command({ type: 'grant-xp', amount: 92 });
     const pending = await state();
     assert.equal(pending.screen, 'level-up');
     assert.equal(pending.world.skills.pendingChoices, 3);

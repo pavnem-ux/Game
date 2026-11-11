@@ -3,10 +3,17 @@ import type { Point } from '../weapon-attacks';
 export const XP_RULES = Object.freeze({
   baseCost: 20,
   costPerLevel: 10,
+  /**
+   * Task 12 §1.1 (provisional): quadratic term `a` of the run level cost
+   * `20 + 10·(L−1) + round(a·(L−1)²)` — slows late run levels; early levels barely change.
+   * Tuned in 4.1 (start value 0.25): run level ≈ 70 at 15:00 with all XP collected.
+   */
+  costQuadratic: 0.4,
   /** Task 10 §1.3 (provisional): run XP −20% (was 10 / 15). */
   meleeReward: 8,
   rangedReward: 12,
-  pickupRadius: 42,
+  /** Task 12 §1.3 (provisional): +75% (was 42); coins and the magnet share it. */
+  pickupRadius: 74,
   crystalRadius: 5,
   cellSize: 64,
   crystalCap: 512,
@@ -32,7 +39,10 @@ const integer = (value: number, name: string) => {
 export function runXpCost(level: number): number {
   integer(level, 'run level');
   if (level < 1) throw new RangeError('Run level starts at 1.');
-  const cost = XP_RULES.baseCost + XP_RULES.costPerLevel * (level - 1);
+  const cost =
+    XP_RULES.baseCost +
+    XP_RULES.costPerLevel * (level - 1) +
+    Math.round(XP_RULES.costQuadratic * (level - 1) ** 2);
   integer(cost, 'XP cost');
   return cost;
 }
@@ -97,6 +107,23 @@ export class RunExperience {
         Math.hypot(c.x - position.x, c.y - position.y) <=
         playerRadius + XP_RULES.pickupRadius + XP_RULES.crystalRadius,
     );
+    const amount = collected.reduce((sum, c) => sum + c.value, 0);
+    this.validateGain(amount);
+    const events: ExperienceEvent[] = [];
+    for (const c of collected) {
+      this.crystals.delete(c.id);
+      this.cells.delete(this.key(c));
+      events.push(Object.freeze({ type: 'xp-collected', amount: c.value, crystalId: c.id }));
+    }
+    events.push(...this.gain(amount));
+    return Object.freeze(events);
+  }
+  /**
+   * Task 12 («Магнит»): collects every crystal on the map through the normal collection path
+   * (each crystal once, all XP kept, level-ups resolved by the same gain rule).
+   */
+  collectAll(): readonly ExperienceEvent[] {
+    const collected = [...this.crystals.values()];
     const amount = collected.reduce((sum, c) => sum + c.value, 0);
     this.validateGain(amount);
     const events: ExperienceEvent[] = [];

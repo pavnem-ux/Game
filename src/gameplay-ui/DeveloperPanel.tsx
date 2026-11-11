@@ -9,6 +9,27 @@ import { skillsForClass } from '../skills';
 import { alphaBridge } from './store';
 import { campaignDebug } from './campaign-debug';
 import type { AlphaState } from './store';
+import { ENEMY_KINDS } from '../gameplay';
+import type { EnemyKind } from '../gameplay';
+import { BUFFS, BUFF_IDS, CHEST_NAMES } from '../gameplay/chests';
+import type { ChestContent, ChestType } from '../gameplay/chests';
+
+/** Task 12 debug labels (Russian). */
+const ENEMY_KIND_LABELS: Record<EnemyKind, string> = {
+  melee: 'Ближний бой',
+  ranged: 'Стрелок',
+  swift: 'Стремительный бес',
+  brute: 'Каменный тролль',
+  bombard: 'Колдун-бомбардир',
+};
+const CONTENT_LABELS: Record<ChestContent, string> = {
+  heal: 'Лечение 15%',
+  gold: 'Золото',
+  magnet: 'Магнит',
+  fury: BUFFS.fury.name,
+  haste: BUFFS.haste.name,
+  lightStep: BUFFS.lightStep.name,
+};
 export default function DeveloperPanel({ state }: { state: AlphaState }) {
   const w = state.world;
   // Task 08.5 §3.2: DEV/QA-only crash trigger for testing the error boundary (render error).
@@ -41,6 +62,9 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
     w?.spawning.settings.maxActive ?? DEFAULT_SPAWNING.maxActive,
   );
   const send = (action: unknown) => alphaBridge.send({ type: 'testing', action });
+  const [enemyKind, setEnemyKind] = useState<EnemyKind>('swift'),
+    [chestType, setChestType] = useState<ChestType>('wooden'),
+    [chestContent, setChestContent] = useState<ChestContent | ''>('');
   const [debugLevel, setDebugLevel] = useState(10),
     [debugXp, setDebugXp] = useState(500),
     [debugGold, setDebugGold] = useState(100),
@@ -418,6 +442,24 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
             <button onClick={() => send({ type: 'spawn', kind: 'ranged', distance })}>
               Добавить ranged
             </button>
+            {/* Task 12 §1.5: N enemies of any kind. */}
+            <label>
+              Тип врага
+              <select
+                aria-label="Debug тип врага"
+                value={enemyKind}
+                onChange={(e) => setEnemyKind(e.target.value as EnemyKind)}
+              >
+                {ENEMY_KINDS.map((k) => (
+                  <option key={k} value={k}>
+                    {ENEMY_KIND_LABELS[k]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button onClick={() => send({ type: 'spawn-n', kind: enemyKind, count, distance })}>
+              Добавить {count} · {ENEMY_KIND_LABELS[enemyKind]}
+            </button>
             <label>
               Размер группы
               <input
@@ -433,6 +475,66 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
               Добавить группу
             </button>
             <button onClick={() => send({ type: 'clear-enemies' })}>Убрать врагов</button>
+          </fieldset>
+          {/* Task 12 §1.5: chests, buffs, auto-collect (campaign runs). */}
+          <fieldset aria-label="Chest Debug">
+            <legend>Сундуки и усиления</legend>
+            <label>
+              Сундук
+              <select
+                aria-label="Debug сундук"
+                value={chestType}
+                onChange={(e) => setChestType(e.target.value as ChestType)}
+              >
+                <option value="wooden">{CHEST_NAMES.wooden}</option>
+                <option value="enchanted">{CHEST_NAMES.enchanted}</option>
+              </select>
+            </label>
+            <label>
+              Содержимое
+              <select
+                aria-label="Debug содержимое сундука"
+                value={chestContent}
+                onChange={(e) => setChestContent(e.target.value as ChestContent | '')}
+              >
+                <option value="">Случайное</option>
+                {(chestType === 'wooden'
+                  ? (['heal', 'gold'] as const)
+                  : (['magnet', ...BUFF_IDS] as const)
+                ).map((c) => (
+                  <option key={c} value={c}>
+                    {CONTENT_LABELS[c]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              onClick={() =>
+                send({
+                  type: 'chest',
+                  chestType,
+                  ...(chestContent ? { content: chestContent } : {}),
+                })
+              }
+            >
+              Создать сундук
+            </button>
+            {BUFF_IDS.map((b) => (
+              <button key={b} onClick={() => send({ type: 'buff', buff: b })}>
+                Усиление: {BUFFS[b].name}
+              </button>
+            ))}
+            {state.qa && (
+              <label>
+                <input
+                  type="checkbox"
+                  aria-label="Автосбор опыта и монет"
+                  checked={state.qa.autoCollect}
+                  onChange={(e) => send({ type: 'auto-collect', enabled: e.target.checked })}
+                />
+                Автосбор опыта и монет (каждую секунду)
+              </label>
+            )}
           </fieldset>
           <fieldset>
             <legend>Навыки</legend>
