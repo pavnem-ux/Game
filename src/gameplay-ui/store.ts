@@ -11,10 +11,14 @@ export type AlphaCommand =
         | 'revive'
         | 'finish'
         | 'reroll'
+        | 'skip-offer'
         | 'abandon'
         | 'kill-on-screen';
     }
   | { type: 'choose-skill'; card: string }
+  | { type: 'banish-skill'; card: string }
+  /** Task 14 hotkeys 1–3: resolved against the world's current offer at execution time. */
+  | { type: 'offer-key'; index: number; banish: boolean }
   | { type: 'choose-enhanced'; skillId: string }
   | { type: 'time-scale'; scale: number }
   | { type: 'testing'; action: unknown };

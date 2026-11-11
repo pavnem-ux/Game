@@ -193,6 +193,24 @@ export const RU = Object.freeze({
       close: 'Закрыть',
     }),
     modal: Object.freeze({ confirm: 'Подтвердить', cancel: 'Отмена' }),
+    /** Task 14: level-up offer controls. */
+    offer: Object.freeze({
+      reroll: (n: number) => `Перебросить · осталось ${n}`,
+      banish: (n: number) => `Изгнать · осталось ${n}`,
+      banishCancel: 'Отменить изгнание',
+      banishHint: 'Выберите карту, которую нужно изгнать до конца забега (или нажмите 1–3).',
+      banishCard: (name: string) => `Изгнать: ${name}`,
+      skip: (coins: number) => (coins > 0 ? `Пропустить · +${coins} монет` : 'Пропустить'),
+      hotkeys: 'R — перебросить · B — изгнать · S — пропустить · 1–3 — выбрать',
+      noRerolls: 'Перебросы закончились или переброс ничего не изменит',
+      reasons: Object.freeze({
+        'none-left': 'Изгнания закончились',
+        'last-upgrade': 'Нельзя изгнать последнее доступное улучшение',
+        'not-skill': 'Награду изгнать нельзя',
+        'no-offer': 'Изгнание недоступно',
+      }) as Readonly<Record<string, string>>,
+      banished: (n: number) => `Изгнано: ${n}`,
+    }),
   }),
 });
 

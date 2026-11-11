@@ -6,6 +6,8 @@ export const SKILL_RULES = Object.freeze({
   autoSlots: 4,
   passiveSlots: 6,
   rerollsPerRun: 3,
+  /** Task 14 (provisional): «Изгнать» uses per run. «Пропустить» is unlimited. */
+  banishesPerRun: 2,
   offerSize: 3,
 });
 

@@ -47,6 +47,9 @@ export function createTestingController(
       case 'buff':
         if (!w.debugGrantBuff(a.buff as BuffId)) throw new Error('Buffs: campaign run only.');
         break;
+      case 'grant-choices':
+        w.debugGrantChoiceControls(a.rerolls as number, a.banishes as number);
+        break;
       case 'auto-collect':
         w.setDebugAutoCollect(a.enabled as boolean);
         break;

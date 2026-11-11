@@ -14,11 +14,14 @@ import {
   skillDamageReadout,
   synergyOverview,
 } from '../skills';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { alphaBridge } from './store';
 import { BuildLabel } from './BuildLabel';
 import { ReportButton } from './ReportButton';
 import { campaignStore } from './campaign-state';
+import { Button } from './kit';
+import { RU } from './strings-ru';
+import { skipCoins } from '../equipment/economy';
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
 /** Force monochrome text presentation so symbols never render as colour emoji. */
@@ -39,6 +42,64 @@ export function LevelUpDialog({
   const offer = skills.offer!;
   const bonus = offer.mode === 'bonus';
   const ownedIds = skills.owned.map((o) => o.skillId);
+  // Task 14: banish mode (B) — the next picked card is banished instead of chosen.
+  const [banishMode, setBanishModeState] = useState(false);
+  const banishRef = useRef(false);
+  const setBanishMode = (on: boolean) => {
+    banishRef.current = on;
+    setBanishModeState(on);
+  };
+  const O = RU.meta.offer;
+  const anyBanishable = offer.cards.some((c) => skills.banishBlocked[cardKey(c)] === null);
+  const banishReason = bonus
+    ? O.reasons['no-offer']
+    : skills.banishes <= 0
+      ? O.reasons['none-left']
+      : anyBanishable
+        ? null
+        : O.reasons['last-upgrade'];
+  const coins = world.campaign ? skipCoins(world.campaign.mapId) : 0;
+  useEffect(() => setBanishMode(false), [offer.id, offer.cards]);
+  /** Picks or banishes a card of the live offer (keys can arrive before React re-renders). */
+  const pick = (key: string) => {
+    const live = alphaBridge.getSnapshot().world?.skills;
+    if (!live?.offer?.cards.some((c) => cardKey(c) === key)) return;
+    if (banishRef.current) {
+      if (live.banishBlocked[key] !== null) return;
+      setBanishMode(false);
+      alphaBridge.send({ type: 'banish-skill', card: key });
+    } else alphaBridge.send({ type: 'choose-skill', card: key });
+  };
+  // Hotkeys: R reroll, B banish mode, S skip, 1–3 pick (or banish in banish mode).
+  useEffect(() => {
+    if (hiddenBehindSkills) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+      const live = alphaBridge.getSnapshot().world?.skills;
+      const current = live?.offer;
+      if (!live || !current) return;
+      const k = e.key.toLowerCase();
+      const n = Number(e.key);
+      if (k === 'r' || k === 'к') {
+        if (current.rerollAvailable) alphaBridge.send({ type: 'reroll' });
+      } else if (k === 'b' || k === 'и') {
+        const can =
+          current.mode === 'skills' &&
+          live.banishes > 0 &&
+          current.cards.some((c) => live.banishBlocked[cardKey(c)] === null);
+        if (can || banishRef.current) setBanishMode(!banishRef.current);
+      } else if (k === 's' || k === 'ы') {
+        alphaBridge.send({ type: 'skip-offer' });
+      } else if (n >= 1 && n <= 3) {
+        // Resolved by the scene against the world's current offer (no stale card keys).
+        alphaBridge.send({ type: 'offer-key', index: n - 1, banish: banishRef.current });
+        if (banishRef.current) setBanishMode(false);
+      } else return;
+      e.preventDefault();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [hiddenBehindSkills]);
   return (
     <section
       className="overlay modal-overlay"
@@ -85,15 +146,18 @@ export function LevelUpDialog({
             return (
               <button
                 key={`${offer.id}-${cardKey(card)}`}
-                className={`upgrade-card skill-card ${card.kind === 'skill' ? `kind-${card.skillKind}` : 'kind-bonus'}${opens ? ' synergy-unlock' : pairs ? ' synergy-pair' : ''}`}
+                className={`upgrade-card skill-card ${card.kind === 'skill' ? `kind-${card.skillKind}` : 'kind-bonus'}${opens ? ' synergy-unlock' : pairs ? ' synergy-pair' : ''}${banishMode ? ' banish-target' : ''}`}
                 autoFocus={i === 0}
                 role="listitem"
                 aria-label={
-                  card.kind === 'skill'
-                    ? `${card.name}, ${card.isNew ? 'новый навык' : 'улучшение'}, ранг ${ROMAN[card.nextRank]}${opens ? `, откроет синергию: ${hints!.unlocks.map((u) => u.synergy.name).join(', ')}` : ''}`
-                    : `${card.name}, награда`
+                  banishMode
+                    ? O.banishCard(card.name)
+                    : card.kind === 'skill'
+                      ? `${card.name}, ${card.isNew ? 'новый навык' : 'улучшение'}, ранг ${ROMAN[card.nextRank]}${opens ? `, откроет синергию: ${hints!.unlocks.map((u) => u.synergy.name).join(', ')}` : ''}`
+                      : `${card.name}, награда`
                 }
-                onClick={() => alphaBridge.send({ type: 'choose-skill', card: cardKey(card) })}
+                onClick={() => pick(cardKey(card))}
+                disabled={banishMode && skills.banishBlocked[cardKey(card)] !== null}
               >
                 <div className="card-top">
                   <span>
@@ -145,15 +209,33 @@ export function LevelUpDialog({
         {offer.cards.some((c) => c.kind === 'skill') && (
           <p className="faint damage-note">{DAMAGE_NOTE}</p>
         )}
-        {!bonus && (
-          <button
-            className="text-button"
-            disabled={!offer.rerollAvailable}
+        {/* Task 14: reroll / banish / skip with counters (kit buttons, reasons as tooltips). */}
+        <div className="meta-ui offer-controls" role="group" aria-label="Управление выбором">
+          {banishMode && <p className="offer-banish-hint">{O.banishHint}</p>}
+          <Button
+            size="s"
+            disabledReason={bonus || !offer.rerollAvailable ? O.noRerolls : null}
             onClick={() => alphaBridge.send({ type: 'reroll' })}
           >
-            Перебросить · осталось {skills.rerolls}
-          </button>
-        )}
+            {O.reroll(skills.rerolls)}
+          </Button>
+          <Button
+            size="s"
+            variant={banishMode ? 'danger' : 'secondary'}
+            aria-pressed={banishMode}
+            disabledReason={banishReason}
+            onClick={() => setBanishMode(!banishMode)}
+          >
+            {banishMode ? O.banishCancel : O.banish(skills.banishes)}
+          </Button>
+          <Button size="s" variant="ghost" onClick={() => alphaBridge.send({ type: 'skip-offer' })}>
+            {O.skip(coins)}
+          </Button>
+          <small className="offer-hotkeys">{O.hotkeys}</small>
+          {skills.banished.length > 0 && (
+            <small className="offer-hotkeys">{O.banished(skills.banished.length)}</small>
+          )}
+        </div>
         <p className="faint">Время остановлено. Выбирайте без спешки.</p>
       </div>
     </section>

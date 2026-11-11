@@ -14,6 +14,7 @@ import type { TestingController } from '../gameplay/testing';
 import { stunIndicator } from './stun-indicator';
 import { oncePerKeyEvent } from './key-event-once';
 import { OFFHAND_WEAPON } from '../talents';
+import { cardKey } from '../skills';
 
 /** Task 08.5 §5.1: floating-number styles (crit larger and gold, player damage red). */
 const FLOAT_STYLES: Record<FloatingKind, { color: string; size: number }> = {
@@ -229,6 +230,26 @@ export class AlphaScene extends Phaser.Scene {
           break;
         case 'reroll':
           this.world?.rerollSkillOffer();
+          break;
+        case 'banish-skill':
+          this.world?.banishSkillCard(command.card);
+          break;
+        case 'offer-key': {
+          // Hotkeys address the offer the world holds now (the UI snapshot may be a frame behind).
+          const card = this.world?.run.currentOffer?.cards[command.index];
+          if (!card || !this.world) break;
+          const key = cardKey(card);
+          if (command.banish) {
+            if (this.world.run.banishBlockReason(key) === null) this.world.banishSkillCard(key);
+          } else {
+            this.world.chooseSkill(key);
+            this.clearInput();
+          }
+          break;
+        }
+        case 'skip-offer':
+          this.world?.skipSkillOffer();
+          this.clearInput();
           break;
         case 'time-scale':
           if (import.meta.env.DEV || __QA_BUILD__) {

@@ -1447,3 +1447,32 @@ p.damage-note {
     top: 188px;
   }
 }
+/* Task 14: level-up offer controls (kit buttons) and banish mode. */
+.offer-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+.offer-hotkeys {
+  flex-basis: 100%;
+  text-align: center;
+  color: var(--text-faint);
+  font-size: 11px;
+}
+.offer-banish-hint {
+  flex-basis: 100%;
+  margin: 0;
+  text-align: center;
+  color: #ffb4a8;
+  font-size: 13px;
+}
+.skill-card.banish-target:not(:disabled) {
+  outline: 2px dashed #e2675b;
+  outline-offset: 3px;
+}
+.skill-card.banish-target:disabled {
+  opacity: 0.45;
+}

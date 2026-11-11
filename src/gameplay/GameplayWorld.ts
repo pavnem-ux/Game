@@ -87,7 +87,7 @@ import {
   isEnemyKind,
 } from './enemy-types';
 import type { EnemyKind, NewEnemyKind } from './enemy-types';
-import { coinValue, normalChance } from '../equipment/economy';
+import { coinValue, normalChance, skipCoins } from '../equipment/economy';
 /** The sole world scheduler. All damage is resolved by existing modules, one boundary at a time. */
 export class GameplayWorld {
   readonly core: CombatCore;
@@ -764,6 +764,28 @@ export class GameplayWorld {
   /** Spend one of the run's three rerolls on the current offer; never grants an extra choice. */
   rerollSkillOffer(): void {
     this.record('skill', this.run.reroll());
+  }
+  /** Task 14 debug (DEV/QA controller only): extra rerolls / banishes for this run. */
+  debugGrantChoiceControls(rerolls: number, banishes: number): void {
+    this.run.grantChoiceControls(rerolls, banishes);
+  }
+  /** Task 14 «Изгнать»: remove an offered skill from the run pool; only that card is replaced. */
+  banishSkillCard(cardKey: string): void {
+    if (typeof cardKey !== 'string') throw new TypeError('Card key must be a string.');
+    if (this.survival.getState().runState === 'ended') throw new Error('The run has ended.');
+    this.record('skill', this.run.banish(cardKey));
+  }
+  /**
+   * Task 14 «Пропустить»: close the offer without a card. Campaign runs add skip coins
+   * (`skipCoins`, 2% of the map's victory Gold, at least 3) to the collected coins, so the normal
+   * payout applies (victory: all, defeat: 50%, abandon: nothing).
+   */
+  skipSkillOffer(): void {
+    if (this.survival.getState().runState === 'ended') throw new Error('The run has ended.');
+    this.record('skill', this.run.skip());
+    if (this.campaignMap)
+      this.record('progression', [this.coins.grant(skipCoins(this.campaignMap.id), 'skip')]);
+    this.prepare();
   }
   private progression(events: readonly ExperienceEvent[]) {
     this.record('progression', events);
@@ -1694,7 +1716,8 @@ export class GameplayWorld {
         channel === 'combat' ||
         channel === 'weapon' ||
         channel === 'progression' ||
-        channel === 'chests'
+        channel === 'chests' ||
+        channel === 'skill'
       )
         this.runStats.consume(entry);
     }
