@@ -4,7 +4,7 @@ Spec: [task-12-enemies-chests.md](task-12-enemies-chests.md) (owner's file; Pret
 blank lines and aligned the tables). Branch `task-12-enemies-chests` from `main` at `b6e7a88`
 (Task 11 merged: `src/gameplay/coins.ts` present). All new numbers are **provisional**.
 
-Current: Phase 4 (tuning & delivery)
+Current: Phase 4.3 (PR description)
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/10
 
@@ -24,8 +24,8 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/10
 - [x] 3.3 Enchanted content + buffs
 - [x] 3.4 HUD, popups, run stats
 - [x] Phase 3 tests
-- [ ] 4.1 Tune `a`; level table; per-act enemy mix and chest income
-- [ ] 4.2 Full checks (AGENTS.md §6 + e2e), docs (`ENEMY_AI.md`, `EXPERIENCE_WAVES.md`, `CHESTS.md`,
+- [x] 4.1 Tune `a`; level table; per-act enemy mix and chest income
+- [x] 4.2 Full checks (AGENTS.md §6 + e2e), docs (`ENEMY_AI.md`, `EXPERIENCE_WAVES.md`, `CHESTS.md`,
       README, `playtest.md`)
 - [ ] 4.3 PR description
 
@@ -116,13 +116,60 @@ nextSpawnAt, lastOpened}`; channel `chests` (also fed to `RunStats`).
 - 3.x: «+25% attack speed» = +25 points of `attackSpeed` (base 100 = the weapon's base rate);
   «damage +20% (physical and magical)» = `damagePercent` +20.
 - 3.x: buff uptime counts a refreshed buff as one continuous application.
+- 4.1: `a` = 0.4 (from 0.25): the clearing bots reach run level 69–72 at 15:00 on maps 10/25/40
+  (target 70 ± 5). The first levels cost at most 10% more each (to level 5: 146 XP instead of 140; to
+  level 10: 622 instead of 540).
+- 4.1: chest gold adds up to +65% (map 1) / +30% (map 40) Gold to a won run when every wooden chest
+  gives gold (full HP). Flagged for the owner (provisional `goldShare` 2%, `goldMin` 5).
+- Browser QA `skills-ui-browser.mjs`: three queued level-ups now need 92 XP (20 + 30 + 42), was 90.
 - `tests/campaign/boss-world.test.ts`: per-file timeout 30 s (each case simulates ~900 s since
   Task 11 moved map 10's boss to 15:00; ~4.5 s each was at the 5 s default under full-suite load).
 - Task 10 test `modifiers.test.ts` (swift map 12) now checks the ×1.1 speed per kind: Act II waves
   mix in the new kinds from the first spawns.
 
+## Measurements (4.1)
+
+Bot runs on the accelerated simulation (`update(0.25)`), seed 1, debug auto-collect on (all XP and
+coins pulled every second), test protection on (pacing only: every run reaches its end), each map at
+its recommended level (class level = map number) with the reference talent build filled as far as
+the level allows (0 / 5 / 12 / 21 ranks); the bot stands still and takes the first skill card.
+
+Run level with a = 0.4 (final):
+
+| Map        | Class  | Kills | 3:00 | 5:00 | 10:00 | 15:00 |
+| ---------- | ------ | ----- | ---- | ---- | ----- | ----- |
+| 1 (10 min) | mage   | 2563  | 18   | 29   | 45    | —     |
+| 1 (10 min) | archer | 1862  | 17   | 24   | 39    | —     |
+| 10         | mage   | 7384  | 28   | 41   | 58    | 70    |
+| 10         | archer | 7211  | 26   | 39   | 57    | 69    |
+| 25         | mage   | 7413  | 30   | 43   | 60    | 72    |
+| 25         | archer | 7285  | 28   | 41   | 60    | 72    |
+| 40         | mage   | 7432  | 30   | 43   | 61    | 72    |
+| 40         | archer | 7375  | 29   | 42   | 60    | 72    |
+
+Same runs' total XP re-costed for other `a` (15:00, mage/archer average; map 10 / 25 / 40):
+a = 0 → 115.5 / 120.5 / 121; 0.25 → 77.5 / 80 / 80; 0.4 → 69.5 / 72 / 72; 0.5 → 66 / 68 / 68.
+At 3:00: a = 0 → 34.5 / 37 / 38.5; 0.4 → 27 / 28.5 / 29.5 (the level count by 3:00 drops because those
+runs already reach level ~30; the first levels themselves cost at most 10% more, see the decisions).
+
+The standing-still melee bots (warrior, rogue) do not clear the waves at the recommended level
+(266–857 kills; the arena fills to its cap), so they stay at run level 19–28 and are not a pacing
+reference (a bot limitation; a human melee player moves).
+
+Enemy mix (automatic spawns of one mage run per map, 2558–7444 spawns): map 1: melee 88 / ranged
+12; map 10: 60 / 12 / swift 15 / brute 8 / bombard 5; map 25 (`ranged18`): 40 / 18 / 20 / 12 / 10;
+map 40: 40 / 12 / 22 / 14 / 12 — exactly the configured shares.
+
+Chests (mage, seeds 1–2, the bot walks to every chest; test protection keeps HP full, so every
+wooden chest gives gold — an upper bound for gold): per run 13 (map 1) / 20 (maps 10–40) spawned,
+all but the last one opened; enchanted 2–5 per run. Chest gold per run: map 1: 50–55, map 10:
+84–102, map 25: 154–187, map 40: 210–240 (vs collected coins 89 / 241–251 / 441–464 / 588–638 and
+victory bonus 30 / 120 / 186 / 300). Buff uptime 13–60 s per buff per run.
+
 ## Verification log
 
+- Phase 4: typecheck ✓, format ✓, `npm test` 1244 ✓, build ✓, `test:production` 2 PASS, QA build +
+  `test:qa` PASS, `test:e2e` 3 PASS.
 - Phase 3: typecheck ✓, format ✓, `npm test` 1244 ✓, build ✓, `test:production` PASS (new
   markers), QA build + `test:qa` PASS, `test:e2e` 3 PASS; screenshot of chests, buff bar and
   bombards checked.

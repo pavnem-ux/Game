@@ -3,17 +3,27 @@ import { RunExperience, runXpCost, XP_RULES } from '../../src/gameplay/experienc
 import { RunCoins } from '../../src/gameplay/coins';
 
 describe('Task 12 Phase 1 — run XP pacing and pickup radius', () => {
-  it('level cost = 20 + 10·(L−1) + round(0.25·(L−1)²) for L = 1, 10, 30, 50', () => {
-    expect(XP_RULES.costQuadratic).toBe(0.25);
-    expect([1, 10, 30, 50].map(runXpCost)).toEqual([20, 130, 520, 1110]);
+  it('level cost = 20 + 10·(L−1) + round(0.4·(L−1)²) for L = 1, 10, 30, 50', () => {
+    expect(XP_RULES.costQuadratic).toBe(0.4); // tuned in 4.1 (start value 0.25)
+    expect([1, 10, 30, 50].map(runXpCost)).toEqual([20, 142, 646, 1470]);
     for (let level = 1; level <= 200; level++) {
       const cost = runXpCost(level);
       expect(Number.isSafeInteger(cost)).toBe(true);
       if (level > 1) expect(cost).toBeGreaterThan(runXpCost(level - 1));
     }
-    // Early levels barely change: the first 5 levels cost at most 4 XP more than before.
-    for (let level = 1; level <= 5; level++)
-      expect(runXpCost(level) - (20 + 10 * (level - 1))).toBeLessThanOrEqual(4);
+    // Early levels barely change: each of the first 5 levels costs at most 10% more than before,
+    // reaching level 5 needs 4% more XP in total (140 → 146).
+    let linear = 0,
+      now = 0;
+    for (let level = 1; level <= 5; level++) {
+      const old = 20 + 10 * (level - 1);
+      expect(runXpCost(level) / old).toBeLessThanOrEqual(1.1);
+      if (level < 5) {
+        linear += old;
+        now += runXpCost(level);
+      }
+    }
+    expect([linear, now]).toEqual([140, 146]);
   });
   it('total XP is never lost: spent costs + current XP = total, in one grant or many', () => {
     const once = new RunExperience();

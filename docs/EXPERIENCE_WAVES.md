@@ -17,10 +17,10 @@ In development only, open `/?debug` and **DEV · Тестирование**. The
 | Parameter                               | Value                                                               |
 | --------------------------------------- | ------------------------------------------------------------------- |
 | Starting run level / XP                 | 1 / 0                                                               |
-| Cost from run level L to L+1            | `20 + 10 * (L - 1)`                                                 |
-| First three costs                       | 20, 30, 40 XP                                                       |
+| Cost from run level L to L+1            | `20 + 10 * (L - 1)` (Task 12: `+ round(0.4 * (L - 1)²)`, see below) |
+| First three costs                       | 20, 30, 40 XP (Task 12: 20, 30, 42)                                 |
 | Melee / ranged death drop               | 10 / 15 XP                                                          |
-| Collection distance from crystal center | player radius + 42 + crystal radius 5 (60 at current player radius) |
+| Collection distance from crystal center | player radius + 42 + crystal radius 5 (Task 12: 74 instead of 42)   |
 | Spatial crystal pile cell               | 64 × 64 world units                                                 |
 | Maximum active crystal piles            | 512                                                                 |
 
@@ -135,3 +135,22 @@ A successful local production build and static/browser regression establish that
 ровно по одному на уровень, в том числе с `healed: 0` при полном HP. Положительное лечение также
 выдаёт обычное событие `healing` Core. Это не лечение при получении урона, не постоянный уровень
 и не воскрешение. Подробнее: [GAMEPLAY_BALANCE_QA.md](GAMEPLAY_BALANCE_QA.md).
+
+## Task 12 — темп уровней забега, радиус подбора, смесь врагов
+
+Все числа **предварительные** (`src/gameplay/experience.ts`, `src/gameplay/enemy-types.ts`).
+
+- **Стоимость уровня забега:** `20 + 10·(L−1) + round(a·(L−1)²)`, `a = XP_RULES.costQuadratic`
+  = 0,4 (стартовое значение 0,25; подобрано в Task 12 §4.1). Квадратичная часть округляется, потому что
+  опыт и стоимости — целые числа. L = 1 / 10 / 30 / 50 → 20 / 142 / 646 / 1470 (было 20 / 110 / 310 /
+  510). Ценность кристаллов не менялась (8 / 12, элита +32; новые враги — 5 / 20 / 12). Кристаллы не
+  исчезают, опыт на лимите кристаллов не теряется, лечение при уровне не изменилось.
+- **Цель подбора `a`:** весь опыт собран (ускоренный режим + отладочный автосбор), карта на
+  рекомендованном уровне → уровень забега ≈ 70 к 15:00 (±5) на картах 10, 25, 40. Таблица замеров —
+  в описании PR и `docs/task-12-progress.md`. Ранние уровни почти не изменились: до уровня 5 нужно
+  146 опыта вместо 140 (+4%), до уровня 10 — 622 вместо 540 (+15%).
+- **Радиус подбора:** `XP_RULES.pickupRadius` 42 → 74 (+75%); монеты и «Магнит» используют тот же
+  радиус. Склейка кристаллов по своим ячейкам 64 × 64 не зависит от радиуса.
+- **Смесь врагов:** в кампании часть обычных спавнов — новые типы (`swift`, `brute`, `bombard`) по
+  долям акта, детерминированно; доля стрелков прежняя. Подробно: [ENEMY_AI.md](ENEMY_AI.md#task-12--новые-враги-и-поведение-artillery).
+- Тесты: `tests/gameplay/pacing-radius.test.ts`, `tests/gameplay/enemy-kinds.test.ts`.

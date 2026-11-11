@@ -6,8 +6,9 @@ export const XP_RULES = Object.freeze({
   /**
    * Task 12 §1.1 (provisional): quadratic term `a` of the run level cost
    * `20 + 10·(L−1) + round(a·(L−1)²)` — slows late run levels; early levels barely change.
+   * Tuned in 4.1 (start value 0.25): run level ≈ 70 at 15:00 with all XP collected.
    */
-  costQuadratic: 0.25,
+  costQuadratic: 0.4,
   /** Task 10 §1.3 (provisional): run XP −20% (was 10 / 15). */
   meleeReward: 8,
   rangedReward: 12,

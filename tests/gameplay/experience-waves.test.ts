@@ -31,15 +31,15 @@ function effect(w: GameplayWorld, sourceId: string, targetId: string, damage: nu
   });
 }
 describe('provisional run XP and persistent crystal piles', () => {
-  it('uses a separate documented cost (Task 12: + round(0.25·(L−1)²)) and supports exact/multiple level boundaries', () => {
-    expect([1, 2, 3].map(runXpCost)).toEqual([20, 30, 41]);
+  it('uses a separate documented cost (Task 12: + round(0.4·(L−1)²)) and supports exact/multiple level boundaries', () => {
+    expect([1, 2, 3].map(runXpCost)).toEqual([20, 30, 42]);
     const xp = new RunExperience();
     xp.grantForTesting(19);
     expect(xp.getState()).toEqual({ level: 1, xp: 19, nextXp: 20, totalXp: 19 });
     xp.grantForTesting(1);
     expect(xp.getState()).toEqual({ level: 2, xp: 0, nextXp: 30, totalXp: 20 });
-    xp.grantForTesting(75); // 30 + 41 → level 4 with 4 left over
-    expect(xp.getState()).toEqual({ level: 4, xp: 4, nextXp: 52, totalXp: 95 });
+    xp.grantForTesting(75); // 30 + 42 → level 4 with 3 left over
+    expect(xp.getState()).toEqual({ level: 4, xp: 3, nextXp: 54, totalXp: 95 });
     expect(Object.isFrozen(xp.getState())).toBe(true);
   });
   it('collects by distance once and keeps all distant XP until approached', () => {
