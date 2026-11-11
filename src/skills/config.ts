@@ -114,6 +114,45 @@ export const SYNERGY_TUNING_LEVEL_II: Tuning = Object.freeze(
   ),
 ) as Tuning;
 
+/**
+ * Task 15 Level III «Пробуждение» properties (catalog v3, provisional). Damage coefficients here
+ * are the awakened effect's own numbers; the triggering proc keeps the Level II value.
+ */
+export const SYNERGY_AWAKENING = Object.freeze({
+  /** «Default Slow»: 30% for 2 s, like the ice ring at rank I; the global Slow cap still applies. */
+  defaultSlow: Object.freeze({ strength: 0.3, duration: 2 }),
+  /** Паровой взрыв: the explosion hits every enemy within this radius of the target (once each). */
+  thermalShock: Object.freeze({ radius: 80 }),
+  /** Огненная буря: 5 neighbours, 2 Burn stacks each; total cap 7 including mage.b1.n05. */
+  wildfire: Object.freeze({ maxTargets: 5, stacks: 2, totalCap: 7 }),
+  /** Ледяная шрапнель: shards into the nearest other enemies (magical ice) + default Slow. */
+  shatteredIce: Object.freeze({ shards: 3, radius: 150, coefficient: 0.25 }),
+  /** Сотрясение: extends the current Stun once per Stun, within the Stun limits. */
+  skullCrusher: Object.freeze({ stunExtension: 0.3 }),
+  /** Неудержимый: up to 3 stacks (each melee kill +1, duration refreshed); +10% move speed. */
+  battleMomentum: Object.freeze({ maxStacks: 3, movementSpeedPercent: 10 }),
+  /** Разлом: a rift at the wave's spot ticking physical damage + default Slow. */
+  seismicImpact: Object.freeze({ duration: 2, radius: 90, tickInterval: 0.5, coefficient: 0.15 }),
+  /** Чумной ливень: explosion around the target, 2 Poison stacks (3/tick, 4 s) each. */
+  toxicBarrage: Object.freeze({ radius: 80, poisonStacks: 2 }),
+  /** Мор: 5 neighbours, each half the dead target's Poison stacks (ceil, 1–5). */
+  plagueChain: Object.freeze({ maxTargets: 5, minStacks: 1, maxStacks: 5 }),
+  /** Инстинкт охотника: the bonus moves to the nearest poisoned enemy (≤ 3 times). */
+  deadlyPrecision: Object.freeze({ radius: 300, maxTransfers: 3 }),
+  /** Кровавый пир: dagger hits on bleeding targets heal % of Max HP, at most once per interval. */
+  bloodFrenzy: Object.freeze({ healPercent: 0.5, interval: 0.5 }),
+  /** Рваные раны: a critical hit adds 2 Bleed stacks (the group's duration refreshes). */
+  deepWounds: Object.freeze({ stacks: 2 }),
+  /** Казнь: threshold 40%; a lethal execution explodes (physical + 1 Bleed stack each). */
+  finalCut: Object.freeze({
+    hpThresholdPercent: 40,
+    radius: 80,
+    coefficient: 0.4,
+    bleedDamage: 3,
+    bleedDuration: 4,
+  }),
+});
+
 /** Builds five cumulative rank tables: each rank inherits the previous one and applies its overrides. */
 export function cumulativeRanks(
   base: SkillParams,

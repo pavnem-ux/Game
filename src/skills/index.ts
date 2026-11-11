@@ -8,6 +8,7 @@ export {
   SYNERGY_TUNING_LEVEL_II,
   SYNERGY_LEVEL_RULES,
   SYNERGY_MAIN_NUMBER,
+  SYNERGY_AWAKENING,
   cumulativeRanks,
 } from './config';
 export { RunSkills } from './RunSkills';

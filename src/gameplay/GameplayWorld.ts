@@ -1772,7 +1772,20 @@ export class GameplayWorld {
               .map((e) => e.group.effectType),
           );
           effects.add(event.group.effectType);
-          this.skills.handlePeriodicKill(death.entityId, effects, death.periodic.sources);
+          // Task 15: stack counts just before death (Plague Chain III «Мор»).
+          const stacks = new Map<EffectType, number>(
+            events
+              .filter(
+                (e) =>
+                  e.type === 'status-removed' &&
+                  e.reason === 'target-dead' &&
+                  e.group.targetId === death.entityId,
+              )
+              .map((e) => [e.group.effectType, e.group.stacks.length]),
+          );
+          if (!stacks.has(event.group.effectType))
+            stacks.set(event.group.effectType, event.group.stacks.length);
+          this.skills.handlePeriodicKill(death.entityId, effects, death.periodic.sources, stacks);
         }
       }
   }
