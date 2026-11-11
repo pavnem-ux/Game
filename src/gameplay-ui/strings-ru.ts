@@ -80,6 +80,9 @@ const EFFECT_LABELS: Record<string, string> = {
 const ENEMY_TYPE_LABELS: Record<EnemyType | 'unknown', string> = {
   melee: 'Ближний бой',
   ranged: 'Стрелки',
+  swift: 'Стремительные бесы',
+  brute: 'Каменные тролли',
+  bombard: 'Колдуны-бомбардиры',
   'elite-melee': 'Элита · ближний бой',
   'elite-ranged': 'Элита · стрелок',
   boss: 'Босс',

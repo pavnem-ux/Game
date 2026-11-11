@@ -5,6 +5,7 @@ import { edgeDistance, segmentCircleIntersection } from '../weapon-attacks';
 import type { CombatBody } from '../weapon-attacks';
 import { EnemyProjectiles } from './EnemyProjectiles';
 import { SpatialGrid } from './SpatialGrid';
+import { circleHitsBody } from './telegraph';
 import {
   circleCrossings,
   desiredState,
@@ -25,6 +26,7 @@ import type {
   EnemyControl,
   EnemyProjectileLaunch,
   EnemyProjectileLaunchEvent,
+  ArtilleryStrikeSnapshot,
 } from './types';
 import {
   EPS,
@@ -47,13 +49,17 @@ type Scheduled =
       kind: 'steer' | 'motion' | 'attempt';
       enemy?: EnemyActor;
     }
-  | { at: number; priority: number; key: string; kind: 'flight'; flight: EnemyProjectileDue };
+  | { at: number; priority: number; key: string; kind: 'flight'; flight: EnemyProjectileDue }
+  | { at: number; priority: number; key: string; kind: 'strike'; strike: ArtilleryStrikeSnapshot };
 const ZERO = Object.freeze({ x: 0, y: 0 });
 export class EnemyAI {
   private readonly positionErrors = new Map<string, { x: number; y: number }>();
   private readonly actors = new Map<string, EnemyActor>();
   private readonly grid: SpatialGrid;
   private readonly flights: EnemyProjectiles;
+  /** Task 12: pending artillery strikes (marked ground circles), in mark order. */
+  private readonly strikes = new Map<string, ArtilleryStrikeSnapshot & { sequence: number }>();
+  private strikeSequence = 0;
   private readonly options: EnemyAIOptions;
   private player: CombatBody | null = null;
   private clock = 0;
@@ -220,6 +226,13 @@ export class EnemyAI {
     this.active();
     return this.flights.getProjectiles();
   }
+  /** Task 12: pending artillery strikes (telegraph circles), oldest first. */
+  getStrikes(): readonly ArtilleryStrikeSnapshot[] {
+    this.active();
+    return Object.freeze(
+      [...this.strikes.values()].map(({ sequence: _sequence, ...strike }) => Object.freeze(strike)),
+    );
+  }
   getSeparationStats(): SeparationStats {
     this.active();
     return this.stats;
@@ -228,6 +241,7 @@ export class EnemyAI {
     this.actors.clear();
     this.positionErrors.clear();
     this.flights.clear();
+    this.strikes.clear();
     this.grid.clear();
     this.disposed = true;
   }
@@ -343,6 +357,7 @@ export class EnemyAI {
   }
   private resolveScheduled(event: Scheduled, output: EnemyEvent[]) {
     if (event.kind === 'flight') output.push(this.flights.resolve(event.flight, this.clock));
+    else if (event.kind === 'strike') this.land(event.strike, output);
     else if (event.kind === 'attempt') this.attempt(event.enemy!, output);
     else {
       if (event.kind === 'steer') this.steeringIndex++;
@@ -468,6 +483,15 @@ export class EnemyAI {
         key: String(flight.sequence).padStart(16, '0'),
       });
     if (!this.core.getEntity(this.options.playerId).alive) return next;
+    // Task 12: artillery strikes land with the enemy attacks (priority 4), in mark order.
+    for (const strike of this.strikes.values())
+      consider({
+        kind: 'strike',
+        strike,
+        at: strike.landsAt,
+        priority: 4,
+        key: `~strike-${String(strike.sequence).padStart(16, '0')}`,
+      });
     const living = this.ordered().filter((actor) => this.core.getEntity(actor.id).alive);
     if (living.length === 0) return next;
     const steeringAt = this.steeringIndex * this.options.movementStep;
@@ -557,6 +581,24 @@ export class EnemyAI {
     const next = this.clock + actor.config.attackInterval;
     if (!Number.isFinite(next) || next <= this.clock)
       throw new RangeError('Enemy attack interval is not representable.');
+    if (actor.config.behavior === 'artillery') {
+      // Task 12: mark the player's current position; the circle stays where it was marked.
+      const sequence = ++this.strikeSequence;
+      const strike = Object.freeze({
+        id: `strike-${sequence}`,
+        sourceId: actor.id,
+        center: Object.freeze({ x: this.player!.x, y: this.player!.y }),
+        radius: actor.config.telegraph.radius,
+        markedAt: this.clock,
+        landsAt: this.clock + actor.config.telegraph.delay,
+      });
+      if (!(strike.landsAt > this.clock))
+        throw new RangeError('Telegraph delay not representable.');
+      this.strikes.set(strike.id, Object.freeze({ ...strike, sequence }));
+      actor.nextAttackAt = next;
+      output.push(Object.freeze({ type: 'artillery-marked', time: this.clock, strike }));
+      return;
+    }
     if (actor.config.behavior === 'ranged') {
       const event = this.flights.launch(this.clock, {
         sourceId: actor.id,
@@ -614,6 +656,57 @@ export class EnemyAI {
         time: this.clock,
         sourceId: actor.id,
         targetId: this.options.playerId,
+        blocked,
+        attack,
+        result,
+      }),
+    );
+  }
+  /**
+   * Task 12: an artillery strike lands. Damage only through Combat Core (and the survival policy),
+   * only if the player's body overlaps the marked circle; cancelled if the source is gone.
+   */
+  private land(due: ArtilleryStrikeSnapshot, output: EnemyEvent[]) {
+    const pending = this.strikes.get(due.id);
+    if (!pending) return;
+    this.strikes.delete(due.id);
+    const { sequence: _sequence, ...strike } = pending;
+    const sourceAlive =
+      this.actors.has(strike.sourceId) && this.core.getEntity(strike.sourceId).alive;
+    const hit = sourceAlive && circleHitsBody(strike.center, strike.radius, this.player!);
+    const context = Object.freeze({
+      time: this.clock,
+      sourceId: strike.sourceId,
+      targetId: this.options.playerId,
+      kind: 'artillery' as const,
+      attack: null,
+    });
+    const blocked =
+      hit && this.options.canResolveDirectDamage
+        ? !policyResult(this.options.canResolveDirectDamage(context))
+        : false;
+    const source = sourceAlive ? this.actors.get(strike.sourceId)! : null;
+    const attack =
+      hit && !blocked && source
+        ? this.core.createAttack({
+            attackerId: strike.sourceId,
+            damageType: source.config.damageType,
+            coefficient: source.config.attackCoefficient,
+          })
+        : null;
+    const result = attack
+      ? this.core.resolveAttack(attack, this.options.playerId, {
+          damageMultiplier: this.options.playerDamageMultiplier?.(attack) ?? 1,
+        })
+      : null;
+    if (result) this.options.onDirectDamageResolved?.({ ...context, attack }, result);
+    output.push(
+      Object.freeze({
+        type: 'artillery-strike',
+        time: this.clock,
+        strike: Object.freeze(strike),
+        hit,
+        cancelled: !sourceAlive,
         blocked,
         attack,
         result,

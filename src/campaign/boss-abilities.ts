@@ -1,4 +1,5 @@
 import { sameInstant } from '../simulation-boundary';
+import { circleHitsBody } from '../enemy-ai/telegraph';
 
 /**
  * Task 08 boss ability library (pure, framework-independent). A `BossController` is a boundary
@@ -263,8 +264,7 @@ export class BossController {
         );
       case 'circle_aoe': {
         const p = host.playerBody();
-        const inside =
-          Math.hypot(p.x - cast.center!.x, p.y - cast.center!.y) <= ability.radius + p.radius;
+        const inside = circleHitsBody(cast.center!, ability.radius, p);
         return inside && host.strikePlayer(ability.id, ability.coefficient) ? 1 : 0;
       }
       case 'charge':

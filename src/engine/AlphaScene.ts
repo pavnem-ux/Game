@@ -382,6 +382,15 @@ export class AlphaScene extends Phaser.Scene {
       g.fillStyle(0xf0c862).fillCircle(pile.x, pile.y, r);
       g.lineStyle(1, 0xfff1c4, 0.8).strokeCircle(pile.x, pile.y, r);
     }
+    // Task 12: bombard telegraphs — a red ground circle that fills up until the strike lands.
+    for (const strike of s.artilleryStrikes) {
+      const span = strike.landsAt - strike.markedAt;
+      const progress = span > 0 ? Math.min(1, Math.max(0, (s.time - strike.markedAt) / span)) : 1;
+      const { x, y } = strike.center;
+      g.fillStyle(0xff3b3b, 0.1 + 0.18 * progress).fillCircle(x, y, strike.radius);
+      g.fillStyle(0xff5a3b, 0.22).fillCircle(x, y, strike.radius * progress);
+      g.lineStyle(2, 0xff4d4d, 0.9).strokeCircle(x, y, strike.radius);
+    }
     let stunLabel = 0;
     let label = 0,
       damageLabel = 0;
@@ -391,6 +400,7 @@ export class AlphaScene extends Phaser.Scene {
       if (!enemy.alive) continue;
       const { x, y } = enemy.position;
       const ranged = enemy.config.behavior === 'ranged';
+      const kind = enemy.kind;
       // Task 08: elites are bigger, glow in their profile colour and carry a name + wide HP bar.
       let eliteName: string | null = null;
       const isBoss = s.campaign?.boss?.enemyId === enemy.entityId;
@@ -405,7 +415,28 @@ export class AlphaScene extends Phaser.Scene {
           .strokeCircle(x, y, enemy.config.radius + 7)
           .lineStyle(1, 0xfff0c4, 0.5)
           .strokeCircle(x, y, enemy.config.radius + 11);
-      g.fillStyle(0x060c0c, 0.4).fillEllipse(x, y + 15 * f, 34 * f, 12 * f);
+      // Task 12: the new normal kinds have their own shapes (elites/bosses keep theirs).
+      const special = eliteName ? null : kind === 'melee' || kind === 'ranged' ? null : kind;
+      const k = special ? enemy.config.radius / 14 : f;
+      g.fillStyle(0x060c0c, 0.4).fillEllipse(x, y + 15 * k, 34 * k, 12 * k);
+      const shape = () => {
+        if (special === 'swift')
+          g.fillTriangle(x, y - 17 * k, x - 12 * k, y + 13 * k, x + 12 * k, y + 13 * k)
+            .fillTriangle(x - 12 * k, y - 4 * k, x - 4 * k, y - 15 * k, x - 3 * k, y - 4 * k)
+            .fillTriangle(x + 12 * k, y - 4 * k, x + 4 * k, y - 15 * k, x + 3 * k, y - 4 * k);
+        else if (special === 'brute')
+          g.fillRoundedRect(x - 16 * k, y - 15 * k, 32 * k, 30 * k, 9 * k);
+        else if (special === 'bombard')
+          g.fillTriangle(x, y - 19 * k, x - 15 * k, y + 15 * k, x + 15 * k, y + 15 * k).fillRect(
+            x - 15 * k,
+            y + 6 * k,
+            30 * k,
+            9 * k,
+          );
+        else if (ranged)
+          g.fillTriangle(x, y - 18 * f, x - 17 * f, y + 14 * f, x + 17 * f, y + 14 * f);
+        else g.fillEllipse(x, y, 30 * f, 33 * f);
+      };
       g.fillStyle(
         isBoss
           ? 0x8e1f3a
@@ -413,21 +444,42 @@ export class AlphaScene extends Phaser.Scene {
             ? ranged
               ? 0x7d4fc0
               : 0xb5532b
-            : ranged
-              ? 0xb2739b
-              : 0x87996e,
+            : special === 'swift'
+              ? 0xc94f3d
+              : special === 'brute'
+                ? 0x7f7a6c
+                : special === 'bombard'
+                  ? 0x3f5fa8
+                  : ranged
+                    ? 0xb2739b
+                    : 0x87996e,
       );
-      if (ranged) g.fillTriangle(x, y - 18 * f, x - 17 * f, y + 14 * f, x + 17 * f, y + 14 * f);
-      else g.fillEllipse(x, y, 30 * f, 33 * f);
-      g.fillStyle(0x18231f).fillEllipse(x, y - 3 * f, 18 * f, 11 * f);
-      g.fillStyle(ranged ? 0xffbebf : 0xe9d497)
-        .fillRect(x - 6 * f, y - 6 * f, 4 * f, 3 * f)
-        .fillRect(x + 3 * f, y - 6 * f, 4 * f, 3 * f);
+      shape();
+      if (special === 'brute')
+        g.lineStyle(2, 0x4d493f, 0.9)
+          .lineBetween(x - 10 * k, y + 8 * k, x - 2 * k, y + 2 * k)
+          .lineBetween(x + 4 * k, y + 10 * k, x + 11 * k, y + 3 * k);
+      if (special === 'bombard')
+        g.fillStyle(0xff7a4d, 0.95)
+          .fillCircle(x, y - 22 * k, 4 * k)
+          .fillStyle(0xffd2a8, 0.5)
+          .fillCircle(x, y - 22 * k, 7 * k);
+      g.fillStyle(0x18231f).fillEllipse(x, y - 3 * k, 18 * k, 11 * k);
+      g.fillStyle(
+        special === 'swift'
+          ? 0xfff07a
+          : special === 'bombard'
+            ? 0x9fd8ff
+            : ranged
+              ? 0xffbebf
+              : 0xe9d497,
+      )
+        .fillRect(x - 6 * k, y - 6 * k, 4 * k, 3 * k)
+        .fillRect(x + 3 * k, y - 6 * k, 4 * k, 3 * k);
       const flash = this.flashes.strength(enemy.entityId, s.time);
       if (flash > 0) {
         g.fillStyle(0xffffff, 0.6 * flash);
-        if (ranged) g.fillTriangle(x, y - 18 * f, x - 17 * f, y + 14 * f, x + 17 * f, y + 14 * f);
-        else g.fillEllipse(x, y, 30 * f, 33 * f);
+        shape();
       }
       g.fillStyle(0x19201b).fillRect(x - hpWidth / 2, barY, hpWidth, eliteName ? 5 : 3);
       g.fillStyle(isBoss ? 0xff4d6d : eliteName ? 0xffb347 : ranged ? 0xe09ac1 : 0xc8d79c).fillRect(

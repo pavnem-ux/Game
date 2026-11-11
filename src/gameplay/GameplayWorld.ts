@@ -73,6 +73,16 @@ import type { DirectDamageObserver, DirectDamagePolicy } from '../enemy-ai';
 import { addModifiers, gearModifiers, validateLoadout } from '../equipment';
 import type { Loadout } from '../equipment';
 import { RunCoins } from './coins';
+import {
+  ENEMY_KINDS,
+  NEW_ENEMY_KINDS,
+  enemyKindConfig,
+  enemyKindStats,
+  enemyKindXp,
+  enemyMix,
+  isEnemyKind,
+} from './enemy-types';
+import type { EnemyKind, NewEnemyKind } from './enemy-types';
 import { coinValue, normalChance } from '../equipment/economy';
 /** The sole world scheduler. All damage is resolved by existing modules, one boundary at a time. */
 export class GameplayWorld {
@@ -163,6 +173,9 @@ export class GameplayWorld {
     this.coinRandom = rng.coins;
     this.campaignMap = options.campaign ? getCampaignMap(options.campaign.mapId) : null;
     this.director = this.campaignMap ? new CampaignDirector(this.campaignMap) : null;
+    this.kindShares = this.campaignMap
+      ? enemyMix(this.campaignMap.id)
+      : Object.freeze({ swift: 0, brute: 0, bombard: 0 });
     this.enemyStats = this.campaignMap
       ? scaleEnemyStats(ALPHA_ENEMY_STATS, this.campaignMap.difficulty)
       : ALPHA_ENEMY_STATS;
@@ -401,12 +414,17 @@ export class GameplayWorld {
         viewport: this.viewport,
       }),
       enemies: Object.freeze(
-        this.enemies
-          .getEnemies()
-          .map((e) => Object.freeze({ ...e, entity: this.core.getEntity(e.entityId) })),
+        this.enemies.getEnemies().map((e) =>
+          Object.freeze({
+            ...e,
+            entity: this.core.getEntity(e.entityId),
+            kind: this.enemyKinds.get(e.entityId) ?? ('melee' as EnemyKind),
+          }),
+        ),
       ),
       playerProjectiles: this.weapons.getProjectiles(),
       enemyProjectiles: this.enemies.getProjectiles(),
+      artilleryStrikes: this.enemies.getStrikes(),
       statuses: this.statuses.getGroups(),
       weapon: this.weapons.getWeaponState(this.playerId),
       movement: this.input,
@@ -535,13 +553,8 @@ export class GameplayWorld {
     this.manualPause = false;
     this.prepare();
   }
-  spawnEnemy(
-    kind: 'melee' | 'ranged',
-    distance = 240,
-    angle?: number,
-    config?: EnemyConfig,
-  ): string {
-    if (kind !== 'melee' && kind !== 'ranged') throw new TypeError('Invalid enemy kind.');
+  spawnEnemy(kind: EnemyKind, distance = 240, angle?: number, config?: EnemyConfig): string {
+    if (!isEnemyKind(kind)) throw new TypeError('Invalid enemy kind.');
     if (
       !Number.isFinite(distance) ||
       distance < 0 ||
@@ -552,8 +565,9 @@ export class GameplayWorld {
     if (this.enemies.getEnemies().filter((e) => e.alive).length >= this.spawnSettings.maxActive)
       throw new RangeError('Alpha enemy cap reached.');
     // Validate the optional test profile before changing RNG, IDs or authoritative entities.
-    const profile = enemyConfig(config ?? ALPHA_ENEMIES[kind]);
-    if (profile.behavior !== kind) throw new TypeError('Enemy kind/profile mismatch.');
+    const profile = enemyConfig(config ?? this.enemyProfile(kind));
+    if (profile.behavior !== enemyKindConfig(kind).behavior)
+      throw new TypeError('Enemy kind/profile mismatch.');
     const a = angle ?? this.spawnRandom() * Math.PI * 2;
     return this.registerEnemy(
       kind,
@@ -570,35 +584,53 @@ export class GameplayWorld {
     if (id === this.bossEnemyId) return 'boss';
     const elite = this.eliteProfiles.get(id);
     if (elite) return elite === 'melee' ? 'elite-melee' : 'elite-ranged';
-    return this.enemies.getEnemy(id).config.behavior;
+    return this.enemyKinds.get(id) ?? 'melee';
+  }
+  /** Task 12: normal kind of each registered enemy (elites/bosses keep their base kind). */
+  private readonly enemyKinds = new Map<string, EnemyKind>();
+  /** Task 12: shares of the new kinds in automatic waves (campaign map mix; 0 elsewhere). */
+  private readonly kindShares: Readonly<Record<NewEnemyKind, number>>;
+  private readonly autoSpawnedByKind: Record<EnemyKind, number> = {
+    melee: 0,
+    ranged: 0,
+    swift: 0,
+    brute: 0,
+    bombard: 0,
+  };
+  /** Task 12: automatic (wave) spawns of this run per kind. */
+  autoSpawnCounts(): Readonly<Record<EnemyKind, number>> {
+    return Object.freeze({ ...this.autoSpawnedByKind });
   }
   /**
    * Task 10 §1.2: enemy profiles of this run — the alpha profiles, with the map's movement-speed
    * modifier (campaign only). Used for automatic waves, boss adds and as the elite base.
    */
-  private enemyProfiles: Readonly<Record<'melee' | 'ranged', EnemyConfig>> | null = null;
-  private enemyProfile(kind: 'melee' | 'ranged'): EnemyConfig {
+  private enemyProfiles: Readonly<Record<EnemyKind, EnemyConfig>> | null = null;
+  private enemyProfile(kind: EnemyKind): EnemyConfig {
     if (!this.enemyProfiles) {
       const scale = this.campaignMap?.enemySpeedScale ?? 1;
       const scaled = (c: EnemyConfig) =>
         scale === 1 ? c : Object.freeze({ ...c, movementSpeed: c.movementSpeed * scale });
-      this.enemyProfiles = Object.freeze({
-        melee: scaled(ALPHA_ENEMIES.melee),
-        ranged: scaled(ALPHA_ENEMIES.ranged),
-      });
+      this.enemyProfiles = Object.freeze(
+        Object.fromEntries(ENEMY_KINDS.map((k) => [k, scaled(enemyKindConfig(k))])) as Record<
+          EnemyKind,
+          EnemyConfig
+        >,
+      );
     }
     return this.enemyProfiles[kind];
   }
   private registerEnemy(
-    kind: 'melee' | 'ranged',
+    kind: EnemyKind,
     position: Point,
     profile: EnemyConfig = this.enemyProfile(kind),
-    stats: CombatAttributes = this.enemyStats,
+    stats: CombatAttributes = enemyKindStats(kind, this.enemyStats),
   ): string {
     const id = `enemy-${++this.enemySequence}`;
     this.core.addEntity({ id, affiliation: 'enemy', stats });
     this.enemies.registerEnemy({ entityId: id, config: profile, position });
     this.enemyIds.add(id);
+    this.enemyKinds.set(id, kind);
     this.prepare();
     return id;
   }
@@ -760,27 +792,49 @@ export class GameplayWorld {
       value,
     );
   }
+  /**
+   * Kind of the next automatic spawn, deterministic like the Task 06 ranged share:
+   * 1. ranged keeps its existing rule (⌊(n+1)·s⌋ > ⌊n·s⌋), so maps without new kinds keep their
+   *    exact sequence;
+   * 2. otherwise the new kind furthest behind (n + 1)·share by at least ½ spawns (rounding rule;
+   *    ties in the order swift, brute, bombard);
+   * 3. otherwise melee.
+   * Every kind stays within ±1 of n·share over any prefix of spawns (≤ 0.64 for the new kinds).
+   */
+  private nextSpawnKind(): EnemyKind {
+    const next = this.autoSpawnSequence + 1;
+    const share = this.spawnSettings.rangedShare; // the exact Task 06 expression
+    if (Math.floor(next * share) > Math.floor((next - 1) * share)) return 'ranged';
+    let best: EnemyKind = 'melee',
+      lead = -1e-9;
+    for (const kind of NEW_ENEMY_KINDS) {
+      const d = next * this.kindShares[kind] - this.autoSpawnedByKind[kind] - 0.5;
+      if (d > lead) {
+        best = kind;
+        lead = d;
+      }
+    }
+    return best;
+  }
   private spawnOffscreen(count: number, stage: number) {
     const enemyIds: string[] = [],
-      positions: Point[] = [];
+      positions: Point[] = [],
+      kinds: EnemyKind[] = [];
     for (let i = 0; i < count && this.enemyIds.size < this.spawnSettings.maxActive; i++) {
-      const share = this.spawnSettings.rangedShare;
-      const kind =
-        Math.floor((this.autoSpawnSequence + 1) * share) >
-        Math.floor(this.autoSpawnSequence * share)
-          ? 'ranged'
-          : 'melee';
+      const kind = this.nextSpawnKind();
       const position = offscreenPosition(
         this.body,
         this.viewport,
-        ALPHA_ENEMIES[kind].radius,
+        this.enemyProfile(kind).radius,
         this.spawnSettings,
         this.spawnRandom,
       );
       if (!position) break;
       this.autoSpawnSequence++;
+      this.autoSpawnedByKind[kind]++;
       enemyIds.push(this.registerEnemy(kind, position));
       positions.push(position);
+      kinds.push(kind);
     }
     this.record('spawning', [
       Object.freeze({
@@ -789,6 +843,7 @@ export class GameplayWorld {
         stage,
         enemyIds: Object.freeze(enemyIds),
         positions: Object.freeze(positions),
+        kinds: Object.freeze(kinds),
         nextSpawnAt: this.nextSpawnAt,
       }),
     ]);
@@ -1318,10 +1373,13 @@ export class GameplayWorld {
     this.record('enemy', events);
     for (const event of events)
       if (
-        (event.type === 'contact-attempt' || event.type === 'enemy-projectile-impact') &&
+        (event.type === 'contact-attempt' ||
+          event.type === 'enemy-projectile-impact' ||
+          event.type === 'artillery-strike') &&
         event.result
       ) {
-        const attack = event.type === 'contact-attempt' ? event.attack! : event.projectile.attack;
+        const attack =
+          event.type === 'enemy-projectile-impact' ? event.projectile.attack : event.attack!;
         this.record(
           'status',
           this.adapter.consumeImpact({
@@ -1400,7 +1458,7 @@ export class GameplayWorld {
           const elite = this.eliteProfiles.get(event.entityId);
           // Task 08: elites drop their normal crystal plus the profile's extra run XP.
           const xp =
-            (enemy.config.behavior === 'melee' ? XP_RULES.meleeReward : XP_RULES.rangedReward) +
+            enemyKindXp(this.enemyKinds.get(event.entityId) ?? 'melee') +
             (elite ? eliteProfile(elite).extraXp : 0) +
             (event.entityId === this.bossEnemyId && this.bossDefinition
               ? this.bossDefinition.xpReward
@@ -1437,6 +1495,7 @@ export class GameplayWorld {
         } else if (this.eliteEnemyIds.includes(event.entityId))
           this.campaignInput({ type: 'elite-killed', time: this.clock });
         this.enemyIds.delete(event.entityId);
+        this.enemyKinds.delete(event.entityId);
         this.enemies.unregisterEnemy(event.entityId);
         this.weapons.removeBody(event.entityId);
       }

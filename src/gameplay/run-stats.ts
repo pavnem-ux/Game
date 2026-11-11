@@ -6,7 +6,15 @@ import type { WorldEvent } from './types';
  * per world, so every run starts empty. Memory is bounded: per-source/per-type maps are small,
  * attack/enemy lookups keep only recent entries and timelines are capped.
  */
-export type EnemyType = 'melee' | 'ranged' | 'elite-melee' | 'elite-ranged' | 'boss';
+export type EnemyType =
+  | 'melee'
+  | 'ranged'
+  | 'swift'
+  | 'brute'
+  | 'bombard'
+  | 'elite-melee'
+  | 'elite-ranged'
+  | 'boss';
 export interface RunStatsResolver {
   readonly playerId: string;
   /** Skill/synergy attribution of an attack snapshot (`skill:<id>`, `synergy:<id>`). */
