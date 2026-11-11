@@ -78,12 +78,13 @@ const resolutions = (w: GameplayWorld) =>
   w.getEvents().filter((e) => e.channel === 'campaign' && e.event.type === 'run-resolved');
 
 describe('campaign runs resolve exactly once in the world', () => {
-  it('long map: an early boss kill wins only when the duration is reached', () => {
+  it('long map: the boss appears when the 15:00 timer ends and its death wins at once', () => {
     const w = world(10);
-    until(w, 601);
-    kill(w, w.getSnapshot().campaign!.bossEnemyId!);
-    expect(w.getSnapshot().campaign).toMatchObject({ status: 'active', bossKilled: true });
+    until(w, 899);
+    expect(w.getSnapshot().campaign!.bossEnemyId).toBeNull();
     until(w, 900);
+    expect(w.getSnapshot().campaign).toMatchObject({ status: 'active', durationReached: true });
+    kill(w, w.getSnapshot().campaign!.bossEnemyId!);
     const c = w.getSnapshot().campaign!;
     expect(c).toMatchObject({ status: 'victory', resolvedAt: 900, bossKilled: true });
     expect(resolutions(w)).toHaveLength(1);

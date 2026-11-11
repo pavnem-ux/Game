@@ -90,9 +90,11 @@ nearest pile; nothing is lost), merge per 64-unit cell, and use their own seeded
 | Abandoned / reload      | nothing                                                                                                                                               |
 | Piles left at a victory | collected automatically (see below)                                                                                                                   |
 
-On a victory, every pile still on the ground is collected. On maps 1–10 the boss appears at the
-end of the timer, so the run is won the moment it dies and its pile could never be picked up
-otherwise. A defeat does not collect the remaining piles.
+On a victory, every pile still on the ground is collected. The boss of every map appears when the
+timer ends (owner decision in the Task 11 review; it was 10:00 on all maps), so the map is won the
+moment the boss dies and its pile could never be picked up otherwise. A defeat does not collect
+the remaining piles. The income table below was measured with this rule (every bot victory ended
+1–4 s after the timer).
 
 Gold enters the profile exactly once, in the same `applyRunResult` as the XP (`RunResult.coins`,
 validated whole number ≥ 0; the existing run-ID deduplication prevents double Gold after reload or a
@@ -110,9 +112,9 @@ count, so every won map gives ≈ 27 normal piles on average.
 | Map | Coin target (60%) | Victories | Normal kills (avg) | Coins min–max | Coins avg | % of target | Gold per victory (avg, + bonus) | Task 10 victory Gold |
 | --- | ----------------- | --------- | ------------------ | ------------- | --------- | ----------- | ------------------------------- | -------------------- |
 | 1   | 45                | 8 / 8     | 2534               | 40–48         | 43.5      | 97%         | 73.5 (+30)                      | 75                   |
-| 10  | 180               | 8 / 8     | 7283               | 172–212       | 190       | 106%        | 310 (+120)                      | 300                  |
-| 20  | 270               | 8 / 8     | 7311               | 260–320       | 287       | 106%        | 467 (+180)                      | 450                  |
-| 40  | 450               | 8 / 8     | 7266               | 440–540       | 485       | 108%        | 785 (+300)                      | 750                  |
+| 10  | 180               | 8 / 8     | 7285               | 171–211       | 189       | 105%        | 309 (+120)                      | 300                  |
+| 20  | 270               | 8 / 8     | 7318               | 260–320       | 288.5     | 107%        | 468.5 (+180)                    | 450                  |
+| 40  | 450               | 8 / 8     | 7299               | 428–528       | 473       | 105%        | 773 (+300)                      | 750                  |
 
 Not measured: weaker human runs that win without a full clear collect fewer normal piles (the boss,
 elite piles and the 40% bonus are fixed); the bots at the recommended level (class level = map

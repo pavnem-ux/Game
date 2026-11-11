@@ -22,7 +22,7 @@ const spawning = (id: number) =>
   campaignSpawning(getCampaignMap(id), spawningSettings(), ALPHA.enemyCap);
 
 describe('Task 10 Phase 1 — 40 maps in 4 acts', () => {
-  it('40 maps; acts of 10 with Russian names; maps 11–40 last 15 min with the boss at 10:00', () => {
+  it('40 maps; acts of 10 with Russian names; maps 11–40 last 15 min with the boss at the end', () => {
     expect(CAMPAIGN_MAPS).toHaveLength(40);
     expect(CAMPAIGN_MAPS.map((m) => m.id)).toEqual(Array.from({ length: 40 }, (_, i) => i + 1));
     expect(CAMPAIGN_ACTS.map((a) => [a.roman, a.name, a.firstMap, a.lastMap])).toEqual([
@@ -36,14 +36,15 @@ describe('Task 10 Phase 1 — 40 maps in 4 acts', () => {
       expect(m.name).toMatch(/[А-ЯЁа-яё]/);
       expect(m.bossName).toMatch(/[А-ЯЁа-яё]/);
       if (m.id > 10) expect(m.durationSeconds).toBe(900);
+      // Owner decision (Task 11 review): the boss appears when the map timer ends (was 10:00).
       const boss = campaignSchedule(m).filter((e) => e.kind === 'boss');
-      expect(boss.map((e) => e.time)).toEqual([600]);
+      expect(boss.map((e) => e.time)).toEqual([m.durationSeconds]);
     }
     expect(new Set(CAMPAIGN_MAPS.map((m) => m.name)).size).toBe(40);
     expect(new Set(CAMPAIGN_MAPS.map((m) => m.bossName)).size).toBe(40);
     expect(() => validateCampaignConfig()).not.toThrow();
   });
-  it('maps 1–10 snapshot: identical to Task 08 except the Gold source and the ranged share', () => {
+  it('maps 1–10 snapshot: identical to Task 08 except the Gold source, the ranged share and the boss time', () => {
     for (const before of act1.maps) {
       const id = before.map.id;
       const now = getCampaignMap(id);
@@ -55,8 +56,22 @@ describe('Task 10 Phase 1 — 40 maps in 4 acts', () => {
         reservedSlots: CAMPAIGN_BALANCE.reservedSlots,
         elite: { interval: 120, perEvent: 1, hpMultiplier: 2.5, damageMultiplier: 1.4 },
       });
-      // Elite/boss schedule byte-identical.
-      expect(JSON.parse(JSON.stringify(campaignSchedule(now)))).toEqual(before.schedule);
+      // Elite/boss schedule: byte-identical on the 10-minute maps 1–2 (boss already at the end).
+      // Longer maps (owner decision, Task 11 review): the boss moves from 10:00 to the end and
+      // 10:00 becomes an ordinary elite slot; elites stay every 2:00 strictly before the end.
+      const schedule = JSON.parse(JSON.stringify(campaignSchedule(now)));
+      type Ev = { kind: string; time: number };
+      if (now.durationSeconds === 600) expect(schedule).toEqual(before.schedule);
+      else {
+        const old = (before.schedule as Ev[]).filter((e) => e.kind === 'elite').map((e) => e.time);
+        const elites = (schedule as Ev[]).filter((e) => e.kind === 'elite').map((e) => e.time);
+        expect(elites).toEqual([...old, 600].sort((a, b) => a - b));
+        expect((before.schedule as Ev[]).find((e) => e.kind === 'boss')!.time).toBe(600);
+        expect((schedule as Ev[]).filter((e) => e.kind !== 'elite')).toEqual([
+          { id: 'boss', kind: 'boss', time: now.durationSeconds },
+          { id: 'end', kind: 'end', time: now.durationSeconds },
+        ]);
+      }
       // Spawner: only the ranged share differs (0.18 → 0.12).
       const s = spawning(id);
       expect({ ...s, rangedShare: before.spawning.rangedShare }).toEqual(before.spawning);

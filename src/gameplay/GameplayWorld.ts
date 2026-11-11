@@ -430,7 +430,7 @@ export class GameplayWorld {
       })(),
       firedEvents: this.director!.firedIds(),
       firedLog: this.director!.firedLog(),
-      bossTime: CAMPAIGN_BALANCE.boss.spawnTime,
+      bossTime: this.campaignMap!.durationSeconds,
       bossEnemyId: this.bossEnemyId,
       eliteEnemyIds: Object.freeze([...this.eliteEnemyIds]),
       elites: Object.freeze(

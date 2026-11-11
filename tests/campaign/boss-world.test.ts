@@ -3,6 +3,10 @@ import { GameplayWorld } from '../../src/gameplay';
 import type { WorldEvent } from '../../src/gameplay';
 import type { CombatTag } from '../../src/skills';
 import { resolveOffers } from '../skills/helpers';
+import { bossSpawnTime } from '../../src/campaign';
+
+/** Map 10's boss appears when its 15:00 timer ends (the map is won when it dies). */
+const B = bossSpawnTime(10);
 
 function world(protect = true) {
   const w = new GameplayWorld({
@@ -41,10 +45,10 @@ const boss = (o: WorldEvent[], type: string, id?: string) =>
 describe('boss abilities in the world (Task 08 §2.2)', () => {
   it('all five abilities act through the existing systems after the boss spawns', () => {
     const w = world();
-    run(w, 600, 5);
+    run(w, B, 5);
     const bossId = w.getSnapshot().campaign!.bossEnemyId!;
     expect(bossId).not.toBeNull();
-    const events = run(w, 640, 0.05);
+    const events = run(w, B + 40, 0.05);
     for (const id of ['void_bloom', 'collapse', 'night_rush', 'dread_tide', 'last_shadows'])
       expect(boss(events, 'boss-ability-executed', id).length, id).toBeGreaterThan(0);
     // Radial burst launched existing enemy projectiles from the boss.
@@ -70,11 +74,11 @@ describe('boss abilities in the world (Task 08 §2.2)', () => {
   });
   it('speed abilities boost the boss through EnemyAI and reset afterwards', () => {
     const w = world();
-    run(w, 600, 5);
+    run(w, B, 5);
     const bossId = w.getSnapshot().campaign!.bossEnemyId!;
     let boosted = 0;
     let seq = 0;
-    while (w.time < 640) {
+    while (w.time < B + 40) {
       w.update(0.05);
       const e = w.getSnapshot().enemies.find((x) => x.entityId === bossId);
       if (e?.speedBoost) boosted = Math.max(boosted, e.speedBoost);
@@ -88,12 +92,12 @@ describe('boss abilities in the world (Task 08 §2.2)', () => {
   });
   it('boss damage goes through Combat Core and the survival policies', () => {
     const shielded = world(true);
-    run(shielded, 640, 0.05);
+    run(shielded, B + 40, 0.05);
     expect(shielded.core.getEntity('player').currentHp).toBe(
       shielded.core.getEntity('player').maxHp,
     );
     const exposed = world(true);
-    run(exposed, 600, 5); // protected until the boss spawns
+    run(exposed, B, 5); // protected until the boss spawns
     const bossId = exposed.getSnapshot().campaign!.bossEnemyId!;
     expect(bossId).not.toBeNull();
     // Remove everything except the boss so only boss damage reaches the player.
@@ -104,7 +108,7 @@ describe('boss abilities in the world (Task 08 §2.2)', () => {
           procs: false,
         });
     exposed.setTestProtection(false);
-    const events = run(exposed, 640, 0.05);
+    const events = run(exposed, B + 40, 0.05);
     const damage = events.filter(
       (e) =>
         e.channel === 'combat' &&
@@ -117,11 +121,11 @@ describe('boss abilities in the world (Task 08 §2.2)', () => {
   it('the ability timeline is identical for small and large frames (deterministic)', () => {
     const timeline = (step: number) => {
       const w = world();
-      run(w, 600, 5);
+      run(w, B, 5);
       const out: string[] = [];
       let seq = w.getEvents().at(-1)?.sequence ?? 0;
-      while (w.time < 630 - 1e-9) {
-        w.update(Math.min(step, 630 - w.time));
+      while (w.time < B + 30 - 1e-9) {
+        w.update(Math.min(step, B + 30 - w.time));
         const fresh = w.getEvents(seq);
         if (fresh.length) seq = fresh.at(-1)!.sequence;
         for (const e of fresh)
@@ -138,16 +142,19 @@ describe('boss abilities in the world (Task 08 §2.2)', () => {
   });
   it('no boss actions while paused, and none after the boss dies', () => {
     const w = world();
-    run(w, 603, 5);
+    run(w, B + 3, 5);
     const before = w.getSnapshot().campaign!.bossCast;
     w.setPaused(true);
     w.update(60);
     expect(w.getSnapshot().campaign!.bossCast).toEqual(before);
     w.setPaused(false);
     w.clearEnemies();
-    const events = run(w, 660, 0.5);
-    expect(boss(events, 'boss-ability-executed')).toHaveLength(0);
-    // Map 10 lasts 15:00, so the run stays active (boss killed) until the duration.
-    expect(w.getSnapshot().campaign).toMatchObject({ bossKilled: true, status: 'active' });
+    w.update(0.05);
+    // The boss appears at the end of the timer, so its death wins the map at once.
+    expect(w.getSnapshot().campaign).toMatchObject({ bossKilled: true, status: 'victory' });
+    const time = w.time;
+    w.update(60);
+    expect(w.time).toBe(time); // resolved: the world is frozen, no further boss actions
+    expect(boss(w.getEvents(), 'boss-ability-executed').every((e) => e.time <= time)).toBe(true);
   });
 });

@@ -82,8 +82,8 @@ describe('Task 11 Phase 4 — drops in the world', () => {
     expect([1, 10, 20, 40].map(coinTarget)).toEqual([45, 180, 270, 450]);
     // Boss: 20% of the coin target (map 1: 9, map 40: 90).
     expect([1, 10, 40].map((m) => coinValue('boss', m))).toEqual([9, 36, 90]);
-    // Elites: 20% of the target shared by the map's elites (map 1: 4 elites → 2 each; map 40: 20 → 5).
-    expect([1, 10, 20, 25, 40].map((m) => coinValue('elite', m))).toEqual([2, 6, 7, 4, 5]);
+    // Elites: 20% of the target shared by the map's elites (map 1: 4 elites → 2 each; map 10: 7 → 5; map 40: 22 → 4).
+    expect([1, 10, 20, 25, 40].map((m) => coinValue('elite', m))).toEqual([2, 5, 7, 4, 4]);
     for (const m of [1, 10, 20, 25, 40]) {
       const elites = campaignSchedule(getCampaignMap(m)).filter((e) => e.kind === 'elite').length;
       const target = coinTarget(m) * COIN_RULES.eliteShare;

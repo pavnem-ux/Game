@@ -8,7 +8,8 @@ Spec: [task-08.md](task-08.md) (owner's text). Step log, code map and decisions:
 
 - Main menu: Играть / Персонаж / Карты / Прогресс / Настройки, Gold always visible.
 - 10 maps in sequence; a map unlocks only after a victory on the previous one.
-- A victory needs **both**: survive to the map's end and kill its boss (boss spawns at 10:00).
+- A victory needs **both**: survive to the map's end and kill its boss (the boss spawns when the timer ends —
+  owner decision in the Task 11 review, was 10:00 — so the map is won the moment it dies).
   Death (after the one revival) = defeat; quitting or reloading during a run = abandoned.
 - Elites every 2 minutes (melee «Свирепый громила» / ranged, alternating), 10 distinct bosses.
 - Results screen: outcome, time, kills, elites, boss, class XP/levels/talent points, Gold,
@@ -87,10 +88,10 @@ only from existing mechanics (enemies, elite profiles, boss ability library, spa
 
 - 40 maps in 4 acts: I «Забытые сказки» (1–10), II «Заколдованные земли» (11–20), III «Мёртвое
   царство» (21–30), IV «Последняя сказка» (31–40). Map 10 → 11 → … → 40 unlock chain.
-- Maps 11–40: 15 min, boss at 10:00. Spawn rate stays at map 10's; HP ×(2.08 + 0.15·(id − 10)),
+- Maps 11–40: 15 min, boss at 15:00 (the end; was 10:00 until the Task 11 review). Spawn rate stays at map 10's; HP ×(2.08 + 0.15·(id − 10)),
   damage ×(1.72 + 0.10·(id − 10)).
 - Elites: every 2:00 / 1:45 / 1:30 / 1:15 (acts I–IV), strictly before the end; 2 per event on
-  maps 25–30 and 35–40. The boss is its own 10:00 event. Reserved enemy slots per map =
+  maps 25–30 and 35–40. The boss is its own event at the map end (10:00 is an ordinary elite slot). Reserved enemy slots per map =
   max(8, all scheduled elites + boss).
 - Per-map modifiers (≤ 2, maps 11–40): «Быстрые враги» (enemy speed ×1.1), «Больше / Много
   стрелков» (ranged share 0.15 / 0.18), «Сильные элиты» (elite HP ×1.25, damage ×1.15).

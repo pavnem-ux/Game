@@ -93,6 +93,11 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/9
 
 ## Verification log
 
+- Owner decision (review of PR #9): the boss of every map appears when the timer ends (was 10:00),
+  so a map is won the moment the boss dies; 10:00 becomes an ordinary elite slot (maps 3–10 and
+  31–40 get one more elite event). `bossSpawnTime(map)`, `CAMPAIGN_BALANCE.boss.minSpawnTime` 600.
+  Old-rule tests now assert the new rule. Re-measured income: map 1 43.5 (97%), map 10 189 (105%),
+  map 20 288.5 (107%), map 40 473 (105%).
 - Phase 6: typecheck ✓, format ✓, `npm test` 1213 ✓, `npm run build` ✓, `test:production` 2 PASS
   (with `CHROMIUM_PATH`), QA build + `test:qa` PASS, `test:e2e` 3 PASS. Income table (8 bot
   victories per map): map 1 avg 43.5 coins (97% of 45), map 10 190 (106% of 180), map 20 287 (106%

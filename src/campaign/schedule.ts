@@ -4,8 +4,9 @@ import type { CampaignMap, EliteProfileId } from './config';
 
 /**
  * Task 08 elite/boss/end schedule. Pure and deterministic: the event list depends only on the map.
- * Elites every `elite.interval` seconds strictly before the map end; the boss replaces the elite
- * slot at `boss.spawnTime`; a final `end` event marks the duration. `CampaignDirector` fires each
+ * Elites every `elite.interval` seconds strictly before the map end; the boss appears at the map
+ * end (owner decision in the Task 11 review: the map is won the moment it dies); a final `end`
+ * event marks the duration. `CampaignDirector` fires each
  * event exactly once from state (never from the bounded world event history), so pause/resume,
  * revival and arbitrarily large frame steps cannot skip or duplicate an event.
  */
@@ -23,9 +24,9 @@ export type ScheduledEvent =
 export function campaignSchedule(map: CampaignMap): readonly ScheduledEvent[] {
   const { elite, boss } = CAMPAIGN_BALANCE;
   const events: ScheduledEvent[] = [];
-  if (boss.spawnTime > map.durationSeconds)
+  if (!(map.durationSeconds >= boss.minSpawnTime))
     throw new Error(`Map ${map.id} has no boss slot before its end.`);
-  // Task 10: the act's elite interval (strictly before the end, never at 10:00) and per-event
+  // Task 10: the act's elite interval (strictly before the end) and per-event
   // count; several elites of one event are separate events at the same time (index order).
   let index = 0;
   for (const time of eliteEventTimes(map.id))
@@ -34,7 +35,7 @@ export function campaignSchedule(map: CampaignMap): readonly ScheduledEvent[] {
       events.push(Object.freeze({ id: `elite-${index + 1}`, kind: 'elite', time, index, profile }));
       index++;
     }
-  events.push(Object.freeze({ id: 'boss', kind: 'boss', time: boss.spawnTime }));
+  events.push(Object.freeze({ id: 'boss', kind: 'boss', time: map.durationSeconds }));
   events.push(Object.freeze({ id: 'end', kind: 'end', time: map.durationSeconds }));
   // Stable order: by time; at equal time elites/boss resolve before the end marker.
   return Object.freeze(
