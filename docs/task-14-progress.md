@@ -24,8 +24,8 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/13
 - [x] 3.3 Music
 - [x] 3.4 Settings UI
 - [x] Phase 3 tests
-- [ ] 4.1 Full checks (AGENTS.md §6 + e2e, `test:production`)
-- [ ] 4.2 Docs (`AUDIO.md`, `IN_RUN_SKILLS.md`, `PLAYER_SURVIVAL.md`, README, `playtest.md`)
+- [x] 4.1 Full checks (AGENTS.md §6 + e2e, `test:production`)
+- [x] 4.2 Docs (`AUDIO.md`, `IN_RUN_SKILLS.md`, `PLAYER_SURVIVAL.md`, README, `playtest.md`)
 - [ ] 4.3 PR description
 
 ## Code map (Task 14)
@@ -114,7 +114,13 @@ readyAt, cooldown, used, hitsAvoided}`; `RunStats.dash {used, hitsAvoided}`.
 - Level-up dialog buttons are click-silent (`data-sound="none"`): the world events give card pick
   / reroll / banish / skip sounds, so a click never double-sounds.
 
+- DEV panel «Выбор и рывок · Task 14»: +3 rerolls / +2 banishes, dash without cooldown, default
+  cooldown. The override also applies to a running cooldown (from the latest dash start, never
+  earlier than now); a finished cooldown stays finished.
+
 ## Verification log
+
+- Phase 4: typecheck ✓, format ✓, `npm test` 1277 ✓, build ✓, `test:production` 2 PASS, QA + `test:qa` PASS, `test:e2e` 3 PASS (alpha: DEV choice/dash tools).
 
 - Phase 3: typecheck ✓, format ✓, `npm test` 1276 ✓, build ✓, `test:production` 2 PASS, QA + `test:qa` PASS, `test:e2e` 3 PASS; no audio log in `dist/`.
 
