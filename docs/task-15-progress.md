@@ -6,7 +6,7 @@ byte-identical (listed in `.prettierignore`). Engine conflicts: `docs/synergies-
 when the first gap is found). Branch `task-15-synergies` from `main` at `e40d7a8` (Task 14 merged).
 All numbers are **provisional** (alpha balance) and come only from the catalog.
 
-Current: Phase 3 (feedback & QA)
+Current: Phase 4 (delivery)
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/14
 
@@ -21,10 +21,10 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/14
 - [x] 2.3 Archer awakenings (toxic_barrage, plague_chain, deadly_precision)
 - [x] 2.4 Rogue awakenings (blood_frenzy, deep_wounds, final_cut)
 - [x] Phase 2 tests
-- [ ] 3.1 Banners, card hints, panel pips
-- [ ] 3.2 VFX + sounds
-- [ ] 3.3 Debug controls
-- [ ] Phase 3 e2e
+- [x] 3.1 Banners, card hints, panel pips
+- [x] 3.2 VFX + sounds
+- [x] 3.3 Debug controls
+- [x] Phase 3 e2e
 - [ ] 4.1 Full checks (AGENTS.md §6 + e2e)
 - [ ] 4.2 Docs (synergy doc, README, `playtest.md`)
 - [ ] 4.3 PR description
@@ -63,9 +63,32 @@ Earlier maps: `docs/task-14-progress.md`, `docs/SYNERGIES_V2_DAMAGE.md`.
   stacks. Event `synergy-triggered` gains `level` and `awakened`. Blood Feast heals through
   `healPlayer` (Combat Core, never revives) with a resolver cooldown key `@heal`.
 - Tests: `tests/skills/synergy-awakening.test.ts` (14).
+- Feedback (3.1): event `synergy-level-up {synergyId, level 2|3, pair, skillId}` from
+  `chooseSkill` / `grantTestSkill` (`recordSynergyLevelUps`, rank levels only; QA overrides emit
+  nothing). Snapshot `synergyLevels [{id, level, pair, forced}]`. `synergy-info.ts`:
+  `SYNERGY_LEVEL_TEXT` (II text, awakened name + effect, Russian), `LEVEL_ROMAN`, `ranksOf`,
+  `cardLevelRaises` (▲ hint only when the pick raises the level to II/III), overview `level` /
+  `bestPair`. UI: `SynergyBanners.tsx` (unlock I / II / gold III «Пробуждение»; queued, 3 visible,
+  shown and timed only while playing), `SynergyPips` + II/III texts in the Skills panel,
+  `CardLevelHint` «▲ <name> II/III» on offer cards (+ aria-label).
+- VFX + sound (3.2): scene flash per synergy colour (`SYNERGY_COLORS`), awakened = larger gold
+  double ring, label «… II/III ✦»; synergy areas/rift coloured by synergy. Audio cues
+  `synergy-fire/ice/impact/poison/blood` (family per synergy, `SYNERGY_FAMILY`), `synergy-awaken`
+  layer for awakened triggers, `synergy-level` (II) and `synergy-awakening` (III) jingles.
+- Debug (3.3): QA diagnostics `level`, `bestPair`, `forced`; DEV panel select «Задать уровень»
+  (по рангам / закрыта / I / II / III) → controller `synergy-level {id, level|null}`.
+- Tests: `tests/skills/synergy-feedback.test.ts`, `tests/ui-kit/synergy-banners.test.ts`; alpha e2e
+  (unlock banner, ▲ hint only on the raising card, II banner after the pick, gold III banner, DEV
+  level select).
 - Gaps: [synergies-v3-gaps.md](synergies-v3-gaps.md) (4 interpretation rows, none blocking).
 
 ## Decisions
+
+- Banners are a React HUD element over the arena, shown only while playing: a level-up from a
+  card pick appears right after the dialog closes, and pauses/offers never hide cards behind it.
+  They queue (nothing dropped when several arrive together; 3 visible).
+- Trigger sounds are per element family (5 sounds for 12 synergies) with the awakened layer on
+  top; the flash colour is per synergy.
 
 - The level is read when a synergy fires (`tuning(id)` per trigger); since ranks only rise, a level
   never drops in a run. Deadly Precision's bonus reads the current level when damage is computed.
@@ -73,6 +96,8 @@ Earlier maps: `docs/task-14-progress.md`, `docs/SYNERGIES_V2_DAMAGE.md`.
   returns to the ranks. Only tests and the DEV/QA controller use it.
 
 ## Verification log
+
+- Phase 3: typecheck ✓, format ✓, `npm test` 1306 ✓, build ✓, `test:production` 2 PASS, QA + `test:qa` PASS, `test:e2e` 3 PASS.
 
 - Phase 2: typecheck ✓, format ✓, `npm test` 1300 ✓.
 
