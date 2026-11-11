@@ -391,6 +391,8 @@ export class GameplayWorld {
   /** End of the latest dash's i-frame window (hits blocked before it count as avoided). */
   private dashGuardUntil = -1;
   private dashCooldownOverride: number | null = null;
+  /** Start of the running cooldown (the latest dash start). */
+  private dashCooldownFrom = 0;
   /** Why a dash cannot start now (null = it can). */
   dashBlockReason(): 'dead' | 'paused' | 'dashing' | 'cooldown' | null {
     if (!this.survival.getState().canPlayerAct) return 'dead';
@@ -410,11 +412,16 @@ export class GameplayWorld {
     this.dashRequested = true;
     return true;
   }
-  /** DEV/QA: dash cooldown override in seconds (null = `DASH_RULES.cooldown`). */
+  /**
+   * DEV/QA: dash cooldown override in seconds (null = `DASH_RULES.cooldown`). Also applies to a
+   * running cooldown (measured from the latest dash start; never earlier than now).
+   */
   setDebugDashCooldown(seconds: number | null): void {
     if (seconds !== null && (!Number.isFinite(seconds) || seconds < 0 || seconds > 60))
       throw new RangeError('Dash cooldown override must be 0–60 s.');
     this.dashCooldownOverride = seconds;
+    if (this.dashReadyPending)
+      this.dashReadyAt = Math.max(this.clock, this.dashCooldownFrom + this.dashCooldown);
   }
   private get dashCooldown(): number {
     return this.dashCooldownOverride ?? DASH_RULES.cooldown;
@@ -449,6 +456,7 @@ export class GameplayWorld {
       direction,
       distance,
     });
+    this.dashCooldownFrom = this.clock;
     this.dashReadyAt = this.clock + this.dashCooldown;
     this.dashReadyPending = this.dashReadyAt > this.clock;
     this.dashGuardUntil = this.clock + DASH_RULES.invulnerability;

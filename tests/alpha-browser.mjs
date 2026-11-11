@@ -341,6 +341,20 @@ try {
       (li) => li.textContent.startsWith('dash') && li.textContent.endsWith('silent'),
     ),
   );
+  // Task 14 §1.4 DEV tools: grant rerolls/banishes and the dash cooldown override.
+  const choicesBefore = (await state()).world.skills;
+  await page.getByRole('button', { name: 'DEV · Тестирование' }).click();
+  await page.getByRole('button', { name: '+3 переброса, +2 изгнания' }).click();
+  await page.getByRole('button', { name: 'Рывок без перезарядки' }).click();
+  await page.getByRole('button', { name: 'DEV · Закрыть' }).click();
+  await page.evaluate(() => window.__alpha.advance(0.05));
+  s = await state();
+  assert.equal(s.world.skills.rerolls, choicesBefore.rerolls + 3);
+  assert.equal(s.world.skills.banishes, choicesBefore.banishes + 2);
+  await page.keyboard.press('Space');
+  await page.evaluate(() => window.__alpha.advance(0.3));
+  assert.equal((await state()).world.dash.used, 2, 'no cooldown with the DEV override');
+  await command({ type: 'dash-cooldown', seconds: null });
 
   await command({ type: 'restart', options: { characterClass: 'mage', initialEnemies: false } });
   await command({ type: 'protection', enabled: true });

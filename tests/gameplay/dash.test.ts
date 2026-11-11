@@ -99,6 +99,26 @@ describe('Task 14 Phase 2 — dash', () => {
     expect(d.survival.getState().runState).toBe('awaiting-revival-choice');
     expect([d.requestDash(), d.dashBlockReason()]).toEqual([false, 'dead']);
   });
+  it('DEV cooldown override also shortens or restores a running cooldown', () => {
+    const w = world();
+    w.requestDash();
+    const t0 = of(step(w, 0.5), 'dash-started')[0].time;
+    expect(w.dashBlockReason()).toBe('cooldown');
+    w.setDebugDashCooldown(1);
+    expect(w.getSnapshot().dash.readyAt).toBeCloseTo(t0 + 1, 9);
+    w.setDebugDashCooldown(0); // already past t0 + 0 → ready now
+    const ready = of(step(w, 0.05), 'dash-ready');
+    expect(ready).toHaveLength(1);
+    expect(w.requestDash()).toBe(true);
+    step(w, 0.5);
+    // A finished cooldown stays finished; restoring the default applies from the next dash.
+    w.setDebugDashCooldown(null);
+    expect(w.dashBlockReason()).toBeNull();
+    w.requestDash();
+    step(w, 0.05);
+    expect(w.getSnapshot().dash.readyAt).toBeCloseTo(w.getSnapshot().dash.startedAt! + 3, 9);
+    expect(() => w.setDebugDashCooldown(-1)).toThrow(RangeError);
+  });
   it('i-frames: the existing hit protection for 0.2 s from the dash start only', () => {
     const w = world();
     w.setTestProtection(false);

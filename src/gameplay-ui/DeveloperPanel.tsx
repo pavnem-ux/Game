@@ -324,6 +324,20 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
           </p>
         </fieldset>
       )}
+      {w && (
+        <fieldset aria-label="Choice and Dash Debug">
+          <legend>Выбор и рывок · Task 14</legend>
+          <button onClick={() => send({ type: 'grant-choices', rerolls: 3, banishes: 2 })}>
+            +3 переброса, +2 изгнания
+          </button>
+          <button onClick={() => send({ type: 'dash-cooldown', seconds: 0 })}>
+            Рывок без перезарядки
+          </button>
+          <button onClick={() => send({ type: 'dash-cooldown', seconds: null })}>
+            Обычная перезарядка рывка
+          </button>
+        </fieldset>
+      )}
       {w && state.qa && (
         <fieldset aria-label="Synergy Diagnostics">
           <legend>Synergy Diagnostics · Синергии</legend>
