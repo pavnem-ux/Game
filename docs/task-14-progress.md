@@ -6,7 +6,7 @@ blank lines). Branch `task-14-sound-dash` from `main` at `4b29dec` (Task 13 UI k
 
 Current: Phase 1 (skill-choice control)
 
-Draft PR: _(set in 0.1)_
+Draft PR: https://github.com/pavnem-ux/Game/pull/13
 
 ## Checklist
 
