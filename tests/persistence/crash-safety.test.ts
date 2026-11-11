@@ -78,6 +78,7 @@ describe('Task 08.5 §3.2 crash path leaves the save intact', () => {
       ({
         time: 30,
         kills: 3,
+        coins: { collected: 0, piles: [] },
         character: { characterClass: 'warrior' },
         progression: { level: 2 },
         runStats: {

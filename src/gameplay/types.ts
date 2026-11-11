@@ -1,4 +1,6 @@
 import type { TalentConfig, TalentRanks } from '../talents';
+import type { Loadout } from '../equipment';
+import type { CoinEvent, CoinPile } from './coins';
 import type { RunStatsSnapshot } from './run-stats';
 import type { ExperienceEvent, RunProgression, XpCrystal } from './experience';
 import type { SpawnSettings, ViewportSize } from './spawning';
@@ -33,6 +35,8 @@ export interface GameplayOptions {
    * the catalog is not approved). `config` is a test seam (defaults to the shipped catalog).
    */
   readonly talents?: Readonly<{ ranks: TalentRanks; config?: TalentConfig }>;
+  /** Task 11: this class's equipped gear (validated: known items, right slot and class). */
+  readonly equipment?: Readonly<{ loadout: Loadout }>;
 }
 export interface WorldEvent {
   readonly sequence: number;
@@ -58,7 +62,8 @@ export interface WorldEvent {
     | RewardEvent
     | WaveEvent
     | SkillEvent
-    | CampaignEvent;
+    | CampaignEvent
+    | CoinEvent;
 }
 export interface GameplaySnapshot {
   readonly time: number;
@@ -93,6 +98,8 @@ export interface GameplaySnapshot {
   readonly kills: number;
   readonly progression: RunProgression;
   readonly crystals: readonly XpCrystal[];
+  /** Task 11: coins collected this run and the piles on the ground (campaign runs only). */
+  readonly coins: Readonly<{ collected: number; piles: readonly CoinPile[] }>;
   readonly spawning: Readonly<{
     settings: SpawnSettings;
     nextSpawnAt: number;

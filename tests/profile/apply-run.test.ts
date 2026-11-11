@@ -23,6 +23,8 @@ const run = (over: Partial<RunResult> = {}): RunResult => ({
   eliteKills: 4,
   bossKilled: true,
   runLevel: 12,
+  // Task 11: Gold = collected coins + victory bonus; 45 + 30 = 75 on map 1.
+  coins: 45,
   ...over,
 });
 const win = (p: PlayerProfile, over: Partial<RunResult> = {}) =>
@@ -98,7 +100,8 @@ describe('applyRunResult (Task 08 §1.3, step 3.3)', () => {
       run({ outcome: 'defeat', bossKilled: false, elapsed: 300 }),
       NOW,
     );
-    expect(d.summary).toMatchObject({ xpGained: 18, goldGained: 9, newlyUnlockedMap: null });
+    // Task 11: defeat Gold = 50% of the collected coins (⌊45 / 2⌋ = 22), no bonus; XP unchanged.
+    expect(d.summary).toMatchObject({ xpGained: 18, goldGained: 22, newlyUnlockedMap: null });
     expect(d.profile.highestUnlockedMap).toBe(1);
     expect(d.profile.completedMaps).toEqual([]);
     expect(d.profile.stats).toMatchObject({ runs: 1, wins: 0, defeats: 1 });
@@ -121,7 +124,7 @@ describe('applyRunResult (Task 08 §1.3, step 3.3)', () => {
     expect(p.classes.warrior).toMatchObject({ level: 2, lifetimeXp: 150 });
     expect(p.classes.mage).toMatchObject({ level: 2, lifetimeXp: 200, xp: 100 });
     expect(p.classes.archer.level).toBe(1);
-    expect(p.gold).toBe(75 + 100);
+    expect(p.gold).toBe(75 + (45 + 40)); // Task 11: map 2 bonus 40 + 45 coins
     expect(p.highestUnlockedMap).toBe(3);
   });
   it('replaying a completed map never lowers unlocks; the last map unlocks nothing new', () => {

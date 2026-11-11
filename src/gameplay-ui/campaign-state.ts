@@ -1,6 +1,8 @@
 import type { CharacterClass } from '../character-stats';
 import { getCampaignMap } from '../campaign';
-import { isMapUnlocked } from '../profile';
+import { buyItem, equipItem, isMapUnlocked, unequipSlot } from '../profile';
+import { EquipmentError } from '../equipment';
+import type { GearSlot } from '../equipment';
 import {
   createProgressionService,
   createSaveStore,
@@ -25,7 +27,7 @@ import { readErrors } from './error-log';
  * the selected class/map. React components only read this state and call these actions; all
  * reward, save and scheduling logic lives in the campaign/profile/persistence modules.
  */
-export type MenuPage = 'play' | 'character' | 'maps' | 'progression' | 'settings';
+export type MenuPage = 'play' | 'character' | 'maps' | 'shop' | 'progression' | 'settings';
 export interface CampaignUiState {
   readonly page: MenuPage;
   readonly selectedMapId: number;
@@ -73,6 +75,8 @@ export function runResultFrom(
     bossKilled: c.bossKilled,
     runLevel: world.progression.level,
     stats: summarizeRunStats(world.runStats),
+    // Task 11: coins collected this run (converted to Gold once, with the result).
+    coins: world.coins.collected,
   });
 }
 
@@ -154,6 +158,19 @@ function commitResolved(world: GameplaySnapshot, outcome?: RunResult['outcome'])
   const commit = service.commitRun(result, new Date().toISOString());
   update({ lastResult: Object.freeze({ runId: result.runId, result, commit }) });
 }
+/** Applies one gear change through the validated save path; returns a refusal reason or null. */
+function gearChange(change: (p: PlayerProfile) => PlayerProfile): string | null {
+  const profile = ensure().progression.profile;
+  if (!profile) return 'no-profile';
+  let next: PlayerProfile;
+  try {
+    next = change(profile);
+  } catch (error) {
+    return error instanceof EquipmentError ? error.reason : 'invalid';
+  }
+  const written = campaignStore.service().replaceProfile(next);
+  return written.ok ? null : (written.failure ?? 'not-saved');
+}
 function update(patch: Partial<CampaignUiState>) {
   state = Object.freeze({ ...ensure(), ...patch });
   listeners.forEach((fn) => fn());
@@ -181,6 +198,21 @@ export const campaignStore = {
   },
   selectClass(characterClass: CharacterClass) {
     campaignStore.service().selectClass(characterClass);
+  },
+  /**
+   * Task 11: shop purchase — Gold deducted and the item owned in one validated save. Returns the
+   * refusal reason (no change) or null on success.
+   */
+  buyItem(itemId: string): string | null {
+    return gearChange((p) => buyItem(p, itemId));
+  },
+  /** Task 11: equip an owned eligible item for a class (applies to that class's next run). */
+  equipItem(characterClass: CharacterClass, itemId: string): string | null {
+    return gearChange((p) => equipItem(p, characterClass, itemId));
+  },
+  /** Task 11: unequip a slot (weapon → starter weapon, other slots → empty). */
+  unequipSlot(characterClass: CharacterClass, slot: GearSlot): string | null {
+    return gearChange((p) => unequipSlot(p, characterClass, slot));
   },
   /**
    * Quit to the menu. An active campaign run is resolved as abandoned (no rewards) first; the
@@ -312,6 +344,8 @@ export const campaignStore = {
         seed,
         // Task 09: the class's talents apply from run start; changes affect the next run.
         talents: { ranks: profile.classes[cls].talents },
+        // Task 11: this class's own loadout; changes apply to the next run.
+        equipment: { loadout: profile.classes[cls].loadout },
         campaign: { mapId, runId: generateRunId() },
       },
     });

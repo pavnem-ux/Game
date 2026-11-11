@@ -2,6 +2,7 @@ import { CHARACTER_CLASSES } from '../character-stats';
 import type { CharacterClass } from '../character-stats';
 import type { ClassProgress } from './class-xp';
 import { NEW_CLASS_PROGRESS } from './class-xp';
+import { defaultLoadout } from '../equipment';
 import type { RunOutcome, RunStatsSummary } from './rewards';
 
 /**
@@ -10,7 +11,8 @@ import type { RunOutcome, RunStatsSummary } from './rewards';
  */
 /** v2 (Task 09): per-class `talents` ranks replace the `talentsSpent` placeholder. */
 /** v3 (Task 10): 40 maps; a completed map 10 now unlocks map 11 (see migrateV2toV3). */
-export const PROFILE_SCHEMA_VERSION = 3;
+/** v4 (Task 11): `ownedItems` and per-class `loadout` (see migrateV3toV4). */
+export const PROFILE_SCHEMA_VERSION = 4;
 export const MAX_RECENT_RUNS = 20;
 export const MAX_PROCESSED_RUN_IDS = 50;
 
@@ -66,6 +68,8 @@ export interface PlayerProfile {
   readonly recentRuns: readonly RecentRun[];
   /** Oldest first, at most MAX_PROCESSED_RUN_IDS (reward de-duplication). */
   readonly processedRunIds: readonly string[];
+  /** Task 11: bought shop items (permanent, no copies), in purchase order. */
+  readonly ownedItems: readonly string[];
 }
 
 /** A brand-new profile. Identity and time are supplied by the caller (no hidden clock/RNG). */
@@ -81,10 +85,12 @@ export function createProfile(profileId: string, createdAt: string): PlayerProfi
     lastSavedAt: null,
     selectedClass: 'warrior',
     classes: Object.freeze(
-      Object.fromEntries(CHARACTER_CLASSES.map((c) => [c, NEW_CLASS_PROGRESS])) as Record<
-        CharacterClass,
-        ClassProgress
-      >,
+      Object.fromEntries(
+        CHARACTER_CLASSES.map((c) => [
+          c,
+          Object.freeze({ ...NEW_CLASS_PROGRESS, loadout: defaultLoadout(c) }),
+        ]),
+      ) as Record<CharacterClass, ClassProgress>,
     ),
     gold: 0,
     highestUnlockedMap: 1,
@@ -93,5 +99,6 @@ export function createProfile(profileId: string, createdAt: string): PlayerProfi
     stats: Object.freeze({ runs: 0, wins: 0, defeats: 0, enemiesKilled: 0, bestSurvivalTime: 0 }),
     recentRuns: Object.freeze([]),
     processedRunIds: Object.freeze([]),
+    ownedItems: Object.freeze([]),
   });
 }

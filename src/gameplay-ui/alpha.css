@@ -1775,3 +1775,93 @@ p.damage-note {
   font-size: 12px;
   color: #ffb38a;
 }
+/* Task 11: run coins in the campaign HUD. */
+.campaign-hud-coins {
+  color: #f0c862;
+  font-variant-numeric: tabular-nums;
+}
+/* Task 11: shop and equipment. */
+.shop-class {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  margin: 4px 0 8px;
+}
+.shop-grid {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 10px;
+}
+.shop-card,
+.equipment-slot {
+  border: 1px solid #9db68755;
+  border-left-width: 4px;
+  background: #14201ae6;
+  padding: 8px 10px;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.shop-card.owned {
+  opacity: 0.85;
+}
+.shop-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+}
+.gear-stats {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 12px;
+  color: #cfe5c2;
+}
+.shop-state {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.85;
+}
+.shop-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12px;
+}
+.shop-message {
+  color: #f4e3b0;
+}
+.equipment-panel {
+  margin-top: 16px;
+}
+.equipment-slots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+.equipment-preview {
+  margin: 10px 0;
+  padding: 8px 10px;
+  border: 1px dashed #e8c36a88;
+}
+.equipment-preview .up {
+  color: #9fe39a;
+}
+.equipment-preview .down {
+  color: #ff9d8a;
+}
+.equipment-stats {
+  margin-top: 10px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.equipment-stats td,
+.equipment-stats th {
+  padding: 2px 10px 2px 0;
+  text-align: left;
+}
+.equipment-stats .changed {
+  color: #f4e3b0;
+}

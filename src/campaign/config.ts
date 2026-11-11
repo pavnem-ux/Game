@@ -66,8 +66,11 @@ export const CAMPAIGN_BALANCE = Object.freeze({
     }),
   }),
   boss: Object.freeze({
-    /** Simulation seconds; the scheduled elite at this time is replaced by the boss. */
-    spawnTime: 600,
+    /**
+     * Owner decision (Task 11 review): the boss of every map appears when the map timer ends
+     * (was a fixed 10:00), so a map ends the moment its boss dies. Earliest allowed time (s).
+     */
+    minSpawnTime: 600,
   }),
   /**
    * Alpha enemy slots kept free for scheduled elites/boss (automatic waves stop earlier), so a
@@ -92,7 +95,7 @@ export const CAMPAIGN_BALANCE = Object.freeze({
 
 /**
  * Task 10 acts: 4 × 10 maps. The elite interval is per act (strictly before the map end; the boss
- * keeps its own 10:00 event). Elites per event: 1, or 2 on the maps listed in `doubleElites`.
+ * appears at the map end — owner decision in the Task 11 review). Elites per event: 1, or 2 on the maps listed in `doubleElites`.
  */
 export interface CampaignAct {
   readonly id: 1 | 2 | 3 | 4;
@@ -391,13 +394,16 @@ export function mapDurationSeconds(mapId: number): number {
       : CAMPAIGN_BALANCE.laterDurationMinutes) * 60
   );
 }
-/** Elite event times of a map: multiples of the act interval strictly before the end, except 10:00. */
+/** The boss of a map appears when its timer ends; the map is won the moment it dies. */
+export function bossSpawnTime(mapId: number): number {
+  return mapDurationSeconds(mapId);
+}
+/** Elite event times of a map: multiples of the act interval strictly before the end (boss). */
 export function eliteEventTimes(mapId: number): readonly number[] {
   const interval = actOf(mapId).eliteInterval;
   const end = mapDurationSeconds(mapId);
   const times: number[] = [];
-  for (let t = interval; t < end; t += interval)
-    if (t !== CAMPAIGN_BALANCE.boss.spawnTime) times.push(t);
+  for (let t = interval; t < end; t += interval) times.push(t);
   return Object.freeze(times);
 }
 function elitesPerEvent(mapId: number): 1 | 2 {
@@ -459,7 +465,7 @@ export function validateCampaignConfig(maps: readonly CampaignMap[] = CAMPAIGN_M
   maps.forEach((map, i) => {
     if (map.id !== i + 1) throw new Error(`Map ${i + 1} has id ${map.id}.`);
     if (!map.name.trim()) throw new Error(`Map ${map.id} needs a name.`);
-    if (!Number.isFinite(map.durationSeconds) || map.durationSeconds < b.boss.spawnTime)
+    if (!Number.isFinite(map.durationSeconds) || map.durationSeconds < b.boss.minSpawnTime)
       throw new Error(`Map ${map.id} must last at least until the boss spawns.`);
     for (const value of Object.values(map.difficulty))
       if (!Number.isFinite(value) || value <= 0)
@@ -489,9 +495,7 @@ export function validateCampaignConfig(maps: readonly CampaignMap[] = CAMPAIGN_M
   const starts = b.stages.map((s) => s.start);
   if (starts[0] !== 0 || starts.some((s, i) => i > 0 && !(s > starts[i - 1] && s < 1)))
     throw new Error('Stage boundaries must start at 0 and increase below 1.');
-  // Act I keeps the Task 08 rule: the boss replaces a scheduled elite slot at 10:00.
-  if (b.elite.interval <= 0 || b.boss.spawnTime % b.elite.interval !== 0)
-    throw new Error('The boss must replace a scheduled elite slot.');
+  if (b.elite.interval <= 0) throw new Error('The elite interval must be positive.');
   if (CAMPAIGN_ACTS[0].eliteInterval !== b.elite.interval)
     throw new Error('Act I must keep the Task 08 elite interval.');
   CAMPAIGN_ACTS.forEach((act, i) => {

@@ -54,6 +54,8 @@ export function validateRunResult(result: RunResult): void {
   if (result.outcome === 'victory' && !result.bossKilled)
     throw new RangeError('A victory requires the boss to be killed.');
   if (result.stats !== undefined) validateRunStatsSummary(result.stats);
+  if (result.coins !== undefined && (!Number.isSafeInteger(result.coins) || result.coins < 0))
+    throw new RangeError('coins must be a whole number ≥ 0.');
 }
 
 function summaryFromRecent(run: RecentRun): RunSummary {
@@ -104,7 +106,12 @@ export function applyRunResult(
 
   const map = getCampaignMap(result.mapId);
   const elapsed = Math.min(result.elapsed, map.durationSeconds);
-  const rewards = runRewards({ mapId: result.mapId, outcome: result.outcome, elapsed });
+  const rewards = runRewards({
+    mapId: result.mapId,
+    outcome: result.outcome,
+    elapsed,
+    coins: result.coins ?? 0,
+  });
   const before = profile.classes[result.characterClass];
   const { progress, levelsGained } = addClassXp(before, rewards.xp);
   const victory = result.outcome === 'victory';

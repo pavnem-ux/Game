@@ -14,6 +14,8 @@ import { TALENT_CONFIG, TALENT_RULES, superpowerActive, validateTalentRanks } fr
 import type { TalentRanks } from '../talents';
 import type { PlayerProfile } from '../profile';
 import { campaignStore } from './campaign-state';
+import { GEAR_SLOTS, SHOP_ITEMS, isEligible } from '../equipment';
+import type { GearSlot, Loadout } from '../equipment';
 
 /**
  * Task 08 profile debug tools. Imported only by the DEV/QA DeveloperPanel (lazy, gated), so none
@@ -95,7 +97,10 @@ export const campaignDebug = {
     const talents = kept.ok ? kept.ranks : {};
     const ok = edit((p) => ({
       ...p,
-      classes: { ...p.classes, [characterClass]: progressAt(level, talents) },
+      classes: {
+        ...p.classes,
+        [characterClass]: { ...p.classes[characterClass], ...progressAt(level, talents) },
+      },
     }));
     return ok ? { talentsReset: !kept.ok } : null;
   },
@@ -127,7 +132,40 @@ export const campaignDebug = {
       classes: {
         ...p.classes,
         [characterClass]:
-          level === progress.level ? { ...progress, talents: ranks } : progressAt(level, ranks),
+          level === progress.level
+            ? { ...progress, talents: ranks }
+            : { ...progress, ...progressAt(level, ranks) },
+      },
+    }));
+  },
+  /** Task 11 §1.7: owns every shop item (no Gold spent; validated save). */
+  unlockAllItems(): boolean {
+    return edit((p) => ({ ...p, ownedItems: SHOP_ITEMS.map((i) => i.id) }));
+  },
+  /**
+   * Task 11 §1.7: owns everything and equips the best tier for a class — its first weapon
+   * template and the first armor / amulet / ring template (amulet of magic for the Mage), tier 5.
+   */
+  equipBestTier(characterClass: CharacterClass): boolean {
+    const best = (slot: GearSlot) => {
+      const pool = SHOP_ITEMS.filter((i) => i.tier === 5 && isEligible(i, characterClass, slot));
+      if (slot === 'amulet')
+        return pool.find((i) =>
+          characterClass === 'mage'
+            ? i.templateId === 'amulet_magic'
+            : i.templateId === 'amulet_power',
+        )!;
+      return pool[0];
+    };
+    return edit((p) => ({
+      ...p,
+      ownedItems: SHOP_ITEMS.map((i) => i.id),
+      classes: {
+        ...p.classes,
+        [characterClass]: {
+          ...p.classes[characterClass],
+          loadout: Object.fromEntries(GEAR_SLOTS.map((s) => [s, best(s).id])) as Loadout,
+        },
       },
     }));
   },

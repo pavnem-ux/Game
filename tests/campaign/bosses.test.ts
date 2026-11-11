@@ -61,7 +61,7 @@ describe('boss configs (Task 08 §2.3)', () => {
     'map %i spawns its own boss with a notification, name and HP bar data',
     (mapId) => {
       const w = world(mapId);
-      const events = run(w, 600.01, 5);
+      const events = run(w, CAMPAIGN_MAPS[mapId - 1].durationSeconds + 0.01, 5);
       const map = CAMPAIGN_MAPS[mapId - 1];
       const def = getBossDefinition(map.bossId);
       const spawned = events.filter((e) => e.event.type === 'boss-spawned');
@@ -79,7 +79,7 @@ describe('boss configs (Task 08 §2.3)', () => {
   );
   it('the boss death event fires exactly once with the boss XP reward', () => {
     const w = world(3);
-    run(w, 600.01, 5);
+    run(w, CAMPAIGN_MAPS[2].durationSeconds + 0.01, 5);
     const id = w.getSnapshot().campaign!.boss!.enemyId;
     hitBoss(w, id, 1e7);
     hitBoss(w, id, 1e7); // dead target: ignored
@@ -93,12 +93,12 @@ describe('boss configs (Task 08 §2.3)', () => {
       )!.event as { xp: number };
     expect(reward.xp).toBe(XP_RULES.meleeReward + getBossDefinition('stone_colossus').xpReward);
     expect(w.getSnapshot().campaign!.boss!.alive).toBe(false);
-    // Map 3 lasts 11:00: the early boss kill wins only once the duration is reached.
-    expect(w.getSnapshot().campaign).toMatchObject({ bossKilled: true, status: 'active' });
+    // Map 3's boss appears when its 11:00 timer ends: its death wins the map at once.
+    expect(w.getSnapshot().campaign).toMatchObject({ bossKilled: true, status: 'victory' });
   });
   it('CC limits: shorter stuns, longer immunity and a lower Slow cap on the boss only', () => {
     const w = world(1);
-    run(w, 600.01, 5);
+    run(w, CAMPAIGN_MAPS[0].durationSeconds + 0.01, 5);
     const id = w.getSnapshot().campaign!.boss!.enemyId;
     const def = getBossDefinition('thornwarden');
     const t0 = w.time;

@@ -59,15 +59,17 @@ describe('Task 10 Phase 2 — elites per act', () => {
         .map((e) => e.time),
     ),
   ];
-  it('elite intervals I 2:00, II 1:45, III 1:30, IV 1:15 — strictly before the end; boss once at 10:00', () => {
-    expect(times(10)).toEqual([120, 240, 360, 480, 720, 840]);
+  it('elite intervals I 2:00, II 1:45, III 1:30, IV 1:15 — strictly before the end; boss once, at the end', () => {
+    expect(times(10)).toEqual([120, 240, 360, 480, 600, 720, 840]);
     expect(times(11)).toEqual([105, 210, 315, 420, 525, 630, 735, 840]);
     expect(times(21)).toEqual([90, 180, 270, 360, 450, 540, 630, 720, 810]);
-    expect(times(31)).toEqual([75, 150, 225, 300, 375, 450, 525, 675, 750, 825]);
+    expect(times(31)).toEqual([75, 150, 225, 300, 375, 450, 525, 600, 675, 750, 825]);
     for (const m of CAMPAIGN_MAPS) {
       const events = campaignSchedule(m);
-      expect(events.filter((e) => e.kind === 'boss').map((e) => e.time)).toEqual([600]);
-      expect(events.filter((e) => e.kind === 'elite' && e.time === 600)).toEqual([]);
+      // Owner decision (Task 11 review): the boss appears when the map timer ends.
+      expect(events.filter((e) => e.kind === 'boss').map((e) => e.time)).toEqual([
+        m.durationSeconds,
+      ]);
       expect(
         events.filter((e) => e.kind === 'elite').every((e) => e.time < m.durationSeconds),
       ).toBe(true);
@@ -86,9 +88,9 @@ describe('Task 10 Phase 2 — elites per act', () => {
       }
       expect(scheduledEnemyCount(m)).toBeLessThanOrEqual(m.reservedSlots);
     }
-    expect(getCampaignMap(40).reservedSlots).toBe(21);
+    expect(getCampaignMap(40).reservedSlots).toBe(23);
   });
-  it('map 40: with automatic waves at their cap, all 20 elites and the boss still spawn (≤ 120 enemies)', () => {
+  it('map 40: with automatic waves at their cap, all 22 elites and the boss still spawn (≤ 120 enemies)', () => {
     const w = new GameplayWorld({
       characterClass: 'mage',
       seed: 3,
@@ -107,9 +109,9 @@ describe('Task 10 Phase 2 — elites per act', () => {
       if (e.kind !== 'end') expect(w.debugFireCampaignEvent(e.id), e.id).toBe(true);
     const events: WorldEvent[] = [...w.getEvents()];
     const peak = w.getSnapshot().enemies.filter((e) => e.alive).length;
-    expect(peak).toBe(ALPHA.enemyCap); // 99 automatic + 20 elites + boss
+    expect(peak).toBe(ALPHA.enemyCap); // 97 automatic + 22 elites + boss
     const kinds = events.filter((e) => e.channel === 'campaign').map((e) => e.event.type);
-    expect(kinds.filter((k) => k === 'elite-spawned')).toHaveLength(20);
+    expect(kinds.filter((k) => k === 'elite-spawned')).toHaveLength(22);
     expect(kinds.filter((k) => k === 'boss-spawned')).toHaveLength(1);
     expect(peak).toBeLessThanOrEqual(ALPHA.enemyCap);
   });

@@ -17,6 +17,8 @@ export interface RunStatModifiers {
   readonly cooldownReduction: number;
   /** Task 09.1: percent movement-speed bonus (talents «скорость движения +X%»). */
   readonly movementSpeedPercent: number;
+  /** Task 11 (additive; 0 for every earlier source): percent area size (gear «размер области»). */
+  readonly areaSizePercent: number;
 }
 export const NO_MODIFIERS: RunStatModifiers = Object.freeze({
   damagePercent: 0,
@@ -31,6 +33,7 @@ export const NO_MODIFIERS: RunStatModifiers = Object.freeze({
   dodgeChance: 0,
   cooldownReduction: 0,
   movementSpeedPercent: 0,
+  areaSizePercent: 0,
 });
 
 /**
@@ -51,5 +54,6 @@ export function composeRunStats(primary: PrimaryAttributes, m: RunStatModifiers)
     movementSpeed: (base.movementSpeed + m.movementSpeed) * (1 + m.movementSpeedPercent / 100),
     dodgeChance: base.dodgeChance + m.dodgeChance,
     cooldownReduction: base.cooldownReduction + m.cooldownReduction,
+    areaSize: base.areaSize * (1 + m.areaSizePercent / 100),
   });
 }

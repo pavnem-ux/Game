@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   CAMPAIGN_BALANCE,
+  bossSpawnTime,
   CAMPAIGN_MAPS,
   getCampaignMap,
   mapDifficulty,
@@ -40,7 +41,9 @@ describe('campaign config (Task 08 §1.1)', () => {
       hpMultiplier: 2.5,
       damageMultiplier: 1.4,
     });
-    expect(CAMPAIGN_BALANCE.boss.spawnTime).toBe(600);
+    // Owner decision (Task 11 review): the boss appears when the map timer ends (≥ 10:00).
+    expect(CAMPAIGN_BALANCE.boss.minSpawnTime).toBe(600);
+    for (const m of CAMPAIGN_MAPS) expect(bossSpawnTime(m.id)).toBe(m.durationSeconds);
     expect(CAMPAIGN_BALANCE.stages.map((s) => s.id)).toEqual([
       'opening',
       'escalation',

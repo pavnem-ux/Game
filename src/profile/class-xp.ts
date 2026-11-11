@@ -1,4 +1,5 @@
 import { PERMANENT_LEVEL_RANGE } from '../character-stats';
+import type { Loadout } from '../equipment';
 
 /**
  * Task 08 permanent class XP (pure). Level L → L+1 costs 100 + 50·(L − 1) XP. Overflow carries
@@ -7,7 +8,8 @@ import { PERMANENT_LEVEL_RANGE } from '../character-stats';
  */
 export const MAX_CLASS_LEVEL = PERMANENT_LEVEL_RANGE.max;
 
-export interface ClassProgress {
+/** XP and talents of one class (everything except its equipment). */
+export interface ClassProgressCore {
   /** XP inside the current level (0 at the cap). */
   readonly xp: number;
   readonly level: number;
@@ -19,7 +21,11 @@ export interface ClassProgress {
    */
   readonly talents: Readonly<Record<string, number>>;
 }
-export const NEW_CLASS_PROGRESS: ClassProgress = Object.freeze({
+export interface ClassProgress extends ClassProgressCore {
+  /** Task 11: this class's equipment (starter weapon + empty slots by default). */
+  readonly loadout: Loadout;
+}
+export const NEW_CLASS_PROGRESS: ClassProgressCore = Object.freeze({
   xp: 0,
   level: 1,
   lifetimeXp: 0,
@@ -33,11 +39,15 @@ export function xpToNextLevel(level: number): number | null {
   return level >= MAX_CLASS_LEVEL ? null : 100 + 50 * (level - 1);
 }
 
-export interface ClassXpResult {
-  readonly progress: ClassProgress;
+export interface ClassXpResult<P extends ClassProgressCore = ClassProgress> {
+  readonly progress: P;
   readonly levelsGained: number;
 }
-export function addClassXp(progress: ClassProgress, amount: number): ClassXpResult {
+/** Adds permanent XP; every other field of `progress` (talents, loadout) is kept. */
+export function addClassXp<P extends ClassProgressCore>(
+  progress: P,
+  amount: number,
+): ClassXpResult<P> {
   if (!Number.isInteger(amount) || amount < 0)
     throw new RangeError('XP must be a whole number ≥ 0.');
   let { xp, level } = progress;

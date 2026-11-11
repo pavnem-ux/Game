@@ -5,6 +5,7 @@ export {
   DOUBLE_ELITE_MAPS,
   MAP_MODIFIERS,
   actOf,
+  bossSpawnTime,
   eliteEventTimes,
   getCampaignMap,
   mapDifficulty,

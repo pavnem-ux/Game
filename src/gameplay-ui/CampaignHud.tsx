@@ -29,6 +29,13 @@ export function CampaignHud({ world }: { world: GameplaySnapshot }) {
         <span className="campaign-hud-time" aria-label="Осталось времени">
           {c.durationReached ? 'Время вышло — добейте босса' : `Осталось ${clock(c.remaining)}`}
         </span>
+        {/* Task 11: Gold coins picked up in this run (paid out with the result). */}
+        <span
+          className="campaign-hud-coins"
+          aria-label={`Монеты за забег: ${world.coins.collected}`}
+        >
+          ◎ {world.coins.collected}
+        </span>
         {!boss && world.time < c.bossTime && (
           <span className="campaign-hud-boss-countdown">
             Босс через {clock(c.bossTime - world.time)}

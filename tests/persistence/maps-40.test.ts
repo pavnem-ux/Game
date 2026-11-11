@@ -34,20 +34,24 @@ function oldV2(last: number) {
 }
 
 describe('Task 10 Phase 4.1 — saves with 40 maps', () => {
-  it('schema v3; an old v2 save loads with no data loss (only the version changes)', () => {
-    expect(SAVE_SCHEMA_VERSION).toBe(3);
+  it('an old v2 save loads with no data loss (only the version changes; Task 11 gear defaults)', () => {
+    expect(SAVE_SCHEMA_VERSION).toBeGreaterThanOrEqual(3);
     const v2 = oldV2(4);
     const r = parseProfileJson(JSON.stringify(v2));
     if (!r.ok) throw r.error;
     expect(r.migratedFrom).toBe(2);
-    expect(r.profile).toEqual({ ...v2, schemaVersion: 3 });
+    expect(r.profile).toEqual({ ...v2, schemaVersion: SAVE_SCHEMA_VERSION });
   });
   it('an old v2 save that completed map 10 gets map 11 unlocked; everything else is kept', () => {
     const v2 = oldV2(10);
     const r = parseProfileJson(JSON.stringify(v2));
     if (!r.ok) throw r.error;
     expect(r.profile.highestUnlockedMap).toBe(11);
-    expect(r.profile).toEqual({ ...v2, schemaVersion: 3, highestUnlockedMap: 11 });
+    expect(r.profile).toEqual({
+      ...v2,
+      schemaVersion: SAVE_SCHEMA_VERSION,
+      highestUnlockedMap: 11,
+    });
     // Without the migration that v2 save would be inconsistent under 40 maps (map 10 → 11).
     expect(parseProfileJson(JSON.stringify({ ...v2, schemaVersion: 3 })).ok).toBe(false);
     // The migration is a no-op for every other shape.

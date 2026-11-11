@@ -8,6 +8,7 @@ import { SaveWarning } from './SaveManagement';
 import { RunStatsPanel } from './RunStatsPanel';
 import { RU } from './strings-ru';
 import { ReportButton } from './ReportButton';
+import { runGold } from '../equipment';
 
 /** Results of a finished campaign run. Rewards come from the committed summary only. */
 export function ResultsScreen({ world }: { world: GameplaySnapshot }) {
@@ -18,6 +19,8 @@ export function ResultsScreen({ world }: { world: GameplaySnapshot }) {
   const summary = last?.commit.summary ?? null;
   const victory = c.status === 'victory';
   const saveState = ui.progression.status.state;
+  // Task 11: coins collected, victory bonus and the Gold actually credited (same formula).
+  const gold = runGold(victory ? 'victory' : 'defeat', c.mapId, world.coins.collected);
   return (
     <section
       className="overlay modal-overlay results-overlay"
@@ -43,6 +46,13 @@ export function ResultsScreen({ world }: { world: GameplaySnapshot }) {
           <dd>{world.progression.level}</dd>
           <dt>Опыт класса</dt>
           <dd>{summary ? `+${summary.xpGained} XP` : '…'}</dd>
+          <dt>Монеты</dt>
+          <dd>
+            {world.coins.collected}
+            {!victory && ` (50% → ${gold.coins})`}
+          </dd>
+          <dt>Бонус за победу</dt>
+          <dd>{victory ? `+${gold.bonus}` : 'нет'}</dd>
           <dt>Золото</dt>
           <dd>{summary ? `+${summary.goldGained}` : '…'}</dd>
           <dt>Уровни</dt>

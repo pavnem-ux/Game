@@ -43,7 +43,7 @@ function run(w: GameplayWorld, seconds: number, step: number, sink: WorldEvent[]
 }
 
 describe('elite/boss schedule (Task 08 §1.2)', () => {
-  it('elites every 2:00 strictly before the end; the boss replaces the 10:00 elite', () => {
+  it('elites every 2:00 strictly before the end; the boss appears when the timer ends', () => {
     expect(plan(1)).toEqual([
       '120:melee',
       '240:ranged',
@@ -52,24 +52,27 @@ describe('elite/boss schedule (Task 08 §1.2)', () => {
       '600:boss',
       '600:end',
     ]);
+    // Owner decision (Task 11 review): 10:00 is an ordinary elite slot; the boss comes at the end.
     expect(plan(3)).toEqual([
       '120:melee',
       '240:ranged',
       '360:melee',
       '480:ranged',
-      '600:boss',
+      '600:melee',
+      '660:boss',
       '660:end',
     ]);
     // 12-minute map: no elite at exactly 12:00 (not strictly before the end).
-    expect(plan(5).slice(-2)).toEqual(['600:boss', '720:end']);
+    expect(plan(5).slice(-3)).toEqual(['600:melee', '720:boss', '720:end']);
     expect(plan(10)).toEqual([
       '120:melee',
       '240:ranged',
       '360:melee',
       '480:ranged',
-      '600:boss',
-      '720:melee',
-      '840:ranged',
+      '600:melee',
+      '720:ranged',
+      '840:melee',
+      '900:boss',
       '900:end',
     ]);
     for (const m of CAMPAIGN_MAPS) {
@@ -161,7 +164,7 @@ describe('scheduled events in the world fire exactly once at their time', () => 
   it('elites and the boss use their scaled definitions; a single boss per run', () => {
     const w = world(4);
     const events: WorldEvent[] = [];
-    run(w, 601, 1, events);
+    run(w, 661, 1, events); // map 4 lasts 11:00: the boss appears at the end
     const base = w.core.getEntity(w.spawnEnemy('melee', 300));
     const c = w.getSnapshot().campaign!;
     const elite = w.core.getEntity(c.eliteEnemyIds[0]);
@@ -176,7 +179,7 @@ describe('scheduled events in the world fire exactly once at their time', () => 
       events
         .filter((e) => e.event.type === 'elite-spawned')
         .map((e) => (e.event as { profile: string }).profile),
-    ).toEqual(['melee', 'ranged', 'melee', 'ranged']);
+    ).toEqual(['melee', 'ranged', 'melee', 'ranged', 'melee']);
   });
   it('the classic alpha has no campaign schedule', () => {
     const w = new GameplayWorld({ characterClass: 'mage', initialEnemies: false });

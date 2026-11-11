@@ -34,6 +34,8 @@ const win = (runId: string) => ({
   eliteKills: 4,
   bossKilled: true,
   runLevel: 7,
+  // Task 11: Gold = collected coins + victory bonus; 45 + 30 = 75 on map 1.
+  coins: 45,
 });
 
 describe('export / import (Task 08 §1.4, step 4.4)', () => {
@@ -70,7 +72,7 @@ describe('export / import (Task 08 §1.4, step 4.4)', () => {
       JSON.stringify({ schemaVersion: 1, profileId: 'x', createdAt: NOW, gold: -3 }),
       'invalid',
     ],
-    ['newer version', JSON.stringify({ schemaVersion: 4 }), 'newer-version'],
+    ['newer version', JSON.stringify({ schemaVersion: 5 }), 'newer-version'],
     ['not an object', '[1,2,3]', 'not-an-object'],
     ['too large', `"${'x'.repeat(1_000_001)}"`, 'invalid'],
   ])('%s: rejected; the current save stays unchanged', (_label, text, code) => {

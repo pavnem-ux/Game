@@ -2,6 +2,7 @@ import { OFFHAND_WEAPON, talentLoadout } from '../talents';
 import { talentWeaponRangeFactor } from '../talents/handlers';
 import type { TalentLoadout } from '../talents';
 import { composeRunStats } from '../skills/stats';
+import type { RunStatModifiers } from '../skills/stats';
 import { DEFAULT_SEED, createRunRandom } from './rng';
 import { RunStats } from './run-stats';
 import type { EnemyType } from './run-stats';
@@ -69,6 +70,10 @@ import type {
   RunInput,
 } from '../campaign';
 import type { DirectDamageObserver, DirectDamagePolicy } from '../enemy-ai';
+import { addModifiers, gearModifiers, validateLoadout } from '../equipment';
+import type { Loadout } from '../equipment';
+import { RunCoins } from './coins';
+import { coinValue, normalChance } from '../equipment/economy';
 /** The sole world scheduler. All damage is resolved by existing modules, one boundary at a time. */
 export class GameplayWorld {
   readonly core: CombatCore;
@@ -88,6 +93,9 @@ export class GameplayWorld {
   private eventSequence = 0;
   private kills = 0;
   private readonly experience = new RunExperience();
+  /** Task 11: Gold coins of this run (campaign only) and their seeded drop stream. */
+  private readonly coins = new RunCoins();
+  private readonly coinRandom: () => number;
   private spawnSettings: SpawnSettings;
   private nextSpawnAt: number;
   private waveSequence = 0;
@@ -97,6 +105,10 @@ export class GameplayWorld {
   private readonly history: WorldEvent[] = [];
   /** Task 09.1: enemies that received statuses during the current boundary. */
   private readonly statusTargets = new Set<string>();
+  /** Task 11: this run's equipped gear (fixed for the run; changes apply to the next run). */
+  readonly loadout: Loadout | null;
+  /** Task 09/11: talent + gear stat layer composed with the class attributes (caps once). */
+  readonly permanentModifiers: RunStatModifiers;
   /** Task 09: this run's talent loadout (fixed for the run; allocation changes affect the next). */
   readonly talents: TalentLoadout;
   /** Task 08.5 run statistics: read-only consumer of every recorded event (new per world). */
@@ -148,6 +160,7 @@ export class GameplayWorld {
     this.random = rng.combat;
     const skillRandom = rng.skills;
     this.spawnRandom = rng.spawn;
+    this.coinRandom = rng.coins;
     this.campaignMap = options.campaign ? getCampaignMap(options.campaign.mapId) : null;
     this.director = this.campaignMap ? new CampaignDirector(this.campaignMap) : null;
     this.enemyStats = this.campaignMap
@@ -172,7 +185,11 @@ export class GameplayWorld {
       options.talents?.ranks ?? {},
       options.talents?.config,
     );
-    const startStats = composeRunStats(this.character.primaryAttributes, this.talents.modifiers);
+    // Task 11: gear joins the talent stat layer (one permanent layer, caps applied once).
+    if (options.equipment) validateLoadout(options.characterClass, options.equipment.loadout);
+    this.loadout = options.equipment?.loadout ?? null;
+    this.permanentModifiers = addModifiers(this.talents.modifiers, gearModifiers(this.loadout));
+    const startStats = composeRunStats(this.character.primaryAttributes, this.permanentModifiers);
     this.core = createCore(this.random);
     this.core.addEntity({
       id: this.playerId,
@@ -247,7 +264,7 @@ export class GameplayWorld {
         playerId: this.playerId,
         characterClass: options.characterClass,
         primary: this.character.primaryAttributes,
-        talentModifiers: this.talents.modifiers,
+        talentModifiers: this.permanentModifiers,
         talents: {
           ranks: this.talents.ranks,
           ...(options.talents?.config ? { config: options.talents.config } : {}),
@@ -376,6 +393,7 @@ export class GameplayWorld {
       kills: this.kills,
       progression: this.experience.getState(),
       crystals: this.experience.getCrystals(),
+      coins: Object.freeze({ collected: this.coins.collected, piles: this.coins.getPiles() }),
       spawning: Object.freeze({
         settings: this.spawnSettings,
         nextSpawnAt: this.nextSpawnAt,
@@ -412,7 +430,7 @@ export class GameplayWorld {
       })(),
       firedEvents: this.director!.firedIds(),
       firedLog: this.director!.firedLog(),
-      bossTime: CAMPAIGN_BALANCE.boss.spawnTime,
+      bossTime: this.campaignMap!.durationSeconds,
       bossEnemyId: this.bossEnemyId,
       eliteEnemyIds: Object.freeze([...this.eliteEnemyIds]),
       elites: Object.freeze(
@@ -930,7 +948,14 @@ export class GameplayWorld {
           elapsed: Math.min(this.clock, this.campaignMap.durationSeconds),
         }),
       ]);
+      // Task 11: a victory pays the coins still on the ground. On maps 1–10 the boss appears at
+      // the end of the timer, so its pile drops at the very moment of victory.
+      if (resolved === 'victory') this.collectRemainingCoins();
     }
+  }
+  private collectRemainingCoins() {
+    const events = this.coins.collectAll();
+    if (events.length) this.record('progression', events);
   }
   // ── Task 08 debug helpers (reachable only through the DEV/QA testing controller) ──
   /** Fires a pending scheduled campaign event now ('boss', 'elite-N', 'end'); exactly once. */
@@ -1165,6 +1190,25 @@ export class GameplayWorld {
     });
     this.controlIndex++;
     this.progression(this.experience.collect(this.body, this.body.radius));
+    const coins = this.coins.collect(this.body, this.body.radius);
+    if (coins.length) this.record('progression', coins);
+  }
+  /**
+   * Task 11 §1.4: campaign coin drop of one rewarded death — boss: large pile, elite: guaranteed
+   * pile, normal enemy: one seeded roll for a small pile. Values scale with the map.
+   */
+  private dropCoins(enemyId: string, position: Point) {
+    const map = this.campaignMap;
+    if (!map) return;
+    const kind =
+      enemyId === this.bossEnemyId ? 'boss' : this.eliteProfiles.has(enemyId) ? 'elite' : 'normal';
+    if (kind === 'normal' && !(this.coinRandom() < normalChance(map.id))) return;
+    const pile = this.coins.drop(position, coinValue(kind, map.id));
+    this.record('progression', [
+      Object.freeze({ type: 'coins-dropped', pileId: pile.id, amount: coinValue(kind, map.id) }),
+    ]);
+    // A death resolved in the same step after the victory still pays (nothing stays on the ground).
+    if (this.campaignRun.status === 'victory') this.collectRemainingCoins();
   }
   private prepare() {
     this.skills.invalidateGeometry();
@@ -1375,6 +1419,8 @@ export class GameplayWorld {
               position: enemy.position,
             }),
           ]);
+          // Task 11: coins drop here too — inside the once-per-death reward (dedup by design).
+          this.dropCoins(event.entityId, enemy.position);
         }
         this.skills.noteDeath(event.entityId, enemy.position);
         if (event.entityId === this.bossEnemyId && !this.bossDefeated) {

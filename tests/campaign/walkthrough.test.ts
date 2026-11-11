@@ -79,7 +79,8 @@ describe('Task 08 §6.3 walkthrough (normal simulation, no debug tools)', () => 
     expect(m1.commit.saved).toBe(true);
     expect(m1.commit.summary).toMatchObject({ newlyUnlockedMap: 2, levelAfter: 2 });
     const gold1 = service.getState().profile!.gold;
-    expect(gold1).toBe(CAMPAIGN_MAPS[0].victoryGold);
+    // Task 11: victory Gold = coins collected in the run + 40% bonus of the map Gold.
+    expect(gold1).toBe((m1.result.coins ?? 0) + Math.round(CAMPAIGN_MAPS[0].victoryGold * 0.4));
 
     // "Restart the browser": a new service over the same storage keeps the progress.
     service = open(storage);
@@ -93,7 +94,9 @@ describe('Task 08 §6.3 walkthrough (normal simulation, no debug tools)', () => 
     p = service.getState().profile!;
     expect(p.classes.mage.level).toBeGreaterThan(1);
     expect(p.classes.warrior.level).toBe(2);
-    expect(p.gold).toBe(gold1 + CAMPAIGN_MAPS[1].victoryGold);
+    expect(p.gold).toBe(
+      gold1 + (m2.result.coins ?? 0) + Math.round(CAMPAIGN_MAPS[1].victoryGold * 0.4),
+    );
 
     // Maps 3–10 in order, rotating classes; Map 10 must be completable.
     const classes: CharacterClass[] = ['archer', 'rogue', 'warrior', 'mage'];

@@ -10,6 +10,7 @@ export const RU_DEBUG = Object.freeze({
     fps: 'FPS',
     enemies: 'Врагов',
     dps: 'Урон в секунду (5 с)',
+    coinsPerMinute: 'Монеты · в минуту',
     total: 'Всего урона',
     bySource: 'Урон по источникам',
     none: 'Пока нет урона.',
