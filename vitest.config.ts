@@ -20,6 +20,7 @@ export default defineConfig({
       'tests/persistence/**/*.test.ts',
       'tests/talents/**/*.test.ts',
       'tests/equipment/**/*.test.ts',
+      'tests/ui-kit/**/*.test.ts',
     ],
   },
 });

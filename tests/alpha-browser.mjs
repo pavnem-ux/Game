@@ -14,7 +14,7 @@ try {
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(base + '/?debug');
   await page.waitForFunction(() => !!window.__alpha);
-  await page.getByRole('heading', { name: 'Выберите свой свет.' }).waitFor();
+  await page.getByRole('heading', { name: 'Последний свет', level: 1 }).waitFor(); // Task 13 hub
   await page.screenshot({ path: 'artifacts/alpha-01-selection.png' });
   await page.getByRole('button', { name: 'Воин Меч', exact: false }).click();
   await page.getByRole('button', { name: 'Начать забег' }).click();

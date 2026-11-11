@@ -1,152 +1,92 @@
-import { useSyncExternalStore } from 'react';
-import { CHARACTER_CLASSES, calculateCharacterStats } from '../character-stats';
-import { CAMPAIGN_ACTS, CAMPAIGN_MAPS } from '../campaign';
-import { CLASS_LABELS, WEAPON_LABELS } from '../gameplay';
-import { isMapUnlocked, recommendedLevel } from '../profile';
+import { useEffect, useSyncExternalStore } from 'react';
 import { campaignStore } from './campaign-state';
 import type { MenuPage } from './campaign-state';
-import { displayHp } from './format';
-import { CLASS_SYMBOLS, minutes } from './campaign-format';
-import { CharacterPage, MapsPage, ProgressionPage } from './CampaignPages';
+import { ProgressionPage } from './CampaignPages';
 import { SaveWarning, SettingsPage } from './SaveManagement';
 import { BuildLabel } from './BuildLabel';
 import { ShopPage } from './ShopPages';
+import { Backdrop, CurrencyBadge } from './kit';
+import { RU } from './strings-ru';
+import { HubPage } from './meta/Hub';
+import { CharacterSelectPage } from './meta/CharacterSelect';
+import { EquipmentPage } from './meta/EquipmentScreen';
+import { TalentsPage } from './meta/TalentsScreen';
+import { MapPathPage } from './meta/MapPath';
+import './meta/meta.css';
 
+const N = RU.meta.nav;
 const PAGES: readonly { id: MenuPage; label: string }[] = [
-  { id: 'play', label: 'Играть' },
-  { id: 'character', label: 'Персонаж' },
-  { id: 'maps', label: 'Карты' },
-  { id: 'shop', label: 'Магазин' },
-  { id: 'progression', label: 'Прогресс' },
-  { id: 'settings', label: 'Настройки' },
+  { id: 'hub', label: N.hub },
+  { id: 'character', label: N.character },
+  { id: 'equipment', label: N.equipment },
+  { id: 'talents', label: N.talents },
+  { id: 'shop', label: N.shop },
+  { id: 'maps', label: N.maps },
+  { id: 'progression', label: N.progression },
+  { id: 'settings', label: N.settings },
 ];
+/** Act backdrop of the map path (the act of the selected map). */
+const ACT_OF_PAGE = (page: MenuPage, act: number) => (page === 'maps' ? act : undefined);
 
-/** Main menu: navigation, Gold and the campaign pages. Reads state; calls store actions only. */
+/**
+ * Task 13 meta shell: night backdrop, title bar with navigation and Gold, the current page.
+ * Esc goes back to the hub (a modal handles its own Esc first). Reads state; store actions only.
+ */
 export function CampaignMenu() {
   const ui = useSyncExternalStore(campaignStore.subscribe, campaignStore.getSnapshot);
   const profile = ui.progression.profile;
+  useEffect(() => {
+    if (ui.page === 'hub') return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('.kit-modal, .developer-panel, [role="dialog"]')) return;
+      e.preventDefault();
+      campaignStore.setPage('hub');
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [ui.page]);
   return (
-    <section className="overlay alpha-menu campaign-menu" aria-labelledby="alpha-title">
-      <nav className="campaign-nav" aria-label="Главное меню">
-        {PAGES.map((p) => (
-          <button
-            key={p.id}
-            className={`campaign-tab ${ui.page === p.id ? 'active' : ''}`}
-            aria-current={ui.page === p.id ? 'page' : undefined}
-            onClick={() => campaignStore.setPage(p.id)}
-          >
-            {p.label}
-          </button>
-        ))}
-        <span className="campaign-gold" aria-label={`Золото: ${profile?.gold ?? 0}`}>
-          ◎ {profile?.gold ?? 0}
-        </span>
-      </nav>
+    <section
+      className={`overlay campaign-menu meta-ui meta-page-${ui.page}`}
+      aria-labelledby="alpha-title"
+    >
+      <Backdrop act={ACT_OF_PAGE(ui.page, Math.ceil(ui.selectedMapId / 10))} />
+      <header className="meta-topbar">
+        <button
+          className="meta-brand"
+          onClick={() => campaignStore.setPage('hub')}
+          aria-label={`${RU.meta.title} — ${N.hub}`}
+        >
+          <span aria-hidden="true">✦</span> {RU.meta.title}
+        </button>
+        <nav className="meta-nav" aria-label={N.label}>
+          {PAGES.map((p) => (
+            <button
+              key={p.id}
+              className={`meta-nav-item ${ui.page === p.id ? 'active' : ''}`}
+              aria-current={ui.page === p.id ? 'page' : undefined}
+              onClick={() => campaignStore.setPage(p.id)}
+            >
+              {p.label}
+            </button>
+          ))}
+        </nav>
+        <CurrencyBadge amount={profile?.gold ?? 0} />
+      </header>
       <SaveWarning />
-      {ui.page === 'play' && <PlayPage />}
-      {ui.page === 'character' && <CharacterPage />}
-      {ui.page === 'maps' && <MapsPage />}
-      {ui.page === 'shop' && <ShopPage />}
-      {ui.page === 'progression' && <ProgressionPage />}
-      {ui.page === 'settings' && <SettingsPage />}
+      <div className="meta-content" key={ui.page}>
+        {ui.page === 'hub' && <HubPage />}
+        {ui.page === 'character' && <CharacterSelectPage />}
+        {ui.page === 'equipment' && <EquipmentPage />}
+        {ui.page === 'talents' && <TalentsPage />}
+        {ui.page === 'maps' && <MapPathPage />}
+        {ui.page === 'shop' && <ShopPage />}
+        {ui.page === 'progression' && <ProgressionPage />}
+        {ui.page === 'settings' && <SettingsPage />}
+      </div>
       <BuildLabel className="menu-build-label" />
     </section>
-  );
-}
-
-function PlayPage() {
-  const ui = useSyncExternalStore(campaignStore.subscribe, campaignStore.getSnapshot);
-  const profile = ui.progression.profile;
-  const selected = profile?.selectedClass ?? 'warrior';
-  const map = CAMPAIGN_MAPS[ui.selectedMapId - 1];
-  return (
-    <div className="campaign-play">
-      <div className="alpha-intro">
-        <div className="eyebrow">КАМПАНИЯ · 10 КАРТ</div>
-        <h1 id="alpha-title">
-          Выберите
-          <br />
-          <em>свой свет.</em>
-        </h1>
-        <p>
-          Переживите карту до конца и победите босса.
-          <br />
-          Победа открывает следующую карту.
-        </p>
-        <p className="alpha-help">
-          WASD / стрелки · P / Esc — пауза
-          <br />
-          На телефоне — джойстик слева внизу
-        </p>
-        <p className="alpha-note campaign-forfeit-note">
-          Сохранения внутри забега нет: выход в меню или перезагрузка страницы во время забега
-          засчитывается как отказ — без награды.
-        </p>
-      </div>
-      <div className="alpha-selection">
-        <div className="class-grid" role="group" aria-label="Выбор класса">
-          {CHARACTER_CLASSES.map((c) => {
-            const level = profile?.classes[c].level ?? 1;
-            const stats = calculateCharacterStats(c, level).combatAttributes;
-            return (
-              <button
-                key={c}
-                className={`class-choice class-${c} ${selected === c ? 'selected' : ''}`}
-                aria-pressed={selected === c}
-                disabled={!profile}
-                onClick={() => campaignStore.selectClass(c)}
-              >
-                <span className="class-symbol">{CLASS_SYMBOLS[c]}</span>
-                <strong>{CLASS_LABELS[c]}</strong>
-                <small>{WEAPON_LABELS[c]}</small>
-                <span>
-                  Ур. {level} · {displayHp(stats.maxHp, stats.maxHp).max} HP ·{' '}
-                  {c === 'mage' ? stats.magicalDamage : stats.physicalDamage} урона
-                </span>
-              </button>
-            );
-          })}
-        </div>
-        <label className="campaign-map-select">
-          Карта
-          <select
-            aria-label="Карта"
-            value={ui.selectedMapId}
-            disabled={!profile}
-            onChange={(e) => campaignStore.selectMap(Number(e.target.value))}
-          >
-            {CAMPAIGN_ACTS.map((a) => (
-              <optgroup key={a.id} label={`Акт ${a.roman} · ${a.name}`}>
-                {CAMPAIGN_MAPS.filter((m) => m.act === a.id).map((m) => (
-                  <option
-                    key={m.id}
-                    value={m.id}
-                    disabled={!profile || !isMapUnlocked(profile, m.id)}
-                  >
-                    {m.id}. {m.name}
-                    {profile && !isMapUnlocked(profile, m.id) ? ' · закрыта' : ''}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
-        </label>
-        <button
-          className="button primary"
-          disabled={!profile}
-          onClick={() => campaignStore.startRun()}
-        >
-          Начать забег · {CLASS_LABELS[selected]} →
-        </button>
-        <p className="alpha-note">
-          {map.name} · {minutes(map.durationSeconds)} · награда {map.victoryXp} XP /{' '}
-          {map.victoryGold} золота · рекомендуемый уровень {recommendedLevel(map.id)}
-          {map.modifiers.length > 0 && <> · {map.modifiers.map((x) => x.label).join('; ')}</>}
-          <br />
-          Опыт забега растёт от кристаллов и сбрасывается после забега; постоянный уровень класса
-          растёт от наград за карты.
-        </p>
-      </div>
-    </div>
   );
 }

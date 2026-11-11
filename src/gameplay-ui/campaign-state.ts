@@ -27,9 +27,23 @@ import { readErrors } from './error-log';
  * the selected class/map. React components only read this state and call these actions; all
  * reward, save and scheduling logic lives in the campaign/profile/persistence modules.
  */
-export type MenuPage = 'play' | 'character' | 'maps' | 'shop' | 'progression' | 'settings';
+/** Task 13: `hub` (was `play`), plus separate Equipment and Talents pages. */
+export type MenuPage =
+  | 'hub'
+  | 'character'
+  | 'equipment'
+  | 'talents'
+  | 'maps'
+  | 'shop'
+  | 'progression'
+  | 'settings';
 export interface CampaignUiState {
   readonly page: MenuPage;
+  /**
+   * Task 13 (presentation only): class shown by the Equipment and Talents pages when opened from
+   * a character card; null = the selected class.
+   */
+  readonly viewClass: CharacterClass | null;
   readonly selectedMapId: number;
   readonly progression: ProgressionState;
   /** Validated import waiting for the player's confirmation (nothing replaced yet). */
@@ -118,7 +132,8 @@ function ensure(): CampaignUiState {
     service = createProgressionService(createSaveStore());
     const initial = service.getState();
     state = Object.freeze({
-      page: 'play',
+      page: 'hub',
+      viewClass: null,
       selectedMapId: initial.profile?.highestUnlockedMap ?? 1,
       progression: initial,
       lastResult: null,
@@ -190,7 +205,11 @@ export const campaignStore = {
     return service!;
   },
   setPage(page: MenuPage) {
-    update({ page });
+    update({ page, viewClass: null });
+  },
+  /** Task 13: open Equipment / Talents for a class without selecting it (presentation only). */
+  openForClass(page: 'equipment' | 'talents', characterClass: CharacterClass | null) {
+    update({ page, viewClass: characterClass });
   },
   selectMap(mapId: number) {
     const profile = ensure().progression.profile;
@@ -221,7 +240,7 @@ export const campaignStore = {
   quitToMenu() {
     const world = alphaBridge.getSnapshot().world;
     if (world?.campaign?.status === 'active') alphaBridge.send({ type: 'abandon' });
-    update({ page: 'play' });
+    update({ page: 'hub' });
     alphaBridge.send({ type: 'menu' });
   },
   /**
