@@ -8,7 +8,7 @@ All numbers are **provisional** (alpha balance) and come only from the catalog.
 
 Current: Phase 1 (levels)
 
-Draft PR: (pending)
+Draft PR: https://github.com/pavnem-ux/Game/pull/14
 
 ## Checklist
 
