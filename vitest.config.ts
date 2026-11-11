@@ -21,6 +21,7 @@ export default defineConfig({
       'tests/talents/**/*.test.ts',
       'tests/equipment/**/*.test.ts',
       'tests/ui-kit/**/*.test.ts',
+      'tests/audio/**/*.test.ts',
     ],
   },
 });
