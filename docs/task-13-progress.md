@@ -20,8 +20,8 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/12
 - [x] 2.5 Shop
 - [x] 2.6 Map path
 - [x] e2e per screen (select class, equip, buy talent, buy item, start map)
-- [ ] 3.1 Keyboard/focus, reduced motion, 1024/1280/1920 widths
-- [ ] 3.2 Full checks (AGENTS.md §6 incl. e2e and `test:production`)
+- [x] 3.1 Keyboard/focus, reduced motion, 1024/1280/1920 widths
+- [x] 3.2 Full checks (AGENTS.md §6 incl. e2e and `test:production`)
 - [ ] 3.3 "After" screenshots 1280×720 and 1920×1080
 - [ ] 3.4 Docs (`PLAYABLE_COMBAT_ALPHA.md` UI section, README), PR description
 
@@ -98,6 +98,12 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/12
 
 ## Verification log
 
+- Phase 3.1–3.2: keyboard (Tab focus ring `--focus`, Enter confirms the focused modal button, Esc
+  cancels a modal without leaving the page and otherwise goes back to the hub), reduced motion
+  (motion tokens 0 ms; title glow, pulsing nodes, mote drift and the learn glow off), widths
+  1024 / 1280 / 1920 without horizontal scroll (plus the existing 390 px phone check) — all in
+  `campaign-browser.mjs`. typecheck ✓, format ✓, `npm test` 1252 ✓, build ✓, `test:production` 2
+  PASS, QA build + `test:qa` PASS, `test:e2e` 3 PASS.
 - Phase 2: typecheck ✓, format ✓, `npm test` 1252 ✓, build ✓, `test:production` 2 PASS, QA build +
   `test:qa` PASS, `test:e2e` 3 PASS (incl. phone width 390 px on every page).
 - Phase 1: typecheck ✓, format ✓, `npm test` 1252 ✓ (kit 8), build ✓.

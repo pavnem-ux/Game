@@ -401,6 +401,9 @@ try {
   const devSave = JSON.parse(await stored());
   assert.equal(devSave.highestUnlockedMap, 40); // Task 10: 40 maps
   assert.equal(devSave.classes[devSave.selectedClass].level, 12);
+  // Task 13: the DEV panel covers the right side of the redesigned pages; close it for the shop,
+  // equipment and map steps and reopen it once the Map 10 run has started.
+  await page.getByRole('button', { name: /DEV · Закрыть/ }).click();
   // Task 11: shop → buy (with confirmation, one atomic save) → equip on the Character screen.
   await nav.getByRole('button', { name: 'Магазин', exact: true }).click();
   const slots = page.getByRole('group', { name: 'Слоты магазина' });
@@ -412,14 +415,29 @@ try {
   await slots.getByRole('button', { name: 'Броня' }).click();
   const plate = page.getByRole('listitem', { name: /^Обычные латы:/ });
   await plate.getByRole('button', { name: /Купить · ◎ 80/ }).click();
-  await page
-    .getByRole('dialog', { name: /Купить «Обычные латы» за 80 золота\?/ })
-    .getByRole('button', { name: 'Подтвердить' })
-    .click();
+  // Task 13 keyboard: the confirm dialog focuses «Подтвердить»; Enter confirms.
+  await page.getByRole('dialog', { name: /Купить «Обычные латы» за 80 золота\?/ }).waitFor();
+  assert.equal(await page.evaluate(() => document.activeElement?.textContent), 'Подтвердить');
+  await page.keyboard.press('Enter');
   await page.getByText('Куплено: Обычные латы.').waitFor();
   const bought = JSON.parse(await stored());
   assert.equal(bought.gold, devSave.gold - 80);
   assert.deepEqual(bought.ownedItems, ['plate-t1']);
+  // Esc cancels the dialog (no purchase) and stays in the shop (it does not go back to the hub).
+  await slots.getByRole('button', { name: 'Амулет' }).click();
+  await page
+    .getByRole('listitem', { name: /^Обычный амулет силы:/ })
+    .getByRole('button', { name: /Купить/ })
+    .click();
+  await page.getByRole('dialog').waitFor();
+  await page.keyboard.press('Escape');
+  assert.equal(await page.getByRole('dialog').count(), 0);
+  assert.equal(
+    await nav.getByRole('button', { name: 'Магазин', exact: true }).getAttribute('aria-current'),
+    'page',
+  );
+  assert.equal(JSON.parse(await stored()).gold, bought.gold);
+  await slots.getByRole('button', { name: 'Броня' }).click();
   await page.screenshot({ path: 'artifacts/campaign-13-shop.png', fullPage: true });
   await nav.getByRole('button', { name: 'Экипировка', exact: true }).click();
   const gear = page.getByRole('region', { name: /^Снаряжение:/ });
@@ -434,8 +452,6 @@ try {
   );
   await page.screenshot({ path: 'artifacts/campaign-14-equipment.png', fullPage: true });
   const goldBefore = JSON.parse(await stored()).gold;
-  // The DEV panel covers the map panel's «В бой» (right side): close it, start, reopen it.
-  await page.getByRole('button', { name: /DEV · Закрыть/ }).click();
   await (await openMap(10)).click();
   await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
   await page.getByRole('button', { name: /DEV · Тестирование/ }).click();
@@ -578,6 +594,62 @@ try {
   assert.equal(await page.getByRole('checkbox', { name: 'Тряска экрана' }).isChecked(), false);
   await page.getByRole('checkbox', { name: 'Тряска экрана' }).check();
 
+  // Task 13 §3.1: desktop widths 1024 / 1280 / 1920 — no horizontal scrolling on any page.
+  const pagesTabs = [
+    'Главная',
+    'Персонаж',
+    'Экипировка',
+    'Таланты',
+    'Магазин',
+    'Карта похода',
+    'Прогресс',
+    'Настройки',
+  ];
+  for (const [width, height] of [
+    [1024, 720],
+    [1280, 720],
+    [1920, 1080],
+  ]) {
+    await page.setViewportSize({ width, height });
+    for (const tab of pagesTabs) {
+      await nav.getByRole('button', { name: tab, exact: true }).click();
+      assert.ok(
+        await page.evaluate(
+          () =>
+            document.documentElement.scrollWidth <= innerWidth &&
+            [...document.querySelectorAll('.meta-content')].every(
+              (e) => e.scrollWidth <= e.clientWidth + 1,
+            ),
+        ),
+        `${tab} fits ${width}×${height}`,
+      );
+    }
+  }
+  // Reduced motion: motion tokens drop to 0 ms and the pulsing nodes stop.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await nav.getByRole('button', { name: 'Карта похода', exact: true }).click();
+  assert.equal(
+    await page.evaluate(() =>
+      getComputedStyle(document.querySelector('.meta-ui')).getPropertyValue('--dur').trim(),
+    ),
+    '0ms',
+  );
+  assert.equal(
+    await page.evaluate(
+      () =>
+        getComputedStyle(document.querySelector('.state-available .map-node-button')).animationName,
+    ),
+    'none',
+  );
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  assert.notEqual(
+    await page.evaluate(
+      () =>
+        getComputedStyle(document.querySelector('.state-available .map-node-button')).animationName,
+    ),
+    'none',
+  );
+
   // Phone width: every menu page fits without horizontal scrolling.
   await page.setViewportSize({ width: 390, height: 844 });
   for (const tab of [
@@ -601,7 +673,7 @@ try {
 
   if (errors.length) throw new Error(errors.join('\n'));
   console.log(
-    'PASS campaign: menu/Gold, Character, Maps (lock/boss reveal), Map 1 win → results/rewards/unlock/save, reload keeps progress, Map 2 with another class (separate XP, shared Gold), quit/reload = abandoned without rewards, Save Management (export, invalid/newer import unchanged, confirm/cancel/replace, round-trip), write-failure warning + retry, DEV campaign tools (unlock/level/Gold, boss, forced Map 10 win, reset); 08.5: time scale, kill-all, stats panel, debug overlay, build label, report download, crash recovery (save untouched), report → save import.',
+    'PASS campaign: menu/Gold, Character, Maps (lock/boss reveal), Map 1 win → results/rewards/unlock/save, reload keeps progress, Map 2 with another class (separate XP, shared Gold), quit/reload = abandoned without rewards, Save Management (export, invalid/newer import unchanged, confirm/cancel/replace, round-trip), write-failure warning + retry, DEV campaign tools (unlock/level/Gold, boss, forced Map 10 win, reset); 08.5: time scale, kill-all, stats panel, debug overlay, build label, report download, crash recovery (save untouched), report → save import; Task 13: hub «В бой»/Esc, quick links, map path panel, talent detail, paper doll, shop modal (Enter/Esc), widths 1024–1920, reduced motion.',
   );
 } finally {
   await browser.close();
