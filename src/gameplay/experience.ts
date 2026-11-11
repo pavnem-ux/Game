@@ -3,10 +3,16 @@ import type { Point } from '../weapon-attacks';
 export const XP_RULES = Object.freeze({
   baseCost: 20,
   costPerLevel: 10,
+  /**
+   * Task 12 §1.1 (provisional): quadratic term `a` of the run level cost
+   * `20 + 10·(L−1) + round(a·(L−1)²)` — slows late run levels; early levels barely change.
+   */
+  costQuadratic: 0.25,
   /** Task 10 §1.3 (provisional): run XP −20% (was 10 / 15). */
   meleeReward: 8,
   rangedReward: 12,
-  pickupRadius: 42,
+  /** Task 12 §1.3 (provisional): +75% (was 42); coins and the magnet share it. */
+  pickupRadius: 74,
   crystalRadius: 5,
   cellSize: 64,
   crystalCap: 512,
@@ -32,7 +38,10 @@ const integer = (value: number, name: string) => {
 export function runXpCost(level: number): number {
   integer(level, 'run level');
   if (level < 1) throw new RangeError('Run level starts at 1.');
-  const cost = XP_RULES.baseCost + XP_RULES.costPerLevel * (level - 1);
+  const cost =
+    XP_RULES.baseCost +
+    XP_RULES.costPerLevel * (level - 1) +
+    Math.round(XP_RULES.costQuadratic * (level - 1) ** 2);
   integer(cost, 'XP cost');
   return cost;
 }
