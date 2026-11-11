@@ -4,7 +4,7 @@ Spec: [task-12-enemies-chests.md](task-12-enemies-chests.md) (owner's file; Pret
 blank lines and aligned the tables). Branch `task-12-enemies-chests` from `main` at `b6e7a88`
 (Task 11 merged: `src/gameplay/coins.ts` present). All new numbers are **provisional**.
 
-Current: Phase 4.3 (PR description)
+Current: done — PR ready for review (not merged)
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/10
 
@@ -27,7 +27,7 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/10
 - [x] 4.1 Tune `a`; level table; per-act enemy mix and chest income
 - [x] 4.2 Full checks (AGENTS.md §6 + e2e), docs (`ENEMY_AI.md`, `EXPERIENCE_WAVES.md`, `CHESTS.md`,
       README, `playtest.md`)
-- [ ] 4.3 PR description
+- [x] 4.3 PR description
 
 ## Code map (Task 12)
 
@@ -119,8 +119,9 @@ nextSpawnAt, lastOpened}`; channel `chests` (also fed to `RunStats`).
 - 4.1: `a` = 0.4 (from 0.25): the clearing bots reach run level 69–72 at 15:00 on maps 10/25/40
   (target 70 ± 5). The first levels cost at most 10% more each (to level 5: 146 XP instead of 140; to
   level 10: 622 instead of 540).
-- 4.1: chest gold adds up to +65% (map 1) / +30% (map 40) Gold to a won run when every wooden chest
-  gives gold (full HP). Flagged for the owner (provisional `goldShare` 2%, `goldMin` 5).
+- 4.1: chest gold adds about +70% (map 1: ~52 vs 73.5) / +30% (map 40: ~225 vs 773) to the average
+  victory Gold measured in Task 11, when every wooden chest gives gold (full HP). Flagged for the
+  owner (provisional `goldShare` 2%, `goldMin` 5).
 - Browser QA `skills-ui-browser.mjs`: three queued level-ups now need 92 XP (20 + 30 + 42), was 90.
 - `tests/campaign/boss-world.test.ts`: per-file timeout 30 s (each case simulates ~900 s since
   Task 11 moved map 10's boss to 15:00; ~4.5 s each was at the 5 s default under full-suite load).
