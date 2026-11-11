@@ -6,7 +6,7 @@ gameplay changes.
 
 Current: Phase 1 (kit)
 
-Draft PR: _(set in 0.1)_
+Draft PR: https://github.com/pavnem-ux/Game/pull/12
 
 ## Checklist
 
