@@ -43,6 +43,12 @@ export const RU = Object.freeze({
     title: 'Игра',
     screenShake: 'Тряска экрана',
     screenShakeHint: 'Лёгкая тряска при получении урона и тяжёлых атаках босса.',
+    sound: 'Звук',
+    masterVolume: 'Общая громкость',
+    sfxVolume: 'Эффекты',
+    musicVolume: 'Музыка',
+    muted: 'Без звука',
+    soundHint: 'Все звуки создаются в игре. Звук включается после первого нажатия или клика.',
   }),
   report: Object.freeze({
     button: 'Сообщить о проблеме',

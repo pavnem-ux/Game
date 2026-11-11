@@ -1,4 +1,5 @@
 import { useState, useSyncExternalStore } from 'react';
+import { uiSound } from '../sound';
 import { CHARACTER_CLASSES } from '../../character-stats';
 import type { CharacterClass } from '../../character-stats';
 import { CLASS_LABELS } from '../../gameplay';
@@ -65,6 +66,7 @@ export function EquipmentPage() {
   const hover = hovered !== selected ? preview(hovered) : null;
   const equip = (id: string) => {
     const refused = campaignStore.equipItem(cls, id);
+    if (refused) uiSound('ui-error');
     setMessage(refused ? (REFUSALS[refused] ?? E.equipFailed) : '');
     setSelected(null);
   };

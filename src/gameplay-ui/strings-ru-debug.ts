@@ -17,5 +17,8 @@ export const RU_DEBUG = Object.freeze({
     none: 'Пока нет урона.',
     hide: 'Скрыть',
     show: 'Оверлей',
+    audio: 'Звук · журнал',
+    mute: 'Без звука',
+    voices: 'голосов:',
   }),
 });

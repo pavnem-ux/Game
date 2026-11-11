@@ -15,6 +15,7 @@ import { stunIndicator } from './stun-indicator';
 import { oncePerKeyEvent } from './key-event-once';
 import { OFFHAND_WEAPON } from '../talents';
 import { cardKey } from '../skills';
+import { soundFrame } from '../gameplay-ui/sound';
 
 /** Task 08.5 §5.1: floating-number styles (crit larger and gold, player damage red). */
 const FLOAT_STYLES: Record<FloatingKind, { color: string; size: number }> = {
@@ -316,7 +317,10 @@ export class AlphaScene extends Phaser.Scene {
     const g = this.graphics;
     g.clear();
     this.cameras.main.centerOn(s.playerBody.x, s.playerBody.y);
-    for (const event of this.world!.getEvents(this.lastEvent)) {
+    const frameEvents = this.world!.getEvents(this.lastEvent);
+    // Task 14: sound reads the same events (presentation only; nothing flows back).
+    soundFrame(frameEvents);
+    for (const event of frameEvents) {
       this.lastEvent = event.sequence;
       const e = event.event;
       if (event.channel === 'weapon' && e.type === 'attack-started' && !e.projectileId)

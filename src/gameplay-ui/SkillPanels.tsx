@@ -15,6 +15,7 @@ import {
   synergyOverview,
 } from '../skills';
 import { useEffect, useRef, useState } from 'react';
+import { uiSound } from './sound';
 import { alphaBridge } from './store';
 import { BuildLabel } from './BuildLabel';
 import { ReportButton } from './ReportButton';
@@ -65,7 +66,7 @@ export function LevelUpDialog({
     const live = alphaBridge.getSnapshot().world?.skills;
     if (!live?.offer?.cards.some((c) => cardKey(c) === key)) return;
     if (banishRef.current) {
-      if (live.banishBlocked[key] !== null) return;
+      if (live.banishBlocked[key] !== null) return void uiSound('ui-error');
       setBanishMode(false);
       alphaBridge.send({ type: 'banish-skill', card: key });
     } else alphaBridge.send({ type: 'choose-skill', card: key });
@@ -82,12 +83,16 @@ export function LevelUpDialog({
       const n = Number(e.key);
       if (k === 'r' || k === 'к') {
         if (current.rerollAvailable) alphaBridge.send({ type: 'reroll' });
+        else uiSound('ui-error');
       } else if (k === 'b' || k === 'и') {
         const can =
           current.mode === 'skills' &&
           live.banishes > 0 &&
           current.cards.some((c) => live.banishBlocked[cardKey(c)] === null);
-        if (can || banishRef.current) setBanishMode(!banishRef.current);
+        if (can || banishRef.current) {
+          setBanishMode(!banishRef.current);
+          uiSound('ui-click');
+        } else uiSound('ui-error');
       } else if (k === 's' || k === 'ы') {
         alphaBridge.send({ type: 'skip-offer' });
       } else if (n >= 1 && n <= 3) {
@@ -105,6 +110,7 @@ export function LevelUpDialog({
       className="overlay modal-overlay"
       role="dialog"
       aria-modal="true"
+      data-sound="none" /* card pick / reroll / banish / skip sound from the world events */
       aria-labelledby="skill-title"
       inert={hiddenBehindSkills}
       aria-hidden={hiddenBehindSkills || undefined}
@@ -223,6 +229,7 @@ export function LevelUpDialog({
             size="s"
             variant={banishMode ? 'danger' : 'secondary'}
             aria-pressed={banishMode}
+            data-sound="ui-click"
             disabledReason={banishReason}
             onClick={() => setBanishMode(!banishMode)}
           >

@@ -3,6 +3,7 @@ import { CHARACTER_CLASSES } from '../character-stats';
 import { CLASS_LABELS } from '../gameplay';
 import { campaignStore } from './campaign-state';
 import { uiSettings } from './ui-settings';
+import { uiSound } from './sound';
 import { RU } from './strings-ru';
 import { statusText } from './save-messages';
 
@@ -24,6 +25,34 @@ function GameplaySettings() {
         {RU.settings.screenShake}
       </label>
       <p className="faint">{RU.settings.screenShakeHint}</p>
+      <h3>{RU.settings.sound}</h3>
+      {(['masterVolume', 'sfxVolume', 'musicVolume'] as const).map((key) => (
+        <label key={key} className="settings-slider">
+          <span>{RU.settings[key]}</span>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={5}
+            value={settings[key]}
+            disabled={settings.muted}
+            onChange={(e) => {
+              uiSettings.set({ [key]: Number(e.target.value) });
+              if (key !== 'musicVolume') uiSound('ui-click'); // level preview
+            }}
+          />
+          <output>{settings[key]}</output>
+        </label>
+      ))}
+      <label className="settings-toggle">
+        <input
+          type="checkbox"
+          checked={settings.muted}
+          onChange={(e) => uiSettings.set({ muted: e.target.checked })}
+        />
+        {RU.settings.muted}
+      </label>
+      <p className="faint">{RU.settings.soundHint}</p>
     </section>
   );
 }

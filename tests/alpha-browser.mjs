@@ -335,6 +335,12 @@ try {
   await page.keyboard.press('Shift');
   await page.evaluate(() => window.__alpha.advance(0.1));
   assert.equal((await state()).world.dash.used, 1, 'no dash on cooldown');
+  // Task 14 sound: the dash cue reaches the audio log; automation keeps it silent (no AudioContext).
+  await page.waitForFunction(() =>
+    [...document.querySelectorAll('[data-testid="debug-audio-log"] li')].some(
+      (li) => li.textContent.startsWith('dash') && li.textContent.endsWith('silent'),
+    ),
+  );
 
   await command({ type: 'restart', options: { characterClass: 'mage', initialEnemies: false } });
   await command({ type: 'protection', enabled: true });

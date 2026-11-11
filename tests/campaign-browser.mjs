@@ -584,8 +584,13 @@ try {
   assert.equal(await shake.isChecked(), true);
   const saveBeforeSetting = await stored();
   await shake.uncheck();
+  // Task 14 added the sound settings to the same key (defaults 80/80/50, sound on).
   assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.settings'))), {
     screenShake: false,
+    masterVolume: 80,
+    sfxVolume: 80,
+    musicVolume: 50,
+    muted: false,
   });
   assert.equal(await stored(), saveBeforeSetting, 'settings never touch the save');
   await page.reload();
@@ -593,6 +598,17 @@ try {
   await nav.getByRole('button', { name: 'Настройки', exact: true }).click();
   assert.equal(await page.getByRole('checkbox', { name: 'Тряска экрана' }).isChecked(), false);
   await page.getByRole('checkbox', { name: 'Тряска экрана' }).check();
+  // Task 14: sound sliders and «Без звука» persist in the settings key, never in the save.
+  await page.getByRole('slider', { name: 'Музыка' }).fill('20');
+  await page.getByRole('checkbox', { name: 'Без звука' }).check();
+  assert.equal(await stored(), saveBeforeSetting, 'sound settings never touch the save');
+  await page.reload();
+  await page.waitForFunction(() => !!window.__alpha);
+  await nav.getByRole('button', { name: 'Настройки', exact: true }).click();
+  assert.equal(await page.getByRole('slider', { name: 'Музыка' }).inputValue(), '20');
+  assert.equal(await page.getByRole('checkbox', { name: 'Без звука' }).isChecked(), true);
+  assert.equal(await page.getByRole('slider', { name: 'Музыка' }).isDisabled(), true);
+  await page.getByRole('checkbox', { name: 'Без звука' }).uncheck();
 
   // Task 13 §3.1: desktop widths 1024 / 1280 / 1920 — no horizontal scrolling on any page.
   const pagesTabs = [
