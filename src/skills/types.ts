@@ -183,6 +183,15 @@ export interface SynergyUnlockedEvent {
   readonly pair: readonly [string, string];
   readonly skillId: string;
 }
+/** Task 15: an acquisition raised a synergy to level II or III (best pair, weakest rank). */
+export interface SynergyLevelUpEvent {
+  readonly type: 'synergy-level-up';
+  readonly synergyId: string;
+  readonly level: 2 | 3;
+  /** The pair that reached the level (workbook order). */
+  readonly pair: readonly [string, string];
+  readonly skillId: string;
+}
 export interface ControlEvent {
   readonly type: 'control-applied' | 'control-expired';
   readonly targetId: string;
@@ -212,6 +221,7 @@ export type SkillEvent =
   | SkillAreaEvent
   | SynergyTriggeredEvent
   | SynergyUnlockedEvent
+  | SynergyLevelUpEvent
   | EnhancedSkillEvent
   | ControlEvent;
 

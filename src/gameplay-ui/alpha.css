@@ -1510,3 +1510,98 @@ p.damage-note {
   border-color: rgba(255, 255, 255, 0.15);
   color: #8f978f;
 }
+
+/* Task 15: synergy banners (unlock / II / III «Пробуждение» in gold), level pips, card level hints */
+.synergy-banners {
+  position: absolute;
+  top: 92px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: grid;
+  gap: 8px;
+  width: min(520px, calc(100% - 32px));
+  pointer-events: none;
+}
+.synergy-banner {
+  display: grid;
+  gap: 2px;
+  padding: 10px 16px;
+  border: 1px solid rgba(159, 220, 255, 0.55);
+  border-radius: 10px;
+  background: rgba(14, 24, 40, 0.92);
+  color: #e9f3ff;
+  text-align: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  animation: synergy-banner-in 0.35s ease-out;
+}
+.synergy-banner strong {
+  font-size: 15px;
+  letter-spacing: 0.02em;
+}
+.synergy-banner span {
+  font-size: 12px;
+  opacity: 0.85;
+}
+.synergy-banner.level-2 {
+  border-color: rgba(185, 160, 255, 0.7);
+}
+.synergy-banner.level-3 {
+  border-color: #e8c36a;
+  background: linear-gradient(180deg, rgba(74, 54, 14, 0.95), rgba(34, 24, 8, 0.95));
+  color: #fff3cf;
+  box-shadow:
+    0 0 22px rgba(232, 195, 106, 0.55),
+    0 8px 24px rgba(0, 0, 0, 0.45);
+}
+.synergy-banner.level-3 strong {
+  color: #ffd877;
+  font-size: 17px;
+}
+@keyframes synergy-banner-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .synergy-banner {
+    animation: none;
+  }
+}
+.synergy-pips {
+  display: inline-flex;
+  gap: 3px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+.synergy-pips i {
+  width: 14px;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.16);
+}
+.synergy-pips i.on {
+  background: #9fdcff;
+}
+.synergy-pips.level-3 i.on {
+  background: #e8c36a;
+  box-shadow: 0 0 6px rgba(232, 195, 106, 0.7);
+}
+.synergy-levels {
+  font-size: 12px;
+  opacity: 0.85;
+}
+.card-synergy-raise {
+  color: #c9b8ff;
+  font-weight: 600;
+}
+.card-synergy-awaken {
+  color: #ffd877;
+  font-weight: 700;
+  text-shadow: 0 0 6px rgba(232, 195, 106, 0.5);
+}

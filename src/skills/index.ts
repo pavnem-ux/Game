@@ -37,7 +37,16 @@ export {
   synergyUnlocked,
   validateSynergyRules,
 } from './synergies';
-export { synergyOverview, cardSynergyHints, rulesForClass, pairText } from './synergy-info';
+export {
+  synergyOverview,
+  cardSynergyHints,
+  cardLevelRaises,
+  ranksOf,
+  rulesForClass,
+  pairText,
+  SYNERGY_LEVEL_TEXT,
+  LEVEL_ROMAN,
+} from './synergy-info';
 export type {
   SynergyInfo,
   SynergyPairInfo,

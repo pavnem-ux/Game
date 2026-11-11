@@ -95,6 +95,37 @@ export const RECIPES: Readonly<Record<SoundCue, Recipe>> = {
   synergy: {
     tones: [...arp('sine', [659, 831, 988, 1319], 0.09, 0.5, 0.4), T('triangle', 1976, 0.6, 0.15)],
   },
+  'synergy-fire': {
+    tones: [T('sawtooth', 330, 0.2, 0.3, { to: 660, lowpass: 1800 })],
+    noise: [N(2400, 0.16, 0.35, { to: 800 })],
+  },
+  'synergy-ice': {
+    tones: [T('sine', 1568, 0.2, 0.4, { to: 2093 }), T('triangle', 2637, 0.12, 0.2, { at: 0.04 })],
+  },
+  'synergy-impact': {
+    tones: [T('square', 140, 0.18, 0.4, { to: 70, lowpass: 600 })],
+    noise: [N(500, 0.14, 0.6)],
+  },
+  'synergy-poison': {
+    tones: [T('triangle', 392, 0.22, 0.35, { to: 294 })],
+    noise: [N(1200, 0.2, 0.3, { q: 6 })],
+  },
+  'synergy-blood': {
+    tones: [T('sawtooth', 247, 0.2, 0.3, { to: 165, lowpass: 1200 })],
+    noise: [N(900, 0.16, 0.4, { q: 3 })],
+  },
+  'synergy-awaken': {
+    tones: [T('triangle', 880, 0.45, 0.35, { to: 1320 }), T('sine', 1760, 0.4, 0.2, { at: 0.06 })],
+    noise: [N(5000, 0.35, 0.2)],
+  },
+  'synergy-level': { tones: arp('triangle', [587, 740, 880], 0.08, 0.4, 0.4) },
+  'synergy-awakening': {
+    tones: [
+      ...arp('triangle', [523, 659, 784, 1046, 1318], 0.09, 0.9, 0.38),
+      T('sine', 2093, 1.1, 0.16, { at: 0.4 }),
+    ],
+    noise: [N(6000, 1, 0.12)],
+  },
   'elite-alarm': {
     tones: [
       T('square', 440, 0.18, 0.3, { lowpass: 1800 }),

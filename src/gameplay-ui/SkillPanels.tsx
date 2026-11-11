@@ -6,8 +6,13 @@ import type {
   OfferCard,
   ReadoutLine,
   SkillDamageReadout,
+  SynergyId,
 } from '../skills';
 import {
+  LEVEL_ROMAN,
+  SYNERGY_LEVEL_TEXT,
+  cardLevelRaises,
+  ranksOf,
   cardSynergyHints,
   compareRanks,
   getSkill,
@@ -43,6 +48,7 @@ export function LevelUpDialog({
   const offer = skills.offer!;
   const bonus = offer.mode === 'bonus';
   const ownedIds = skills.owned.map((o) => o.skillId);
+  const ranks = ranksOf(skills.owned);
   // Task 14: banish mode (B) — the next picked card is banished instead of chosen.
   const [banishMode, setBanishModeState] = useState(false);
   const banishRef = useRef(false);
@@ -144,6 +150,10 @@ export function LevelUpDialog({
                 ? cardSynergyHints(world.character.characterClass, ownedIds, card.skillId)
                 : null;
             const opens = (hints?.unlocks.length ?? 0) > 0;
+            const raises =
+              card.kind === 'skill'
+                ? cardLevelRaises(world.character.characterClass, ranks, card.skillId)
+                : [];
             const pairs = (hints?.halfPairs.length ?? 0) > 0;
             const comparison =
               card.kind === 'skill'
@@ -159,7 +169,7 @@ export function LevelUpDialog({
                   banishMode
                     ? O.banishCard(card.name)
                     : card.kind === 'skill'
-                      ? `${card.name}, ${card.isNew ? 'новый навык' : 'улучшение'}, ранг ${ROMAN[card.nextRank]}${opens ? `, откроет синергию: ${hints!.unlocks.map((u) => u.synergy.name).join(', ')}` : ''}`
+                      ? `${card.name}, ${card.isNew ? 'новый навык' : 'улучшение'}, ранг ${ROMAN[card.nextRank]}${opens ? `, откроет синергию: ${hints!.unlocks.map((u) => u.synergy.name).join(', ')}` : ''}${raises.length ? `, поднимет синергию: ${raises.map((r) => `${r.synergy.name} ${LEVEL_ROMAN[r.level]}`).join(', ')}` : ''}`
                       : `${card.name}, награда`
                 }
                 onClick={() => pick(cardKey(card))}
@@ -187,6 +197,7 @@ export function LevelUpDialog({
                   />
                 )}
                 {hints && <CardSynergyHint hints={hints} />}
+                <CardLevelHint raises={raises} />
                 <div className="card-bottom">
                   <span>
                     {card.kind === 'skill'
@@ -395,6 +406,41 @@ const short = (list: readonly string[]) =>
     : list.join(', ');
 
 /** Compact synergy hint for one offered card (pair prerequisites only, never a trigger promise). */
+/** Task 15: synergy level as 3 pips (I / II / III «Пробуждение»). */
+export function SynergyPips({ level }: { level: number }) {
+  return (
+    <span
+      className={`synergy-pips level-${level}`}
+      role="img"
+      aria-label={level ? `Уровень синергии ${LEVEL_ROMAN[level]} из III` : 'Синергия закрыта'}
+    >
+      {[1, 2, 3].map((i) => (
+        <i key={i} className={i <= level ? 'on' : undefined} />
+      ))}
+    </span>
+  );
+}
+/** Task 15 card hint «▲ <Синергия> II/III»: only when this pick raises the level. */
+function CardLevelHint({ raises }: { raises: ReturnType<typeof cardLevelRaises> }) {
+  if (raises.length === 0) return null;
+  return (
+    <div className="card-synergy card-synergy-level" data-testid="card-level-hint">
+      {raises.map((r) => (
+        <span
+          key={r.synergy.id}
+          className={r.level === 3 ? 'card-synergy-awaken' : 'card-synergy-raise'}
+          title={
+            r.level === 3
+              ? `Пробуждение: ${SYNERGY_LEVEL_TEXT[r.synergy.id as SynergyId].awakened}`
+              : `Уровень II: ${SYNERGY_LEVEL_TEXT[r.synergy.id as SynergyId].levelTwo}`
+          }
+        >
+          ▲ {r.synergy.name} {LEVEL_ROMAN[r.level]}
+        </span>
+      ))}
+    </div>
+  );
+}
 function CardSynergyHint({ hints }: { hints: ReturnType<typeof cardSynergyHints> }) {
   const unlocks = hints.unlocks.map((u) => u.synergy.name);
   const unlockWith = [...new Set(hints.unlocks.flatMap((u) => u.withSkills))];
@@ -562,7 +608,10 @@ function SynergySection({ world }: { world: GameplaySnapshot }) {
   const info = synergyOverview(
     world.character.characterClass,
     world.skills.owned.map((o) => o.skillId),
+    ranksOf(world.skills.owned),
   );
+  // Effective levels (a DEV/QA override can differ from the ranks).
+  const effective = new Map(world.synergyLevels.map((l) => [l.id, l.level]));
   return (
     <section className="synergy-overview" aria-label="Синергии">
       <h3>Синергии</h3>
@@ -581,6 +630,7 @@ function SynergySection({ world }: { world: GameplaySnapshot }) {
           >
             <div className="synergy-entry-heading">
               <strong>{s.name}</strong>
+              <SynergyPips level={effective.get(s.id) ?? s.level} />
               <span className="synergy-status">
                 {s.status === 'available' ? '✓ Доступна' : '◇ Закрыта'}
               </span>
@@ -615,7 +665,17 @@ function SynergySection({ world }: { world: GameplaySnapshot }) {
                 ))}
               </ul>
             </div>
-            <p className="synergy-explanation">{s.explanation}</p>
+            <p className="synergy-levels">
+              <b>II</b> (оба навыка пары ранга III+): {SYNERGY_LEVEL_TEXT[s.id].levelTwo}.{' '}
+              <b>III «{SYNERGY_LEVEL_TEXT[s.id].awakened}»</b> (оба ранга V):{' '}
+              {SYNERGY_LEVEL_TEXT[s.id].awakenedEffect}.
+            </p>
+            <p className="synergy-explanation">
+              {s.explanation}
+              {s.bestPair &&
+                s.level > 1 &&
+                ` Уровень ${LEVEL_ROMAN[s.level]} даёт пара: ${s.bestPair}.`}
+            </p>
           </li>
         ))}
       </ul>

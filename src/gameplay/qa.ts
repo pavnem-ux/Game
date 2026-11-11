@@ -4,8 +4,8 @@ import type { CombatEntity, RandomSource } from '../combat-core';
 import { WeaponStatusAdapter } from '../status-effects';
 import type { OnHitEffectMapping, StatusEffects } from '../status-effects';
 import type { WeaponImpactEvent } from '../weapon-attacks';
-import { SYNERGY_RULES, completedPairs } from '../skills';
-import type { SynergyId, SynergyPair } from '../skills';
+import { SYNERGY_RULES, bestSynergyPair, completedPairs } from '../skills';
+import type { SynergyId, SynergyLevel, SynergyPair } from '../skills';
 import { GameplayWorld } from './GameplayWorld';
 import type { GameplayOptions, WorldEvent } from './types';
 
@@ -19,6 +19,10 @@ export interface QaSynergyDiagnostic {
   readonly count: number;
   readonly lastTime: number | null;
   readonly lastTargetId: string | null;
+  /** Task 15: effective level 0–3, the best pair (from ranks) and whether a QA override sets it. */
+  readonly level: SynergyLevel;
+  readonly bestPair: SynergyPair | null;
+  readonly forced: boolean;
 }
 export interface QaSnapshot {
   readonly godMode: boolean;
@@ -115,6 +119,9 @@ export class QaGameplayWorld extends GameplayWorld {
               count: counter?.count ?? 0,
               lastTime: counter?.time ?? null,
               lastTargetId: counter?.targetId ?? null,
+              level: this.skills.synergies.level(rule.id),
+              bestPair: bestSynergyPair(rule, this.run.rankMap()).pair,
+              forced: this.skills.synergies.hasLevelOverride(rule.id),
             });
           },
         ),

@@ -1,7 +1,111 @@
 import type { CharacterClass } from '../character-stats';
 import { getSkill } from './catalog';
-import { SYNERGY_RULES, completedPairs, pairComplete, synergyUnlocked } from './synergies';
-import type { SynergyId, SynergyPair, SynergyRule } from './synergies';
+import {
+  SYNERGY_RULES,
+  bestSynergyPair,
+  completedPairs,
+  pairComplete,
+  synergyUnlocked,
+} from './synergies';
+import type { SynergyId, SynergyLevel, SynergyPair, SynergyRule } from './synergies';
+
+/**
+ * Task 15 (catalog v3): player-facing Level II / III texts. Numbers are the catalog's (provisional);
+ * combat uses SYNERGY_TUNING_LEVEL_II and SYNERGY_AWAKENING, never these strings.
+ */
+export const SYNERGY_LEVEL_TEXT: Readonly<
+  Record<SynergyId, Readonly<{ levelTwo: string; awakened: string; awakenedEffect: string }>>
+> = Object.freeze({
+  thermal_shock: Object.freeze({
+    levelTwo: 'коэффициент взрыва ×0.825',
+    awakened: 'Паровой взрыв',
+    awakenedEffect: 'взрыв бьёт всех врагов в радиусе 80 от цели (одно попадание по врагу)',
+  }),
+  wildfire: Object.freeze({
+    levelTwo: 'урон Burn 4.5 за тик',
+    awakened: 'Огненная буря',
+    awakenedEffect: '5 соседей вместо 3, каждому 2 стака Burn (всего не более 7 целей с талантами)',
+  }),
+  shattered_ice: Object.freeze({
+    levelTwo: 'бонус ×0.675',
+    awakened: 'Ледяная шрапнель',
+    awakenedEffect: '3 осколка в 3 ближайших врагов в радиусе 150: ×0.25 ледяного урона и Slow',
+  }),
+  skull_crusher: Object.freeze({
+    levelTwo: 'доп. урон ×0.75',
+    awakened: 'Сотрясение',
+    awakenedEffect:
+      'продлевает текущее оглушение цели на 0.3 с (раз за оглушение, в пределах лимитов)',
+  }),
+  battle_momentum: Object.freeze({
+    levelTwo: '+22.5 скорости атаки',
+    awakened: 'Неудержимый',
+    awakenedEffect: 'до 3 стаков (каждое убийство +1), пока бафф активен — +10% скорости бега',
+  }),
+  seismic_impact: Object.freeze({
+    levelTwo: 'волна ×0.75',
+    awakened: 'Разлом',
+    awakenedEffect: 'трещина радиусом 90 на 2 с: каждые 0.5 с ×0.15 физического урона и Slow',
+  }),
+  toxic_barrage: Object.freeze({
+    levelTwo: 'взрыв ×0.9',
+    awakened: 'Чумной ливень',
+    awakenedEffect: 'взрыв бьёт всех в радиусе 80 и накладывает каждому 2 стака Poison',
+  }),
+  plague_chain: Object.freeze({
+    levelTwo: 'урон Poison 4.5 за тик',
+    awakened: 'Мор',
+    awakenedEffect: '5 соседей; каждый получает половину стаков Poison погибшего (1–5)',
+  }),
+  deadly_precision: Object.freeze({
+    levelTwo: '+22.5% урона по цели',
+    awakened: 'Инстинкт охотника',
+    awakenedEffect:
+      'если цель с бонусом погибает, бонус переходит на ближайшего отравленного врага (до 3 раз)',
+  }),
+  blood_frenzy: Object.freeze({
+    levelTwo: '+22.5 скорости атаки',
+    awakened: 'Кровавый пир',
+    awakenedEffect: 'удары кинжалом по кровоточащим лечат 0.5% Max HP (не чаще раза в 0.5 с)',
+  }),
+  deep_wounds: Object.freeze({
+    levelTwo: 'урон Bleed 4.5 за тик',
+    awakened: 'Рваные раны',
+    awakenedEffect: 'крит добавляет 2 стака Bleed и обновляет длительность',
+  }),
+  final_cut: Object.freeze({
+    levelTwo: 'добивание ×1.8',
+    awakened: 'Казнь',
+    awakenedEffect:
+      'порог 40%; если удар убивает — кровавый взрыв радиусом 80 (×0.4 и 1 стак Bleed)',
+  }),
+});
+export const LEVEL_ROMAN = Object.freeze(['', 'I', 'II', 'III'] as const);
+/** Rank lookup from the snapshot's owned skills. */
+export function ranksOf(owned: readonly { skillId: string; rank: number }[]) {
+  return new Map(owned.map((s) => [s.skillId, s.rank]));
+}
+/**
+ * Task 15 card hint «▲ <Синергия> II/III»: synergies whose level this pick would raise to II or III
+ * (a new skill enters at rank I; an upgrade adds one rank). Unlocks (level I) keep their own hint.
+ */
+export function cardLevelRaises(
+  characterClass: CharacterClass,
+  ranks: ReadonlyMap<string, number>,
+  skillId: string,
+): readonly { readonly synergy: SynergyRef; readonly level: 2 | 3 }[] {
+  const next = new Map(ranks);
+  next.set(skillId, (ranks.get(skillId) ?? 0) + 1);
+  const raises: { synergy: SynergyRef; level: 2 | 3 }[] = [];
+  for (const rule of rulesForClass(characterClass)) {
+    if (!rule.unlockPairs.some((pair) => pair.includes(skillId))) continue;
+    const before = bestSynergyPair(rule, ranks).level;
+    const after = bestSynergyPair(rule, next).level;
+    if (after > before && after >= 2)
+      raises.push(Object.freeze({ synergy: ref(rule), level: after as 2 | 3 }));
+  }
+  return Object.freeze(raises);
+}
 
 /**
  * Player-facing synergy information derived only from SYNERGY_RULES (pair table) and the skill
@@ -33,6 +137,10 @@ export interface SynergyInfo {
   readonly completedPairs: readonly string[];
   /** Which pair opened it, or what is still missing for the closest pair(s). */
   readonly explanation: string;
+  /** Task 15: level 0–3 from the best pair's weakest rank (0 while locked; I without ranks). */
+  readonly level: SynergyLevel;
+  /** Task 15: the pair giving the level ("A + B"), or null while locked. */
+  readonly bestPair: string | null;
 }
 export interface SynergyRef {
   readonly id: SynergyId;
@@ -66,6 +174,8 @@ const unique = (names: readonly string[]) => Object.freeze([...new Set(names)]);
 export function synergyOverview(
   characterClass: CharacterClass,
   ownedIds: readonly string[],
+  /** Task 15: owned ranks; without it every owned skill counts as rank I (level ≤ I). */
+  ranks: ReadonlyMap<string, number> = new Map(ownedIds.map((id) => [id, 1])),
 ): readonly SynergyInfo[] {
   const owned = new Set(ownedIds);
   return Object.freeze(
@@ -105,6 +215,10 @@ export function synergyOverview(
         pairs: Object.freeze(pairs),
         completedPairs: Object.freeze(done),
         explanation,
+        ...(() => {
+          const best = bestSynergyPair(rule, ranks);
+          return { level: best.level, bestPair: best.pair ? pairText(best.pair) : null };
+        })(),
       } satisfies SynergyInfo);
     }),
   );

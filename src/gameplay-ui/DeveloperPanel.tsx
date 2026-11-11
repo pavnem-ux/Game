@@ -360,6 +360,31 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
                   : 'Заблокирована'}{' '}
                 · пары: {synergy.unlockPairs.map((p) => p.join(' + ')).join(' | ')}
               </p>
+              <p data-testid={`synergy-level-${synergy.id}`}>
+                Уровень: <b>{['—', 'I', 'II', 'III'][synergy.level]}</b>
+                {synergy.forced ? ' (задан вручную)' : ''} · лучшая пара:{' '}
+                {synergy.bestPair ? synergy.bestPair.join(' + ') : 'нет'}
+              </p>
+              <label>
+                Задать уровень{' '}
+                <select
+                  aria-label={`Уровень синергии ${synergy.name}`}
+                  value={synergy.forced ? String(synergy.level) : 'auto'}
+                  onChange={(e) =>
+                    send({
+                      type: 'synergy-level',
+                      id: synergy.id,
+                      level: e.target.value === 'auto' ? null : Number(e.target.value),
+                    })
+                  }
+                >
+                  <option value="auto">по рангам</option>
+                  <option value="0">закрыта</option>
+                  <option value="1">I</option>
+                  <option value="2">II</option>
+                  <option value="3">III</option>
+                </select>
+              </label>
               <p>
                 Активаций: <b>{synergy.count}</b>
               </p>
