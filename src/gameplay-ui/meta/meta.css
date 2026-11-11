@@ -108,7 +108,7 @@
   gap: var(--sp-4);
   margin-bottom: var(--sp-5);
 }
-.meta-page-head > :last-child {
+.meta-push {
   margin-left: auto;
 }
 .meta-note {
@@ -1204,4 +1204,27 @@
   background: rgba(255, 236, 196, 0.08);
   color: var(--text-faint);
   box-shadow: none;
+}
+
+/* Progression page in the kit look (the page's old card colours are overridden). */
+.meta-ui .progression-card,
+.meta-ui .recent-runs {
+  background:
+    linear-gradient(180deg, rgba(255, 236, 196, 0.05), rgba(255, 236, 196, 0.015)),
+    rgba(14, 20, 38, 0.86);
+  border-color: var(--ink-line);
+  border-radius: var(--radius-l);
+  padding: var(--sp-5);
+  color: var(--text);
+  font-size: var(--fs-s);
+}
+.meta-ui .campaign-bar {
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: var(--radius-round);
+}
+.meta-ui .campaign-bar > div {
+  background: linear-gradient(90deg, var(--gold-600), var(--gold-300));
+}
+.meta-ui .recent-run.outcome-victory b {
+  color: var(--gold-300);
 }

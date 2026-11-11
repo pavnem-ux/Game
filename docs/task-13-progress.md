@@ -4,7 +4,7 @@ Spec: [task-13-ui-redesign.md](task-13-ui-redesign.md) (owner's file; Prettier o
 Branch `task-13-ui` from `main` at `095ec2d` (Tasks 11 and 12 merged). Presentation only — no
 gameplay changes.
 
-Current: Phase 3 (polish & delivery)
+Current: done — PR ready for review (not merged)
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/12
 
@@ -22,8 +22,8 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/12
 - [x] e2e per screen (select class, equip, buy talent, buy item, start map)
 - [x] 3.1 Keyboard/focus, reduced motion, 1024/1280/1920 widths
 - [x] 3.2 Full checks (AGENTS.md §6 incl. e2e and `test:production`)
-- [ ] 3.3 "After" screenshots 1280×720 and 1920×1080
-- [ ] 3.4 Docs (`PLAYABLE_COMBAT_ALPHA.md` UI section, README), PR description
+- [x] 3.3 "After" screenshots 1280×720 and 1920×1080
+- [x] 3.4 Docs (`PLAYABLE_COMBAT_ALPHA.md` UI section, README), PR description
 
 ## Code map (Task 13)
 
@@ -87,6 +87,8 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/12
 - Gold is shown once (top bar) on every page; the hub card and shop header do not repeat it.
 - Talent purchase: the learn button is in the detail panel (no modal); confirmation is the short
   glow animation and a status line. Shop purchases keep a confirm step (now a modal dialog).
+- Shop: a header item is pushed right only with the explicit `.meta-push` class (a generic
+  «last child» rule threw the slot tabs to the right when the class selector was hidden).
 - Phase 2 screens were built together and committed as one step (they share the shell and CSS).
 - e2e updates (no assertion removed): nav labels; character card text «Опыт 0 / 100» and the
   talent-points badge label; map checks moved from cards to the side panel (same facts: lock
@@ -98,6 +100,10 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/12
 
 ## Verification log
 
+- Phase 3.3–3.4: "after" screenshots of all 8 pages at 1280×720 and 1920×1080 plus 3 states
+  (talent detail, equipment compare, shop confirm) in `docs/ui/after/`; docs (UI section in
+  `PLAYABLE_COMBAT_ALPHA.md`, README). Final: typecheck ✓, `npm test` 1252 ✓, build ✓,
+  `test:production` 2 PASS, QA build + `test:qa` PASS, `test:e2e` 3 PASS.
 - Phase 3.1–3.2: keyboard (Tab focus ring `--focus`, Enter confirms the focused modal button, Esc
   cancels a modal without leaving the page and otherwise goes back to the hub), reduced motion
   (motion tokens 0 ms; title glow, pulsing nodes, mote drift and the learn glow off), widths

@@ -74,7 +74,7 @@ export function TalentsPage() {
             setMessage('');
           }}
         />
-        <div className={`talent-points ${available > 0 ? 'has-points' : ''}`}>
+        <div className={`talent-points meta-push ${available > 0 ? 'has-points' : ''}`}>
           <ClassEmblem characterClass={cls} size={34} />
           <span>
             <b>{T.points(available, earned)}</b>

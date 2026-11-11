@@ -85,7 +85,7 @@ export function EquipmentPage() {
             setSelected(null);
           }}
         />
-        <Button variant="ghost" onClick={() => campaignStore.setPage('shop')}>
+        <Button variant="ghost" className="meta-push" onClick={() => campaignStore.setPage('shop')}>
           ⚖ {E.toShop} →
         </Button>
       </header>
