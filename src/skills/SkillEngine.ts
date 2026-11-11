@@ -464,10 +464,22 @@ export class SkillEngine {
   }
 
   // ───────────────────────────── stats and on-hit modifiers ─────────────────────────────
+  /** Task 12: temporary run modifiers owned by the world (chest buffs). */
+  private external: RunStatModifiers = NO_MODIFIERS;
+  /**
+   * Task 12 (additive): sets the world's temporary run modifiers (chest buffs) and recomposes the
+   * stats; they join the same `composeRunStats` composition, so the central caps apply once.
+   */
+  setExternalModifiers(m: RunStatModifiers): void {
+    this.external = Object.freeze({ ...m });
+    this.refreshStats();
+  }
   private modifiers(): RunStatModifiers {
     const m: Record<keyof RunStatModifiers, number> = {
       ...(this.host.talentModifiers ?? NO_MODIFIERS),
     };
+    for (const [key, value] of Object.entries(this.external))
+      m[key as keyof RunStatModifiers] += value;
     // Task 09.1: timed talent stat buffs (refresh, don't stack) join the same composition.
     for (const [stat, value] of Object.entries(this.talents.statBuffs()))
       m[stat as keyof RunStatModifiers] += value ?? 0;

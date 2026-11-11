@@ -382,6 +382,31 @@ export class AlphaScene extends Phaser.Scene {
       g.fillStyle(0xf0c862).fillCircle(pile.x, pile.y, r);
       g.lineStyle(1, 0xfff1c4, 0.8).strokeCircle(pile.x, pile.y, r);
     }
+    // Task 12: chests (original shapes): wooden — brown box with an iron band; enchanted — violet
+    // box with a glowing rune. Blinking (alpha flicker) in the last 5 s of their life.
+    for (const chest of s.chests?.items ?? []) {
+      const alpha = chest.blinking ? (Math.floor(s.time * 6) % 2 === 0 ? 0.35 : 1) : 1;
+      const { x, y } = chest;
+      const enchanted = chest.type === 'enchanted';
+      g.fillStyle(enchanted ? 0xb68cff : 0xf0c862, 0.16 * alpha).fillCircle(x, y, 26);
+      g.fillStyle(0x060c0c, 0.35 * alpha).fillEllipse(x, y + 12, 34, 9);
+      g.fillStyle(enchanted ? 0x4b2f86 : 0x7a4b25, alpha).fillRoundedRect(
+        x - 15,
+        y - 11,
+        30,
+        22,
+        4,
+      );
+      g.fillStyle(enchanted ? 0x6a46b8 : 0x9a6232, alpha).fillRoundedRect(x - 15, y - 13, 30, 9, 4);
+      g.fillStyle(enchanted ? 0xd8c4ff : 0x3a3d40, alpha)
+        .fillRect(x - 15, y - 5, 30, 3)
+        .fillRect(x - 3, y - 6, 6, 8);
+      if (enchanted)
+        g.lineStyle(1, 0xf1e6ff, 0.8 * alpha)
+          .strokeCircle(x, y + 4, 4)
+          .lineBetween(x - 9, y + 6, x - 5, y + 2)
+          .lineBetween(x + 5, y + 2, x + 9, y + 6);
+    }
     // Task 12: bombard telegraphs — a red ground circle that fills up until the strike lands.
     for (const strike of s.artilleryStrikes) {
       const span = strike.landsAt - strike.markedAt;

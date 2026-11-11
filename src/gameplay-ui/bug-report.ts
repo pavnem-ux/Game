@@ -24,6 +24,8 @@ export interface BugReportRun {
   readonly screen: string;
   readonly kills: number;
   readonly stats: RunStatsSnapshot;
+  /** Task 12: chest buffs active when the report was made (remaining seconds). */
+  readonly activeBuffs: readonly Readonly<{ id: string; name: string; remaining: number }>[];
 }
 export interface BugReport {
   readonly format: typeof REPORT_FORMAT;
@@ -72,6 +74,11 @@ export function buildBugReport(input: ReportInput): BugReport {
           screen: input.screen,
           kills: w.kills,
           stats: w.runStats,
+          activeBuffs: Object.freeze(
+            (w.chests?.buffs ?? []).map((b) =>
+              Object.freeze({ id: b.id, name: b.name, remaining: b.remaining }),
+            ),
+          ),
         })
       : null,
     errors: input.errors,

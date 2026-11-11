@@ -1,5 +1,18 @@
 import type { GameplaySnapshot } from '../gameplay';
+import { BUFFS } from '../gameplay/chests';
+import type { BuffId, ChestContent } from '../gameplay/chests';
 import { clock } from './campaign-format';
+
+/** Task 12: seconds a chest pickup popup stays on screen. */
+const PICKUP_POPUP = 2.5;
+const BUFF_ICONS: Record<BuffId, string> = { fury: '⚔', haste: '≫', lightStep: '➶' };
+/** Task 12 pickup popup text (Russian): «+15% HP», «+N золота», buff name, «Магнит». */
+export function chestPopupText(content: ChestContent, amount: number): string {
+  if (content === 'heal') return '+15% HP';
+  if (content === 'gold') return `+${amount} золота`;
+  if (content === 'magnet') return 'Магнит: всё собрано';
+  return `${BUFFS[content].name}: ${BUFFS[content].description}`;
+}
 
 const ELITE_WARNING = 10;
 const ELITE_FRESH = 5;
@@ -19,8 +32,34 @@ export function CampaignHud({ world }: { world: GameplaySnapshot }) {
       ? next.time - world.time
       : null;
   const boss = c.boss;
+  const chests = world.chests;
+  const popup =
+    chests?.lastOpened && world.time - chests.lastOpened.time < PICKUP_POPUP
+      ? chests.lastOpened
+      : null;
   return (
     <>
+      {/* Task 12: active chest buffs with remaining time; pickup popup. */}
+      {chests && chests.buffs.length > 0 && (
+        <ul className="buff-bar" aria-label="Усиления">
+          {chests.buffs.map((b) => (
+            <li
+              key={b.id}
+              className={`buff buff-${b.id}`}
+              aria-label={`${b.name}: ${Math.ceil(b.remaining)} с`}
+            >
+              <span aria-hidden="true">{BUFF_ICONS[b.id]}</span>
+              <strong>{b.name}</strong>
+              <small>{Math.ceil(b.remaining)} с</small>
+            </li>
+          ))}
+        </ul>
+      )}
+      {popup && (
+        <div className={`chest-popup chest-popup-${popup.chestType}`} role="status">
+          {chestPopupText(popup.content, popup.amount)}
+        </div>
+      )}
       <div className="campaign-hud" aria-label="Кампания">
         <strong className="campaign-hud-map">
           {c.mapId}. {c.mapName}

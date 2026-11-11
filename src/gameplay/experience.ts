@@ -117,6 +117,23 @@ export class RunExperience {
     events.push(...this.gain(amount));
     return Object.freeze(events);
   }
+  /**
+   * Task 12 («Магнит»): collects every crystal on the map through the normal collection path
+   * (each crystal once, all XP kept, level-ups resolved by the same gain rule).
+   */
+  collectAll(): readonly ExperienceEvent[] {
+    const collected = [...this.crystals.values()];
+    const amount = collected.reduce((sum, c) => sum + c.value, 0);
+    this.validateGain(amount);
+    const events: ExperienceEvent[] = [];
+    for (const c of collected) {
+      this.crystals.delete(c.id);
+      this.cells.delete(this.key(c));
+      events.push(Object.freeze({ type: 'xp-collected', amount: c.value, crystalId: c.id }));
+    }
+    events.push(...this.gain(amount));
+    return Object.freeze(events);
+  }
   grantForTesting(amount: number): readonly ExperienceEvent[] {
     this.validateGain(amount);
     return Object.freeze([

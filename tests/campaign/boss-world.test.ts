@@ -42,7 +42,8 @@ const boss = (o: WorldEvent[], type: string, id?: string) =>
       (id === undefined || (e.event as { abilityId: string }).abilityId === id),
   );
 
-describe('boss abilities in the world (Task 08 §2.2)', () => {
+// Map 10's boss appears at 15:00 (Task 11), so each case simulates ~900 s: allow more than 5 s.
+describe('boss abilities in the world (Task 08 §2.2)', { timeout: 30_000 }, () => {
   it('all five abilities act through the existing systems after the boss spawns', () => {
     const w = world();
     run(w, B, 5);

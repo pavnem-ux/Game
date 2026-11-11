@@ -51,6 +51,14 @@ export interface RunStatsSnapshot {
   readonly lowHpTimes: readonly number[];
   /** Damage dealt per second over the last 5 s of simulation time. */
   readonly dps: number;
+  /** Task 12: chests spawned / opened / expired by type, contents opened and buff uptime (s). */
+  readonly chests: Readonly<{
+    spawned: Readonly<Record<'wooden' | 'enchanted', number>>;
+    opened: Readonly<Record<'wooden' | 'enchanted', number>>;
+    expired: number;
+    contents: Readonly<Record<string, number>>;
+    buffUptime: Readonly<Record<'fury' | 'haste' | 'lightStep', number>>;
+  }>;
 }
 export const RUN_STATS_LIMITS = Object.freeze({
   lowHpThreshold: 0.2,
@@ -73,6 +81,15 @@ function remember<K, V>(map: Map<K, V>, key: K, value: V, limit: number) {
 export class RunStats {
   private readonly dealt = new Map<string, { damage: number; hits: number }>();
   private readonly taken = new Map<EnemyType | 'unknown', number>();
+  private readonly chestSpawned = { wooden: 0, enchanted: 0 };
+  private readonly chestOpened = { wooden: 0, enchanted: 0 };
+  private chestExpired = 0;
+  private readonly chestContents: Record<string, number> = {};
+  private readonly buffUptime = { fury: 0, haste: 0, lightStep: 0 };
+  private readonly buffActive = new Map<
+    'fury' | 'haste' | 'lightStep',
+    { startedAt: number; expiresAt: number }
+  >();
   private readonly killed = new Map<EnemyType, number>();
   private readonly weaponByAttack = new Map<string, string>();
   private readonly types = new Map<string, EnemyType>();
@@ -156,6 +173,34 @@ export class RunStats {
       case 'healing':
         if (event.entityId === this.resolve.playerId) this.checkLowHp(time);
         return;
+      // Task 12: chests and buffs.
+      case 'chest-spawned':
+        this.chestSpawned[event.chest.type]++;
+        this.version++;
+        return;
+      case 'chest-expired':
+        this.chestExpired++;
+        this.version++;
+        return;
+      case 'chest-opened':
+        this.chestOpened[event.chest.type]++;
+        this.chestContents[event.content] = (this.chestContents[event.content] ?? 0) + 1;
+        this.version++;
+        return;
+      case 'buff-started': {
+        const active = this.buffActive.get(event.buff);
+        this.buffActive.set(event.buff, {
+          startedAt: active?.startedAt ?? time,
+          expiresAt: event.expiresAt,
+        });
+        this.version++;
+        return;
+      }
+      case 'buff-ended':
+        this.buffActive.delete(event.buff);
+        this.buffUptime[event.buff] += event.uptime;
+        this.version++;
+        return;
       case 'run-level-up':
         for (let level = event.previousLevel + 1; level <= event.level; level++)
           if (this.timeline.length < RUN_STATS_LIMITS.timeline) this.timeline.push({ level, time });
@@ -194,6 +239,23 @@ export class RunStats {
       lowHpMoments: this.lowMoments,
       lowHpTimes: Object.freeze([...this.lowTimes]),
       dps: this.dps(bucket, now),
+      chests: Object.freeze({
+        spawned: Object.freeze({ ...this.chestSpawned }),
+        opened: Object.freeze({ ...this.chestOpened }),
+        expired: this.chestExpired,
+        contents: Object.freeze({ ...this.chestContents }),
+        buffUptime: Object.freeze(
+          Object.fromEntries(
+            (['fury', 'haste', 'lightStep'] as const).map((id) => {
+              const active = this.buffActive.get(id);
+              const live = active
+                ? Math.max(0, Math.min(now, active.expiresAt) - active.startedAt)
+                : 0;
+              return [id, this.buffUptime[id] + live];
+            }),
+          ) as Record<'fury' | 'haste' | 'lightStep', number>,
+        ),
+      }),
     });
     this.cache = { version: this.version, bucket, snapshot };
     return snapshot;

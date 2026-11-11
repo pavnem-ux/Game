@@ -11,6 +11,7 @@ export const RU_DEBUG = Object.freeze({
     enemies: 'Врагов',
     dps: 'Урон в секунду (5 с)',
     coinsPerMinute: 'Монеты · в минуту',
+    levelTimeline: 'Уровень забега · 5/10/15 мин',
     total: 'Всего урона',
     bySource: 'Урон по источникам',
     none: 'Пока нет урона.',

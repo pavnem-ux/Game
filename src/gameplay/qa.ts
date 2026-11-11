@@ -22,6 +22,8 @@ export interface QaSynergyDiagnostic {
 }
 export interface QaSnapshot {
   readonly godMode: boolean;
+  /** Task 12: debug auto-collect of all XP/coins every second (pacing measurement). */
+  readonly autoCollect: boolean;
   readonly synergies: readonly QaSynergyDiagnostic[];
 }
 
@@ -99,6 +101,7 @@ export class QaGameplayWorld extends GameplayWorld {
   qaSnapshot(): QaSnapshot {
     return Object.freeze({
       godMode: this.qaCore.godMode,
+      autoCollect: this.debugAutoCollect,
       synergies: Object.freeze(
         SYNERGY_RULES.filter((rule) => rule.characterClass === this.character.characterClass).map(
           (rule) => {

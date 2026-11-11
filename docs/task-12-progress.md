@@ -4,7 +4,7 @@ Spec: [task-12-enemies-chests.md](task-12-enemies-chests.md) (owner's file; Pret
 blank lines and aligned the tables). Branch `task-12-enemies-chests` from `main` at `b6e7a88`
 (Task 11 merged: `src/gameplay/coins.ts` present). All new numbers are **provisional**.
 
-Current: Phase 3 (chests)
+Current: Phase 4 (tuning & delivery)
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/10
 
@@ -19,11 +19,11 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/10
 - [x] 2.3 `artillery` behaviour + bombard
 - [x] 2.4 Spawn mix per act
 - [x] Phase 2 tests
-- [ ] 3.1 Chest spawn / expiry scheduling
-- [ ] 3.2 Opening + wooden content
-- [ ] 3.3 Enchanted content + buffs
-- [ ] 3.4 HUD, popups, run stats
-- [ ] Phase 3 tests
+- [x] 3.1 Chest spawn / expiry scheduling
+- [x] 3.2 Opening + wooden content
+- [x] 3.3 Enchanted content + buffs
+- [x] 3.4 HUD, popups, run stats
+- [x] Phase 3 tests
 - [ ] 4.1 Tune `a`; level table; per-act enemy mix and chest income
 - [ ] 4.2 Full checks (AGENTS.md §6 + e2e), docs (`ENEMY_AI.md`, `EXPERIENCE_WAVES.md`, `CHESTS.md`,
       README, `playtest.md`)
@@ -60,6 +60,28 @@ Earlier maps: `docs/task-11-progress.md`, `docs/task-10-progress.md`.
   `autoSpawnCounts()`. Run stats `EnemyType` adds swift/brute/bombard (kills, damage taken) with
   Russian labels. `AlphaScene` draws the new shapes and the filling red strike circle.
 - Tests: `tests/gameplay/enemy-kinds.test.ts`.
+- Chests (3.1–3.4): `src/gameplay/chests.ts` — `CHEST_RULES` (45 s, 250–450, max 3, 60 s, blink 5 s,
+  radius 16, 75/25, heal 50% × 15%, gold max(5, 2%), buffs 20 s), `BUFFS` (Ярость
+  `damagePercent` +20, Быстрые руки `attackSpeed` +25, Лёгкий шаг `movementSpeedPercent` +20),
+  `RunChests` (spawnDue/spawnAt, expireDue, touched, open, grantBuff, endRun), `buffModifiers`,
+  `chestGold`. RNG stream `chests` (salt `0xc2b2ae35`).
+- World: `chests` (campaign only); boundaries `chest-expire` rank 8.6 (after skill expirations
+  8.5) and `chest-spawn` rank 9.25 (after reinforcement spawning 9, before the campaign events 9.5),
+  both only while the run is active and the player can act; opening in `movePlayer` after
+  crystals/coins; `openChest` (heal via `core.heal`, gold via `coins.drop` at the chest, magnet via
+  `experience.collectAll` + `coins.collectAll` and the normal `progression()`; buffs via
+  `syncBuffs()` → `SkillEngine.setExternalModifiers` (additive) → `composeRunStats`); buffs end in
+  `campaignInput` on resolution. Snapshot `chests {items (blinking), buffs (remaining),
+nextSpawnAt, lastOpened}`; channel `chests` (also fed to `RunStats`).
+- `RunExperience.collectAll()`; `RunStats.chests` (spawned/opened by type, expired, contents, buff
+  uptime); bug report `run.activeBuffs`.
+- UI: `CampaignHud` buff bar (icon, name, seconds) + pickup popup (`chestPopupText`); chest
+  drawing (wooden / enchanted, blinking) in `AlphaScene`; styles in `alpha.css`.
+- Debug (1.5): world `debugSpawnChest(type, content?)`, `debugGrantBuff`, `setDebugAutoCollect`;
+  controller `spawn-n`, `chest`, `buff`, `auto-collect`; QA snapshot `autoCollect`; panel fieldset
+  «Сундуки и усиления» (`Chest Debug`) + enemy-kind spawner; overlay row «Уровень забега · 5/10/15
+  мин» (`levelMarks`). Production markers added.
+- Tests: `tests/gameplay/chests.test.ts`, `tests/persistence/task12-debug.test.ts`.
 
 ## Decisions
 
@@ -81,11 +103,29 @@ Earlier maps: `docs/task-11-progress.md`, `docs/task-10-progress.md`.
   created at landing (Combat Core, survival policy, talent damage-taken multiplier).
 - 2.3: retreat distance 150 and hysteresis 18 like the ranged enemy (spec: «keeps range like the
   ranged enemy»).
+- 3.x: chests exist in campaign runs only (their gold uses the map's victory Gold and the coin
+  rules; like coins in Task 11). The type is rolled at spawn (different look); the content at
+  opening (a wooden chest's heal/gold depends on the HP at that moment). Contents of a dead player
+  never resolve (chests open only in the control step, which runs only while the player can act;
+  the heal also checks `alive`).
+- 3.x: tie slots (owner-approved in the spec): chest/buff expiry 8.6 (with the skill expirations,
+  after them); chest spawn 9.25 (after reinforcement spawning, before the Task 08 campaign events
+  at 9.5). No other reordering.
+- 3.x: position: up to 12 seeded tries (angle + distance) inside the arena (40-unit margin) and
+  not overlapping another chest; otherwise the spawn is skipped like at the limit (`no-space`).
+- 3.x: «+25% attack speed» = +25 points of `attackSpeed` (base 100 = the weapon's base rate);
+  «damage +20% (physical and magical)» = `damagePercent` +20.
+- 3.x: buff uptime counts a refreshed buff as one continuous application.
+- `tests/campaign/boss-world.test.ts`: per-file timeout 30 s (each case simulates ~900 s since
+  Task 11 moved map 10's boss to 15:00; ~4.5 s each was at the 5 s default under full-suite load).
 - Task 10 test `modifiers.test.ts` (swift map 12) now checks the ×1.1 speed per kind: Act II waves
   mix in the new kinds from the first spawns.
 
 ## Verification log
 
+- Phase 3: typecheck ✓, format ✓, `npm test` 1244 ✓, build ✓, `test:production` PASS (new
+  markers), QA build + `test:qa` PASS, `test:e2e` 3 PASS; screenshot of chests, buff bar and
+  bombards checked.
 - Phase 2: typecheck ✓, format ✓, `npm test` 1228 ✓, build ✓, `test:e2e` 3 PASS; screenshot of
   the new shapes and a strike circle checked (DEV build).
 - Phase 1: typecheck ✓, format ✓, `npm test` 1217 ✓, `test:e2e` 3 PASS.
