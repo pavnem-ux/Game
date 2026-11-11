@@ -13,13 +13,21 @@ export interface CoinPile extends Point {
 }
 export type CoinEvent =
   | { readonly type: 'coins-dropped'; readonly pileId: string; readonly amount: number }
-  | { readonly type: 'coins-collected'; readonly pileId: string; readonly amount: number };
+  | { readonly type: 'coins-collected'; readonly pileId: string; readonly amount: number }
+  /** Task 14: coins added straight to the run total (offer skip); paid by the normal rules. */
+  | { readonly type: 'coins-granted'; readonly source: 'skip'; readonly amount: number };
 const integer = (v: number, what: string) => {
   if (!Number.isSafeInteger(v) || v < 0)
     throw new RangeError(`${what} must be a whole number ≥ 0.`);
 };
 export class RunCoins {
   private collectedTotal = 0;
+  /** Task 14: adds coins to the collected total (no pile); same payout rules as picked-up coins. */
+  grant(amount: number, source: 'skip'): CoinEvent {
+    integer(amount, 'granted coins');
+    this.collectedTotal += amount;
+    return Object.freeze({ type: 'coins-granted', source, amount });
+  }
   private sequence = 0;
   private readonly piles = new Map<string, CoinPile>();
   private readonly cells = new Map<string, string>();

@@ -1325,6 +1325,27 @@ p.damage-note {
   width: 18px;
   height: 18px;
 }
+/* Task 14 sound sliders */
+.gameplay-settings h3 + .settings-slider,
+.settings-slider {
+  display: grid;
+  grid-template-columns: minmax(120px, 160px) minmax(0, 1fr) 3ch;
+  align-items: center;
+  gap: 10px;
+  max-width: 460px;
+  margin: 6px 0;
+}
+.settings-slider input {
+  width: 100%;
+  accent-color: #e8c36a;
+}
+.settings-slider output {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.gameplay-settings h3:not(:first-child) {
+  margin-top: 14px;
+}
 /* Task 09.1 C1: the Mage's enhanced (5th-slot) skill. */
 .skill-chip.enhanced {
   outline: 1px solid #e8c36a;
@@ -1446,4 +1467,46 @@ p.damage-note {
   .chest-popup {
     top: 188px;
   }
+}
+/* Task 14: level-up offer controls (kit buttons) and banish mode. */
+.offer-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+.offer-hotkeys {
+  flex-basis: 100%;
+  text-align: center;
+  color: var(--text-faint);
+  font-size: 11px;
+}
+.offer-banish-hint {
+  flex-basis: 100%;
+  margin: 0;
+  text-align: center;
+  color: #ffb4a8;
+  font-size: 13px;
+}
+.skill-card.banish-target:not(:disabled) {
+  outline: 2px dashed #e2675b;
+  outline-offset: 3px;
+}
+.skill-card.banish-target:disabled {
+  opacity: 0.45;
+}
+/* Task 14: dash readiness in the skill bar. */
+.skill-dash {
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(236, 196, 111, 0.6);
+  color: #f6dc9c;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.skill-dash.cooling {
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #8f978f;
 }

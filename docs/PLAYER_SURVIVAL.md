@@ -112,6 +112,14 @@ Survival не отменяет уже допустимую смерть враг
 - `revival-choice-required`: исходный immutable death.
 - `player-revived`: restoredHp, fullInvulnerableUntil.
 - `run-ended`: reason `finish-run` или `revival-already-used`, во втором случае death.
+- `protection-granted` (Task 14): source `dash`, expiresAt.
+
+**Рывок (Task 14).** `grantProtection(seconds, 'dash')` — аддитивный API: продлевает обычную защиту
+от прямых попаданий (`directUntil`, та же, что 0,3 с после попадания) до `time + seconds`, никогда
+не сокращает её. Мир вызывает его в начале рывка с 0,2 с (`DASH_RULES.invulnerability`,
+предварительно). Периодический урон (DoT) эта защита не блокирует — его блокирует только полная
+защита после воскрешения. Мёртвый игрок или ожидание решения о воскрешении — вызов игнорируется (без событий).
+Заблокированные в окне рывка попадания мир считает в `dash.hitsAvoided`.
 
 Отдельного события expiration нет: флаги вычисляются из времени. Новых переходов при повторных timestamp без действия нет. Direct duplicate notifications дедуплицируются по attack/target на текущем времени; новые корректные попадания позже могут использовать тот же универсальный Core snapshot. Старые известные death при replay после revival игнорируются, новая реальная смерть остаётся допустимой.
 

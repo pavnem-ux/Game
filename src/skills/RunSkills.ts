@@ -6,6 +6,7 @@ import {
   cardKey,
   eligiblePools,
   pickSkills,
+  replacementCard,
   rerollIsMeaningful,
   rerollSkills,
   skillCard,
@@ -29,6 +30,10 @@ export class RunSkills {
   private readonly pool: readonly SkillDefinition[];
   private readonly ranks = new Map<string, number>();
   private rerolls: number = SKILL_RULES.rerollsPerRun;
+  /** Task 14: banishes left, skills removed from the run pool, offers skipped. */
+  private banishesLeft: number = SKILL_RULES.banishesPerRun;
+  private readonly banished = new Set<string>();
+  private skipped = 0;
   private pending = 0;
   private offer: LevelUpOffer | null = null;
   private offerSequence = 0;
@@ -115,6 +120,96 @@ export class RunSkills {
     this.rerolls--;
     return this.generate(true, new Set(offer.cards.map(cardKey)));
   }
+  /**
+   * Task 14: why a card cannot be banished now (null = it can): no offer / not a skill card,
+   * no banishes left, or it is an owned skill's upgrade and the last eligible card.
+   */
+  banishBlockReason(key: string): 'no-offer' | 'not-skill' | 'none-left' | 'last-upgrade' | null {
+    const offer = this.offer;
+    if (!offer || offer.mode !== 'skills') return 'no-offer';
+    const card = offer.cards.find((c) => cardKey(c) === key);
+    if (!card || card.kind !== 'skill') return 'not-skill';
+    if (this.banishesLeft <= 0) return 'none-left';
+    const pools = this.pools();
+    if (!card.isNew && pools.fresh.length + pools.upgrades.length <= 1) return 'last-upgrade';
+    return null;
+  }
+  /**
+   * Task 14 «Изгнать»: removes the card's skill from the pool for the rest of the run and replaces
+   * only that card (seeded, reroll preference for its slot). The offer id stays the same.
+   */
+  banish(key: string): SkillEvent[] {
+    const reason = this.banishBlockReason(key);
+    if (reason) throw new Error(`Cannot banish: ${reason}.`);
+    const offer = this.offer!;
+    const card = offer.cards.find((c) => cardKey(c) === key)! as Extract<
+      OfferCard,
+      { kind: 'skill' }
+    >;
+    this.banishesLeft--;
+    this.banished.add(card.skillId);
+    const keep = new Set(offer.cards.map(cardKey).filter((k) => k !== key));
+    const pools = this.pools();
+    const replacement = replacementCard(pools, keep, card.isNew, this.random);
+    const cards = offer.cards.flatMap((c) =>
+      cardKey(c) !== key
+        ? [c]
+        : replacement
+          ? [skillCard(replacement, this.rank(replacement.id))]
+          : [],
+    );
+    if (cards.length === 0) {
+      // Nothing eligible is left: the offer becomes the bonus fallback (as at pool exhaustion).
+      this.offer = null;
+      return [
+        Object.freeze({
+          type: 'skill-banished',
+          offerId: offer.id,
+          skillId: card.skillId,
+          replacement: null,
+        }),
+        ...this.generate(false, new Set()),
+      ];
+    }
+    this.offer = Object.freeze({
+      ...offer,
+      cards: Object.freeze(cards),
+      rerollAvailable: this.rerolls > 0 && rerollIsMeaningful(pools),
+    });
+    return [
+      Object.freeze({
+        type: 'skill-banished',
+        offerId: offer.id,
+        skillId: card.skillId,
+        replacement: replacement?.id ?? null,
+      }),
+    ];
+  }
+  /** Task 14 «Пропустить»: closes the current offer without a card (unlimited). */
+  skip(): SkillEvent[] {
+    const offer = this.offer;
+    if (!offer) throw new Error('No level-up offer to skip.');
+    this.skipped++;
+    this.pending--;
+    this.offer = null;
+    const events: SkillEvent[] = [
+      Object.freeze({ type: 'skill-offer-skipped', offerId: offer.id }),
+    ];
+    if (this.pending > 0) events.push(...this.generate(false, new Set()));
+    return events;
+  }
+  /** DEV/QA: extra rerolls / banishes for this run. */
+  grantChoiceControls(rerolls: number, banishes: number): void {
+    for (const n of [rerolls, banishes])
+      if (!Number.isSafeInteger(n) || n < 0 || n > 99) throw new RangeError('Invalid grant.');
+    this.rerolls += rerolls;
+    this.banishesLeft += banishes;
+    if (this.offer && this.offer.mode === 'skills')
+      this.offer = Object.freeze({
+        ...this.offer,
+        rerollAvailable: this.rerolls > 0 && rerollIsMeaningful(this.pools()),
+      });
+  }
   /** Choose exactly one card of the current offer. */
   choose(key: string): { result: ChoiceResult; events: SkillEvent[] } {
     const offer = this.offer;
@@ -197,6 +292,14 @@ export class RunSkills {
         passive: Object.freeze({ used: used.passive, max: SKILL_RULES.passiveSlots }),
       }),
       rerolls: this.rerolls,
+      banishes: this.banishesLeft,
+      banished: Object.freeze([...this.banished]),
+      skips: this.skipped,
+      banishBlocked: Object.freeze(
+        Object.fromEntries(
+          (this.offer?.cards ?? []).map((c) => [cardKey(c), this.banishBlockReason(cardKey(c))]),
+        ),
+      ),
       pendingChoices: this.pending,
       offer: this.offer,
       gold: this.gold,
@@ -215,7 +318,8 @@ export class RunSkills {
   }
   private pools() {
     const used = this.slotUsage();
-    return eligiblePools(this.pool, {
+    const pool = this.banished.size ? this.pool.filter((d) => !this.banished.has(d.id)) : this.pool;
+    return eligiblePools(pool, {
       ranks: this.ranks,
       autoUsed: used.auto,
       passiveUsed: used.passive,

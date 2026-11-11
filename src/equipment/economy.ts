@@ -27,7 +27,14 @@ export const COIN_RULES = Object.freeze({
   victoryBonusShare: 0.4,
   /** Defeat pays this share of the collected coins (rounded down), no bonus. Abandoned: nothing. */
   defeatCoinShare: 0.5,
+  /** Task 14 «Пропустить» (provisional): coins = this share of the map's victory Gold, at least min. */
+  skipShare: 0.02,
+  skipMin: 3,
 });
+/** Task 14: coins for skipping a level-up offer on this map. */
+export function skipCoins(mapId: number): number {
+  return Math.max(COIN_RULES.skipMin, Math.round(victoryGold(mapId) * COIN_RULES.skipShare));
+}
 /** Map scale of normal piles, like the Task 10 Gold table: victoryGold(map) / victoryGold(1). */
 export function coinScale(mapId: number): number {
   return victoryGold(mapId) / victoryGold(1);

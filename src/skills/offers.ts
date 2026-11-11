@@ -122,6 +122,24 @@ export function rerollSkills(
   return pickSkills(pools, random, full);
 }
 
+/**
+ * Task 14 «Изгнать»: a replacement for one banished card, following the reroll preference for that
+ * slot — never a card already in the offer; the same category (new / upgrade) first so the managed
+ * «at least one new and one upgrade» guarantee holds when possible; null when nothing is left.
+ */
+export function replacementCard(
+  pools: OfferPools,
+  keep: ReadonlySet<string>,
+  wasFresh: boolean,
+  random: Random,
+): SkillDefinition | null {
+  const fresh = pools.fresh.filter((d) => !keep.has(d.id));
+  const upgrades = pools.upgrades.filter((d) => !keep.has(d.id));
+  const same = wasFresh ? fresh : upgrades;
+  const candidates = same.length ? same : [...fresh, ...upgrades];
+  return candidates.length ? takeRandom([...candidates], random) : null;
+}
+
 /** A reroll is meaningful only if a different set of cards could be produced. */
 export function rerollIsMeaningful(pools: OfferPools): boolean {
   return pools.fresh.length + pools.upgrades.length > SKILL_RULES.offerSize;

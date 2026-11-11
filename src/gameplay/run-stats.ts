@@ -51,6 +51,15 @@ export interface RunStatsSnapshot {
   readonly lowHpTimes: readonly number[];
   /** Damage dealt per second over the last 5 s of simulation time. */
   readonly dps: number;
+  /** Task 14: dashes used and direct hits avoided during dash i-frames. */
+  readonly dash: Readonly<{ used: number; hitsAvoided: number }>;
+  /** Task 14: level-up offer controls used this run and the skills banished (in order). */
+  readonly choices: Readonly<{
+    rerolls: number;
+    banishes: number;
+    skips: number;
+    banished: readonly string[];
+  }>;
   /** Task 12: chests spawned / opened / expired by type, contents opened and buff uptime (s). */
   readonly chests: Readonly<{
     spawned: Readonly<Record<'wooden' | 'enchanted', number>>;
@@ -82,6 +91,11 @@ export class RunStats {
   private readonly dealt = new Map<string, { damage: number; hits: number }>();
   private readonly taken = new Map<EnemyType | 'unknown', number>();
   private readonly chestSpawned = { wooden: 0, enchanted: 0 };
+  private rerollsUsed = 0;
+  private dashesUsed = 0;
+  private dashAvoided = 0;
+  private skipsUsed = 0;
+  private readonly banishedIds: string[] = [];
   private readonly chestOpened = { wooden: 0, enchanted: 0 };
   private chestExpired = 0;
   private readonly chestContents: Record<string, number> = {};
@@ -173,6 +187,30 @@ export class RunStats {
       case 'healing':
         if (event.entityId === this.resolve.playerId) this.checkLowHp(time);
         return;
+      // Task 14: dash.
+      case 'dash-started':
+        this.dashesUsed++;
+        this.version++;
+        return;
+      case 'dash-hit-avoided':
+        this.dashAvoided++;
+        this.version++;
+        return;
+      // Task 14: level-up offer controls.
+      case 'skill-offer':
+        if (event.reroll) {
+          this.rerollsUsed++;
+          this.version++;
+        }
+        return;
+      case 'skill-banished':
+        this.banishedIds.push(event.skillId);
+        this.version++;
+        return;
+      case 'skill-offer-skipped':
+        this.skipsUsed++;
+        this.version++;
+        return;
       // Task 12: chests and buffs.
       case 'chest-spawned':
         this.chestSpawned[event.chest.type]++;
@@ -239,6 +277,13 @@ export class RunStats {
       lowHpMoments: this.lowMoments,
       lowHpTimes: Object.freeze([...this.lowTimes]),
       dps: this.dps(bucket, now),
+      dash: Object.freeze({ used: this.dashesUsed, hitsAvoided: this.dashAvoided }),
+      choices: Object.freeze({
+        rerolls: this.rerollsUsed,
+        banishes: this.banishedIds.length,
+        skips: this.skipsUsed,
+        banished: Object.freeze([...this.banishedIds]),
+      }),
       chests: Object.freeze({
         spawned: Object.freeze({ ...this.chestSpawned }),
         opened: Object.freeze({ ...this.chestOpened }),

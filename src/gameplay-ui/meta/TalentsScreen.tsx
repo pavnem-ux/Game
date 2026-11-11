@@ -2,6 +2,7 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 import { CHARACTER_CLASSES } from '../../character-stats';
 import type { CharacterClass } from '../../character-stats';
 import { CLASS_LABELS } from '../../gameplay';
+import { uiSound } from '../sound';
 import {
   TALENT_CONFIG,
   availableTalentPoints,
@@ -54,6 +55,7 @@ export function TalentsPage() {
   const learn = (n: TalentNode) => {
     const rank = (ranks[n.id] ?? 0) + 1;
     const result = campaignStore.purchaseTalent(cls, n.id);
+    uiSound(result.ok ? 'ui-buy' : 'ui-error');
     if (!result.ok) setMessage(T.reasons[result.reason ?? ''] ?? RU.meta.talents.locked);
     else {
       setFlash(n.id);

@@ -14,6 +14,8 @@ import type { TestingController } from '../gameplay/testing';
 import { stunIndicator } from './stun-indicator';
 import { oncePerKeyEvent } from './key-event-once';
 import { OFFHAND_WEAPON } from '../talents';
+import { cardKey } from '../skills';
+import { soundFrame } from '../gameplay-ui/sound';
 
 /** Task 08.5 §5.1: floating-number styles (crit larger and gold, player damage red). */
 const FLOAT_STYLES: Record<FloatingKind, { color: string; size: number }> = {
@@ -80,6 +82,14 @@ export class AlphaScene extends Phaser.Scene {
       }
     });
     this.input.keyboard!.on('keydown-P', toggle).on('keydown-ESC', toggle);
+    // Task 14: Space / Shift dash (resolved by the world at its next input sample).
+    const dash = (e: KeyboardEvent) => {
+      if (e.repeat || (e.target as HTMLElement)?.matches('input,select,textarea')) return;
+      if (!this.world || this.world.paused) return;
+      e.preventDefault(); // a focused HUD button must not also receive Space during play
+      if (this.world.requestDash()) this.publish();
+    };
+    this.input.keyboard!.on('keydown-SPACE', dash).on('keydown-SHIFT', dash);
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
       if (
         this.world &&
@@ -230,6 +240,26 @@ export class AlphaScene extends Phaser.Scene {
         case 'reroll':
           this.world?.rerollSkillOffer();
           break;
+        case 'banish-skill':
+          this.world?.banishSkillCard(command.card);
+          break;
+        case 'offer-key': {
+          // Hotkeys address the offer the world holds now (the UI snapshot may be a frame behind).
+          const card = this.world?.run.currentOffer?.cards[command.index];
+          if (!card || !this.world) break;
+          const key = cardKey(card);
+          if (command.banish) {
+            if (this.world.run.banishBlockReason(key) === null) this.world.banishSkillCard(key);
+          } else {
+            this.world.chooseSkill(key);
+            this.clearInput();
+          }
+          break;
+        }
+        case 'skip-offer':
+          this.world?.skipSkillOffer();
+          this.clearInput();
+          break;
         case 'time-scale':
           if (import.meta.env.DEV || __QA_BUILD__) {
             if (!isDebugTimeScale(command.scale))
@@ -287,7 +317,10 @@ export class AlphaScene extends Phaser.Scene {
     const g = this.graphics;
     g.clear();
     this.cameras.main.centerOn(s.playerBody.x, s.playerBody.y);
-    for (const event of this.world!.getEvents(this.lastEvent)) {
+    const frameEvents = this.world!.getEvents(this.lastEvent);
+    // Task 14: sound reads the same events (presentation only; nothing flows back).
+    soundFrame(frameEvents);
+    for (const event of frameEvents) {
       this.lastEvent = event.sequence;
       const e = event.event;
       if (event.channel === 'weapon' && e.type === 'attack-started' && !e.projectileId)
@@ -599,6 +632,35 @@ export class AlphaScene extends Phaser.Scene {
     }
     const { x, y } = s.playerBody,
       color = CLASS_COLORS[s.character.characterClass];
+    // Task 14: dash afterimages (fading ghosts along the dash line) and the cooldown ring.
+    const dash = s.dash;
+    if (dash.startedAt !== null && dash.from) {
+      const age = s.time - dash.startedAt;
+      if (age >= 0 && age < 0.4) {
+        const fade = 1 - age / 0.4;
+        for (let i = 0; i < 4; i++) {
+          const t = i / 4;
+          const gx = dash.from.x + (x - dash.from.x) * t,
+            gy = dash.from.y + (y - dash.from.y) * t;
+          g.fillStyle(color, 0.12 + 0.12 * t * fade).fillTriangle(
+            gx,
+            gy - 12,
+            gx - 15,
+            gy + 17,
+            gx + 15,
+            gy + 17,
+          );
+        }
+      }
+    }
+    if (s.time < dash.readyAt && dash.cooldown > 0) {
+      const done = 1 - (dash.readyAt - s.time) / dash.cooldown;
+      g.lineStyle(3, 0x0b1222, 0.6).strokeCircle(x, y, 34);
+      g.lineStyle(3, 0xecc46f, 0.85)
+        .beginPath()
+        .arc(x, y, 34, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.max(0, done))
+        .strokePath();
+    }
     g.fillStyle(0x030d0c, 0.45).fillEllipse(x, y + 17, 38, 13);
     g.fillStyle(color, s.player.alive ? 1 : 0.4).fillTriangle(
       x,

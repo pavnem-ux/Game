@@ -2,6 +2,7 @@ import { useState, useSyncExternalStore } from 'react';
 import { CHARACTER_CLASSES } from '../character-stats';
 import type { CharacterClass } from '../character-stats';
 import { CLASS_LABELS } from '../gameplay';
+import { uiSound } from './sound';
 import {
   GEAR_SLOTS,
   GEAR_STAT_LABELS,
@@ -173,6 +174,7 @@ export function ShopPage() {
           title={`Купить «${buying.name}» за ${buying.price} золота?`}
           onConfirm={() => {
             const refused = campaignStore.buyItem(buying.id);
+            uiSound(refused ? 'ui-error' : 'ui-buy');
             setConfirming(null);
             setMessage(
               refused ? (REFUSALS[refused] ?? 'Покупка не удалась.') : `Куплено: ${buying.name}.`,

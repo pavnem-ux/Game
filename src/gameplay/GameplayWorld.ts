@@ -34,6 +34,7 @@ import {
   ALPHA_ENEMIES,
   ALPHA_ENEMY_STATS,
   ALPHA_WEAPONS,
+  DASH_RULES,
   defaultOnHit,
 } from './config';
 import type { CampaignSnapshot, GameplayOptions, GameplaySnapshot, WorldEvent } from './types';
@@ -87,7 +88,7 @@ import {
   isEnemyKind,
 } from './enemy-types';
 import type { EnemyKind, NewEnemyKind } from './enemy-types';
-import { coinValue, normalChance } from '../equipment/economy';
+import { coinValue, normalChance, skipCoins } from '../equipment/economy';
 /** The sole world scheduler. All damage is resolved by existing modules, one boundary at a time. */
 export class GameplayWorld {
   readonly core: CombatCore;
@@ -375,6 +376,123 @@ export class GameplayWorld {
       this.facing = Object.freeze({ x: this.input.x / l, y: this.input.y / l });
     }
   }
+  // ── Task 14 dash ──
+  private dash: Readonly<{
+    startedAt: number;
+    endsAt: number;
+    from: Point;
+    to: Point;
+    direction: Point;
+    distance: number;
+  }> | null = null;
+  private dashReadyAt = 0;
+  private dashReadyPending = false;
+  private dashRequested = false;
+  /** End of the latest dash's i-frame window (hits blocked before it count as avoided). */
+  private dashGuardUntil = -1;
+  private dashCooldownOverride: number | null = null;
+  /** Start of the running cooldown (the latest dash start). */
+  private dashCooldownFrom = 0;
+  /** Why a dash cannot start now (null = it can). */
+  dashBlockReason(): 'dead' | 'paused' | 'dashing' | 'cooldown' | null {
+    if (!this.survival.getState().canPlayerAct) return 'dead';
+    if (this.paused) return 'paused';
+    if (this.dash) return 'dashing';
+    if (this.clock < this.dashReadyAt && !sameInstant(this.clock, this.dashReadyAt))
+      return 'cooldown';
+    return null;
+  }
+  /**
+   * Task 14: request a dash (Space / Shift). It starts at the next input sample, like movement
+   * input; returns false (nothing queued) while dead, paused, in an offer or revive prompt,
+   * dashing or on cooldown.
+   */
+  requestDash(): boolean {
+    if (this.dashBlockReason() !== null) return false;
+    this.dashRequested = true;
+    return true;
+  }
+  /**
+   * DEV/QA: dash cooldown override in seconds (null = `DASH_RULES.cooldown`). Also applies to a
+   * running cooldown (measured from the latest dash start; never earlier than now).
+   */
+  setDebugDashCooldown(seconds: number | null): void {
+    if (seconds !== null && (!Number.isFinite(seconds) || seconds < 0 || seconds > 60))
+      throw new RangeError('Dash cooldown override must be 0–60 s.');
+    this.dashCooldownOverride = seconds;
+    if (this.dashReadyPending)
+      this.dashReadyAt = Math.max(this.clock, this.dashCooldownFrom + this.dashCooldown);
+  }
+  private get dashCooldown(): number {
+    return this.dashCooldownOverride ?? DASH_RULES.cooldown;
+  }
+  private startDash() {
+    const moving = Math.hypot(this.input.x, this.input.y) > 0;
+    const raw = moving ? this.input : this.facing;
+    const l = Math.hypot(raw.x, raw.y) || 1;
+    const direction = Object.freeze({ x: raw.x / l, y: raw.y / l });
+    // Stop at the arena bounds along the dash direction (no sliding along a wall).
+    const r = this.body.radius,
+      max = ALPHA.arenaSize - r;
+    let distance: number = DASH_RULES.distance;
+    for (const [p, d] of [
+      [this.body.x, direction.x],
+      [this.body.y, direction.y],
+    ] as const) {
+      if (d > 0) distance = Math.min(distance, (max - p) / d);
+      else if (d < 0) distance = Math.min(distance, (r - p) / d);
+    }
+    distance = Math.max(0, distance);
+    const from = Object.freeze({ x: this.body.x, y: this.body.y });
+    const to = Object.freeze({
+      x: this.clamp(from.x + direction.x * distance, r),
+      y: this.clamp(from.y + direction.y * distance, r),
+    });
+    this.dash = Object.freeze({
+      startedAt: this.clock,
+      endsAt: this.clock + DASH_RULES.duration,
+      from,
+      to,
+      direction,
+      distance,
+    });
+    this.dashCooldownFrom = this.clock;
+    this.dashReadyAt = this.clock + this.dashCooldown;
+    this.dashReadyPending = this.dashReadyAt > this.clock;
+    this.dashGuardUntil = this.clock + DASH_RULES.invulnerability;
+    this.dashesUsed++;
+    this.record(
+      'survival',
+      this.survival.grantProtection(DASH_RULES.invulnerability, 'dash').events,
+    );
+    this.record('movement', [
+      Object.freeze({ type: 'dash-started', from, to, direction, endsAt: this.dash.endsAt }),
+    ]);
+  }
+  private dashPosition(time: number): Point {
+    const d = this.dash!;
+    const speed = DASH_RULES.distance / DASH_RULES.duration;
+    const travelled = Math.min(d.distance, Math.max(0, time - d.startedAt) * speed);
+    if (travelled >= d.distance) return d.to;
+    return {
+      x: this.clamp(d.from.x + d.direction.x * travelled, this.body.radius),
+      y: this.clamp(d.from.y + d.direction.y * travelled, this.body.radius),
+    };
+  }
+  private endDash() {
+    const d = this.dash!;
+    this.body = Object.freeze({ ...this.body, x: d.to.x, y: d.to.y });
+    this.dash = null;
+    this.record('movement', [Object.freeze({ type: 'dash-ended', at: d.to })]);
+  }
+  private dashesUsed = 0;
+  private dashHitsAvoided = 0;
+  private noteBlockedHit(sourceId: string) {
+    if (this.clock < this.dashGuardUntil && !sameInstant(this.clock, this.dashGuardUntil)) {
+      this.dashHitsAvoided++;
+      this.record('movement', [Object.freeze({ type: 'dash-hit-avoided', sourceId })]);
+    }
+  }
   setPaused(paused: boolean): void {
     if (typeof paused !== 'boolean') throw new TypeError('paused must be boolean.');
     this.manualPause = paused;
@@ -432,6 +550,16 @@ export class GameplayWorld {
       playerProjectiles: this.weapons.getProjectiles(),
       enemyProjectiles: this.enemies.getProjectiles(),
       artilleryStrikes: this.enemies.getStrikes(),
+      dash: Object.freeze({
+        active: this.dash !== null,
+        startedAt: this.dash?.startedAt ?? null,
+        from: this.dash?.from ?? null,
+        to: this.dash?.to ?? null,
+        readyAt: this.dashReadyAt,
+        cooldown: this.dashCooldown,
+        used: this.dashesUsed,
+        hitsAvoided: this.dashHitsAvoided,
+      }),
       chests: this.chests
         ? Object.freeze({
             items: Object.freeze(
@@ -535,7 +663,11 @@ export class GameplayWorld {
       }
       this.advanceAll(next.time);
       if (next.kind === 'control') this.movePlayer();
-      else if (next.kind === 'weapon') this.consumeWeapons(this.weapons.resolveBoundary());
+      else if (next.kind === 'dash-end') this.endDash();
+      else if (next.kind === 'dash-ready') {
+        this.dashReadyPending = false;
+        this.record('movement', [Object.freeze({ type: 'dash-ready' })]);
+      } else if (next.kind === 'weapon') this.consumeWeapons(this.weapons.resolveBoundary());
       else if (next.kind === 'status') this.consumeStatuses(this.statuses.resolveBoundary());
       else if (next.kind === 'enemy') this.consumeEnemies(this.enemies.resolveBoundary());
       else if (next.kind === 'spawn') this.spawnWave();
@@ -765,6 +897,28 @@ export class GameplayWorld {
   rerollSkillOffer(): void {
     this.record('skill', this.run.reroll());
   }
+  /** Task 14 debug (DEV/QA controller only): extra rerolls / banishes for this run. */
+  debugGrantChoiceControls(rerolls: number, banishes: number): void {
+    this.run.grantChoiceControls(rerolls, banishes);
+  }
+  /** Task 14 «Изгнать»: remove an offered skill from the run pool; only that card is replaced. */
+  banishSkillCard(cardKey: string): void {
+    if (typeof cardKey !== 'string') throw new TypeError('Card key must be a string.');
+    if (this.survival.getState().runState === 'ended') throw new Error('The run has ended.');
+    this.record('skill', this.run.banish(cardKey));
+  }
+  /**
+   * Task 14 «Пропустить»: close the offer without a card. Campaign runs add skip coins
+   * (`skipCoins`, 2% of the map's victory Gold, at least 3) to the collected coins, so the normal
+   * payout applies (victory: all, defeat: 50%, abandon: nothing).
+   */
+  skipSkillOffer(): void {
+    if (this.survival.getState().runState === 'ended') throw new Error('The run has ended.');
+    this.record('skill', this.run.skip());
+    if (this.campaignMap)
+      this.record('progression', [this.coins.grant(skipCoins(this.campaignMap.id), 'skip')]);
+    this.prepare();
+  }
   private progression(events: readonly ExperienceEvent[]) {
     this.record('progression', events);
     for (const event of events)
@@ -909,7 +1063,10 @@ export class GameplayWorld {
         kind: 'contact' as const,
       };
       if (!this.core.getEntity(this.playerId).alive) return false;
-      if (!this.hostilePolicies.canResolveDirectDamage({ ...context, attack: null })) return false;
+      if (!this.hostilePolicies.canResolveDirectDamage({ ...context, attack: null })) {
+        this.noteBlockedHit(boss);
+        return false;
+      }
       const attack = this.core.createAttack({
         attackerId: boss,
         damageType: 'physical',
@@ -1317,15 +1474,25 @@ export class GameplayWorld {
     return new WeaponStatusAdapter(this.statuses, mapping);
   }
   private movePlayer() {
-    const speed = scaleMovementSpeed(
-      ALPHA.baseMovementSpeed,
-      this.skills.effectiveStats.movementSpeed,
-    );
-    this.body = Object.freeze({
-      ...this.body,
-      x: this.clamp(this.body.x + this.input.x * speed * ALPHA.controlStep, this.body.radius),
-      y: this.clamp(this.body.y + this.input.y * speed * ALPHA.controlStep, this.body.radius),
-    });
+    // Task 14: a requested dash starts at this input sample (if still allowed).
+    if (this.dashRequested) {
+      this.dashRequested = false;
+      if (this.dashBlockReason() === null) this.startDash();
+    }
+    if (this.dash) {
+      // During a dash the position is a pure function of time (no input; enemies are passed).
+      this.body = Object.freeze({ ...this.body, ...this.dashPosition(this.clock) });
+    } else {
+      const speed = scaleMovementSpeed(
+        ALPHA.baseMovementSpeed,
+        this.skills.effectiveStats.movementSpeed,
+      );
+      this.body = Object.freeze({
+        ...this.body,
+        x: this.clamp(this.body.x + this.input.x * speed * ALPHA.controlStep, this.body.radius),
+        y: this.clamp(this.body.y + this.input.y * speed * ALPHA.controlStep, this.body.radius),
+      });
+    }
     this.controlIndex++;
     this.progression(this.experience.collect(this.body, this.body.radius));
     const coins = this.coins.collect(this.body, this.body.radius);
@@ -1445,14 +1612,20 @@ export class GameplayWorld {
           | 'campaign'
           | 'chest-spawn'
           | 'chest-expire'
+          | 'dash-end'
+          | 'dash-ready'
           | 'advance';
       }[] = [];
       const add = (time: number, rank: number, kind: (typeof candidates)[number]['kind']) => {
         if (time < horizon || sameInstant(time, horizon))
           candidates.push({ time: Math.max(this.clock, Math.min(time, horizon)), rank, kind });
       };
-      if (this.survival.getState().canPlayerAct)
+      if (this.survival.getState().canPlayerAct) {
         add(this.controlIndex * ALPHA.controlStep, 0, 'control');
+        // Task 14: dash end and cooldown end resolve just before the input sample at equal time.
+        if (this.dash) add(this.dash.endsAt, -0.5, 'dash-end');
+        if (this.dashReadyPending) add(this.dashReadyAt, -0.4, 'dash-ready');
+      }
       const w = this.weapons.peekBoundary(horizon),
         s = this.statuses.peekBoundary(horizon),
         e = this.enemies.peekBoundary(horizon);
@@ -1536,6 +1709,21 @@ export class GameplayWorld {
   }
   private consumeEnemies(events: readonly EnemyEvent[]) {
     this.record('enemy', events);
+    // Task 14: direct hits blocked inside a dash's i-frame window count as avoided by the dash.
+    for (const event of events)
+      if (
+        (event.type === 'contact-attempt' ||
+          event.type === 'enemy-projectile-impact' ||
+          event.type === 'artillery-strike') &&
+        event.blocked
+      )
+        this.noteBlockedHit(
+          event.type === 'enemy-projectile-impact'
+            ? event.projectile.sourceId
+            : event.type === 'artillery-strike'
+              ? event.strike.sourceId
+              : event.sourceId,
+        );
     for (const event of events)
       if (
         (event.type === 'contact-attempt' ||
@@ -1694,7 +1882,9 @@ export class GameplayWorld {
         channel === 'combat' ||
         channel === 'weapon' ||
         channel === 'progression' ||
-        channel === 'chests'
+        channel === 'chests' ||
+        channel === 'skill' ||
+        channel === 'movement'
       )
         this.runStats.consume(entry);
     }

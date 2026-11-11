@@ -2,6 +2,8 @@ import { useState } from 'react';
 import type { GameplaySnapshot } from '../gameplay';
 import { damageSourceLabel } from './strings-ru';
 import { RU_DEBUG } from './strings-ru-debug';
+import { audioDirector } from './sound';
+import { uiSettings } from './ui-settings';
 
 const whole = (n: number) => Math.round(n).toLocaleString('ru-RU');
 /** Run level reached by 5:00, 10:00 and 15:00 of simulation time ('—' = not reached yet). */
@@ -69,6 +71,28 @@ export default function DebugOverlay({ world, fps }: { world: GameplaySnapshot; 
           ))}
         </ol>
       )}
+      {/* Task 14 §1.4: mute toggle + audio event log (latest decisions, newest first). */}
+      <h4>{t.audio}</h4>
+      <label className="debug-audio-mute">
+        <input
+          type="checkbox"
+          checked={uiSettings.get().muted}
+          onChange={(e) => uiSettings.set({ muted: e.target.checked })}
+        />
+        {t.mute} · {t.voices} {audioDirector.activeVoices}
+      </label>
+      <ol className="debug-audio-log" data-testid="debug-audio-log">
+        {audioDirector
+          .getLog()
+          .slice(-10)
+          .reverse()
+          .map((entry, i) => (
+            <li key={i} className={`audio-${entry.result}`}>
+              <span>{entry.cue}</span>
+              <b>{entry.result}</b>
+            </li>
+          ))}
+      </ol>
     </aside>
   );
 }

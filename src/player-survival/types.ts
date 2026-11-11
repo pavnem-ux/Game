@@ -40,7 +40,14 @@ export interface RunEndedEvent extends LifecycleBase {
   readonly reason: 'finish-run' | 'revival-already-used';
   readonly death?: DeathEvent;
 }
+/** Task 14: hit protection granted by a gameplay action (dash i-frames), not by a hit. */
+export interface ProtectionGrantedEvent extends LifecycleBase {
+  readonly type: 'protection-granted';
+  readonly source: 'dash';
+  readonly expiresAt: number;
+}
 export type SurvivalEvent =
+  | ProtectionGrantedEvent
   | DirectProtectionEvent
   | RevivalChoiceEvent
   | PlayerRevivedEvent

@@ -197,6 +197,8 @@ try {
     if (Math.abs(dx) > 8) keys.push(dx > 0 ? 'd' : 'a');
     if (Math.abs(dy) > 8) keys.push(dy > 0 ? 's' : 'w');
     for (const key of keys) await page.keyboard.down(key);
+    // Let the scene sample the held keys before stepping (input is read on its frame).
+    await page.waitForTimeout(40);
     await page.evaluate(() => window.__alpha.advance(0.1));
     for (const key of keys) await page.keyboard.up(key);
   }
@@ -279,6 +281,81 @@ try {
       await page.screenshot({ path: 'artifacts/alpha-12-skills.png' });
     }
   }
+  // Task 14: «Изгнать» (B, then 1–3) and «Пропустить» (S) with counters; disabled with a reason.
+  await command({
+    type: 'restart',
+    options: { characterClass: 'mage', initialEnemies: false, spawning: { enabled: false } },
+  });
+  await command({ type: 'protection', enabled: true });
+  await command({ type: 'grant-xp', amount: 92 }); // three levels: 20 + 30 + 42
+  await page.getByRole('dialog', { name: /Уровень забега/ }).waitFor();
+  const controls = page.getByRole('group', { name: 'Управление выбором' });
+  assert.ok(await controls.getByRole('button', { name: 'Изгнать · осталось 2' }).isEnabled());
+  const offered = (await state()).world.skills.offer.cards.map((c) => c.skillId);
+  await page.keyboard.press('b');
+  assert.equal(
+    await controls.getByRole('button', { name: 'Отменить изгнание' }).getAttribute('aria-pressed'),
+    'true',
+  );
+  await page.keyboard.press('2');
+  s = await state();
+  assert.deepEqual(s.world.skills.banished, [offered[1]]);
+  assert.equal(s.world.skills.banishes, 1);
+  assert.ok(!s.world.skills.offer.cards.some((c) => c.skillId === offered[1]));
+  assert.equal(s.screen, 'level-up', 'banishing keeps the offer open');
+  await page.keyboard.press('s');
+  s = await state();
+  assert.equal(s.world.skills.skips, 1);
+  assert.equal(s.world.skills.pendingChoices, 2);
+  await controls.getByRole('button', { name: 'Изгнать · осталось 1' }).click();
+  await page.keyboard.press('1');
+  const noBanish = controls.getByRole('button', { name: 'Изгнать · осталось 0' });
+  assert.equal(await noBanish.isDisabled(), true);
+  assert.equal(await noBanish.getAttribute('title'), 'Изгнания закончились');
+  assert.equal((await state()).world.runStats.choices.banishes, 2);
+  await page.keyboard.press('1');
+  await page.keyboard.press('1');
+  assert.equal((await state()).screen, 'playing');
+  // Two picks (the second may upgrade the first skill): ranks sum to 2, nothing pending.
+  s = await state();
+  assert.equal(s.world.skills.pendingChoices, 0);
+  assert.equal(
+    s.world.skills.owned.reduce((sum, o) => sum + o.rank, 0),
+    2,
+  );
+
+  // Task 14: Space dashes (140 units, cooldown shown in the skill bar); Shift on cooldown does not.
+  const dashStart = (await state()).world.playerBody.x;
+  await page.keyboard.press('Space');
+  await page.evaluate(() => window.__alpha.advance(0.3));
+  s = await state();
+  assert.equal(s.world.dash.used, 1);
+  assert.ok(s.world.playerBody.x - dashStart >= 139, 'dash moved the player ~140 units');
+  await page.getByLabel(/^Рывок: \d+\.\d с$/).waitFor();
+  await page.keyboard.press('Shift');
+  await page.evaluate(() => window.__alpha.advance(0.1));
+  assert.equal((await state()).world.dash.used, 1, 'no dash on cooldown');
+  // Task 14 sound: the dash cue reaches the audio log; automation keeps it silent (no AudioContext).
+  await page.waitForFunction(() =>
+    [...document.querySelectorAll('[data-testid="debug-audio-log"] li')].some(
+      (li) => li.textContent.startsWith('dash') && li.textContent.endsWith('silent'),
+    ),
+  );
+  // Task 14 §1.4 DEV tools: grant rerolls/banishes and the dash cooldown override.
+  const choicesBefore = (await state()).world.skills;
+  await page.getByRole('button', { name: 'DEV · Тестирование' }).click();
+  await page.getByRole('button', { name: '+3 переброса, +2 изгнания' }).click();
+  await page.getByRole('button', { name: 'Рывок без перезарядки' }).click();
+  await page.getByRole('button', { name: 'DEV · Закрыть' }).click();
+  await page.evaluate(() => window.__alpha.advance(0.05));
+  s = await state();
+  assert.equal(s.world.skills.rerolls, choicesBefore.rerolls + 3);
+  assert.equal(s.world.skills.banishes, choicesBefore.banishes + 2);
+  await page.keyboard.press('Space');
+  await page.evaluate(() => window.__alpha.advance(0.3));
+  assert.equal((await state()).world.dash.used, 2, 'no cooldown with the DEV override');
+  await command({ type: 'dash-cooldown', seconds: null });
+
   await command({ type: 'restart', options: { characterClass: 'mage', initialEnemies: false } });
   await command({ type: 'protection', enabled: true });
   for (let i = 0; i < 5; i++) await command({ type: 'group', count: 24, distance: 550 });

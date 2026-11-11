@@ -98,6 +98,12 @@ export interface RunSkillsSnapshot {
   readonly owned: readonly OwnedSkill[];
   readonly slots: Readonly<{ auto: SlotUsage; passive: SlotUsage }>;
   readonly rerolls: number;
+  /** Task 14: banishes left this run, skills banished (never offered again), offers skipped. */
+  readonly banishes: number;
+  readonly banished: readonly string[];
+  readonly skips: number;
+  /** Task 14: per offered card key, why it cannot be banished (null = it can). */
+  readonly banishBlocked: Readonly<Record<string, string | null>>;
   readonly pendingChoices: number;
   readonly offer: LevelUpOffer | null;
   readonly gold: number;
@@ -179,7 +185,21 @@ export interface ControlEvent {
   readonly control: 'slow' | 'stun';
   readonly until?: number;
 }
+/** Task 14: a card was banished from the run pool; its slot got `replacement` (null = none). */
+export interface SkillBanishedEvent {
+  readonly type: 'skill-banished';
+  readonly offerId: number;
+  readonly skillId: string;
+  readonly replacement: string | null;
+}
+/** Task 14: the offer was skipped (no card taken). The world pays the skip coins. */
+export interface OfferSkippedEvent {
+  readonly type: 'skill-offer-skipped';
+  readonly offerId: number;
+}
 export type SkillEvent =
+  | SkillBanishedEvent
+  | OfferSkippedEvent
   | SkillChosenEvent
   | BonusClaimedEvent
   | OfferEvent

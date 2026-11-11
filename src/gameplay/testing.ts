@@ -47,6 +47,15 @@ export function createTestingController(
       case 'buff':
         if (!w.debugGrantBuff(a.buff as BuffId)) throw new Error('Buffs: campaign run only.');
         break;
+      case 'dash':
+        if (!w.requestDash()) throw new Error(`Dash unavailable: ${w.dashBlockReason()}.`);
+        break;
+      case 'dash-cooldown':
+        w.setDebugDashCooldown(a.seconds as number | null);
+        break;
+      case 'grant-choices':
+        w.debugGrantChoiceControls(a.rerolls as number, a.banishes as number);
+        break;
       case 'auto-collect':
         w.setDebugAutoCollect(a.enabled as boolean);
         break;

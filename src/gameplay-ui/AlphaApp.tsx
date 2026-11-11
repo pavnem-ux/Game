@@ -16,6 +16,7 @@ import { CampaignMenu } from './CampaignMenu';
 import { ResultsScreen } from './ResultsScreen';
 import { CampaignHud } from './CampaignHud';
 import { displayHp } from './format';
+import { installSound } from './sound';
 import './alpha.css';
 const DeveloperPanel =
   import.meta.env.DEV || __QA_BUILD__ ? lazy(() => import('./DeveloperPanel')) : null;
@@ -36,6 +37,7 @@ const symbols: Record<CharacterClass, string> = {
 export function AlphaApp() {
   const state = useSyncExternalStore(alphaBridge.subscribe, alphaBridge.getSnapshot);
   const [debugOpen, setDebugOpen] = useState(false);
+  useEffect(installSound, []);
   const [skillsOpen, setSkillsOpen] = useState(false);
   const skillsOpener = useRef<HTMLElement | null>(null);
   const openSkills = useCallback(() => {
