@@ -6,7 +6,7 @@ blank lines and aligned the tables). Branch `task-12-enemies-chests` from `main`
 
 Current: Phase 1 (pacing & radius)
 
-Draft PR: _(set in 0.1)_
+Draft PR: https://github.com/pavnem-ux/Game/pull/10
 
 ## Checklist
 
