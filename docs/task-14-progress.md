@@ -4,7 +4,7 @@ Spec: [task-14-sound-choice-dash.md](task-14-sound-choice-dash.md) (owner's file
 blank lines). Branch `task-14-sound-dash` from `main` at `4b29dec` (Task 13 UI kit merged:
 `src/gameplay-ui/kit/` present). All new numbers are **provisional**.
 
-Current: Phase 4 (delivery)
+Current: done — PR ready for review (not merged)
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/13
 
@@ -26,7 +26,7 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/13
 - [x] Phase 3 tests
 - [x] 4.1 Full checks (AGENTS.md §6 + e2e, `test:production`)
 - [x] 4.2 Docs (`AUDIO.md`, `IN_RUN_SKILLS.md`, `PLAYER_SURVIVAL.md`, README, `playtest.md`)
-- [ ] 4.3 PR description
+- [x] 4.3 PR description
 
 ## Code map (Task 14)
 
