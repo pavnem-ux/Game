@@ -4,7 +4,7 @@ Spec: [task-14-sound-choice-dash.md](task-14-sound-choice-dash.md) (owner's file
 blank lines). Branch `task-14-sound-dash` from `main` at `4b29dec` (Task 13 UI kit merged:
 `src/gameplay-ui/kit/` present). All new numbers are **provisional**.
 
-Current: Phase 3 (sound)
+Current: Phase 4 (delivery)
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/13
 
@@ -19,11 +19,11 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/13
 - [x] 2.2 Invulnerability via Player Survival
 - [x] 2.3 HUD / VFX
 - [x] Phase 2 tests
-- [ ] 3.1 Audio engine (context, mixer, limits, settings)
-- [ ] 3.2 SFX set
-- [ ] 3.3 Music
-- [ ] 3.4 Settings UI
-- [ ] Phase 3 tests
+- [x] 3.1 Audio engine (context, mixer, limits, settings)
+- [x] 3.2 SFX set
+- [x] 3.3 Music
+- [x] 3.4 Settings UI
+- [x] Phase 3 tests
 - [ ] 4.1 Full checks (AGENTS.md §6 + e2e, `test:production`)
 - [ ] 4.2 Docs (`AUDIO.md`, `IN_RUN_SKILLS.md`, `PLAYER_SURVIVAL.md`, README, `playtest.md`)
 - [ ] 4.3 PR description
@@ -65,6 +65,21 @@ readyAt, cooldown, used, hitsAvoided}`; `RunStats.dash {used, hitsAvoided}`.
   gold cooldown ring around the player; skill bar «⇢ Рывок» / «⇢ N.N с» (aria «Рывок готов
   (Пробел / Shift)» / «Рывок: N.N с»). Controller `dash`, `dash-cooldown`.
 - Tests: `tests/gameplay/dash.test.ts`; alpha e2e Space dash + cooldown label.
+- Sound (3.1–3.4): `src/audio/` (presentation only). `cues.ts` (32 cues, mixing class/gain/priority;
+  `MIX_RULES`: voice cap 24, hits 8 / pickups 6 / ui 4 / events 4 per 100 ms, pickup series reset
+  0.5 s, jitter ±3% pitch / ±10% gain, heartbeat < 25% HP every 1.1 s, crossfade 1 s, pause duck
+  ×0.5), `mapping.ts` (pure `cuesForEvent`), `limits.ts` (`CueLimiter`, `busGains`),
+  `director.ts` (`AudioDirector` → `AudioSink`; `musicFor`; one victory/defeat jingle per run;
+  log of the last 40 decisions), `engine.ts` (`WebAudioEngine`: lazy AudioContext on the first
+  gesture, never under `navigator.webdriver`; compressor → master; sfx/music buses; recipes from
+  oscillators + band-passed noise + envelopes; look-ahead generative music per act / boss / menu).
+  Wiring `src/gameplay-ui/sound.ts`: `installSound()` (AlphaApp mount: gesture unlock, delegated
+  hover/click/confirm sounds, bridge → music/heartbeat), `soundFrame(events)` (scene `draw()`,
+  same events as the VFX), `uiSound(cue)` (buy / error in shop, talents, equipment, offer
+  hotkeys). Settings `UiSettings.masterVolume / sfxVolume / musicVolume / muted` (80/80/50/off,
+  clamped 0–100) on the Settings page; debug overlay «Звук · журнал» + mute (DEV/QA only).
+- Tests: `tests/audio/audio.test.ts`; alpha e2e dash cue in the audio log; campaign e2e sound
+  settings persistence.
 
 ## Decisions
 
@@ -89,7 +104,19 @@ readyAt, cooldown, used, hitsAvoided}`; `RunStats.dash {used, hitsAvoided}`.
 - Alpha e2e crystal walk (Task 12 setup): waits 40 ms after pressing a movement key before stepping,
   so the scene samples the key (it flaked when a crystal landed just outside the 74 reach).
 
+- Sound starts with the first pointer/key gesture anywhere (autoplay policy). Under automation
+  (`navigator.webdriver`, Playwright/headless) no AudioContext is created: cues are still decided
+  and logged as `silent`, which the e2e reads. The live path was checked in Chromium with
+  `webdriver` overridden (cues `played`, no page errors); actual loudness/clipping needs a listen.
+- Music follows the bridge screen: menu theme on meta pages, act 1–4 track in a run (sandbox =
+  act 1), boss track while the boss lives, silence on results/ended (the jingle plays), ×0.5 on
+  pause, level-up, enhanced skill and the revival prompt.
+- Level-up dialog buttons are click-silent (`data-sound="none"`): the world events give card pick
+  / reroll / banish / skip sounds, so a click never double-sounds.
+
 ## Verification log
+
+- Phase 3: typecheck ✓, format ✓, `npm test` 1276 ✓, build ✓, `test:production` 2 PASS, QA + `test:qa` PASS, `test:e2e` 3 PASS; no audio log in `dist/`.
 
 - Phase 2: typecheck ✓, format ✓, `npm test` 1265 ✓, build ✓, `test:production` 2 PASS, QA + `test:qa` PASS, `test:e2e` 3 PASS.
 
