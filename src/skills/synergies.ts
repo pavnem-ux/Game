@@ -3,7 +3,7 @@ import { sameInstant } from '../simulation-boundary';
 import type { EffectType } from '../status-effects';
 import type { Point } from '../weapon-attacks';
 import { getSkill } from './catalog';
-import { SYNERGY_TUNING } from './config';
+import { SYNERGY_LEVEL_RULES, SYNERGY_TUNING, SYNERGY_TUNING_LEVEL_II } from './config';
 import type { HitInfo, PreHit, SkillEngine } from './SkillEngine';
 import type { CombatTag } from './types';
 
@@ -243,6 +243,41 @@ export function synergyUnlocked(
   return completedPairs(rule, ownedIds).length > 0;
 }
 
+/** Task 15 synergy level: 0 locked, 1 (I), 2 (II), 3 (III «Пробуждение»). */
+export type SynergyLevel = 0 | 1 | 2 | 3;
+/** Level of one pair from its weakest skill rank (0 when a skill is missing). */
+export function pairLevel(pair: SynergyPair, ranks: ReadonlyMap<string, number>): SynergyLevel {
+  const weakest = Math.min(ranks.get(pair[0]) ?? 0, ranks.get(pair[1]) ?? 0);
+  if (weakest >= SYNERGY_LEVEL_RULES.levelThreeRank) return 3;
+  if (weakest >= SYNERGY_LEVEL_RULES.levelTwoRank) return 2;
+  return weakest >= 1 ? 1 : 0;
+}
+/**
+ * Task 15: the synergy's best completed pair (highest pair level; ties keep workbook order) and its
+ * level. Pure: depends only on the run's skill ranks — talents never unlock or raise a level.
+ */
+export function bestSynergyPair(
+  rule: Pick<SynergyRule, 'unlockPairs'>,
+  ranks: ReadonlyMap<string, number>,
+): { readonly level: SynergyLevel; readonly pair: SynergyPair | null } {
+  let level: SynergyLevel = 0;
+  let pair: SynergyPair | null = null;
+  for (const p of rule.unlockPairs) {
+    const l = pairLevel(p, ranks);
+    if (l > level) {
+      level = l;
+      pair = p;
+    }
+  }
+  return Object.freeze({ level, pair });
+}
+export function synergyLevel(
+  rule: Pick<SynergyRule, 'unlockPairs'>,
+  ranks: ReadonlyMap<string, number>,
+): SynergyLevel {
+  return bestSynergyPair(rule, ranks).level;
+}
+
 /**
  * Startup validation of the pair configuration: exactly 12 rules, 3 per class; every pair has two
  * distinct existing skills legal for that class (class skill or universal), at least one active;
@@ -282,7 +317,6 @@ export function validateSynergyRules(
 validateSynergyRules(SYNERGY_RULES, getSkill);
 
 const SYNERGY_TAGS: ReadonlySet<CombatTag> = new Set(['synergy', 'secondary']);
-const T = SYNERGY_TUNING;
 
 /**
  * Event-driven synergy rules. Each rule fires at most once per originating hit/kill; proc damage is
@@ -314,8 +348,53 @@ export class SynergyResolver {
     this.unlockedCache = { version: owned.length, ids };
     return ids;
   }
+  private levelCache: { version: number; levels: ReadonlyMap<SynergyId, SynergyLevel> } | null =
+    null;
+  /**
+   * Task 15: levels of the current class's synergies (0 = locked). Ranks only rise within a run,
+   * so the rank total is a sufficient cache version; a new run has a new resolver (levels reset).
+   */
+  levels(): ReadonlyMap<SynergyId, SynergyLevel> {
+    const version = this.e.run.rankTotal();
+    if (this.levelCache?.version === version) return this.levelCache.levels;
+    const ranks = this.e.run.rankMap();
+    const levels = new Map<SynergyId, SynergyLevel>();
+    for (const rule of SYNERGY_RULES)
+      if (rule.characterClass === this.cls) levels.set(rule.id, synergyLevel(rule, ranks));
+    this.levelCache = { version, levels };
+    return levels;
+  }
+  private readonly levelOverrides = new Map<SynergyId, SynergyLevel>();
+  /**
+   * Task 15 QA/tests: force a synergy's level (0 locks it, 1–3 open it at that level); null returns
+   * to the level from the run's ranks. Only the DEV/QA controller and tests call it.
+   */
+  setLevelOverride(id: SynergyId, level: SynergyLevel | null): void {
+    const rule = SYNERGY_RULES.find((r) => r.id === id);
+    if (!rule) throw new RangeError(`Unknown synergy: ${String(id)}.`);
+    if (rule.characterClass !== this.cls)
+      throw new RangeError(`Synergy ${id} belongs to another class.`);
+    if (level === null) this.levelOverrides.delete(id);
+    else if (level === 0 || level === 1 || level === 2 || level === 3)
+      this.levelOverrides.set(id, level);
+    else throw new RangeError('Synergy level must be 0–3.');
+  }
+  /** Current level of one synergy (read at trigger time). */
+  level(id: SynergyId): SynergyLevel {
+    return this.levelOverrides.get(id) ?? this.levels().get(id) ?? 0;
+  }
+  /** True while a QA override decides this synergy's level. */
+  hasLevelOverride(id: SynergyId): boolean {
+    return this.levelOverrides.has(id);
+  }
+  /** Tuning for the synergy's current level: II and III use the ×1.5 main number. */
+  private tuning(id: SynergyId): typeof SYNERGY_TUNING {
+    return this.level(id) >= 2 ? SYNERGY_TUNING_LEVEL_II : SYNERGY_TUNING;
+  }
   /** Pure ownership/class check shared with read-only QA diagnostics. */
   isEligible(id: SynergyId): boolean {
+    const forced = this.levelOverrides.get(id);
+    if (forced !== undefined) return forced > 0;
     return this.unlockedIds().has(id);
   }
   private now() {
@@ -385,7 +464,7 @@ export class SynergyResolver {
     const f = this.focus;
     if (this.cls !== 'archer' || !f || f.targetId !== targetId) return 1;
     return f.bonusUntil > this.now() || sameInstant(f.bonusUntil, this.now())
-      ? 1 + T.deadlyPrecision.bonusPercent / 100
+      ? 1 + this.tuning('deadly_precision').deadlyPrecision.bonusPercent / 100
       : 1;
   }
   onHit(hit: HitInfo): void {
@@ -410,12 +489,15 @@ export class SynergyResolver {
           this.ready('thermal_shock', targetId) &&
           alive()
         ) {
-          this.cool('thermal_shock', targetId, T.thermalShock.cooldown);
+          this.cool('thermal_shock', targetId, this.tuning('thermal_shock').thermalShock.cooldown);
           this.announce('thermal_shock', targetId, pre.position);
-          this.procDamage('thermal_shock', targetId, T.thermalShock.coefficient, 'magical', [
-            'fire',
-            'ice',
-          ]);
+          this.procDamage(
+            'thermal_shock',
+            targetId,
+            this.tuning('thermal_shock').thermalShock.coefficient,
+            'magical',
+            ['fire', 'ice'],
+          );
         }
         if (
           this.isEligible('shattered_ice') &&
@@ -424,11 +506,15 @@ export class SynergyResolver {
           this.ready('shattered_ice', targetId) &&
           alive()
         ) {
-          this.cool('shattered_ice', targetId, T.shatteredIce.cooldown);
+          this.cool('shattered_ice', targetId, this.tuning('shattered_ice').shatteredIce.cooldown);
           this.announce('shattered_ice', targetId, pre.position);
-          this.procDamage('shattered_ice', targetId, T.shatteredIce.coefficient, 'magical', [
-            'ice',
-          ]);
+          this.procDamage(
+            'shattered_ice',
+            targetId,
+            this.tuning('shattered_ice').shatteredIce.coefficient,
+            'magical',
+            ['ice'],
+          );
         }
         break;
       case 'warrior': {
@@ -440,9 +526,14 @@ export class SynergyResolver {
           this.ready('skull_crusher', targetId) &&
           alive()
         ) {
-          this.cool('skull_crusher', targetId, T.skullCrusher.cooldown);
+          this.cool('skull_crusher', targetId, this.tuning('skull_crusher').skullCrusher.cooldown);
           this.announce('skull_crusher', targetId, pre.position);
-          this.procDamage('skull_crusher', targetId, T.skullCrusher.coefficient, 'physical');
+          this.procDamage(
+            'skull_crusher',
+            targetId,
+            this.tuning('skull_crusher').skullCrusher.coefficient,
+            'physical',
+          );
         }
         if (
           this.isEligible('seismic_impact') &&
@@ -451,10 +542,18 @@ export class SynergyResolver {
           this.ready('seismic_impact', targetId) &&
           pre.position
         ) {
-          this.cool('seismic_impact', targetId, T.seismicImpact.cooldown);
+          this.cool(
+            'seismic_impact',
+            targetId,
+            this.tuning('seismic_impact').seismicImpact.cooldown,
+          );
           this.announce('seismic_impact', targetId, pre.position);
-          const r = this.e.area(T.seismicImpact.radius);
-          const attack = this.e.attack(new Set(), T.seismicImpact.coefficient, 'physical');
+          const r = this.e.area(this.tuning('seismic_impact').seismicImpact.radius);
+          const attack = this.e.attack(
+            new Set(),
+            this.tuning('seismic_impact').seismicImpact.coefficient,
+            'physical',
+          );
           const procTags = new Set<CombatTag>([...SYNERGY_TAGS, 'physical', 'area']);
           let n = 0;
           for (const id of this.e.inCircle(pre.position, r))
@@ -476,19 +575,23 @@ export class SynergyResolver {
           this.ready('toxic_barrage', targetId)
         ) {
           let b = this.barrage.get(targetId);
-          if (!b || this.now() - b.since > T.toxicBarrage.window) {
+          if (!b || this.now() - b.since > this.tuning('toxic_barrage').toxicBarrage.window) {
             b = { since: this.now(), keys: new Set() };
             this.barrage.set(targetId, b);
           }
           b.keys.add(hit.projectileKey);
-          if (b.keys.size >= T.toxicBarrage.projectiles && alive()) {
+          if (b.keys.size >= this.tuning('toxic_barrage').toxicBarrage.projectiles && alive()) {
             this.barrage.delete(targetId);
-            this.cool('toxic_barrage', targetId, T.toxicBarrage.cooldown);
+            this.cool(
+              'toxic_barrage',
+              targetId,
+              this.tuning('toxic_barrage').toxicBarrage.cooldown,
+            );
             this.announce('toxic_barrage', targetId, pre.position);
             const proc = this.procDamage(
               'toxic_barrage',
               targetId,
-              T.toxicBarrage.coefficient,
+              this.tuning('toxic_barrage').toxicBarrage.coefficient,
               'physical',
             );
             if (proc && alive())
@@ -496,8 +599,8 @@ export class SynergyResolver {
                 targetId,
                 {
                   effectType: 'poison',
-                  rawDamagePerTick: T.toxicBarrage.poisonDamage,
-                  duration: T.toxicBarrage.poisonDuration,
+                  rawDamagePerTick: this.tuning('toxic_barrage').toxicBarrage.poisonDamage,
+                  duration: this.tuning('toxic_barrage').toxicBarrage.poisonDuration,
                   probabilityPercent: 100,
                 },
                 1,
@@ -508,7 +611,11 @@ export class SynergyResolver {
         // Deadly Precision: repeated direct hits on the same poisoned target; resets on change/expiry.
         if (this.isEligible('deadly_precision')) {
           const f = this.focus;
-          if (!f || f.targetId !== targetId || this.now() - f.since > T.deadlyPrecision.window)
+          if (
+            !f ||
+            f.targetId !== targetId ||
+            this.now() - f.since > this.tuning('deadly_precision').deadlyPrecision.window
+          )
             this.focus = {
               targetId,
               since: this.now(),
@@ -517,9 +624,10 @@ export class SynergyResolver {
             };
           else f.hits++;
           const focus = this.focus!;
-          if (focus.hits >= T.deadlyPrecision.hits) {
+          if (focus.hits >= this.tuning('deadly_precision').deadlyPrecision.hits) {
             const fresh = !(focus.bonusUntil > this.now());
-            focus.bonusUntil = this.now() + T.deadlyPrecision.duration;
+            focus.bonusUntil =
+              this.now() + this.tuning('deadly_precision').deadlyPrecision.duration;
             focus.hits = 0;
             focus.since = this.now();
             if (fresh) this.announce('deadly_precision', targetId, pre.position);
@@ -536,8 +644,8 @@ export class SynergyResolver {
           this.e.setBuff(
             'blood_frenzy',
             1,
-            T.bloodFrenzy.attackSpeed,
-            this.now() + T.bloodFrenzy.duration,
+            this.tuning('blood_frenzy').bloodFrenzy.attackSpeed,
+            this.now() + this.tuning('blood_frenzy').bloodFrenzy.duration,
           );
         }
         if (
@@ -546,14 +654,14 @@ export class SynergyResolver {
           this.ready('deep_wounds', targetId) &&
           alive()
         ) {
-          this.cool('deep_wounds', targetId, T.deepWounds.cooldown);
+          this.cool('deep_wounds', targetId, this.tuning('deep_wounds').deepWounds.cooldown);
           this.announce('deep_wounds', targetId, pre.position);
           this.e.applyStatus(
             targetId,
             {
               effectType: 'bleed',
-              rawDamagePerTick: T.deepWounds.bleedDamage,
-              duration: T.deepWounds.bleedDuration,
+              rawDamagePerTick: this.tuning('deep_wounds').deepWounds.bleedDamage,
+              duration: this.tuning('deep_wounds').deepWounds.bleedDuration,
               probabilityPercent: 100,
             },
             1,
@@ -563,12 +671,18 @@ export class SynergyResolver {
         if (this.isEligible('final_cut') && alive()) {
           const target = this.e.host.core.getEntity(targetId);
           if (
-            (target.currentHp / target.maxHp) * 100 < T.finalCut.hpThresholdPercent &&
+            (target.currentHp / target.maxHp) * 100 <
+              this.tuning('final_cut').finalCut.hpThresholdPercent &&
             this.ready('final_cut', targetId)
           ) {
-            this.cool('final_cut', targetId, T.finalCut.cooldown);
+            this.cool('final_cut', targetId, this.tuning('final_cut').finalCut.cooldown);
             this.announce('final_cut', targetId, pre.position);
-            this.procDamage('final_cut', targetId, T.finalCut.coefficient, 'physical');
+            this.procDamage(
+              'final_cut',
+              targetId,
+              this.tuning('final_cut').finalCut.coefficient,
+              'physical',
+            );
           }
         }
         break;
@@ -596,16 +710,16 @@ export class SynergyResolver {
     if (this.isEligible('wildfire') && pre.effects.has('burn') && pre.position) {
       // Task 09.1: talents naming Wildfire may widen the spread (radius, neighbours); no cascade.
       const geometry = this.e.talentCombat.synergySpread('wildfire', {
-        radius: T.wildfire.radius,
-        maxTargets: T.wildfire.maxTargets,
+        radius: this.tuning('wildfire').wildfire.radius,
+        maxTargets: this.tuning('wildfire').wildfire.maxTargets,
       });
       const n = this.spread(
         'wildfire',
         pre.position,
         targetId,
         'burn',
-        T.wildfire.burnDamage,
-        T.wildfire.burnDuration,
+        this.tuning('wildfire').wildfire.burnDamage,
+        this.tuning('wildfire').wildfire.burnDuration,
         this.e.area(geometry.radius),
         geometry.maxTargets,
       );
@@ -617,10 +731,10 @@ export class SynergyResolver {
         pre.position,
         targetId,
         'poison',
-        T.plagueChain.poisonDamage,
-        T.plagueChain.poisonDuration,
-        this.e.area(T.plagueChain.radius),
-        T.plagueChain.maxTargets,
+        this.tuning('plague_chain').plagueChain.poisonDamage,
+        this.tuning('plague_chain').plagueChain.poisonDuration,
+        this.e.area(this.tuning('plague_chain').plagueChain.radius),
+        this.tuning('plague_chain').plagueChain.maxTargets,
       );
       if (n) this.announce('plague_chain', targetId, pre.position);
     }
@@ -629,8 +743,8 @@ export class SynergyResolver {
       this.e.setBuff(
         'battle_momentum',
         1,
-        T.battleMomentum.attackSpeed,
-        this.now() + T.battleMomentum.duration,
+        this.tuning('battle_momentum').battleMomentum.attackSpeed,
+        this.now() + this.tuning('battle_momentum').battleMomentum.duration,
       );
     }
     if (this.focus?.targetId === targetId) this.focus = null;

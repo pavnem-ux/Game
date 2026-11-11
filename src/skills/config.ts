@@ -76,6 +76,44 @@ export const SYNERGY_TUNING = Object.freeze({
   finalCut: Object.freeze({ hpThresholdPercent: 30, coefficient: 1.2, cooldown: 2 }),
 });
 
+/**
+ * Task 15 (catalog v3, provisional): synergy levels from the weakest rank of the best completed
+ * pair — I (both owned), II (both rank ≥ 3), III «Пробуждение» (both rank 5). Level II multiplies
+ * each synergy's main number (`SYNERGY_MAIN_NUMBER`) by 1.5; III = II + the awakened property.
+ */
+export const SYNERGY_LEVEL_RULES = Object.freeze({
+  levelTwoRank: 3,
+  levelThreeRank: 5,
+  levelTwoMultiplier: 1.5,
+});
+type Tuning = typeof SYNERGY_TUNING;
+/** The catalog's "main number" per synergy (the value Level II multiplies). */
+export const SYNERGY_MAIN_NUMBER = Object.freeze({
+  thermalShock: 'coefficient',
+  wildfire: 'burnDamage',
+  shatteredIce: 'coefficient',
+  skullCrusher: 'coefficient',
+  battleMomentum: 'attackSpeed',
+  seismicImpact: 'coefficient',
+  toxicBarrage: 'coefficient',
+  plagueChain: 'poisonDamage',
+  deadlyPrecision: 'bonusPercent',
+  bloodFrenzy: 'attackSpeed',
+  deepWounds: 'bleedDamage',
+  finalCut: 'coefficient',
+} as const satisfies { [K in keyof Tuning]: keyof Tuning[K] });
+/** Level II tuning: SYNERGY_TUNING with each main number × 1.5 (rounded to 4 decimals). */
+export const SYNERGY_TUNING_LEVEL_II: Tuning = Object.freeze(
+  Object.fromEntries(
+    (Object.keys(SYNERGY_TUNING) as (keyof Tuning)[]).map((key) => {
+      const field = SYNERGY_MAIN_NUMBER[key];
+      const base = SYNERGY_TUNING[key] as Record<string, number>;
+      const scaled = Math.round(base[field] * SYNERGY_LEVEL_RULES.levelTwoMultiplier * 1e4) / 1e4;
+      return [key, Object.freeze({ ...base, [field]: scaled })];
+    }),
+  ),
+) as Tuning;
+
 /** Builds five cumulative rank tables: each rank inherits the previous one and applies its overrides. */
 export function cumulativeRanks(
   base: SkillParams,

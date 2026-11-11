@@ -42,7 +42,7 @@ import type { CampaignSnapshot, GameplayOptions, GameplaySnapshot, WorldEvent } 
 import { RunExperience, XP_RULES } from './experience';
 import type { ExperienceEvent } from './experience';
 import { RunSkills, SkillEngine, SYNERGY_RULES, completedPairs } from '../skills';
-import type { SkillEvent } from '../skills';
+import type { SkillEvent, SynergyId, SynergyLevel } from '../skills';
 import type { CombatAttributes } from '../character-stats';
 import type { EffectType } from '../status-effects';
 import { spawningSettings, wavePressure, offscreenPosition, viewportSize } from './spawning';
@@ -900,6 +900,10 @@ export class GameplayWorld {
   /** Task 14 debug (DEV/QA controller only): extra rerolls / banishes for this run. */
   debugGrantChoiceControls(rerolls: number, banishes: number): void {
     this.run.grantChoiceControls(rerolls, banishes);
+  }
+  /** Task 15 debug (DEV/QA controller and tests): force a synergy level (null = from ranks). */
+  setTestSynergyLevel(id: SynergyId, level: SynergyLevel | null): void {
+    this.skills.synergies.setLevelOverride(id, level);
   }
   /** Task 14 «Изгнать»: remove an offered skill from the run pool; only that card is replaced. */
   banishSkillCard(cardKey: string): void {
