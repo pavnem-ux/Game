@@ -1,5 +1,8 @@
 # Task 07.2 v2 — Synergy Unlock Pairs & Damage Transparency
 
+> **Task 15:** уровни I/II/III и Пробуждение поверх этой модели описаны в
+> [SYNERGIES_V3.md](SYNERGIES_V3.md). Открытие парами, условия и кулдауны отсюда не изменились.
+
 Спецификация владельца: «Task 07.2 — Synergy Unlock v2 + Damage Transparency». Источник
 дизайна — книга `Skazki_Task07_Synergies_v2_Damage.xlsx`: листы «Пары синергий», «Синергии»,
 «Урон по рангам», «Модель урона». Реализация находится в PR #3, ветка `claude/stoic-carson-76vdrx`.

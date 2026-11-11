@@ -6,7 +6,7 @@ byte-identical (listed in `.prettierignore`). Engine conflicts: `docs/synergies-
 when the first gap is found). Branch `task-15-synergies` from `main` at `e40d7a8` (Task 14 merged).
 All numbers are **provisional** (alpha balance) and come only from the catalog.
 
-Current: Phase 4 (delivery)
+Current: done — PR ready for review (not merged)
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/14
 
@@ -25,9 +25,9 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/14
 - [x] 3.2 VFX + sounds
 - [x] 3.3 Debug controls
 - [x] Phase 3 e2e
-- [ ] 4.1 Full checks (AGENTS.md §6 + e2e)
-- [ ] 4.2 Docs (synergy doc, README, `playtest.md`)
-- [ ] 4.3 PR description
+- [x] 4.1 Full checks (AGENTS.md §6 + e2e)
+- [x] 4.2 Docs (synergy doc, README, `playtest.md`)
+- [x] 4.3 PR description
 
 ## Code map (starting point)
 
@@ -96,6 +96,9 @@ Earlier maps: `docs/task-14-progress.md`, `docs/SYNERGIES_V2_DAMAGE.md`.
   returns to the ranks. Only tests and the DEV/QA controller use it.
 
 ## Verification log
+
+- Phase 4: docs `SYNERGIES_V3.md` (new), `SYNERGIES_V2_DAMAGE.md` pointer, `AUDIO.md`, README,
+  `playtest.md` §5.6; checks as Phase 3 (unchanged code).
 
 - Phase 3: typecheck ✓, format ✓, `npm test` 1306 ✓, build ✓, `test:production` 2 PASS, QA + `test:qa` PASS, `test:e2e` 3 PASS.
 
