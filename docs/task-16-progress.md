@@ -20,8 +20,8 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/16
 - [x] 3.1 Browser compatibility fixes
 - [x] 3.2 Quality setting extension + FPS in the debug overlay
 - [x] Phase 3 FPS table
-- [ ] 4.1 Full checks (AGENTS.md §6 + e2e, `test:production`)
-- [ ] 4.2 Docs (`MOBILE.md`, README, `playtest.md`)
+- [x] 4.1 Full checks (AGENTS.md §6 + e2e, `test:production`)
+- [x] 4.2 Docs (`MOBILE.md`, README, `playtest.md`)
 - [ ] 4.3 PR description
 
 ## Tools
