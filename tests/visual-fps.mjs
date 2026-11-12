@@ -21,6 +21,9 @@ const profiles = [
     touch: true,
   },
 ];
+// FPS_PROFILES=phone|desktop limits the run to one profile.
+const only = process.env.FPS_PROFILES;
+const chosen = only ? profiles.filter((p) => p.name.startsWith(only)) : profiles;
 const browser = await chromium.launch({
   executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium',
 });
@@ -28,7 +31,7 @@ const scenarios = [
   { name: 'map 40', options: { characterClass: 'mage', level: 30, campaign: { mapId: 40 } } },
   { name: 'sandbox', options: { characterClass: 'mage', level: 30 } },
 ];
-for (const p of profiles)
+for (const p of chosen)
   for (const scenario of scenarios) {
     const context = await browser.newContext({
       viewport: p.viewport,

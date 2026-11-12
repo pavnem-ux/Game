@@ -17,6 +17,8 @@ import { cardKey } from '../skills';
 import { soundFrame } from '../gameplay-ui/sound';
 import { buildUnitTextures } from './visuals/texture-factory';
 import { BiomeRenderer } from './visuals/BiomeRenderer';
+import { BOSS_DARK, LightRenderer, WARM_DARK } from './visuals/LightRenderer';
+import { QUALITY_PRESETS } from './visuals/quality';
 import type { GraphicsQuality } from './visuals/quality';
 import { DEPTH, UnitRenderer } from './visuals/UnitRenderer';
 import {
@@ -51,6 +53,11 @@ export class AlphaScene extends Phaser.Scene {
   /** Task 18: the map's biome (ground, decor, particles), rebuilt when the map changes. */
   private biome!: BiomeRenderer;
   private mapId: number | null = null;
+  /** Task 18: darkness overlay and light sources («Последний свет»). */
+  private lighting!: LightRenderer;
+  private revivedAt = Number.NEGATIVE_INFINITY;
+  /** Task 18: additive glows on projectiles / light sources (Высокое only). */
+  private accentGlow = true;
   /** Task 18: last drawn position of each enemy (death puffs); entries are updated in place. */
   private readonly lastEnemyPos = new Map<string, { x: number; y: number; color: number }>();
   private joystick!: Phaser.GameObjects.Graphics;
@@ -80,10 +87,14 @@ export class AlphaScene extends Phaser.Scene {
   }
   create() {
     this.biome = new BiomeRenderer(this);
-    this.biome.build(null, this.graphicsQuality());
     this.graphics = this.add.graphics().setDepth(5);
     buildUnitTextures(this);
     this.units = new UnitRenderer(this);
+    this.lighting = new LightRenderer(this);
+    // Task 18: quality applies to every visual layer now and whenever the setting changes.
+    this.applyQuality();
+    const unsubscribeQuality = uiSettings.subscribe(() => this.applyQuality());
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, unsubscribeQuality);
     this.overlay = this.add.graphics().setDepth(DEPTH.overlay);
     this.joystick = this.add.graphics().setDepth(100).setScrollFactor(0);
     this.vignette = this.add.graphics().setDepth(90).setScrollFactor(0);
@@ -204,6 +215,7 @@ export class AlphaScene extends Phaser.Scene {
     this.lastEvent = 0;
     this.fx = [];
     this.lastEnemyPos.clear();
+    this.revivedAt = Number.NEGATIVE_INFINITY;
     this.error = '';
     this.clearInput();
     this.keys && this.input.keyboard?.resetKeys();
@@ -316,9 +328,89 @@ export class AlphaScene extends Phaser.Scene {
     this.world?.setMovement(0, 0);
     this.input.keyboard?.resetKeys();
   }
-  /** Task 18 «Качество графики» (the setting arrives in step 3.4). */
+  /**
+   * Task 18 «Последний свет»: act darkness with a flickering warm light around the player; light
+   * sources cut holes in order of importance (telegraphs and enemy shots first, so they are always
+   * visible), coloured glows add warmth. Boss phase: deeper, redder darkness and a boss aura.
+   */
+  private drawLights(s: GameplaySnapshot) {
+    const look = this.biome.look;
+    const t = s.time;
+    const boss = s.campaign?.boss
+      ? s.enemies.find((e) => e.alive && e.entityId === s.campaign!.boss!.enemyId)
+      : undefined;
+    const revive = Math.min(1, Math.max(0, (t - this.revivedAt) / 0.8));
+    const darkness = ((look?.biome.darkness ?? 0.45) + (boss ? 0.12 : 0)) * revive;
+    const flicker = 1 + 0.03 * Math.sin(t * 7.3) + 0.02 * Math.sin(t * 12.1);
+    const { x, y } = s.playerBody;
+    this.lighting.begin(this.cameras.main, darkness, boss ? BOSS_DARK : WARM_DARK, {
+      x,
+      y,
+      radius: 260 * flicker * (boss ? 0.92 : 1),
+    });
+    const L = this.lighting;
+    // Telegraphs first: they must never be lost in the dark.
+    for (const strike of s.artilleryStrikes) {
+      L.add(strike.center.x, strike.center.y, strike.radius * 1.5, 1);
+      if (this.accentGlow)
+        this.units.glow(strike.center.x, strike.center.y, strike.radius * 1.2, 0xff4d3d, 0.22);
+    }
+    const cast = s.campaign?.bossCast;
+    if (cast?.center) {
+      const r = cast.radius ?? (cast.kind === 'charge' ? 180 : 110);
+      L.add(cast.center.x, cast.center.y, r * 1.5, 1);
+      if (this.accentGlow) this.units.glow(cast.center.x, cast.center.y, r, 0xff4d3d, 0.2);
+    }
+    for (const p of s.enemyProjectiles) {
+      L.add(p.x, p.y, 60, 0.9);
+      if (this.accentGlow) this.units.glow(p.x, p.y, 26, 0xff6a4a, 0.5);
+    }
+    if (boss) {
+      L.add(boss.position.x, boss.position.y, 200, 0.85);
+      this.units.glow(boss.position.x, boss.position.y, 170, 0xff3b5c, 0.28);
+    }
+    for (const chest of s.chests?.items ?? []) {
+      L.add(chest.x, chest.y, 110, 0.9);
+      if (this.accentGlow)
+        this.units.glow(
+          chest.x,
+          chest.y,
+          60,
+          chest.type === 'enchanted' ? 0xb68cff : 0xf0c862,
+          0.3,
+        );
+    }
+    for (const p of s.playerProjectiles) {
+      L.add(p.x, p.y, 70, 0.75);
+      if (this.accentGlow)
+        this.units.glow(
+          p.x,
+          p.y,
+          22,
+          p.weaponId.startsWith('skill:') ? skillColor(p.weaponId.slice(6)) : 0xfff0c0,
+          0.45,
+        );
+    }
+    for (const z of s.skillCombat.zones) L.add(z.center.x, z.center.y, z.radius * 1.4, 0.8);
+    for (const f of this.fx)
+      if (f.event.event.type === 'skill-area') {
+        const e = f.event.event;
+        L.add(f.x, f.y, e.radius * 1.4, Math.max(0, (f.until - t) / 0.25));
+      }
+    for (const c of s.crystals) L.add(c.x, c.y, 44, 0.6);
+    for (const pile of s.coins.piles) L.add(pile.x, pile.y, 40, 0.55);
+  }
+  /** Task 18 «Качество графики» (UI settings; presentation only). */
   private graphicsQuality(): GraphicsQuality {
-    return 'high';
+    return uiSettings.get().graphicsQuality;
+  }
+  /** Applies the quality to every visual layer (biome rebuild, light mode, glows). */
+  private applyQuality() {
+    const q = this.graphicsQuality();
+    this.units.glowEnabled = QUALITY_PRESETS[q].glow;
+    this.accentGlow = QUALITY_PRESETS[q].accentGlow;
+    this.lighting.setQuality(q);
+    this.biome.build(this.mapId, q);
   }
   update(time: number, delta: number) {
     const dt = frameStep(delta, import.meta.env.DEV || __QA_BUILD__ ? this.timeScale : 1);
@@ -344,6 +436,7 @@ export class AlphaScene extends Phaser.Scene {
       this.overlay.clear();
       this.units.begin();
       this.units.end();
+      this.lighting.hide();
     }
     this.hudTimer -= dt;
     if (this.hudTimer <= 0) {
@@ -355,8 +448,10 @@ export class AlphaScene extends Phaser.Scene {
     const g = this.graphics;
     g.clear();
     const o = this.overlay.clear();
-    this.units.begin();
     this.cameras.main.centerOn(s.playerBody.x, s.playerBody.y);
+    // Task 18: cull sprites to the camera view (worldView follows centerOn above).
+    this.units.setView(this.cameras.main.worldView);
+    this.units.begin();
     const frameEvents = this.world!.getEvents(this.lastEvent);
     // Task 14: sound reads the same events (presentation only; nothing flows back).
     soundFrame(frameEvents);
@@ -367,6 +462,11 @@ export class AlphaScene extends Phaser.Scene {
         this.fx.push({ event, until: event.time + 0.18, x: e.origin.x, y: e.origin.y });
       if (event.channel === 'skill' && e.type === 'skill-area')
         this.fx.push({ event, until: event.time + 0.25, x: e.center.x, y: e.center.y });
+      // Task 18: revive — a brief bright flash; darkness returns over 0.8 s.
+      if (event.channel === 'survival' && e.type === 'player-revived') {
+        this.revivedAt = event.time;
+        this.cameras.main.flash(450, 255, 236, 200);
+      }
       // Task 18: death puff where the enemy was last drawn.
       if (event.channel === 'combat' && e.type === 'death' && e.entityId !== 'player') {
         const last = this.lastEnemyPos.get(e.entityId);
@@ -519,7 +619,6 @@ export class AlphaScene extends Phaser.Scene {
         s.time,
         flash,
         {
-          shadowWidth: 34 * (isBoss ? enemy.config.radius / 17 : k),
           ...(glowColor !== undefined ? { glow: glowColor, glowScale: isBoss ? 1.6 : 1.1 } : {}),
         },
       );
@@ -661,7 +760,7 @@ export class AlphaScene extends Phaser.Scene {
       1 / ART_SCALE,
       s.time,
       hitAge >= 0 && hitAge < 0.15 ? 1 - hitAge / 0.15 : 0,
-      { alpha: s.player.alive ? 1 : 0.4, shadowWidth: 38 },
+      { alpha: s.player.alive ? 1 : 0.4 },
     );
     if (s.survival.directProtected)
       g.lineStyle(
@@ -768,6 +867,7 @@ export class AlphaScene extends Phaser.Scene {
           .setColor(f.event.channel === 'skill' ? '#bfe9ff' : '#ffe4ba')
           .setVisible(true);
     }
+    this.drawLights(s);
     this.units.end();
     this.labels.slice(label).forEach((t) => t.setVisible(false));
     this.damageLabels.slice(damageLabel).forEach((t) => t.setVisible(false));

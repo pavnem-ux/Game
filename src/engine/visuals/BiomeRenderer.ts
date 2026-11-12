@@ -6,6 +6,7 @@ import { DECOR_ART, DECOR_BASE_Y, DECOR_SIZE, FX_ART, FX_SIZE } from './decor-ar
 import { QUALITY_PRESETS } from './quality';
 import type { GraphicsQuality } from './quality';
 import { renderRandom } from './render-rng';
+import { TintCache } from './tint-cache';
 
 /** Task 18 biome layers (all below units except the falling particles). */
 export const BIOME_DEPTH = Object.freeze({
@@ -13,7 +14,8 @@ export const BIOME_DEPTH = Object.freeze({
   features: -7,
   decor: -5,
   fog: 4.7,
-  particles: 9,
+  /** Above the darkness (9.5): fireflies, embers and snow read as light. */
+  particles: 9.6,
 });
 const TILE = 256;
 const pen = (g: Phaser.GameObjects.Graphics): Pen => g;
@@ -31,7 +33,9 @@ export class BiomeRenderer {
   private pv = new Float32Array(0);
   private built: { mapId: number | null; quality: GraphicsQuality } | null = null;
   look: MapLook | null = null;
+  private readonly tints: TintCache;
   constructor(private readonly scene: Phaser.Scene) {
+    this.tints = new TintCache(scene);
     for (const key of DECOR_KEYS) this.bake(key, DECOR_SIZE, (g) => DECOR_ART[key](pen(g)));
     this.bake('fx-mote', FX_SIZE, (g) => FX_ART.mote(pen(g)));
     this.bake('fx-fog', FX_SIZE, (g) => FX_ART.fog(pen(g)));
@@ -88,12 +92,15 @@ export class BiomeRenderer {
       this.py[i] = rand() * 1400;
       this.pv[i] = rand();
       const fog = kind === 'fog';
+      // Fireflies and embers glow (additive); ash motes stay plain grey. Colours are baked.
+      const ember = kind === 'ash' && this.pv[i] > 0.66;
+      const color = ember ? 0xffa25a : PARTICLE_TINT[kind];
       const img = scene.add
-        .image(0, 0, fog ? 'fx-fog' : 'fx-mote')
+        .image(0, 0, this.tints.get(fog ? 'fx-fog' : 'fx-mote', color))
         .setDepth(fog ? BIOME_DEPTH.fog : BIOME_DEPTH.particles)
-        .setTint(PARTICLE_TINT[kind])
         .setScale(fog ? 3 + this.pv[i] * 3 : kind === 'fireflies' ? 0.32 : 0.3);
-      if (kind === 'fireflies' || kind === 'ash') img.setBlendMode(Phaser.BlendModes.ADD);
+      if (kind === 'fireflies' || ember) img.setBlendMode(Phaser.BlendModes.ADD);
+      if (kind === 'ash') img.setAlpha(ember ? 1 : 0.7);
       this.keep(img);
       this.particles.push(img);
     }
@@ -259,7 +266,6 @@ export class BiomeRenderer {
       img.setPosition(x, y);
       if (kind === 'fireflies')
         img.setAlpha(0.1 + 0.7 * Math.max(0, Math.sin(time * 1.3 + v * 20)));
-      else if (kind === 'ash') img.setTint(v > 0.66 ? 0xffa25a : 0x9a9898);
       else if (kind === 'fog') img.setAlpha(0.14 + 0.06 * Math.sin(time * 0.3 + v * 9));
     }
   }
@@ -281,7 +287,7 @@ const WRAP = [
 const PARTICLE_TINT = {
   fireflies: 0xd8f07a,
   fog: 0x9fb8b4,
-  ash: 0x9a9898,
+  ash: 0x8a8686,
   snow: 0xf0f6ff,
 } as const;
 const shiftedWall = (look: MapLook) => look.palette.patchA;

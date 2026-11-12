@@ -351,10 +351,36 @@ function chest(p: Pen, c: number, enchanted: boolean) {
       .lineBetween(s(-9), s(6), s(-5), s(2))
       .lineBetween(s(5), s(2), s(9), s(6));
 }
+/** Units carry their soft ground shadow inside the texture (one sprite per unit on Canvas). */
+const UNIT_SHADOW: Partial<Record<TextureKey, readonly [number, number, number]>> = {
+  'player-warrior': [17, 38, 13],
+  'player-mage': [17, 38, 13],
+  'player-archer': [17, 38, 13],
+  'player-rogue': [17, 38, 13],
+  'enemy-melee': [15, 34, 12],
+  'enemy-ranged': [15, 34, 12],
+  'enemy-swift': [15, 30, 10],
+  'enemy-brute': [16, 38, 13],
+  'enemy-bombard': [16, 34, 12],
+  'elite-melee': [16, 36, 12],
+  'elite-ranged': [16, 36, 12],
+  boss: [33, 70, 22],
+};
 /** Draws one texture's art centred in its square (used by the factory and by tests). */
 export function drawArt(key: TextureKey, pen: Pen): number {
   const size = textureSize(key);
-  ART[key](pen, size / 2);
+  const c = size / 2;
+  const shadow = UNIT_SHADOW[key];
+  if (shadow) {
+    const [dy, w, h] = shadow;
+    for (let i = 0; i < 3; i++)
+      pen
+        .fillStyle(0x020806, 0.2)
+        .fillEllipse(c, c + dy * ART_SCALE, (w - i * 7) * ART_SCALE, (h - i * 3) * ART_SCALE);
+  }
+  ART[key](pen, c);
   return size;
 }
+/** True when the unit texture already contains its ground shadow. */
+export const hasBakedShadow = (key: TextureKey): boolean => UNIT_SHADOW[key] !== undefined;
 export const ART_KEYS = TEXTURE_KEYS;

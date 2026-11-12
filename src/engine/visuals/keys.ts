@@ -52,8 +52,11 @@ export function playerProjectileKey(weaponId: string, characterClass: CharacterC
 }
 export const chestTextureKey = (type: 'wooden' | 'enchanted'): TextureKey => `chest-${type}`;
 
-/** Art is drawn at this scale into textures and displayed at 1 / ART_SCALE (crisp when zoomed). */
-export const ART_SCALE = 2;
+/**
+ * Art is drawn at this scale into textures and displayed at 1 / ART_SCALE. 1: the Canvas renderer
+ * draws at CSS resolution, so 1:1 textures avoid a downscale on every draw (measured faster).
+ */
+export const ART_SCALE = 1;
 /** Texture size (px) per key; units are centred, items too. */
 export function textureSize(key: TextureKey): number {
   if (key === 'boss') return 112 * ART_SCALE;
