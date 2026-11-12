@@ -1,4 +1,7 @@
 import type { GameplaySnapshot } from '../gameplay';
+import type { PetSnapshot } from '../pets/runtime';
+import { PET_CONFIG } from '../pets';
+import { PetPortrait } from './pets/PetPortrait';
 import { ALPHA_ENEMY_STATS, ALPHA_WEAPONS } from '../gameplay';
 import type {
   DamageContext,
@@ -387,6 +390,8 @@ export function SkillBar({
             ? `${(world.dash.readyAt - world.time).toFixed(1)} с`
             : 'Рывок'}
         </span>
+        {/* Task 20: the pet — small portrait with a cooldown ring for timed pets. */}
+        {world.pet && <PetHudIcon pet={world.pet} time={world.time} />}
         {buffs.map((b) => (
           <span key={b.id} className="skill-buff">
             {b.id.replace(/_/g, ' ')}
@@ -797,5 +802,27 @@ function SkillOverview({
         <SkillsOverviewBody world={world} />
       </aside>
     </>
+  );
+}
+
+/** Task 20 HUD: pet portrait; timed pets show a conic cooldown ring until their next action. */
+function PetHudIcon({ pet, time }: { pet: PetSnapshot; time: number }) {
+  const name = PET_CONFIG[pet.id].name;
+  const remaining =
+    pet.nextActionAt !== null && pet.interval ? Math.max(0, pet.nextActionAt - time) : 0;
+  const progress = pet.interval ? 1 - Math.min(1, remaining / pet.interval) : 1;
+  return (
+    <span
+      className={`pet-hud ${pet.interval ? 'timed' : 'aura'}`}
+      style={{ ['--progress' as string]: String(progress) }}
+      aria-label={
+        pet.interval
+          ? `Питомец «${name}», уровень ${pet.level}: действие через ${remaining.toFixed(1)} с`
+          : `Питомец «${name}», уровень ${pet.level}: аура`
+      }
+      title={name}
+    >
+      <PetPortrait id={pet.id} size={22} />
+    </span>
   );
 }

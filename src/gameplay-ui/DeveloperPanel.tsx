@@ -11,6 +11,7 @@ import { campaignDebug } from './campaign-debug';
 import type { AlphaState } from './store';
 import { ENEMY_KINDS } from '../gameplay';
 import { SHOP_ITEMS } from '../equipment';
+import { PET_CONFIG, PET_IDS } from '../pets';
 import type { EnemyKind } from '../gameplay';
 import { BUFFS, BUFF_IDS, CHEST_NAMES } from '../gameplay/chests';
 import type { ChestContent, ChestType } from '../gameplay/chests';
@@ -72,6 +73,8 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
     [debugOre, setDebugOre] = useState(50),
     [levelItem, setLevelItem] = useState('plate-t1'),
     [itemLevelValue, setItemLevelValue] = useState(10),
+    [debugPet, setDebugPet] = useState<string>('owlet'),
+    [debugPetLevel, setDebugPetLevel] = useState(1),
     [debugSeed, setDebugSeed] = useState(String(w?.seed ?? 1)),
     [jumpMap, setJumpMap] = useState(11),
     [talentNodeChoice, setTalentNode] = useState(''),
@@ -272,6 +275,46 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
         <button onClick={() => campaignDebug.setItemLevel(levelItem, itemLevelValue)}>
           Установить уровень предмета
         </button>
+      </fieldset>
+      {/* Task 20 §1.5: pets (validated saves / the current run; DEV/QA only). */}
+      <fieldset aria-label="Pet Debug">
+        <legend>Питомцы</legend>
+        <button onClick={() => campaignDebug.unlockAllPets()}>Открыть всех питомцев</button>
+        <label>
+          Питомец
+          <select
+            aria-label="Debug питомец"
+            value={debugPet}
+            onChange={(e) => setDebugPet(e.target.value)}
+          >
+            {PET_IDS.map((id) => (
+              <option key={id} value={id}>
+                {PET_CONFIG[id].name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Уровень
+          <select
+            aria-label="Debug уровень питомца"
+            value={debugPetLevel}
+            onChange={(e) => setDebugPetLevel(Number(e.target.value))}
+          >
+            {[1, 2, 3, 4, 5].map((l) => (
+              <option key={l} value={l}>
+                {l}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button onClick={() => campaignDebug.setPetLevel(debugPet, debugPetLevel)}>
+          Установить уровень питомца
+        </button>
+        <button onClick={() => send({ type: 'pet', id: debugPet, level: debugPetLevel })}>
+          Призвать питомца в забег
+        </button>
+        <button onClick={() => send({ type: 'pet', id: null })}>Убрать питомца из забега</button>
       </fieldset>
       <fieldset aria-label="Talent Debug">
         <legend>Таланты · {CLASS_LABELS[characterClass]}</legend>

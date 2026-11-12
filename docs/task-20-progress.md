@@ -4,7 +4,7 @@ Spec: [task-20-pets.md](task-20-pets.md) (owner's file). Branch `task-20-pets` s
 `task-19-gear` (PR #17, itself stacked on #16): neither was merged into `main` when this task
 started, and pets need Task 19's ore and forge. Rebase onto `main` once #16 and #17 are merged.
 
-Current: Phase 3
+Current: Phase 4
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/18
 
@@ -20,7 +20,7 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/18
 - [x] Phase 2 tests
 - [x] 3.1 Pet selection (hub + equipment slot)
 - [x] 3.2 Shop tab, forge tab
-- [ ] 3.3 HUD icon + cooldown ring; sprites, light
+- [x] 3.3 HUD icon + cooldown ring; sprites, light
 - [ ] 4 Full checks, docs, PR
 
 ## Decisions
@@ -67,6 +67,13 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/18
   confirmation; quest pets read «Награда за задание»). Forge tabs «Предметы» / «Питомцы» (effect now
   vs next, Gold + ore cost, «Улучшить до уровня N»). Presentation-only store state: `shopTab`,
   `forgeItem = 'pet:<id>'`.
+- Visuals: six procedural pet textures (`pet-<id>`, Task 18 art/factory, pooled item sprites).
+  The sprite follows the simulation anchor with exponential smoothing (`PET_FOLLOW.rate`, frame
+  time; rendering only), idle bob, action animation (fox streak through the target, owlet spark,
+  heal / barrier ring on the player). Light: a small light + tinted glow per pet (firefly bigger).
+- HUD: pet portrait in the skill bar; timed pets fill a conic cooldown ring until the next action.
+- DEV panel «Питомцы»: «Открыть всех питомцев», pet + level → «Установить уровень питомца»,
+  «Призвать питомца в забег» / «Убрать питомца из забега» (testing action `pet`).
 - `tests/pets/` added to the Vitest include list; `npm run test:pets`.
 
 ## Verification log
