@@ -49,7 +49,8 @@ export function EquipmentPage() {
   const cls = shown ?? ui.viewClass ?? profile.selectedClass;
   const progress = profile.classes[cls];
   const loadout = progress.loadout;
-  const stats = (l: Loadout | null) => permanentStats(cls, progress.level, progress.talents, l);
+  const stats = (l: Loadout | null) =>
+    permanentStats(cls, progress.level, progress.talents, l, profile.itemLevels);
   const withGear = stats(loadout);
   const without = stats(null);
   const owned: GearItem[] = [

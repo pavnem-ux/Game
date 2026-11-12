@@ -12,7 +12,14 @@ import {
 } from '../profile';
 import type { ClassProgress, MapBest, PlayerProfile, RecentRun, RunStatsSummary } from '../profile';
 import { validateTalentRanks } from '../talents';
-import { GEAR_SLOTS, defaultLoadout, findItem, isEligible } from '../equipment';
+import {
+  GEAR_SLOTS,
+  UPGRADE_RULES,
+  defaultLoadout,
+  findItem,
+  isEligible,
+  isUpgradeable,
+} from '../equipment';
 import type { Loadout } from '../equipment';
 
 /**
@@ -233,6 +240,16 @@ export function normalizeProfile(data: Json, version = SAVE_SCHEMA_VERSION): Pla
   });
   if (new Set(ownedItems).size !== ownedItems.length) invalid('ownedItems (duplicates)');
   const owned = new Set(ownedItems);
+  // Task 19: forge levels 0–10 of owned (upgradeable) items only; +0 entries are not kept.
+  const levelsRaw = or(data.itemLevels, {});
+  if (!isObject(levelsRaw)) invalid('itemLevels');
+  const itemLevels: Record<string, number> = {};
+  for (const [id, level] of Object.entries(levelsRaw as Json)) {
+    const item = findItem(id);
+    if (!item || !isUpgradeable(item) || !owned.has(id)) invalid(`itemLevels.${id}`);
+    if (int(level, `itemLevels.${id}`, 0, UPGRADE_RULES.maxLevel) > 0)
+      itemLevels[id] = level as number;
+  }
   const classesRaw = or(data.classes, {});
   if (!isObject(classesRaw)) invalid('classes');
   const classes = Object.freeze(
@@ -292,6 +309,7 @@ export function normalizeProfile(data: Json, version = SAVE_SCHEMA_VERSION): Pla
     recentRuns: Object.freeze((recentRaw as unknown[]).map(recentRun)),
     processedRunIds: Object.freeze(processedRunIds),
     ownedItems: Object.freeze(ownedItems),
+    itemLevels: Object.freeze(itemLevels),
   });
 }
 

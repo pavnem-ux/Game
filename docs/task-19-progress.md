@@ -17,8 +17,8 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/17
 - [x] Phase 1 tests
 - [x] 2.1 Ore rewards, first-victory bonus, dedup
 - [x] 2.2 Ore UI
-- [ ] 3.1 Upgrade logic (pure)
-- [ ] 3.2 Stats with upgrade levels
+- [x] 3.1 Upgrade logic (pure)
+- [x] 3.2 Stats with upgrade levels
 - [ ] 3.3 Forge UI
 - [ ] 4 Save v5 migration / validation
 - [ ] 5 Full checks, docs, PR
@@ -42,6 +42,16 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/17
   (same snapshot and run-ID dedup as XP/Gold); stored per recent run (`ore`, optional) and in
   `RunSummary.oreGained`. UI: «Руда» badge next to Gold in the menu top bar (hub, shop, forge — all
   menu pages), «Руда» row on the results screen (with «первая победа ×3»).
+- Forge (`equipment/upgrades.ts`, pure): `UPGRADE_RULES`, `upgradeCost`, `upgradedStats`,
+  `checkUpgrade` (reasons `unknown`, `starter`, `not-owned`, `max`, `gold`, `ore`), `upgradeItem`
+  (one new state). Gold cost rounds **up** (`⌈price × 0.1 × L⌉`: a tier-5 weapon at 3125 Gold has
+  half-Gold steps, e.g. +1 = 313). Upgraded stats are rounded to 3 decimals.
+- Levels live in `profile.itemLevels` (id → 1–10; +0 not stored). They reach the run through
+  `GameplayOptions.equipment.itemLevels` (validated at world start) → `gearModifiers(loadout,
+levels)` → `composeRunStats` (caps once). Character and Equipment screens use the same
+  `permanentStats(…, itemLevels)`.
+- Store: `campaignStore.upgradeItem(id)` → one validated save (Gold + ore + level); a failed write
+  keeps the old profile. Debug: `grantOre`, `setItemLevel` (DEV/QA panel only).
 - Debug «Лучшее снаряжение»: the Mage gets the magic helmet / gloves / pants.
 
 ## Verification log

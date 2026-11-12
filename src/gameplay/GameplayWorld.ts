@@ -71,7 +71,7 @@ import type {
   RunInput,
 } from '../campaign';
 import type { DirectDamageObserver, DirectDamagePolicy } from '../enemy-ai';
-import { addModifiers, gearModifiers, validateLoadout } from '../equipment';
+import { addModifiers, gearModifiers, validateItemLevels, validateLoadout } from '../equipment';
 import type { Loadout } from '../equipment';
 import { RunCoins } from './coins';
 import { BUFFS, CHEST_RULES, RunChests, buffModifiers, chestGold } from './chests';
@@ -208,8 +208,14 @@ export class GameplayWorld {
     );
     // Task 11: gear joins the talent stat layer (one permanent layer, caps applied once).
     if (options.equipment) validateLoadout(options.characterClass, options.equipment.loadout);
+    // Task 19: forge levels scale the equipped items' stats (validated; read at world start only).
+    const itemLevels = options.equipment?.itemLevels;
+    if (itemLevels !== undefined) validateItemLevels(itemLevels);
     this.loadout = options.equipment?.loadout ?? null;
-    this.permanentModifiers = addModifiers(this.talents.modifiers, gearModifiers(this.loadout));
+    this.permanentModifiers = addModifiers(
+      this.talents.modifiers,
+      gearModifiers(this.loadout, itemLevels),
+    );
     const startStats = composeRunStats(this.character.primaryAttributes, this.permanentModifiers);
     this.core = createCore(this.random);
     this.core.addEntity({

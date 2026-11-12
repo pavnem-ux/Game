@@ -34,7 +34,7 @@ export function CharacterSelectPage() {
   const stats = Object.fromEntries(
     CHARACTER_CLASSES.map((c) => {
       const p = profile.classes[c];
-      return [c, permanentStats(c, p.level, p.talents, p.loadout)];
+      return [c, permanentStats(c, p.level, p.talents, p.loadout, profile.itemLevels)];
     }),
   ) as Record<string, CombatAttributes>;
   const best = Object.fromEntries(

@@ -1,7 +1,7 @@
 import type { CharacterClass } from '../character-stats';
 import { getCampaignMap } from '../campaign';
-import { buyItem, equipItem, isMapUnlocked, unequipSlot } from '../profile';
-import { EquipmentError } from '../equipment';
+import { buyItem, equipItem, isMapUnlocked, unequipSlot, upgradeProfileItem } from '../profile';
+import { EquipmentError, UpgradeError } from '../equipment';
 import type { GearSlot } from '../equipment';
 import {
   createProgressionService,
@@ -181,7 +181,9 @@ function gearChange(change: (p: PlayerProfile) => PlayerProfile): string | null 
   try {
     next = change(profile);
   } catch (error) {
-    return error instanceof EquipmentError ? error.reason : 'invalid';
+    return error instanceof EquipmentError || error instanceof UpgradeError
+      ? error.reason
+      : 'invalid';
   }
   const written = campaignStore.service().replaceProfile(next);
   return written.ok ? null : (written.failure ?? 'not-saved');
@@ -228,6 +230,13 @@ export const campaignStore = {
   /** Task 11: equip an owned eligible item for a class (applies to that class's next run). */
   equipItem(characterClass: CharacterClass, itemId: string): string | null {
     return gearChange((p) => equipItem(p, characterClass, itemId));
+  },
+  /**
+   * Task 19 forge: upgrade an owned item by one level — Gold, ore and the level in one validated
+   * save (nothing changes when the write fails). Returns the refusal reason or null.
+   */
+  upgradeItem(itemId: string): string | null {
+    return gearChange((p) => upgradeProfileItem(p, itemId));
   },
   /** Task 11: unequip a slot (weapon → starter weapon, other slots → empty). */
   unequipSlot(characterClass: CharacterClass, slot: GearSlot): string | null {
@@ -364,7 +373,7 @@ export const campaignStore = {
         // Task 09: the class's talents apply from run start; changes affect the next run.
         talents: { ranks: profile.classes[cls].talents },
         // Task 11: this class's own loadout; changes apply to the next run.
-        equipment: { loadout: profile.classes[cls].loadout },
+        equipment: { loadout: profile.classes[cls].loadout, itemLevels: profile.itemLevels },
         campaign: { mapId, runId: generateRunId() },
       },
     });

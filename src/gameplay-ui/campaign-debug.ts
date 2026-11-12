@@ -210,6 +210,25 @@ export const campaignDebug = {
   grantGold(amount: number) {
     return edit((p) => ({ ...p, gold: p.gold + amount }));
   },
+  /** Task 19 §1.5: adds ore (validated save). */
+  grantOre(amount: number) {
+    return edit((p) => ({ ...p, ore: p.ore + amount }));
+  },
+  /**
+   * Task 19 §1.5: sets an item's forge level 0–10 (the item becomes owned; no Gold/ore spent). The
+   * validated save rejects starter weapons, unknown ids and levels outside 0–10.
+   */
+  setItemLevel(itemId: string, level: number) {
+    return edit((p) => {
+      const levels: Record<string, number> = { ...p.itemLevels, [itemId]: level };
+      if (level === 0) delete levels[itemId];
+      return {
+        ...p,
+        ownedItems: p.ownedItems.includes(itemId) ? p.ownedItems : [...p.ownedItems, itemId],
+        itemLevels: levels,
+      };
+    });
+  },
   /** Removes the profile, backup and quarantine, then starts a fresh test profile. */
   resetProgress() {
     createSaveStore().clearForDev();

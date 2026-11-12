@@ -74,6 +74,8 @@ export interface PlayerProfile {
   readonly processedRunIds: readonly string[];
   /** Task 11: bought shop items (permanent, no copies), in purchase order. */
   readonly ownedItems: readonly string[];
+  /** Task 19: forge upgrade level (1–10) per owned item id; absent id = +0. Account-wide. */
+  readonly itemLevels: Readonly<Record<string, number>>;
 }
 
 /** A brand-new profile. Identity and time are supplied by the caller (no hidden clock/RNG). */
@@ -105,5 +107,6 @@ export function createProfile(profileId: string, createdAt: string): PlayerProfi
     recentRuns: Object.freeze([]),
     processedRunIds: Object.freeze([]),
     ownedItems: Object.freeze([]),
+    itemLevels: Object.freeze({}),
   });
 }
