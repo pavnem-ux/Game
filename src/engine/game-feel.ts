@@ -38,6 +38,8 @@ export class FloatingNumbers {
   readonly entries: readonly FloatingNumber[];
   private next = 0;
   private spawned = 0;
+  /** Task 16: numbers on screen at once (≤ capacity; «Качество графики»). */
+  private limit: number;
   constructor(readonly capacity: number = FLOATING_LIMITS.capacity) {
     if (!Number.isInteger(capacity) || capacity < 1) throw new RangeError('Invalid capacity.');
     this.entries = Array.from({ length: capacity }, () => ({
@@ -51,10 +53,22 @@ export class FloatingNumbers {
       drift: 0,
       text: '',
     }));
+    this.limit = capacity;
+  }
+  /** Task 16: caps how many numbers show at once; entries beyond the cap are dropped. */
+  setLimit(limit: number): void {
+    const n = Math.max(1, Math.min(this.capacity, Math.floor(limit)));
+    if (!Number.isFinite(n)) throw new RangeError('Invalid limit.');
+    this.limit = n;
+    for (let i = n; i < this.capacity; i++) (this.entries[i] as FloatingNumber).active = false;
+    if (this.next >= n) this.next = 0;
+  }
+  get activeLimit(): number {
+    return this.limit;
   }
   spawn(kind: FloatingKind, x: number, y: number, value: number, now: number): FloatingNumber {
     const e = this.entries[this.next] as FloatingNumber;
-    this.next = (this.next + 1) % this.capacity;
+    this.next = (this.next + 1) % this.limit;
     // Golden-ratio spread in [-1, 1): visual variety without any random source.
     const spread = ((this.spawned++ * 0.618033988749895) % 1) * 2 - 1;
     e.active = true;

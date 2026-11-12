@@ -424,6 +424,7 @@ export class AlphaScene extends Phaser.Scene {
   private applyQuality() {
     const q = this.graphicsQuality();
     this.units.glowEnabled = QUALITY_PRESETS[q].glow;
+    this.floating.setLimit(QUALITY_PRESETS[q].damageNumbers);
     this.accentGlow = QUALITY_PRESETS[q].accentGlow;
     this.lighting.setQuality(q);
     this.biome.build(this.mapId, q);

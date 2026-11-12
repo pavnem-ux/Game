@@ -20,6 +20,8 @@ export interface QualityPreset {
   readonly accentGlow: boolean;
   /** Task 16: canvas device-pixel-ratio cap (sharpness vs. pixels to fill). */
   readonly dprCap: number;
+  /** Task 16: floating damage numbers on screen at once. */
+  readonly damageNumbers: number;
 }
 export const QUALITY_PRESETS: Readonly<Record<GraphicsQuality, QualityPreset>> = Object.freeze({
   high: Object.freeze({
@@ -29,6 +31,7 @@ export const QUALITY_PRESETS: Readonly<Record<GraphicsQuality, QualityPreset>> =
     glow: true,
     accentGlow: true,
     dprCap: 2,
+    damageNumbers: 40,
   }),
   medium: Object.freeze({
     lightResolution: 0.25,
@@ -37,6 +40,7 @@ export const QUALITY_PRESETS: Readonly<Record<GraphicsQuality, QualityPreset>> =
     glow: true,
     accentGlow: false,
     dprCap: 1.5,
+    damageNumbers: 24,
   }),
   low: Object.freeze({
     lightResolution: 0,
@@ -45,6 +49,7 @@ export const QUALITY_PRESETS: Readonly<Record<GraphicsQuality, QualityPreset>> =
     glow: false,
     accentGlow: false,
     dprCap: 1,
+    damageNumbers: 12,
   }),
 });
 /** Default: Высокое on desktop, Среднее on touch devices. */

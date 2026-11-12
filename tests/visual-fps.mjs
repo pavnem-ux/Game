@@ -14,12 +14,8 @@ const quality = process.env.FPS_QUALITY || '';
 const seconds = Number(process.env.FPS_SECONDS || 5);
 const profiles = [
   { name: 'desktop 1280×800', viewport: { width: 1280, height: 800 }, throttle: 1, touch: false },
-  {
-    name: 'phone 390×844, CPU ×4',
-    viewport: { width: 390, height: 844 },
-    throttle: 4,
-    touch: true,
-  },
+  // Task 16: portrait phones show «Поверните устройство» (the run pauses), so phones are measured
+  // in landscape, the play orientation.
   // Task 16: landscape is the play orientation on phones.
   {
     name: 'phone 844×390 landscape, CPU ×4',
