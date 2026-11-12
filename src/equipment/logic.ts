@@ -4,6 +4,8 @@ import { GEAR_SLOTS, TIER_CONFIG } from './config';
 import type { GearSlot, GearStat, Tier } from './config';
 import { findItem, isEligible, starterWeapon } from './items';
 import type { GearItem } from './items';
+import { NO_ITEM_LEVELS, itemLevel, upgradedStats } from './upgrades';
+import type { ItemLevels } from './upgrades';
 
 /**
  * Task 11 pure ownership / loadout rules (no storage, no UI). Buying unlocks an item permanently
@@ -19,7 +21,15 @@ export interface EquipmentState {
   readonly loadouts: Loadouts;
 }
 export const defaultLoadout = (c: CharacterClass): Loadout =>
-  Object.freeze({ weapon: starterWeapon(c).id, armor: null, amulet: null, ring: null });
+  Object.freeze({
+    weapon: starterWeapon(c).id,
+    helmet: null,
+    armor: null,
+    gloves: null,
+    pants: null,
+    amulet: null,
+    ring: null,
+  });
 export const defaultLoadouts = (): Loadouts =>
   Object.freeze(
     Object.fromEntries(CHARACTER_CLASSES.map((c) => [c, defaultLoadout(c)])) as Record<
@@ -108,11 +118,20 @@ export function equippedItems(loadout: Loadout): readonly GearItem[] {
     .map((id) => findItem(id))
     .filter((i): i is GearItem => i !== null);
 }
-/** Summed gear stat bonuses of a loadout (run-modifier units). */
-export function loadoutStats(loadout: Loadout): Readonly<Partial<Record<GearStat, number>>> {
+/**
+ * Summed gear stat bonuses of a loadout (run-modifier units). Task 19: each item counts at its
+ * upgrade level (`levels`, absent = +0; the default keeps the Task 11 behaviour).
+ */
+export function loadoutStats(
+  loadout: Loadout,
+  levels: ItemLevels = NO_ITEM_LEVELS,
+): Readonly<Partial<Record<GearStat, number>>> {
   const out: Partial<Record<GearStat, number>> = {};
   for (const item of equippedItems(loadout))
-    for (const [stat, v] of Object.entries(item.stats) as [GearStat, number][])
+    for (const [stat, v] of Object.entries(upgradedStats(item, itemLevel(levels, item.id))) as [
+      GearStat,
+      number,
+    ][])
       out[stat] = (out[stat] ?? 0) + v;
   return Object.freeze(out);
 }

@@ -3,6 +3,7 @@ export {
   SaveDataError,
   migrateV2toV3,
   migrateV3toV4,
+  migrateV4toV5,
   migrations,
   normalizeProfile,
   parseProfile,

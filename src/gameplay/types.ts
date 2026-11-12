@@ -1,5 +1,5 @@
 import type { TalentConfig, TalentRanks } from '../talents';
-import type { Loadout } from '../equipment';
+import type { ItemLevels, Loadout } from '../equipment';
 import type { CoinEvent, CoinPile } from './coins';
 import type { RunStatsSnapshot } from './run-stats';
 import type { ExperienceEvent, RunProgression, XpCrystal } from './experience';
@@ -49,7 +49,8 @@ export interface GameplayOptions {
    */
   readonly talents?: Readonly<{ ranks: TalentRanks; config?: TalentConfig }>;
   /** Task 11: this class's equipped gear (validated: known items, right slot and class). */
-  readonly equipment?: Readonly<{ loadout: Loadout }>;
+  /** Task 11 loadout; Task 19 `itemLevels` (forge upgrade levels, absent = all +0). */
+  readonly equipment?: Readonly<{ loadout: Loadout; itemLevels?: ItemLevels }>;
 }
 export interface WorldEvent {
   readonly sequence: number;

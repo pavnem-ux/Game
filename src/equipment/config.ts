@@ -6,11 +6,23 @@ import type { CharacterClass } from '../character-stats';
  * Framework-independent: no Phaser/React/storage imports. Gear only changes existing combat
  * attributes, through the same run-modifier keys the talents use (`RunStatModifiers`).
  */
-export type GearSlot = 'weapon' | 'armor' | 'amulet' | 'ring';
-export const GEAR_SLOTS: readonly GearSlot[] = Object.freeze(['weapon', 'armor', 'amulet', 'ring']);
+/** Task 19 adds the shared «Шлем», «Перчатки», «Штаны» slots (7 slots in total). */
+export type GearSlot = 'weapon' | 'helmet' | 'armor' | 'gloves' | 'pants' | 'amulet' | 'ring';
+export const GEAR_SLOTS: readonly GearSlot[] = Object.freeze([
+  'weapon',
+  'helmet',
+  'armor',
+  'gloves',
+  'pants',
+  'amulet',
+  'ring',
+]);
 export const SLOT_LABELS: Readonly<Record<GearSlot, string>> = Object.freeze({
   weapon: 'Оружие',
+  helmet: 'Шлем',
   armor: 'Броня',
+  gloves: 'Перчатки',
+  pants: 'Штаны',
   amulet: 'Амулет',
   ring: 'Кольцо',
 });
@@ -119,6 +131,16 @@ export const TIER_CONFIG: Readonly<
 /** Weapons cost ×1.25; the second weapon stat counts ×0.6 (spec §1.2). */
 export const WEAPON_PRICE_FACTOR = 1.25;
 export const WEAPON_SECOND_STAT_FACTOR = 0.6;
+/**
+ * Slots whose second stat counts ×WEAPON_SECOND_STAT_FACTOR (Task 19 §1.1: the new two-stat slots
+ * follow the weapon rule; Task 11 armor keeps both stats at ×1.0). Only weapons cost ×1.25.
+ */
+export const SECOND_STAT_REDUCED_SLOTS: readonly GearSlot[] = Object.freeze([
+  'weapon',
+  'helmet',
+  'gloves',
+  'pants',
+]);
 
 export interface GearTemplate {
   readonly id: string;
@@ -145,7 +167,7 @@ const t = (
     stats: Object.freeze([...stats]),
     ...(characterClass ? { characterClass } : {}),
   });
-/** Spec §1.2 templates: 8 class weapons + 9 shared items. */
+/** Spec §1.2 templates: 8 class weapons + 9 shared items; Task 19 §1.1: + 9 helmet/gloves/pants. */
 export const GEAR_TEMPLATES: readonly GearTemplate[] = Object.freeze([
   t(
     'heavy_sword',
@@ -206,6 +228,19 @@ export const GEAR_TEMPLATES: readonly GearTemplate[] = Object.freeze([
   t('ring_precision', 'Кольцо точности', 'n', 'ring', ['criticalChance']),
   t('ring_fury', 'Кольцо ярости', 'n', 'ring', ['criticalDamage']),
   t('ring_speed', 'Кольцо скорости', 'n', 'ring', ['attackSpeed']),
+  // Task 19 §1.1 (shared by all classes; second stat ×0.6).
+  t('guard_helm', 'Шлем стража', 'm', 'helmet', ['maxHpPercent', 'resistance']),
+  t('hunter_hood', 'Капюшон охотника', 'm', 'helmet', ['criticalChance', 'dodgeChance']),
+  t('mage_circlet', 'Венец мага', 'm', 'helmet', ['cooldownReduction', 'magicalDamagePercent']),
+  t('plate_gauntlets', 'Латные рукавицы', 'pl', 'gloves', ['physicalDamagePercent', 'resistance']),
+  t('trickster_gloves', 'Перчатки ловкача', 'pl', 'gloves', ['attackSpeed', 'criticalChance']),
+  t('sorcerer_gloves', 'Перчатки чародея', 'pl', 'gloves', [
+    'magicalDamagePercent',
+    'areaSizePercent',
+  ]),
+  t('plate_greaves', 'Латные поножи', 'pl', 'pants', ['maxHpPercent', 'resistance']),
+  t('leather_pants', 'Кожаные штаны', 'pl', 'pants', ['movementSpeedPercent', 'dodgeChance']),
+  t('mystic_trousers', 'Шаровары мистика', 'pl', 'pants', ['cooldownReduction', 'maxHpPercent']),
 ]);
 
 /** Starting weapons: owned tier-0 items with no bonus, equipped by default (spec §1.1). */

@@ -16,6 +16,12 @@ import type { PlayerProfile } from '../profile';
 import { campaignStore } from './campaign-state';
 import { GEAR_SLOTS, SHOP_ITEMS, isEligible } from '../equipment';
 import type { GearSlot, Loadout } from '../equipment';
+/** Task 19: magic templates of the new slots for the Mage's best-gear debug loadout. */
+const MAGE_GEAR: Partial<Record<GearSlot, string>> = {
+  helmet: 'mage_circlet',
+  gloves: 'sorcerer_gloves',
+  pants: 'mystic_trousers',
+};
 
 /**
  * Task 08 profile debug tools. Imported only by the DEV/QA DeveloperPanel (lazy, gated), so none
@@ -144,7 +150,8 @@ export const campaignDebug = {
   },
   /**
    * Task 11 §1.7: owns everything and equips the best tier for a class — its first weapon
-   * template and the first armor / amulet / ring template (amulet of magic for the Mage), tier 5.
+   * template and the first template of every other slot (magic amulet / helmet / gloves / pants
+   * for the Mage), tier 5.
    */
   equipBestTier(characterClass: CharacterClass): boolean {
     const best = (slot: GearSlot) => {
@@ -155,6 +162,9 @@ export const campaignDebug = {
             ? i.templateId === 'amulet_magic'
             : i.templateId === 'amulet_power',
         )!;
+      // Task 19: the Mage gets the magic helmet / gloves / pants; the others the first template.
+      const magic = MAGE_GEAR[slot];
+      if (characterClass === 'mage' && magic) return pool.find((i) => i.templateId === magic)!;
       return pool[0];
     };
     return edit((p) => ({
@@ -199,6 +209,25 @@ export const campaignDebug = {
   },
   grantGold(amount: number) {
     return edit((p) => ({ ...p, gold: p.gold + amount }));
+  },
+  /** Task 19 §1.5: adds ore (validated save). */
+  grantOre(amount: number) {
+    return edit((p) => ({ ...p, ore: p.ore + amount }));
+  },
+  /**
+   * Task 19 §1.5: sets an item's forge level 0–10 (the item becomes owned; no Gold/ore spent). The
+   * validated save rejects starter weapons, unknown ids and levels outside 0–10.
+   */
+  setItemLevel(itemId: string, level: number) {
+    return edit((p) => {
+      const levels: Record<string, number> = { ...p.itemLevels, [itemId]: level };
+      if (level === 0) delete levels[itemId];
+      return {
+        ...p,
+        ownedItems: p.ownedItems.includes(itemId) ? p.ownedItems : [...p.ownedItems, itemId],
+        itemLevels: levels,
+      };
+    });
   },
   /** Removes the profile, backup and quarantine, then starts a fresh test profile. */
   resetProgress() {

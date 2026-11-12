@@ -34,6 +34,7 @@ try {
     'Экипировка',
     'Таланты',
     'Магазин',
+    'Кузница',
     'Карта похода',
     'Прогресс',
     'Настройки',
@@ -178,6 +179,7 @@ try {
   // Task 11: Gold = coins collected in the run + victory bonus (30 on map 1).
   assert.match(text, /Монеты\s+\d+/);
   assert.match(text, /Бонус за победу\s+\+30/);
+  assert.match(text, /Руда\s+\+6 \(первая победа ×3\)/); // Task 19: Map 1, first victory
   assert.match(text, /1 → 2 \(\+1\)/);
   assert.match(text, /Очки талантов\s+\+1/);
   assert.match(text, /Открыта карта 2: Туманные болота/);
@@ -398,7 +400,16 @@ try {
   await devProfile.getByRole('button', { name: /Установить уровень/ }).click();
   await page.getByLabel('Debug золото').fill('500');
   await devProfile.getByRole('button', { name: 'Выдать золото' }).click();
+  // Task 19: ore for the forge step below (Map 1 was won above: first victory ×3 = 6 ore).
+  const oreBefore = JSON.parse(await stored()).ore;
+  assert.equal(oreBefore, 6);
+  await page.getByLabel('Debug руда').fill('20');
+  await page
+    .getByRole('group', { name: 'Gear Debug' })
+    .getByRole('button', { name: 'Выдать руду' })
+    .click();
   const devSave = JSON.parse(await stored());
+  assert.equal(devSave.ore, oreBefore + 20);
   assert.equal(devSave.highestUnlockedMap, 40); // Task 10: 40 maps
   assert.equal(devSave.classes[devSave.selectedClass].level, 12);
   // Task 13: the DEV panel covers the right side of the redesigned pages; close it for the shop,
@@ -407,7 +418,7 @@ try {
   // Task 11: shop → buy (with confirmation, one atomic save) → equip on the Character screen.
   await nav.getByRole('button', { name: 'Магазин', exact: true }).click();
   const slots = page.getByRole('group', { name: 'Слоты магазина' });
-  assert.equal(await slots.getByRole('button').count(), 4);
+  assert.equal(await slots.getByRole('button').count(), 7); // Task 19: + Шлем, Перчатки, Штаны
   assert.match(
     await page.getByRole('listitem', { name: /^Добротный тяжёлый меч:/ }).innerText(),
     /Откроется после карты 8/,
@@ -451,6 +462,31 @@ try {
     bought.selectedClass,
   );
   await page.screenshot({ path: 'artifacts/campaign-14-equipment.png', fullPage: true });
+  // Task 19: forge from the item preview («В кузницу») → «Улучшить» (one save) → +1.
+  await gear.getByRole('button', { name: 'Снять: Броня' }).click();
+  await gear.getByRole('button', { name: /^Обычные латы/ }).click();
+  await gear
+    .getByRole('group', { name: 'Предпросмотр снаряжения' })
+    .getByRole('button', { name: /В кузницу/ })
+    .click();
+  const forge = page.getByRole('group', { name: 'Улучшение предмета' });
+  await forge.getByText('Обычные латы', { exact: true }).waitFor();
+  const preForge = JSON.parse(await stored());
+  await forge.getByRole('button', { name: /Улучшить до \+1/ }).click();
+  await forge.getByRole('heading', { name: 'Обычные латы +1' }).waitFor();
+  const forged = JSON.parse(await stored());
+  assert.deepEqual(forged.itemLevels, { 'plate-t1': 1 });
+  assert.equal(forged.gold, preForge.gold - 8);
+  assert.equal(forged.ore, preForge.ore - 1);
+  assert.match(await forge.innerText(), /Здоровье\s+\+5\.25%\s+\+5\.5%/);
+  await page.screenshot({ path: 'artifacts/campaign-14b-forge.png', fullPage: true });
+  await nav.getByRole('button', { name: 'Экипировка', exact: true }).click();
+  await gear.getByRole('button', { name: /^Обычные латы \+1/ }).click();
+  await gear
+    .getByRole('group', { name: 'Предпросмотр снаряжения' })
+    .getByRole('button', { name: 'Надеть' })
+    .click();
+  await gear.getByRole('button', { name: 'Броня: Обычные латы +1' }).waitFor();
   const goldBefore = JSON.parse(await stored()).gold;
   await (await openMap(10)).click();
   await page.waitForFunction(() => window.__alpha.state().screen === 'playing');

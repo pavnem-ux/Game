@@ -10,7 +10,8 @@ screen → the next run starts with the stronger attributes.
 
 ## 1. Slots, items, tiers
 
-- 4 slots per class: «Оружие» (class-specific), «Броня», «Амулет», «Кольцо» (shared). Each class has
+- 4 slots per class: «Оружие» (class-specific), «Броня», «Амулет», «Кольцо» (shared) — **Task 19
+  adds «Шлем», «Перчатки», «Штаны» (7 slots, 130 items; see §8)**. Each class has
   its own loadout; an owned shared item can be worn by every class at once.
 - Starter weapons (`starter_sword`, `starter_daggers`, `starter_bow`, `starter_staff`) are tier 0,
   give no bonus, are always owned (never stored in `ownedItems`, never sold) and are the default
@@ -122,7 +123,7 @@ number, no talents) died on maps 1–20, so they gave no victory data.
 
 ## 5. Save
 
-Schema v4 (`migrateV3toV4`): `ownedItems: []` and each class's `loadout` (starter weapon, other
+Schema v4 (`migrateV3toV4`; Task 19 → v5, see §8.5): `ownedItems: []` and each class's `loadout` (starter weapon, other
 slots empty); Gold, XP, levels, maps and talents unchanged. Validation (`normalizeProfile`): owned
 ids known, buyable and unique; loadout ids known, in the right slot, eligible for the class, owned
 (or the class's starter); weapon never empty; a missing loadout → default. An invalid import never
@@ -143,3 +144,125 @@ the first template per slot; the Mage gets «Амулет магии»). Gold: t
 - Not verified: income of human players (only bots, see 4.1), balance of tiers 2–5 against the
   late maps, the shop on small phone screens.
 - Out of scope (spec): selling, crafting, sockets, loot drops, new stats or weapon behaviours.
+
+## 8. Task 19 — new slots, ore («Руда»), upgrades («Кузница»)
+
+Spec: [task-19-gear-upgrades-ore.md](task-19-gear-upgrades-ore.md) · progress:
+[task-19-progress.md](task-19-progress.md). All numbers are **provisional** (owner-controlled) and
+live in `src/equipment/config.ts` (slots, templates), `src/equipment/economy.ts` (`ORE_RULES`) and
+`src/equipment/upgrades.ts` (`UPGRADE_RULES`).
+
+### 8.1 Slots and items
+
+7 slots, in this order: «Оружие», «Шлем», «Броня», «Перчатки», «Штаны», «Амулет», «Кольцо». The
+new slots are shared by all classes (like armor). Their templates have two stats: first ×1.0,
+second ×0.6 of the tier-1 base (`SECOND_STAT_REDUCED_SLOTS`: weapon + the three new slots; Task 11
+armor keeps ×1.0 / ×1.0). Tiers, multipliers, unlocks and prices are those of the other non-weapon
+items (80 / 300 / 700 / 1400 / 2500). 26 templates × 5 tiers = **130 shop items**.
+
+| Slot     | Templates (stats, tier 1)                                                                                                                                                  |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Шлем     | Шлем стража `guard_helm` (HP +5%, res +1.2); Капюшон охотника `hunter_hood` (crit +1, dodge +0.6); Венец мага `mage_circlet` (CDR +1, magic +2.4%)                         |
+| Перчатки | Латные рукавицы `plate_gauntlets` (phys +4%, res +1.2); Перчатки ловкача `trickster_gloves` (AS +2, crit +0.6); Перчатки чародея `sorcerer_gloves` (magic +4%, area +1.2%) |
+| Штаны    | Латные поножи `plate_greaves` (HP +5%, res +1.2); Кожаные штаны `leather_pants` (move +2%, dodge +0.6); Шаровары мистика `mystic_trousers` (CDR +1, HP +3%)                |
+
+UI: the paper doll shows helmet / armor / gloves left and amulet / ring / pants right of the
+figure, the weapon across the bottom (phones ≤ 760 px: two columns, no figure). Shop tabs and the
+equipment filters list all 7 slots.
+
+### 8.2 Ore
+
+Victory only: `2 + ⌊mapId / 4⌋`; the **first** victory on a map (map not yet in `completedMaps`)
+pays ×3. Defeat / abandoned: 0. Credited by `applyRunResult` in the same snapshot as XP and Gold
+(run-ID deduplication: a repeated result or a reload never pays twice). Shown next to Gold in the
+menu top bar (hub, shop, forge — every menu page), in the forge header and as «Руда» on the results
+screen.
+
+| Map | Victory | First victory (×3) |
+| --- | ------- | ------------------ |
+| 1–3 | 2       | 6                  |
+| 4   | 3       | 9                  |
+| 8   | 4       | 12                 |
+| 12  | 5       | 15                 |
+| 16  | 6       | 18                 |
+| 20  | 7       | 21                 |
+| 24  | 8       | 24                 |
+| 32  | 10      | 30                 |
+| 40  | 12      | 36                 |
+
+First victories on all 40 maps give 810 ore together.
+
+### 8.3 Upgrades (forge)
+
+Every owned item (weapons included; starter weapons excluded) has one account-wide level +0…+10
+(`profile.itemLevels`; items are account-wide unlocks, so every class wearing it gets the level).
+Each level adds +5% of the item's base stats (+5 = ×1.25, +10 = ×1.5; values rounded to 3
+decimals). An upgrade **always** succeeds: no randomness, no failure, no downgrade.
+
+Cost of reaching level L: Gold = ⌈price × 0.1 × L⌉ (rounded up: the half-Gold steps of 375 / 875 /
+1750 / 3125 weapons), Ore = ⌈tier × L / 2⌉. To +10 in total: 5.5 × price Gold.
+
+| Item price (tier) | Gold per level +1 … +10                                          | Gold to +10 |
+| ----------------- | ---------------------------------------------------------------- | ----------- |
+| 80 (t1)           | 8 / 16 / 24 / 32 / 40 / 48 / 56 / 64 / 72 / 80                   | 440         |
+| 100 (t1 weapon)   | 10 / 20 / … / 100                                                | 550         |
+| 300 (t2)          | 30 / 60 / 90 / 120 / 150 / 180 / 210 / 240 / 270 / 300           | 1650        |
+| 700 (t3)          | 70 / 140 / … / 700                                               | 3850        |
+| 1400 (t4)         | 140 / 280 / … / 1400                                             | 7700        |
+| 2500 (t5)         | 250 / 500 / … / 2500                                             | 13750       |
+| 3125 (t5 weapon)  | 313 / 625 / 938 / 1250 / 1563 / 1875 / 2188 / 2500 / 2813 / 3125 | 17190       |
+
+| Tier | Ore per level +1 … +10                       | Ore to +10 |
+| ---- | -------------------------------------------- | ---------- |
+| 1    | 1 / 1 / 2 / 2 / 3 / 3 / 4 / 4 / 5 / 5        | 30         |
+| 2    | 1 / 2 / 3 / 4 / 5 / 6 / 7 / 8 / 9 / 10       | 55         |
+| 3    | 2 / 3 / 5 / 6 / 8 / 9 / 11 / 12 / 14 / 15    | 85         |
+| 4    | 2 / 4 / 6 / 8 / 10 / 12 / 14 / 16 / 18 / 20  | 110        |
+| 5    | 3 / 5 / 8 / 10 / 13 / 15 / 18 / 20 / 23 / 25 | 140        |
+
+Forge screen («Кузница»: menu nav after «Магазин», hub tile, «В кузницу» in the Equipment item
+preview): owned upgradeable items with a slot filter (equipped first) and level pips; the selected
+item's level, current vs next stats, Gold + ore cost (red when short) and «Улучшить до +N»
+(disabled with the reason: «Не хватает золота / руды», «Предмет уже улучшен до +10»). Item names show
+the level everywhere: «Обычное кольцо точности +3» (forge, equipment, shop, character cards).
+
+### 8.4 API and stat integration
+
+- `src/equipment/upgrades.ts` (pure): `UPGRADE_RULES`, `upgradeCost(item, L)`,
+  `upgradedStats(item, level)`, `itemDisplayName`, `checkUpgrade` → `ok` or `unknown` / `starter` /
+  `not-owned` / `max` / `gold` / `ore`, `upgradeItem(state, id)` (Gold, ore and the level in one
+  new state; throws `UpgradeError`, unchanged), `validateItemLevels`.
+- `src/equipment/economy.ts`: `ORE_RULES`, `runOre(outcome, mapId, firstVictory)`.
+- `loadoutStats(loadout, levels?)`, `gearModifiers(loadout, levels?)`,
+  `permanentStats(class, level, talents, loadout, levels?)` — additive optional parameter (absent =
+  +0, the Task 11 behaviour).
+- Runs: `GameplayOptions.equipment.itemLevels` (validated at world start, read once) →
+  `gearModifiers` → the talent+gear layer → `composeRunStats` (central caps once). Combat Core
+  rules are unchanged.
+- `src/profile/equipment.ts`: `upgradeProfileItem`; `campaignStore.upgradeItem(id)` saves once (a
+  failed write keeps the old profile); `campaignStore.openForge(id)`.
+
+### 8.5 Save v5
+
+`migrateV4toV5`: `ore: 0`, `itemLevels: {}`, and every class loadout gains empty `helmet`,
+`gloves`, `pants`. Nothing else changes. Validation: ore is a whole number ≥ 0; item levels are
+whole numbers 0–10 of owned, upgradeable items (0 is accepted and not kept); new-slot items must be
+known, in the right slot and owned. Recent runs store the run's ore (`ore`, optional). An invalid
+import never overwrites a valid save; export / import, the backup copy and bug reports include the
+new fields.
+
+### 8.6 Debug (DEV / QA build only)
+
+«Снаряжение и магазин»: «Открыть все предметы» (all 130), «Лучшее снаряжение» (tier 5 in all 7
+slots; the Mage gets the magic helmet / gloves / pants), «Выдать руду», item + level (+0…+10) →
+«Установить уровень предмета». Not in the production build.
+
+### 8.7 Verification and limits
+
+- Tests: `tests/equipment/slots.test.ts`, `upgrades.test.ts`; `tests/persistence/ore-reward`,
+  `forge-store`, `save-v5`; e2e: `campaign-browser.mjs` (7 shop tabs, ore after the first Map 1 win,
+  «В кузницу» → upgrade → «+1», «Руда» results row) and `mobile-browser.mjs` (forge page and
+  upgrade by touch at 844×390 and 768×1024, no horizontal scroll).
+- Not verified: the ore / upgrade economy against real play (no bot measurement — e.g. first
+  victories on all 40 maps give 810 ore, a tier-5 item to +10 needs 140); how +10 gear affects late
+  maps; the forge on real phones (emulated Chromium only).

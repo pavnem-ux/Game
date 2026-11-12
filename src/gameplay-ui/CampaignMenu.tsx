@@ -5,13 +5,14 @@ import { ProgressionPage } from './CampaignPages';
 import { SaveWarning, SettingsPage } from './SaveManagement';
 import { BuildLabel } from './BuildLabel';
 import { ShopPage } from './ShopPages';
-import { Backdrop, CurrencyBadge } from './kit';
+import { Backdrop, CurrencyBadge, OreBadge } from './kit';
 import { RU } from './strings-ru';
 import { HubPage } from './meta/Hub';
 import { CharacterSelectPage } from './meta/CharacterSelect';
 import { EquipmentPage } from './meta/EquipmentScreen';
 import { TalentsPage } from './meta/TalentsScreen';
 import { MapPathPage } from './meta/MapPath';
+import { ForgePage } from './meta/ForgeScreen';
 import './meta/meta.css';
 
 const N = RU.meta.nav;
@@ -21,6 +22,7 @@ const PAGES: readonly { id: MenuPage; label: string }[] = [
   { id: 'equipment', label: N.equipment },
   { id: 'talents', label: N.talents },
   { id: 'shop', label: N.shop },
+  { id: 'forge', label: N.forge },
   { id: 'maps', label: N.maps },
   { id: 'progression', label: N.progression },
   { id: 'settings', label: N.settings },
@@ -81,7 +83,10 @@ export function CampaignMenu() {
             </button>
           ))}
         </nav>
-        <CurrencyBadge amount={profile?.gold ?? 0} />
+        <span className="meta-currencies">
+          <CurrencyBadge amount={profile?.gold ?? 0} />
+          <OreBadge amount={profile?.ore ?? 0} />
+        </span>
       </header>
       <SaveWarning />
       <div className="meta-content" key={ui.page}>
@@ -91,6 +96,7 @@ export function CampaignMenu() {
         {ui.page === 'talents' && <TalentsPage />}
         {ui.page === 'maps' && <MapPathPage />}
         {ui.page === 'shop' && <ShopPage />}
+        {ui.page === 'forge' && <ForgePage />}
         {ui.page === 'progression' && <ProgressionPage />}
         {ui.page === 'settings' && <SettingsPage />}
       </div>

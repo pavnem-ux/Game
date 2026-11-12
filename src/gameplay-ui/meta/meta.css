@@ -18,6 +18,11 @@
   backdrop-filter: blur(3px);
   min-width: 0;
 }
+.meta-currencies {
+  display: inline-flex;
+  gap: var(--sp-2);
+  flex: none;
+}
 .meta-brand {
   border: 0;
   background: none;
@@ -474,12 +479,13 @@
 .paper-doll {
   position: relative;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: auto 1fr auto;
+  /* Task 19: 7 slots (helmet, gloves, pants added) on both sides of the figure. */
+  grid-template-columns: minmax(0, 1fr) 72px minmax(0, 1fr);
   grid-template-areas:
-    'amulet ring'
-    'figure figure'
-    'weapon armor';
+    'helmet figure amulet'
+    'armor figure ring'
+    'gloves figure pants'
+    'weapon weapon weapon';
   gap: var(--sp-3);
   padding: var(--sp-4);
   border-radius: var(--radius-l);
@@ -493,10 +499,11 @@
   position: relative;
   display: grid;
   place-items: center;
-  min-height: 230px;
+  min-height: 0;
 }
 .doll-silhouette {
-  height: 220px;
+  width: 72px;
+  height: auto;
   fill: rgba(255, 236, 196, 0.08);
   stroke: rgba(232, 196, 120, 0.35);
   stroke-width: 1.5;
@@ -516,6 +523,15 @@
 }
 .doll-slot-ring {
   grid-area: ring;
+}
+.doll-slot-helmet {
+  grid-area: helmet;
+}
+.doll-slot-gloves {
+  grid-area: gloves;
+}
+.doll-slot-pants {
+  grid-area: pants;
 }
 .doll-slot {
   display: grid;
@@ -1146,6 +1162,104 @@
   flex-wrap: wrap;
 }
 
+/* ── Task 19: Forge ── */
+.forge-screen .meta-page-head {
+  flex-wrap: wrap;
+}
+.forge-wallet {
+  display: inline-flex;
+  gap: var(--sp-2);
+  margin-left: auto;
+}
+.forge-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(280px, 1fr);
+  gap: var(--sp-5);
+  align-items: start;
+  margin-top: var(--sp-4);
+}
+.forge-items .kit-panel-head {
+  flex-wrap: wrap;
+}
+.forge-card {
+  width: 100%;
+}
+.forge-wearers {
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+}
+.forge-pips {
+  display: inline-flex;
+  gap: 3px;
+  vertical-align: middle;
+}
+.forge-pips i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  transform: rotate(45deg);
+  border: 1px solid rgba(232, 196, 120, 0.45);
+  background: transparent;
+}
+.forge-pips i.on {
+  background: var(--gold-400);
+  border-color: var(--gold-300);
+  box-shadow: 0 0 6px rgba(245, 196, 98, 0.5);
+}
+.forge-detail {
+  position: sticky;
+  top: var(--sp-3);
+}
+.forge-detail-body {
+  display: grid;
+  gap: var(--sp-3);
+}
+.forge-level {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--text-muted);
+  margin: 0;
+}
+.forge-stats {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-s);
+}
+.forge-stats th,
+.forge-stats td {
+  padding: 6px 4px;
+  text-align: left;
+  border-bottom: 1px solid var(--ink-line);
+}
+.forge-stats th {
+  color: var(--text-faint);
+  font-weight: 600;
+}
+.forge-stats td.changed {
+  color: var(--up, #8fd48a);
+  font-weight: 700;
+}
+.forge-cost {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--text-muted);
+}
+.forge-cost .short .kit-currency {
+  border-color: rgba(230, 110, 100, 0.7);
+  color: #f0a59c;
+}
+.forge-maxed {
+  margin: 0;
+  color: var(--gold-300);
+  font-weight: 700;
+}
+.forge-message.forge-ok {
+  color: var(--gold-300);
+}
+
 /* ── Widths: 1024–1280 compact ── */
 @media (max-width: 1300px) {
   .meta-content {
@@ -1176,6 +1290,24 @@
   }
 }
 @media (max-width: 760px) {
+  .forge-layout {
+    grid-template-columns: 1fr;
+  }
+  .forge-detail {
+    position: static;
+  }
+  /* Task 19: phones — two slot columns, no figure. */
+  .paper-doll {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      'helmet amulet'
+      'armor ring'
+      'gloves pants'
+      'weapon weapon';
+  }
+  .doll-figure {
+    display: none;
+  }
   .meta-ui .character-grid,
   .talent-columns,
   .equipment-layout,

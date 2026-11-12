@@ -1,5 +1,5 @@
 import type { CharacterClass } from '../character-stats';
-import { equip, highestClearedMap, purchase, unequip } from '../equipment';
+import { equip, highestClearedMap, purchase, unequip, upgradeItem } from '../equipment';
 import type { EquipmentState, GearSlot, Loadouts } from '../equipment';
 import type { PlayerProfile } from './profile';
 
@@ -53,4 +53,25 @@ export function unequipSlot(
   slot: GearSlot,
 ): PlayerProfile {
   return withState(profile, unequip(equipmentStateOf(profile), c, slot));
+}
+/**
+ * Task 19 forge: upgrades an owned item by one level — Gold, ore and the new level change together
+ * in one new profile (the caller saves it once). Throws UpgradeError; the profile is unchanged.
+ */
+export function upgradeProfileItem(profile: PlayerProfile, itemId: string): PlayerProfile {
+  const next = upgradeItem(
+    {
+      gold: profile.gold,
+      ore: profile.ore,
+      ownedItems: profile.ownedItems,
+      itemLevels: profile.itemLevels,
+    },
+    itemId,
+  );
+  return Object.freeze({
+    ...profile,
+    gold: next.gold,
+    ore: next.ore,
+    itemLevels: next.itemLevels,
+  });
 }

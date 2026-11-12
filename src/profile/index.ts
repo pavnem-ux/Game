@@ -18,4 +18,4 @@ export {
 export type { MapBest, PlayerProfile, ProfileStats, RecentRun } from './profile';
 export { applyRunResult, isMapUnlocked, nextMapAfter, validateRunResult } from './apply-run';
 export type { ApplyRunOutcome, RunSummary } from './apply-run';
-export { buyItem, equipItem, equipmentStateOf, unequipSlot } from './equipment';
+export { buyItem, equipItem, equipmentStateOf, unequipSlot, upgradeProfileItem } from './equipment';

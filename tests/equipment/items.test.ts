@@ -28,12 +28,12 @@ const state = (gold = 100_000, owned: string[] = []): EquipmentState => ({
 });
 
 describe('Task 11 §1.2 — items (templates × tiers)', () => {
-  it('85 shop items (17 templates × 5 tiers) with unique ids; 4 starter weapons', () => {
-    expect(GEAR_TEMPLATES).toHaveLength(17);
+  it('130 shop items (26 templates × 5 tiers, Task 19) with unique ids; 4 starter weapons', () => {
+    expect(GEAR_TEMPLATES).toHaveLength(26);
     expect(GEAR_TEMPLATES.filter((t) => t.slot === 'weapon')).toHaveLength(8);
-    expect(SHOP_ITEMS).toHaveLength(85);
+    expect(SHOP_ITEMS).toHaveLength(130);
     const ids = [...SHOP_ITEMS, ...STARTER_ITEMS].map((i) => i.id);
-    expect(new Set(ids).size).toBe(89);
+    expect(new Set(ids).size).toBe(134);
     expect(STARTER_ITEMS.map((i) => [i.characterClass, i.tier, i.price, i.stats])).toEqual(
       CHARACTER_CLASSES.map((c) => [c, 0, 0, {}]).sort(
         (a, b) =>
@@ -125,12 +125,18 @@ describe('Task 11 §1.1 — purchase / equip / unequip (pure)', () => {
     expect(s.loadouts.warrior).toEqual({
       weapon: 'heavy_sword-t1',
       armor: 'plate-t1',
+      helmet: null,
+      gloves: null,
+      pants: null,
       amulet: null,
       ring: null,
     });
     expect(s.loadouts.mage).toEqual({
       weapon: 'starter_staff',
       armor: 'plate-t1',
+      helmet: null,
+      gloves: null,
+      pants: null,
       amulet: null,
       ring: null,
     });
@@ -146,6 +152,9 @@ describe('Task 11 §1.1 — purchase / equip / unequip (pure)', () => {
       expect(defaultLoadouts()[c]).toEqual({
         weapon: starterWeapon(c).id,
         armor: null,
+        helmet: null,
+        gloves: null,
+        pants: null,
         amulet: null,
         ring: null,
       });

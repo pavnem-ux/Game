@@ -36,9 +36,9 @@ const code = (raw: unknown) => {
 };
 
 describe('saveSchema (Task 08 §1.4, step 4.1)', () => {
-  it('v4 is current (Task 11 gear) and the migrations map upgrades v1 → v2 → v3 → v4', () => {
-    expect(SAVE_SCHEMA_VERSION).toBe(4);
-    expect(Object.keys(migrations)).toEqual(['1', '2', '3']);
+  it('v5 is current (Task 19 forge) and the migrations map upgrades v1 → … → v5', () => {
+    expect(SAVE_SCHEMA_VERSION).toBe(5);
+    expect(Object.keys(migrations)).toEqual(['1', '2', '3', '4']);
   });
   it('a valid profile round-trips through JSON unchanged', () => {
     const p = played();
@@ -63,7 +63,15 @@ describe('saveSchema (Task 08 §1.4, step 4.1)', () => {
       lifetimeXp: 0,
       talents: {},
       // Task 11: a missing loadout defaults to the starter weapon and empty slots.
-      loadout: { weapon: 'starter_daggers', armor: null, amulet: null, ring: null },
+      loadout: {
+        weapon: 'starter_daggers',
+        helmet: null,
+        gloves: null,
+        pants: null,
+        armor: null,
+        amulet: null,
+        ring: null,
+      },
     });
     expect(r.profile.stats.runs).toBe(0);
     expect(r.profile.recentRuns).toEqual([]);
@@ -106,7 +114,7 @@ describe('saveSchema (Task 08 §1.4, step 4.1)', () => {
     expect(code([base])).toBe('not-an-object');
   });
   it('newer-version and malformed JSON are reported with distinct codes', () => {
-    expect(code({ ...json(played()), schemaVersion: 5 })).toBe('newer-version');
+    expect(code({ ...json(played()), schemaVersion: 6 })).toBe('newer-version');
     const bad = parseProfileJson('{"schemaVersion": 1,');
     expect(!bad.ok && bad.error.code).toBe('malformed-json');
   });

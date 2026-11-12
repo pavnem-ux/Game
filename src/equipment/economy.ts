@@ -93,3 +93,20 @@ export function runGold(
   }
   return Object.freeze({ coins: 0, bonus: 0, total: 0 });
 }
+
+/**
+ * Task 19 §1.2 Ore («Руда») — second profile currency. PROVISIONAL. Victory only:
+ * `base + floor(mapId / perMaps)` (map 1: 2, map 4: 3, map 40: 12); the first victory on a map pays
+ * ×firstVictoryMultiplier. Defeat / abandoned: 0.
+ */
+export const ORE_RULES = Object.freeze({ base: 2, perMaps: 4, firstVictoryMultiplier: 3 });
+export function runOre(
+  outcome: 'victory' | 'defeat' | 'abandoned',
+  mapId: number,
+  firstVictory: boolean,
+): number {
+  if (!Number.isInteger(mapId) || mapId < 1) throw new RangeError('Invalid map id.');
+  if (outcome !== 'victory') return 0;
+  const ore = ORE_RULES.base + Math.floor(mapId / ORE_RULES.perMaps);
+  return firstVictory ? ore * ORE_RULES.firstVictoryMultiplier : ore;
+}

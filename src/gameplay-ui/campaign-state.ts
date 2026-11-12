@@ -1,7 +1,7 @@
 import type { CharacterClass } from '../character-stats';
 import { getCampaignMap } from '../campaign';
-import { buyItem, equipItem, isMapUnlocked, unequipSlot } from '../profile';
-import { EquipmentError } from '../equipment';
+import { buyItem, equipItem, isMapUnlocked, unequipSlot, upgradeProfileItem } from '../profile';
+import { EquipmentError, UpgradeError } from '../equipment';
 import type { GearSlot } from '../equipment';
 import {
   createProgressionService,
@@ -35,6 +35,7 @@ export type MenuPage =
   | 'talents'
   | 'maps'
   | 'shop'
+  | 'forge'
   | 'progression'
   | 'settings';
 export interface CampaignUiState {
@@ -44,6 +45,8 @@ export interface CampaignUiState {
    * a character card; null = the selected class.
    */
   readonly viewClass: CharacterClass | null;
+  /** Task 19 (presentation only): item preselected when the forge is opened from an item. */
+  readonly forgeItem: string | null;
   readonly selectedMapId: number;
   readonly progression: ProgressionState;
   /** Validated import waiting for the player's confirmation (nothing replaced yet). */
@@ -134,6 +137,7 @@ function ensure(): CampaignUiState {
     state = Object.freeze({
       page: 'hub',
       viewClass: null,
+      forgeItem: null,
       selectedMapId: initial.profile?.highestUnlockedMap ?? 1,
       progression: initial,
       lastResult: null,
@@ -181,7 +185,9 @@ function gearChange(change: (p: PlayerProfile) => PlayerProfile): string | null 
   try {
     next = change(profile);
   } catch (error) {
-    return error instanceof EquipmentError ? error.reason : 'invalid';
+    return error instanceof EquipmentError || error instanceof UpgradeError
+      ? error.reason
+      : 'invalid';
   }
   const written = campaignStore.service().replaceProfile(next);
   return written.ok ? null : (written.failure ?? 'not-saved');
@@ -205,11 +211,15 @@ export const campaignStore = {
     return service!;
   },
   setPage(page: MenuPage) {
-    update({ page, viewClass: null });
+    update({ page, viewClass: null, forgeItem: null });
   },
   /** Task 13: open Equipment / Talents for a class without selecting it (presentation only). */
   openForClass(page: 'equipment' | 'talents', characterClass: CharacterClass | null) {
     update({ page, viewClass: characterClass });
+  },
+  /** Task 19: open the forge with an item preselected (presentation only). */
+  openForge(itemId: string | null) {
+    update({ page: 'forge', viewClass: null, forgeItem: itemId });
   },
   selectMap(mapId: number) {
     const profile = ensure().progression.profile;
@@ -228,6 +238,13 @@ export const campaignStore = {
   /** Task 11: equip an owned eligible item for a class (applies to that class's next run). */
   equipItem(characterClass: CharacterClass, itemId: string): string | null {
     return gearChange((p) => equipItem(p, characterClass, itemId));
+  },
+  /**
+   * Task 19 forge: upgrade an owned item by one level — Gold, ore and the level in one validated
+   * save (nothing changes when the write fails). Returns the refusal reason or null.
+   */
+  upgradeItem(itemId: string): string | null {
+    return gearChange((p) => upgradeProfileItem(p, itemId));
   },
   /** Task 11: unequip a slot (weapon → starter weapon, other slots → empty). */
   unequipSlot(characterClass: CharacterClass, slot: GearSlot): string | null {
@@ -364,7 +381,7 @@ export const campaignStore = {
         // Task 09: the class's talents apply from run start; changes affect the next run.
         talents: { ranks: profile.classes[cls].talents },
         // Task 11: this class's own loadout; changes apply to the next run.
-        equipment: { loadout: profile.classes[cls].loadout },
+        equipment: { loadout: profile.classes[cls].loadout, itemLevels: profile.itemLevels },
         campaign: { mapId, runId: generateRunId() },
       },
     });

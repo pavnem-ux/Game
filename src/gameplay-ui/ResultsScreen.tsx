@@ -8,7 +8,7 @@ import { SaveWarning } from './SaveManagement';
 import { RunStatsPanel } from './RunStatsPanel';
 import { RU } from './strings-ru';
 import { ReportButton } from './ReportButton';
-import { runGold } from '../equipment';
+import { runGold, runOre } from '../equipment';
 
 /** Results of a finished campaign run. Rewards come from the committed summary only. */
 export function ResultsScreen({ world }: { world: GameplaySnapshot }) {
@@ -21,6 +21,8 @@ export function ResultsScreen({ world }: { world: GameplaySnapshot }) {
   const saveState = ui.progression.status.state;
   // Task 11: coins collected, victory bonus and the Gold actually credited (same formula).
   const gold = runGold(victory ? 'victory' : 'defeat', c.mapId, world.coins.collected);
+  // Task 19: first victory on the map pays ×3 ore (the summary amount is what was credited).
+  const firstWin = !!summary && victory && summary.oreGained > runOre('victory', c.mapId, false);
   return (
     <section
       className="overlay modal-overlay results-overlay"
@@ -55,6 +57,16 @@ export function ResultsScreen({ world }: { world: GameplaySnapshot }) {
           <dd>{victory ? `+${gold.bonus}` : 'нет'}</dd>
           <dt>Золото</dt>
           <dd>{summary ? `+${summary.goldGained}` : '…'}</dd>
+          <dt>Руда</dt>
+          <dd>
+            {summary
+              ? summary.oreGained > 0
+                ? `+${summary.oreGained}${firstWin ? ' (первая победа ×3)' : ''}`
+                : victory
+                  ? '+0'
+                  : 'нет'
+              : '…'}
+          </dd>
           <dt>Уровни</dt>
           <dd>
             {summary

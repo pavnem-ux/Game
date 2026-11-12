@@ -32,11 +32,27 @@ describe('Task 11 §1.3 — a run starts with that class’s own loadout', () =>
         ...p.classes,
         warrior: {
           ...p.classes.warrior,
-          loadout: { weapon: 'heavy_sword-t1', armor: 'plate-t1', amulet: null, ring: null },
+          loadout: {
+            weapon: 'heavy_sword-t1',
+            helmet: null,
+            gloves: null,
+            pants: null,
+            armor: 'plate-t1',
+            amulet: null,
+            ring: null,
+          },
         },
         mage: {
           ...p.classes.mage,
-          loadout: { weapon: 'starter_staff', armor: null, amulet: null, ring: 'ring_fury-t1' },
+          loadout: {
+            weapon: 'starter_staff',
+            helmet: null,
+            gloves: null,
+            pants: null,
+            armor: null,
+            amulet: null,
+            ring: 'ring_fury-t1',
+          },
         },
       },
     };
@@ -52,7 +68,18 @@ describe('Task 11 §1.3 — a run starts with that class’s own loadout', () =>
     expect(starts().map((s) => [s.options.characterClass, s.options.equipment.loadout])).toEqual([
       ['warrior', geared.classes.warrior.loadout],
       ['mage', geared.classes.mage.loadout],
-      ['rogue', { weapon: 'starter_daggers', armor: null, amulet: null, ring: null }],
+      [
+        'rogue',
+        {
+          weapon: 'starter_daggers',
+          helmet: null,
+          gloves: null,
+          pants: null,
+          armor: null,
+          amulet: null,
+          ring: null,
+        },
+      ],
     ]);
   });
 });

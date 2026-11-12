@@ -12,7 +12,8 @@ import type { RunOutcome, RunStatsSummary } from './rewards';
 /** v2 (Task 09): per-class `talents` ranks replace the `talentsSpent` placeholder. */
 /** v3 (Task 10): 40 maps; a completed map 10 now unlocks map 11 (see migrateV2toV3). */
 /** v4 (Task 11): `ownedItems` and per-class `loadout` (see migrateV3toV4). */
-export const PROFILE_SCHEMA_VERSION = 4;
+/** v5 (Task 19): `ore`, `itemLevels`, loadout slots helmet/gloves/pants (see migrateV4toV5). */
+export const PROFILE_SCHEMA_VERSION = 5;
 export const MAX_RECENT_RUNS = 20;
 export const MAX_PROCESSED_RUN_IDS = 50;
 
@@ -34,6 +35,8 @@ export interface RecentRun {
   readonly bossKilled: boolean;
   readonly xp: number;
   readonly gold: number;
+  /** Task 19: ore credited by this run (absent in older saves = 0). */
+  readonly ore?: number;
   readonly levelBefore: number;
   readonly levelAfter: number;
   readonly levelsGained: number;
@@ -58,6 +61,8 @@ export interface PlayerProfile {
   readonly selectedClass: CharacterClass;
   readonly classes: Readonly<Record<CharacterClass, ClassProgress>>;
   readonly gold: number;
+  /** Task 19: second currency «Руда» (victory rewards; spent in the forge). */
+  readonly ore: number;
   /** Highest playable map id (Map 1 is always unlocked). */
   readonly highestUnlockedMap: number;
   readonly completedMaps: readonly number[];
@@ -70,6 +75,8 @@ export interface PlayerProfile {
   readonly processedRunIds: readonly string[];
   /** Task 11: bought shop items (permanent, no copies), in purchase order. */
   readonly ownedItems: readonly string[];
+  /** Task 19: forge upgrade level (1–10) per owned item id; absent id = +0. Account-wide. */
+  readonly itemLevels: Readonly<Record<string, number>>;
 }
 
 /** A brand-new profile. Identity and time are supplied by the caller (no hidden clock/RNG). */
@@ -93,6 +100,7 @@ export function createProfile(profileId: string, createdAt: string): PlayerProfi
       ) as Record<CharacterClass, ClassProgress>,
     ),
     gold: 0,
+    ore: 0,
     highestUnlockedMap: 1,
     completedMaps: Object.freeze([]),
     bestResults: Object.freeze({}),
@@ -100,5 +108,6 @@ export function createProfile(profileId: string, createdAt: string): PlayerProfi
     recentRuns: Object.freeze([]),
     processedRunIds: Object.freeze([]),
     ownedItems: Object.freeze([]),
+    itemLevels: Object.freeze({}),
   });
 }

@@ -10,6 +10,7 @@ import { alphaBridge } from './store';
 import { campaignDebug } from './campaign-debug';
 import type { AlphaState } from './store';
 import { ENEMY_KINDS } from '../gameplay';
+import { SHOP_ITEMS } from '../equipment';
 import type { EnemyKind } from '../gameplay';
 import { BUFFS, BUFF_IDS, CHEST_NAMES } from '../gameplay/chests';
 import type { ChestContent, ChestType } from '../gameplay/chests';
@@ -68,6 +69,9 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
   const [debugLevel, setDebugLevel] = useState(10),
     [debugXp, setDebugXp] = useState(500),
     [debugGold, setDebugGold] = useState(100),
+    [debugOre, setDebugOre] = useState(50),
+    [levelItem, setLevelItem] = useState('plate-t1'),
+    [itemLevelValue, setItemLevelValue] = useState(10),
     [debugSeed, setDebugSeed] = useState(String(w?.seed ?? 1)),
     [jumpMap, setJumpMap] = useState(11),
     [talentNodeChoice, setTalentNode] = useState(''),
@@ -224,6 +228,49 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
         <button onClick={() => campaignDebug.unlockAllItems()}>Открыть все предметы</button>
         <button onClick={() => campaignDebug.equipBestTier(characterClass)}>
           Лучшее снаряжение ({CLASS_LABELS[characterClass]})
+        </button>
+        {/* Task 19 §1.5: ore and forge levels (validated saves; DEV/QA only). */}
+        <label>
+          Руда
+          <input
+            aria-label="Debug руда"
+            type="number"
+            min="0"
+            value={debugOre}
+            onChange={(e) => setDebugOre(Number(e.target.value))}
+          />
+        </label>
+        <button onClick={() => campaignDebug.grantOre(debugOre)}>Выдать руду</button>
+        <label>
+          Предмет
+          <select
+            aria-label="Debug предмет кузницы"
+            value={levelItem}
+            onChange={(e) => setLevelItem(e.target.value)}
+          >
+            {SHOP_ITEMS.map((i) => (
+              <option key={i.id} value={i.id}>
+                {i.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Уровень
+          <select
+            aria-label="Debug уровень предмета"
+            value={itemLevelValue}
+            onChange={(e) => setItemLevelValue(Number(e.target.value))}
+          >
+            {Array.from({ length: 11 }, (_, l) => (
+              <option key={l} value={l}>
+                +{l}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button onClick={() => campaignDebug.setItemLevel(levelItem, itemLevelValue)}>
+          Установить уровень предмета
         </button>
       </fieldset>
       <fieldset aria-label="Talent Debug">

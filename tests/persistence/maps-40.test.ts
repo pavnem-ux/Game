@@ -25,9 +25,16 @@ function winUpTo(last: number): PlayerProfile {
     ).profile;
   return p;
 }
+/** Task 19: v5-only fields never exist in an older save (ore, item levels, run ore). */
+function stripV5(data: Record<string, unknown> & { recentRuns?: Record<string, unknown>[] }) {
+  delete data.ore;
+  delete data.itemLevels;
+  for (const run of data.recentRuns ?? []) delete run.ore;
+  return data;
+}
 /** A save as Task 08–09 wrote it (schema v2, 10 maps): map 10 completed was the end. */
 function oldV2(last: number) {
-  const data = JSON.parse(JSON.stringify(winUpTo(last)));
+  const data = stripV5(JSON.parse(JSON.stringify(winUpTo(last))));
   data.schemaVersion = 2;
   if (last === 10) data.highestUnlockedMap = 10; // there was no map 11 before Task 10
   return data;
@@ -40,7 +47,12 @@ describe('Task 10 Phase 4.1 — saves with 40 maps', () => {
     const r = parseProfileJson(JSON.stringify(v2));
     if (!r.ok) throw r.error;
     expect(r.migratedFrom).toBe(2);
-    expect(r.profile).toEqual({ ...v2, schemaVersion: SAVE_SCHEMA_VERSION });
+    expect(r.profile).toEqual({
+      ...v2,
+      ore: 0,
+      itemLevels: {},
+      schemaVersion: SAVE_SCHEMA_VERSION,
+    });
   });
   it('an old v2 save that completed map 10 gets map 11 unlocked; everything else is kept', () => {
     const v2 = oldV2(10);
@@ -49,6 +61,8 @@ describe('Task 10 Phase 4.1 — saves with 40 maps', () => {
     expect(r.profile.highestUnlockedMap).toBe(11);
     expect(r.profile).toEqual({
       ...v2,
+      ore: 0,
+      itemLevels: {},
       schemaVersion: SAVE_SCHEMA_VERSION,
       highestUnlockedMap: 11,
     });

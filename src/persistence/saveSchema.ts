@@ -12,7 +12,14 @@ import {
 } from '../profile';
 import type { ClassProgress, MapBest, PlayerProfile, RecentRun, RunStatsSummary } from '../profile';
 import { validateTalentRanks } from '../talents';
-import { GEAR_SLOTS, defaultLoadout, findItem, isEligible } from '../equipment';
+import {
+  GEAR_SLOTS,
+  UPGRADE_RULES,
+  defaultLoadout,
+  findItem,
+  isEligible,
+  isUpgradeable,
+} from '../equipment';
 import type { Loadout } from '../equipment';
 
 /**
@@ -72,10 +79,30 @@ export function migrateV3toV4(data: Json): Json {
     ownedItems: [],
   };
 }
+/**
+ * v4 → v5 (Task 19): `ore: 0`, `itemLevels: {}`, and every class loadout gains empty `helmet`,
+ * `gloves`, `pants` slots. Nothing else changes (Gold, XP, levels, maps, talents, items, loadouts).
+ */
+export function migrateV4toV5(data: Json): Json {
+  const classes: Json = {};
+  if (isObject(data.classes))
+    for (const [id, value] of Object.entries(data.classes))
+      classes[id] =
+        isObject(value) && isObject(value.loadout)
+          ? { ...value, loadout: { ...value.loadout, helmet: null, gloves: null, pants: null } }
+          : value; // a missing loadout gets the default; anything else is left for validation
+  return {
+    ...data,
+    ...(isObject(data.classes) ? { classes } : {}),
+    ore: 0,
+    itemLevels: {},
+  };
+}
 export const migrations: Readonly<Record<number, Migration>> = Object.freeze({
   1: migrateV1toV2,
   2: migrateV2toV3,
   3: migrateV3toV4,
+  4: migrateV4toV5,
 });
 
 export type SaveErrorCode =
@@ -208,6 +235,8 @@ function recentRun(raw: unknown, i: number): RecentRun {
     bossKilled: typeof v.bossKilled === 'boolean' ? v.bossKilled : invalid(`${p}.bossKilled`),
     xp: int(v.xp, `${p}.xp`),
     gold: int(v.gold, `${p}.gold`),
+    // Task 19: optional (absent in older runs).
+    ...(v.ore === undefined ? {} : { ore: int(v.ore, `${p}.ore`) }),
     levelBefore,
     levelAfter,
     levelsGained: int(or(v.levelsGained, levelAfter - levelBefore), `${p}.levelsGained`),
@@ -231,6 +260,16 @@ export function normalizeProfile(data: Json, version = SAVE_SCHEMA_VERSION): Pla
   });
   if (new Set(ownedItems).size !== ownedItems.length) invalid('ownedItems (duplicates)');
   const owned = new Set(ownedItems);
+  // Task 19: forge levels 0–10 of owned (upgradeable) items only; +0 entries are not kept.
+  const levelsRaw = or(data.itemLevels, {});
+  if (!isObject(levelsRaw)) invalid('itemLevels');
+  const itemLevels: Record<string, number> = {};
+  for (const [id, level] of Object.entries(levelsRaw as Json)) {
+    const item = findItem(id);
+    if (!item || !isUpgradeable(item) || !owned.has(id)) invalid(`itemLevels.${id}`);
+    if (int(level, `itemLevels.${id}`, 0, UPGRADE_RULES.maxLevel) > 0)
+      itemLevels[id] = level as number;
+  }
   const classesRaw = or(data.classes, {});
   if (!isObject(classesRaw)) invalid('classes');
   const classes = Object.freeze(
@@ -276,6 +315,7 @@ export function normalizeProfile(data: Json, version = SAVE_SCHEMA_VERSION): Pla
     selectedClass: cls(or(data.selectedClass, 'warrior'), 'selectedClass'),
     classes,
     gold: int(or(data.gold, 0), 'gold'),
+    ore: int(or(data.ore, 0), 'ore'),
     highestUnlockedMap,
     completedMaps: Object.freeze(completedMaps),
     bestResults: Object.freeze(bestResults),
@@ -289,6 +329,7 @@ export function normalizeProfile(data: Json, version = SAVE_SCHEMA_VERSION): Pla
     recentRuns: Object.freeze((recentRaw as unknown[]).map(recentRun)),
     processedRunIds: Object.freeze(processedRunIds),
     ownedItems: Object.freeze(ownedItems),
+    itemLevels: Object.freeze(itemLevels),
   });
 }
 
