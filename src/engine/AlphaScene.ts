@@ -9,7 +9,6 @@ import type { GameplayOptions, GameplaySnapshot, WorldEvent } from '../gameplay'
 import { alphaBridge, CLASS_COLORS } from '../gameplay-ui/store';
 import type { AlphaCommand } from '../gameplay-ui/store';
 import { loadSave, saveRun } from '../progression/save';
-import { createWorld } from './World';
 import type { TestingController } from '../gameplay/testing';
 import { stunIndicator } from './stun-indicator';
 import { oncePerKeyEvent } from './key-event-once';
@@ -17,6 +16,8 @@ import { OFFHAND_WEAPON } from '../talents';
 import { cardKey } from '../skills';
 import { soundFrame } from '../gameplay-ui/sound';
 import { buildUnitTextures } from './visuals/texture-factory';
+import { BiomeRenderer } from './visuals/BiomeRenderer';
+import type { GraphicsQuality } from './visuals/quality';
 import { DEPTH, UnitRenderer } from './visuals/UnitRenderer';
 import {
   ART_SCALE,
@@ -47,6 +48,9 @@ export class AlphaScene extends Phaser.Scene {
   /** Task 18: HP bars, marks and control rings above the unit sprites. */
   private overlay!: Phaser.GameObjects.Graphics;
   private units!: UnitRenderer;
+  /** Task 18: the map's biome (ground, decor, particles), rebuilt when the map changes. */
+  private biome!: BiomeRenderer;
+  private mapId: number | null = null;
   /** Task 18: last drawn position of each enemy (death puffs); entries are updated in place. */
   private readonly lastEnemyPos = new Map<string, { x: number; y: number; color: number }>();
   private joystick!: Phaser.GameObjects.Graphics;
@@ -75,7 +79,8 @@ export class AlphaScene extends Phaser.Scene {
     super('combat-alpha');
   }
   create() {
-    createWorld(this);
+    this.biome = new BiomeRenderer(this);
+    this.biome.build(null, this.graphicsQuality());
     this.graphics = this.add.graphics().setDepth(5);
     buildUnitTextures(this);
     this.units = new UnitRenderer(this);
@@ -191,6 +196,9 @@ export class AlphaScene extends Phaser.Scene {
         ? this.testingWorld(input)
         : new GameplayWorld(input); // Validate before replacing a session.
     this.world = next;
+    // Task 18: the run's map decides the biome (same map ⇒ same look).
+    this.mapId = options.campaign?.mapId ?? null;
+    this.biome.build(this.mapId, this.graphicsQuality());
     this.resetFeel();
     this.runId++;
     this.lastEvent = 0;
@@ -308,8 +316,13 @@ export class AlphaScene extends Phaser.Scene {
     this.world?.setMovement(0, 0);
     this.input.keyboard?.resetKeys();
   }
-  update(_time: number, delta: number) {
+  /** Task 18 «Качество графики» (the setting arrives in step 3.4). */
+  private graphicsQuality(): GraphicsQuality {
+    return 'high';
+  }
+  update(time: number, delta: number) {
     const dt = frameStep(delta, import.meta.env.DEV || __QA_BUILD__ ? this.timeScale : 1);
+    this.biome.update(this.cameras.main.worldView, time / 1000, Math.min(0.05, delta / 1000));
     if (this.world) {
       let dx =
         Number(this.keys.D.isDown || this.keys.RIGHT.isDown) -
