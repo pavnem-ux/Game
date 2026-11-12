@@ -22,7 +22,7 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/16
 - [x] Phase 3 FPS table
 - [x] 4.1 Full checks (AGENTS.md §6 + e2e, `test:production`)
 - [x] 4.2 Docs (`MOBILE.md`, README, `playtest.md`)
-- [ ] 4.3 PR description
+- [x] 4.3 PR description
 
 ## Tools
 
