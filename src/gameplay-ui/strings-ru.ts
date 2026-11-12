@@ -49,6 +49,11 @@ export const RU = Object.freeze({
     musicVolume: 'Музыка',
     muted: 'Без звука',
     soundHint: 'Все звуки создаются в игре. Звук включается после первого нажатия или клика.',
+    graphics: 'Графика',
+    graphicsQuality: 'Качество графики',
+    graphicsQualityOptions: Object.freeze({ high: 'Высокое', medium: 'Среднее', low: 'Низкое' }),
+    graphicsHint:
+      'Свет, частицы, густота декора и свечение. «Низкое» — быстрее на слабых устройствах; на игру не влияет.',
   }),
   report: Object.freeze({
     button: 'Сообщить о проблеме',

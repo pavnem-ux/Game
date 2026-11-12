@@ -591,6 +591,7 @@ try {
     sfxVolume: 80,
     musicVolume: 50,
     muted: false,
+    graphicsQuality: 'high', // Task 18 default on desktop (fine pointer)
   });
   assert.equal(await stored(), saveBeforeSetting, 'settings never touch the save');
   await page.reload();

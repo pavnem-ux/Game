@@ -3,6 +3,8 @@
  * never part of the progress save. Missing/invalid data falls back to defaults; storage errors
  * keep the setting for this session only.
  */
+import { defaultQuality, isGraphicsQuality } from '../engine/visuals/quality';
+import type { GraphicsQuality } from '../engine/visuals/quality';
 export const UI_SETTINGS_KEY = 'skazki.settings';
 export interface UiSettings {
   /** «Тряска экрана»: camera shake on player hits and boss heavy attacks (default on). */
@@ -12,6 +14,16 @@ export interface UiSettings {
   readonly sfxVolume: number;
   readonly musicVolume: number;
   readonly muted: boolean;
+  /** Task 18 «Качество графики»: light resolution, particles, decor density, glow. */
+  readonly graphicsQuality: GraphicsQuality;
+}
+/** Touch-first devices (coarse pointer) default to Среднее; desktops to Высокое. */
+function touchDevice(): boolean {
+  try {
+    return globalThis.matchMedia?.('(pointer: coarse)').matches ?? false;
+  } catch {
+    return false;
+  }
 }
 export const DEFAULT_UI_SETTINGS: UiSettings = Object.freeze({
   screenShake: true,
@@ -19,6 +31,7 @@ export const DEFAULT_UI_SETTINGS: UiSettings = Object.freeze({
   sfxVolume: 80,
   musicVolume: 50,
   muted: false,
+  graphicsQuality: defaultQuality(touchDevice()),
 });
 const volume = (v: unknown, fallback: number) =>
   typeof v === 'number' && Number.isFinite(v)
@@ -47,6 +60,9 @@ export function parseUiSettings(raw: string | null): UiSettings {
       sfxVolume: volume(s.sfxVolume, DEFAULT_UI_SETTINGS.sfxVolume),
       musicVolume: volume(s.musicVolume, DEFAULT_UI_SETTINGS.musicVolume),
       muted: typeof s.muted === 'boolean' ? s.muted : DEFAULT_UI_SETTINGS.muted,
+      graphicsQuality: isGraphicsQuality(s.graphicsQuality)
+        ? s.graphicsQuality
+        : DEFAULT_UI_SETTINGS.graphicsQuality,
     });
   } catch {
     return DEFAULT_UI_SETTINGS;
