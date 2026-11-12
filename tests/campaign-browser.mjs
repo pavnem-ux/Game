@@ -179,6 +179,7 @@ try {
   // Task 11: Gold = coins collected in the run + victory bonus (30 on map 1).
   assert.match(text, /Монеты\s+\d+/);
   assert.match(text, /Бонус за победу\s+\+30/);
+  assert.match(text, /Руда\s+\+6 \(первая победа ×3\)/); // Task 19: Map 1, first victory
   assert.match(text, /1 → 2 \(\+1\)/);
   assert.match(text, /Очки талантов\s+\+1/);
   assert.match(text, /Открыта карта 2: Туманные болота/);
