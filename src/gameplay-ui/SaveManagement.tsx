@@ -4,6 +4,7 @@ import { CLASS_LABELS } from '../gameplay';
 import { campaignStore } from './campaign-state';
 import { uiSettings } from './ui-settings';
 import { uiSound } from './sound';
+import { GRAPHICS_QUALITIES } from '../engine/visuals/quality';
 import { RU } from './strings-ru';
 import { statusText } from './save-messages';
 
@@ -53,6 +54,23 @@ function GameplaySettings() {
         {RU.settings.muted}
       </label>
       <p className="faint">{RU.settings.soundHint}</p>
+      <h3>{RU.settings.graphics}</h3>
+      <label className="settings-slider">
+        <span>{RU.settings.graphicsQuality}</span>
+        <select
+          value={settings.graphicsQuality}
+          onChange={(e) =>
+            uiSettings.set({ graphicsQuality: e.target.value as typeof settings.graphicsQuality })
+          }
+        >
+          {GRAPHICS_QUALITIES.map((q) => (
+            <option key={q} value={q}>
+              {RU.settings.graphicsQualityOptions[q]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <p className="faint">{RU.settings.graphicsHint}</p>
     </section>
   );
 }
