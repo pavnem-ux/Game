@@ -4,7 +4,7 @@ Spec: [task-19-gear-upgrades-ore.md](task-19-gear-upgrades-ore.md) (owner's file
 `task-19-gear` stacked on `task-16-mobile` (PR #16 was not merged into `main` yet when this task
 started; the spec's base is "main with Task 16 merged"). Rebase onto `main` once #16 is merged.
 
-Current: Phase 5 (PR description)
+Current: done — PR ready for review (stacked on #16)
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/17
 
