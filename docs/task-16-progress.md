@@ -6,7 +6,7 @@ blank lines). Branch `task-16-mobile` from `main` at `6d89106` (Tasks 14, 15 and
 
 Current: Phase 1 (touch input)
 
-Draft PR: (pending)
+Draft PR: https://github.com/pavnem-ux/Game/pull/16
 
 ## Checklist
 
