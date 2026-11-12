@@ -333,7 +333,8 @@ export class AlphaScene extends Phaser.Scene {
           until: event.time + 0.8,
           x: e.position.x,
           y: e.position.y - 18,
-          text: SYNERGY_LABELS[e.synergyId] ?? e.synergyId,
+          // Task 15: the level shows on the label; an awakened trigger gets a gold «✦».
+          text: `${SYNERGY_LABELS[e.synergyId] ?? e.synergyId}${e.level && e.level > 1 ? ` ${e.level === 2 ? 'II' : 'III'}` : ''}${e.awakened ? ' ✦' : ''}`,
         });
       if (event.channel === 'campaign' && (e.type === 'boss-spawned' || e.type === 'boss-defeated'))
         this.fx.push({
@@ -755,6 +756,18 @@ export class AlphaScene extends Phaser.Scene {
           if (e.shape === 'ring' && e.innerRadius) g.strokeCircle(f.x, f.y, e.innerRadius);
         }
       }
+      if (e.type === 'synergy-triggered') {
+        // Task 15: per-synergy flash; an awakened trigger draws a larger gold double ring.
+        const life = Math.max(0, (f.until - s.time) / 0.8);
+        const c = SYNERGY_COLORS[e.synergyId] ?? 0xbfe9ff;
+        const grow = 1 - life;
+        const y = f.y + 18;
+        if (e.awakened) {
+          g.fillStyle(0xffd877, 0.12 * life).fillCircle(f.x, y, 30 + grow * 40);
+          g.lineStyle(3, 0xffd877, 0.85 * life).strokeCircle(f.x, y, 30 + grow * 40);
+          g.lineStyle(2, c, 0.7 * life).strokeCircle(f.x, y, 18 + grow * 24);
+        } else g.lineStyle(2, c, 0.75 * life).strokeCircle(f.x, y, 12 + grow * 18);
+      }
       if (f.text)
         this.label(this.damageLabels, damageLabel++)
           .setPosition(f.x, f.y - 40 - (0.6 - (f.until - s.time)) * 20)
@@ -904,8 +917,24 @@ const SKILL_FAMILY: Record<string, keyof typeof SKILL_COLORS> = {
 };
 function skillColor(key: string): number {
   const id = key.split(/[#:]/)[0];
+  if (SYNERGY_COLORS[id] !== undefined) return SYNERGY_COLORS[id]; // Task 15 synergy areas
   return SKILL_COLORS[SKILL_FAMILY[id] ?? 'physical'];
 }
+/** Task 15: synergy flash colours (element of each synergy). */
+const SYNERGY_COLORS: Record<string, number> = {
+  thermal_shock: 0xffb36b,
+  wildfire: 0xff8a4c,
+  shattered_ice: 0x9fdcff,
+  skull_crusher: 0xf1e3b8,
+  battle_momentum: 0xffd27a,
+  seismic_impact: 0xd8b98a,
+  toxic_barrage: 0x9fe07a,
+  plague_chain: 0x7fd06a,
+  deadly_precision: 0xcff5a0,
+  blood_frenzy: 0xe0607a,
+  deep_wounds: 0xc84a66,
+  final_cut: 0xff5470,
+};
 const SYNERGY_LABELS: Record<string, string> = {
   thermal_shock: 'ТЕРМОШОК',
   wildfire: 'ЛЕСНОЙ ПОЖАР',

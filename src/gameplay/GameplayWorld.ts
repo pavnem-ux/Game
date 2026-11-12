@@ -41,8 +41,8 @@ import type { CampaignSnapshot, GameplayOptions, GameplaySnapshot, WorldEvent } 
 
 import { RunExperience, XP_RULES } from './experience';
 import type { ExperienceEvent } from './experience';
-import { RunSkills, SkillEngine, SYNERGY_RULES, completedPairs } from '../skills';
-import type { SkillEvent } from '../skills';
+import { RunSkills, SkillEngine, SYNERGY_RULES, bestSynergyPair, completedPairs } from '../skills';
+import type { SkillEvent, SynergyId, SynergyLevel } from '../skills';
 import type { CombatAttributes } from '../character-stats';
 import type { EffectType } from '../status-effects';
 import { spawningSettings, wavePressure, offscreenPosition, viewportSize } from './spawning';
@@ -547,6 +547,17 @@ export class GameplayWorld {
           }),
         ),
       ),
+      // Task 15: effective synergy levels of the class (QA overrides included) and best pairs.
+      synergyLevels: Object.freeze(
+        SYNERGY_RULES.filter((r) => r.characterClass === this.character.characterClass).map((r) =>
+          Object.freeze({
+            id: r.id,
+            level: this.skills.synergies.level(r.id),
+            pair: bestSynergyPair(r, this.run.rankMap()).pair,
+            forced: this.skills.synergies.hasLevelOverride(r.id),
+          }),
+        ),
+      ),
       playerProjectiles: this.weapons.getProjectiles(),
       enemyProjectiles: this.enemies.getProjectiles(),
       artilleryStrikes: this.enemies.getStrikes(),
@@ -846,10 +857,14 @@ export class GameplayWorld {
     if (typeof cardKey !== 'string') throw new TypeError('Card key must be a string.');
     if (this.survival.getState().runState === 'ended') throw new Error('The run has ended.');
     const unlockedBefore = new Set(this.skills.synergies.unlockedIds());
+    const levelsBefore = new Map(this.skills.synergies.levels());
     const { result, events } = this.run.choose(cardKey);
     this.record('skill', events);
     this.skills.applyChoice(result);
-    if (result.type === 'skill') this.recordSynergyUnlocks(unlockedBefore, result.skillId);
+    if (result.type === 'skill') {
+      this.recordSynergyUnlocks(unlockedBefore, result.skillId);
+      this.recordSynergyLevelUps(levelsBefore, result.skillId);
+    }
     this.rebuildOnHit();
     this.prepare();
   }
@@ -872,10 +887,34 @@ export class GameplayWorld {
     }
     if (events.length > 0) this.record('skill', events);
   }
+  /**
+   * Task 15: emit `synergy-level-up` for rank-based levels this acquisition raised to II or III
+   * (level I is the `synergy-unlocked` event). Levels only rise, so each level is announced once.
+   */
+  private recordSynergyLevelUps(before: ReadonlyMap<string, number>, skillId: string): void {
+    const ranks = this.run.rankMap();
+    const events: SkillEvent[] = [];
+    for (const rule of SYNERGY_RULES) {
+      if (rule.characterClass !== this.character.characterClass) continue;
+      const now = bestSynergyPair(rule, ranks);
+      if (now.level >= 2 && now.level > (before.get(rule.id) ?? 0) && now.pair)
+        events.push(
+          Object.freeze({
+            type: 'synergy-level-up',
+            synergyId: rule.id,
+            level: now.level as 2 | 3,
+            pair: Object.freeze([now.pair[0], now.pair[1]] as const),
+            skillId,
+          }),
+        );
+    }
+    if (events.length > 0) this.record('skill', events);
+  }
   /** DEV/tests only: equip a class/universal skill at a rank without an offer (limits still apply). */
   grantTestSkill(skillId: string, rank = 1): void {
     if (typeof skillId !== 'string') throw new TypeError('skillId must be a string.');
     const unlockedBefore = new Set(this.skills.synergies.unlockedIds());
+    const levelsBefore = new Map(this.skills.synergies.levels());
     const granted = this.run.grantWithEvents(skillId, rank);
     this.skills.applyChoice(granted.result);
     this.record('skill', [
@@ -883,6 +922,7 @@ export class GameplayWorld {
       ...granted.events,
     ]);
     this.recordSynergyUnlocks(unlockedBefore, skillId);
+    this.recordSynergyLevelUps(levelsBefore, skillId);
     this.rebuildOnHit();
     this.prepare();
   }
@@ -900,6 +940,10 @@ export class GameplayWorld {
   /** Task 14 debug (DEV/QA controller only): extra rerolls / banishes for this run. */
   debugGrantChoiceControls(rerolls: number, banishes: number): void {
     this.run.grantChoiceControls(rerolls, banishes);
+  }
+  /** Task 15 debug (DEV/QA controller and tests): force a synergy level (null = from ranks). */
+  setTestSynergyLevel(id: SynergyId, level: SynergyLevel | null): void {
+    this.skills.synergies.setLevelOverride(id, level);
   }
   /** Task 14 «Изгнать»: remove an offered skill from the run pool; only that card is replaced. */
   banishSkillCard(cardKey: string): void {
@@ -1768,7 +1812,20 @@ export class GameplayWorld {
               .map((e) => e.group.effectType),
           );
           effects.add(event.group.effectType);
-          this.skills.handlePeriodicKill(death.entityId, effects, death.periodic.sources);
+          // Task 15: stack counts just before death (Plague Chain III «Мор»).
+          const stacks = new Map<EffectType, number>(
+            events
+              .filter(
+                (e) =>
+                  e.type === 'status-removed' &&
+                  e.reason === 'target-dead' &&
+                  e.group.targetId === death.entityId,
+              )
+              .map((e) => [e.group.effectType, e.group.stacks.length]),
+          );
+          if (!stacks.has(event.group.effectType))
+            stacks.set(event.group.effectType, event.group.stacks.length);
+          this.skills.handlePeriodicKill(death.entityId, effects, death.periodic.sources, stacks);
         }
       }
   }

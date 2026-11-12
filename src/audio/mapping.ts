@@ -1,6 +1,22 @@
 import type { WorldEvent } from '../gameplay';
 import type { SoundCue } from './cues';
 
+/** Task 15: each synergy's trigger sound family (its element). */
+export const SYNERGY_FAMILY: Readonly<Record<string, SoundCue>> = Object.freeze({
+  thermal_shock: 'synergy-fire',
+  wildfire: 'synergy-fire',
+  shattered_ice: 'synergy-ice',
+  skull_crusher: 'synergy-impact',
+  battle_momentum: 'synergy-impact',
+  seismic_impact: 'synergy-impact',
+  toxic_barrage: 'synergy-poison',
+  plague_chain: 'synergy-poison',
+  deadly_precision: 'synergy-poison',
+  blood_frenzy: 'synergy-blood',
+  deep_wounds: 'synergy-blood',
+  final_cut: 'synergy-blood',
+});
+
 /**
  * Task 14: world event → sound cue mapping (pure; read-only). The director passes each frame's new
  * world events; nothing here can affect the simulation.
@@ -44,6 +60,13 @@ export function cuesForEvent(entry: WorldEvent, ctx: CueContext): readonly Sound
       return ['ui-confirm'];
     case 'synergy-unlocked':
       return ['synergy'];
+    case 'synergy-level-up':
+      return [e.level === 3 ? 'synergy-awakening' : 'synergy-level'];
+    case 'synergy-triggered': {
+      const family = SYNERGY_FAMILY[e.synergyId];
+      if (!family) return [];
+      return e.awakened ? [family, 'synergy-awaken'] : [family];
+    }
     case 'elite-spawned':
       return ['elite-alarm'];
     case 'boss-spawned':

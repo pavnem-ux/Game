@@ -170,12 +170,25 @@ export interface SynergyTriggeredEvent {
   readonly synergyId: string;
   readonly targetId: string;
   readonly position: Point;
+  /** Task 15: synergy level when it fired (1–3; 3 = «Пробуждение»). */
+  readonly level?: 1 | 2 | 3;
+  /** Task 15: an awakened property acted in this trigger (explosion, shards, rift, transfer…). */
+  readonly awakened?: boolean;
 }
 /** Task 07.2 v2: acquiring a skill completed the first unlock pair of a synergy (emitted once). */
 export interface SynergyUnlockedEvent {
   readonly type: 'synergy-unlocked';
   readonly synergyId: string;
   /** The completed pair (skill IDs, workbook order); the acquired skill is one of them. */
+  readonly pair: readonly [string, string];
+  readonly skillId: string;
+}
+/** Task 15: an acquisition raised a synergy to level II or III (best pair, weakest rank). */
+export interface SynergyLevelUpEvent {
+  readonly type: 'synergy-level-up';
+  readonly synergyId: string;
+  readonly level: 2 | 3;
+  /** The pair that reached the level (workbook order). */
   readonly pair: readonly [string, string];
   readonly skillId: string;
 }
@@ -208,6 +221,7 @@ export type SkillEvent =
   | SkillAreaEvent
   | SynergyTriggeredEvent
   | SynergyUnlockedEvent
+  | SynergyLevelUpEvent
   | EnhancedSkillEvent
   | ControlEvent;
 

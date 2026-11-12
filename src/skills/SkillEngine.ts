@@ -101,6 +101,8 @@ export interface PreHit {
   readonly mark: MarkState | null;
   readonly hpPercent: number;
   readonly position: Point | null;
+  /** Task 15: stack counts per effect type just before the hit/death (additive, optional). */
+  readonly stacks?: ReadonlyMap<EffectType, number>;
 }
 export interface HitInfo {
   readonly targetId: string;
@@ -139,6 +141,9 @@ interface ControlState {
   slowUntil: number;
   stunUntil: number;
   stunImmuneUntil: number;
+  /** Task 15: start of the current Stun and the Stun start a synergy already extended (-1 none). */
+  stunStartedAt: number;
+  stunExtendedFor: number;
   /** Last time this state was pushed to EnemyAI; later transition times are pending boundaries. */
   syncedAt: number;
 }
@@ -146,6 +151,8 @@ interface BuffState {
   stacks: number;
   value: number;
   expiresAt: number;
+  /** Task 15 (Battle Momentum III): movement speed % while the buff is active. */
+  movementSpeedPercent?: number;
 }
 export interface ZoneSpec {
   readonly key: string;
@@ -510,7 +517,11 @@ export class SkillEngine {
             buff.stacks,
             this.params('battle_fury').maxStacks,
           );
-      else if (id === 'battle_momentum' || id === 'blood_frenzy') m.attackSpeed += buff.value;
+      else if (id === 'battle_momentum' || id === 'blood_frenzy') {
+        // Task 15: Battle Momentum III stacks (value per stack) and adds move speed while active.
+        m.attackSpeed += buff.value * (id === 'battle_momentum' ? buff.stacks : 1);
+        if (buff.movementSpeedPercent) m.movementSpeedPercent += buff.movementSpeedPercent;
+      }
     }
     return m;
   }
@@ -822,6 +833,9 @@ export class SkillEngine {
     return Object.freeze({
       targetId,
       effects: new Set(this.host.statuses.getGroups(targetId).map((g) => g.effectType)),
+      stacks: new Map(
+        this.host.statuses.getGroups(targetId).map((g) => [g.effectType, g.stacks.length]),
+      ),
       slowed: !!control && control.slow > 0 && active(control.slowUntil),
       stunned: !!control && active(control.stunUntil),
       mark: this.activeMark(targetId),
@@ -962,6 +976,7 @@ export class SkillEngine {
     targetId: string,
     effects: ReadonlySet<EffectType>,
     lethalSources: readonly PeriodicDamageSource[],
+    stacks?: ReadonlyMap<EffectType, number>,
   ): void {
     const fromPlayer = lethalSources.filter(
       (s) => s.rawDamage > 0 && s.sourceId === this.host.playerId,
@@ -977,6 +992,7 @@ export class SkillEngine {
       mark: this.marks.get(targetId) ?? null,
       hpPercent: 0,
       position: this.deaths.get(targetId) ?? null,
+      ...(stacks ? { stacks } : {}),
     });
     this.onKill(targetId, pre, { direct: false, tags: new Set(), procs });
   }
@@ -992,6 +1008,8 @@ export class SkillEngine {
         this,
       );
     this.marks.delete(targetId);
+    // Task 15: death reactions that are not damage (Deadly Precision III bonus transfer).
+    this.synergies.onDeath(targetId, pre);
     if (!cause.procs) return;
     this.talentCombat.onKill({ targetId, direct: cause.direct, tags: cause.tags });
     if (cause.direct && cause.tags.has('melee') && this.rank('battle_fury') > 0)
@@ -1066,6 +1084,7 @@ export class SkillEngine {
         duration + (tags ? this.talentCombat.stunBonus(tags) : 0),
       ) * (limits ? Math.min(1, limits.stunScale) : 1);
     if (d <= 0) return false;
+    c.stunStartedAt = this.clock;
     c.stunUntil = this.clock + d;
     c.stunImmuneUntil =
       c.stunUntil +
@@ -1078,10 +1097,42 @@ export class SkillEngine {
     ]);
     return true;
   }
+  /**
+   * Task 15 (Skull Crusher III «Сотрясение»): extend the target's current Stun by `seconds`, at most
+   * once per Stun; the total never exceeds the Stun duration limit (× the target's stun scale) and
+   * the immunity window moves with the new end. Returns the seconds added (0 = nothing changed).
+   */
+  extendStun(targetId: string, seconds: number): number {
+    if (!(seconds > 0) || !this.host.core.getEntity(targetId).alive) return 0;
+    const c = this.controls.get(targetId);
+    if (!c || !(c.stunUntil > this.clock) || sameInstant(c.stunUntil, this.clock)) return 0;
+    if (c.stunExtendedFor === c.stunStartedAt) return 0;
+    const limits = this.host.controlLimits?.(targetId) ?? null;
+    const maxTotal = CONTROL_RULES.maxStunDuration * (limits ? Math.min(1, limits.stunScale) : 1);
+    const until = Math.min(c.stunStartedAt + maxTotal, c.stunUntil + seconds);
+    const added = until - c.stunUntil;
+    if (!(added > 0) || sameInstant(until, c.stunUntil)) return 0;
+    c.stunExtendedFor = c.stunStartedAt;
+    c.stunUntil = until;
+    c.stunImmuneUntil += added;
+    this.syncControl(targetId);
+    this.host.recordSkill([
+      Object.freeze({ type: 'control-applied', targetId, control: 'stun', until: c.stunUntil }),
+    ]);
+    return added;
+  }
   private control(targetId: string): ControlState {
     let c = this.controls.get(targetId);
     if (!c) {
-      c = { slow: 0, slowUntil: 0, stunUntil: 0, stunImmuneUntil: 0, syncedAt: this.clock };
+      c = {
+        slow: 0,
+        slowUntil: 0,
+        stunUntil: 0,
+        stunImmuneUntil: 0,
+        stunStartedAt: 0,
+        stunExtendedFor: -1,
+        syncedAt: this.clock,
+      };
       this.controls.set(targetId, c);
     }
     return c;
@@ -1112,8 +1163,14 @@ export class SkillEngine {
     const m = this.marks.get(targetId);
     return m && (m.expiresAt > this.clock || sameInstant(m.expiresAt, this.clock)) ? m : null;
   }
-  setBuff(id: string, stacks: number, value: number, expiresAt: number): void {
-    this.buffs.set(id, { stacks, value, expiresAt });
+  setBuff(
+    id: string,
+    stacks: number,
+    value: number,
+    expiresAt: number,
+    extra: { readonly movementSpeedPercent?: number } = {},
+  ): void {
+    this.buffs.set(id, { stacks, value, expiresAt, ...extra });
     this.refreshStats();
   }
   buff(id: string): BuffState | null {

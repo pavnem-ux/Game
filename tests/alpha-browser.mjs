@@ -356,6 +356,61 @@ try {
   assert.equal((await state()).world.dash.used, 2, 'no cooldown with the DEV override');
   await command({ type: 'dash-cooldown', seconds: null });
 
+  // Task 15: synergy levels. Fireball + Кольцо льда is a Thermal Shock pair (catalog v3).
+  await command({ type: 'restart', options: { characterClass: 'mage', initialEnemies: false } });
+  await command({ type: 'protection', enabled: true });
+  await command({ type: 'grant-skill', skillId: 'fireball', rank: 3 });
+  await command({ type: 'grant-skill', skillId: 'frost_nova', rank: 2 });
+  await page.getByText('✦ Синергия открыта: Термошок · I').waitFor();
+  await command({ type: 'grant-choices', rerolls: 12, banishes: 0 });
+  await command({ type: 'grant-xp', amount: 20 });
+  await page.waitForFunction(() => window.__alpha.state().screen === 'level-up');
+  // Reroll until the offer holds the Кольцо льда upgrade (the only card that raises the level).
+  for (let i = 0; i < 12; i++) {
+    const cards = (await state()).world.skills.offer.cards;
+    if (cards.some((c) => c.kind === 'skill' && c.skillId === 'frost_nova')) break;
+    await command({ type: 'reroll-skills' });
+    await page.waitForTimeout(150);
+  }
+  const offerCards = (await state()).world.skills.offer.cards;
+  assert.ok(
+    offerCards.some((c) => c.skillId === 'frost_nova'),
+    'offer holds the raising card',
+  );
+  const hints = page.getByTestId('card-level-hint');
+  await hints.first().waitFor();
+  assert.equal(await hints.count(), 1, 'the ▲ hint appears only on the card that raises a level');
+  assert.equal(await hints.first().innerText(), '▲ Термошок II');
+  const raising = page.locator('.skill-card', { has: page.getByTestId('card-level-hint') });
+  assert.match(await raising.getAttribute('aria-label'), /^Кольцо льда, улучшение.*Термошок II/);
+  await raising.click();
+  await page.getByText('▲ Термошок · уровень II').waitFor();
+  await command({ type: 'grant-skill', skillId: 'fireball', rank: 5 });
+  await command({ type: 'grant-skill', skillId: 'frost_nova', rank: 5 });
+  const awakening = page.locator('.synergy-banner.level-3');
+  await awakening.waitFor();
+  assert.match(await awakening.innerText(), /Пробуждение: Термошок · III[\s\S]*Паровой взрыв/);
+  assert.equal((await state()).world.synergyLevels.find((l) => l.id === 'thermal_shock').level, 3);
+  // Task 15 §3.3 DEV/QA: level and best pair per synergy; force a level for testing.
+  await page.getByRole('button', { name: 'DEV · Тестирование' }).click();
+  await page.getByLabel('Уровень синергии Лесной пожар').selectOption('2');
+  await page.waitForFunction(
+    () => window.__alpha.state().world.synergyLevels.find((l) => l.id === 'wildfire').forced,
+  );
+  assert.match(
+    await page.getByTestId('synergy-level-thermal_shock').innerText(),
+    /III · лучшая пара: fireball \+ frost_nova/,
+  );
+  assert.match(
+    await page.getByTestId('synergy-level-wildfire').innerText(),
+    /II \(задан вручную\)/,
+  );
+  await page.getByRole('button', { name: 'DEV · Закрыть' }).click();
+  assert.deepEqual(
+    (await state()).world.synergyLevels.find((l) => l.id === 'wildfire'),
+    { id: 'wildfire', level: 2, pair: null, forced: true },
+  );
+
   await command({ type: 'restart', options: { characterClass: 'mage', initialEnemies: false } });
   await command({ type: 'protection', enabled: true });
   for (let i = 0; i < 5; i++) await command({ type: 'group', count: 24, distance: 550 });

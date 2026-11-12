@@ -6,7 +6,13 @@ import type { ExperienceEvent, RunProgression, XpCrystal } from './experience';
 import type { SpawnSettings, ViewportSize } from './spawning';
 import type { CharacterClass, CharacterStatsSnapshot, CombatAttributes } from '../character-stats';
 import type { BossAbilityOutcome, BossCastState } from '../campaign';
-import type { RunSkillsSnapshot, SkillCombatSnapshot, SkillEvent } from '../skills';
+import type {
+  RunSkillsSnapshot,
+  SkillCombatSnapshot,
+  SkillEvent,
+  SynergyId,
+  SynergyLevel,
+} from '../skills';
 import type { CombatEntity, CombatEvent } from '../combat-core';
 import type {
   ArtilleryStrikeSnapshot,
@@ -159,6 +165,14 @@ export interface GameplaySnapshot {
   readonly statuses: readonly StatusGroupSnapshot[];
   readonly weapon: WeaponState;
   readonly movement: Point;
+  /** Task 15: effective level (0–3) and best pair of each synergy of the class. */
+  readonly synergyLevels: readonly Readonly<{
+    id: SynergyId;
+    level: SynergyLevel;
+    pair: readonly [string, string] | null;
+    /** A DEV/QA override decides the level. */
+    forced: boolean;
+  }>[];
   /** Task 08: campaign run state (null outside campaign runs). */
   readonly campaign: CampaignSnapshot | null;
 }

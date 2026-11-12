@@ -23,6 +23,14 @@ export type SoundCue =
   | 'reroll'
   | 'banish'
   | 'synergy'
+  | 'synergy-fire'
+  | 'synergy-ice'
+  | 'synergy-impact'
+  | 'synergy-poison'
+  | 'synergy-blood'
+  | 'synergy-awaken'
+  | 'synergy-level'
+  | 'synergy-awakening'
   | 'elite-alarm'
   | 'boss-horn'
   | 'telegraph'
@@ -92,6 +100,15 @@ export const CUES: Readonly<Record<SoundCue, CueSpec>> = Object.freeze({
   reroll: S('ui', 0.28, 2, 0.25),
   banish: S('ui', 0.32, 2, 0.35),
   synergy: S('event', 0.38, 3, 0.8),
+  // Task 15: synergy triggers by element family (+ a stronger layer when awakened) and level-ups.
+  'synergy-fire': S('hit', 0.22, 1, 0.22),
+  'synergy-ice': S('hit', 0.2, 1, 0.22),
+  'synergy-impact': S('hit', 0.24, 1, 0.2),
+  'synergy-poison': S('hit', 0.2, 1, 0.24),
+  'synergy-blood': S('hit', 0.22, 1, 0.22),
+  'synergy-awaken': S('event', 0.34, 3, 0.5),
+  'synergy-level': S('event', 0.38, 3, 0.7),
+  'synergy-awakening': S('event', 0.46, 4, 1.4),
   'elite-alarm': S('event', 0.38, 4, 0.6),
   'boss-horn': S('event', 0.5, 4, 2),
   telegraph: S('event', 0.24, 3, 0.5),

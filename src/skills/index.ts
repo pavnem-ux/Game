@@ -5,13 +5,17 @@ export {
   BONUS_TUNING,
   CONTROL_RULES,
   SYNERGY_TUNING,
+  SYNERGY_TUNING_LEVEL_II,
+  SYNERGY_LEVEL_RULES,
+  SYNERGY_MAIN_NUMBER,
+  SYNERGY_AWAKENING,
   cumulativeRanks,
 } from './config';
 export { RunSkills } from './RunSkills';
 export { SkillEngine } from './SkillEngine';
 export type { SkillHost, PreHit, HitInfo } from './SkillEngine';
 export { SYNERGY_RULES } from './synergies';
-export type { SynergyId, SynergyPair, SynergyRule } from './synergies';
+export type { SynergyId, SynergyLevel, SynergyPair, SynergyRule } from './synergies';
 export { ABILITIES } from './abilities';
 export {
   eligiblePools,
@@ -24,8 +28,25 @@ export {
 export { composeRunStats, NO_MODIFIERS } from './stats';
 export type { RunStatModifiers } from './stats';
 export type * from './types';
-export { completedPairs, pairComplete, synergyUnlocked, validateSynergyRules } from './synergies';
-export { synergyOverview, cardSynergyHints, rulesForClass, pairText } from './synergy-info';
+export {
+  bestSynergyPair,
+  completedPairs,
+  pairComplete,
+  pairLevel,
+  synergyLevel,
+  synergyUnlocked,
+  validateSynergyRules,
+} from './synergies';
+export {
+  synergyOverview,
+  cardSynergyHints,
+  cardLevelRaises,
+  ranksOf,
+  rulesForClass,
+  pairText,
+  SYNERGY_LEVEL_TEXT,
+  LEVEL_ROMAN,
+} from './synergy-info';
 export type {
   SynergyInfo,
   SynergyPairInfo,

@@ -54,6 +54,19 @@ export class RunSkills {
   rank(skillId: string): number {
     return this.ranks.get(skillId) ?? 0;
   }
+  /**
+   * Task 15: sum of all ranks. Ranks only rise during a run, so this is a monotonic version for
+   * caches derived from ranks (synergy levels).
+   */
+  rankTotal(): number {
+    let total = 0;
+    for (const r of this.ranks.values()) total += r;
+    return total;
+  }
+  /** Task 15: read-only rank lookup of the owned skills (skill id → rank 1–5). */
+  rankMap(): ReadonlyMap<string, number> {
+    return new Map(this.ranks);
+  }
   /** Owned skill IDs in acquisition order. */
   ownedIds(): readonly string[] {
     return Object.freeze([...this.ranks.keys()]);

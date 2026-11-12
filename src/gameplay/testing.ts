@@ -3,6 +3,7 @@ import { QaGameplayWorld } from './qa';
 import type { QaSnapshot } from './qa';
 import type { EnemyKind } from './enemy-types';
 import type { BuffId, ChestContent, ChestType } from './chests';
+import type { SynergyId, SynergyLevel } from '../skills';
 export const createTestingWorld = (options: GameplayOptions): GameplayWorld =>
   new QaGameplayWorld(options);
 export interface TestingController {
@@ -52,6 +53,10 @@ export function createTestingController(
         break;
       case 'dash-cooldown':
         w.setDebugDashCooldown(a.seconds as number | null);
+        break;
+      case 'synergy-level':
+        // Task 15: force a synergy level (0–3) or return to the rank level (null).
+        w.setTestSynergyLevel(a.id as SynergyId, a.level as SynergyLevel | null);
         break;
       case 'grant-choices':
         w.debugGrantChoiceControls(a.rerolls as number, a.banishes as number);
