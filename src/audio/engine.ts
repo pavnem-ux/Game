@@ -288,6 +288,14 @@ export class WebAudioEngine implements AudioSink {
     return this.ctx !== null && this.ctx.state === 'running';
   }
   /** Creates/resumes the context; call from a user gesture. Returns true when audio can play. */
+  private hidden = false;
+  /** Task 16: suspend the context while the page is hidden; resume when it is shown again. */
+  setHidden(hidden: boolean): void {
+    this.hidden = hidden;
+    if (!this.ctx) return;
+    if (hidden && this.ctx.state === 'running') void this.ctx.suspend().catch(() => undefined);
+    else if (!hidden && this.ctx.state !== 'running') void this.ctx.resume().catch(() => undefined);
+  }
   unlock(): boolean {
     if (!this.ctx) {
       const Ctor =
@@ -324,7 +332,8 @@ export class WebAudioEngine implements AudioSink {
       this.noiseBuffer = buffer;
       if (this.wantedTrack) this.startTrack(this.wantedTrack);
     }
-    if (this.ctx.state === 'suspended') void this.ctx.resume().catch(() => undefined);
+    // iOS can report 'interrupted' (phone call, other app audio): resume from any non-running state.
+    if (this.ctx.state !== 'running' && !this.hidden) void this.ctx.resume().catch(() => undefined);
     return true;
   }
   now() {

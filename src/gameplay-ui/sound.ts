@@ -49,14 +49,16 @@ let installed = false;
 export function installSound() {
   if (installed || typeof document === 'undefined') return;
   installed = true;
+  // Task 16: iOS Safari unlocks audio reliably only inside a `touchend` handler.
+  const gestures = ['pointerdown', 'touchend', 'keydown'] as const;
   const unlock = () => {
-    if (engine.unlock() && engine.live) {
-      document.removeEventListener('pointerdown', unlock, true);
-      document.removeEventListener('keydown', unlock, true);
-    }
+    if (document.hidden) return;
+    if (engine.unlock() && engine.live)
+      for (const g of gestures) document.removeEventListener(g, unlock, true);
   };
-  document.addEventListener('pointerdown', unlock, true);
-  document.addEventListener('keydown', unlock, true);
+  for (const g of gestures) document.addEventListener(g, unlock, true);
+  // Task 16: a hidden tab suspends audio (the scene pauses the run); visible again → resume.
+  document.addEventListener('visibilitychange', () => engine.setHidden(document.hidden));
   let hovered: Element | null = null;
   document.addEventListener('pointerover', (e) => {
     const b = (e.target as Element | null)?.closest?.('button:not(:disabled)') ?? null;
