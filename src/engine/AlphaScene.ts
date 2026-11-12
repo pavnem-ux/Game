@@ -15,6 +15,8 @@ import { oncePerKeyEvent } from './key-event-once';
 import { OFFHAND_WEAPON } from '../talents';
 import { cardKey } from '../skills';
 import { soundFrame } from '../gameplay-ui/sound';
+import { hapticFrame } from '../gameplay-ui/touch';
+import { JOYSTICK, inJoystickZone, keyboardVector, movementInput } from './touch-input';
 import { buildUnitTextures } from './visuals/texture-factory';
 import { BiomeRenderer } from './visuals/BiomeRenderer';
 import { BOSS_DARK, LightRenderer, WARM_DARK } from './visuals/LightRenderer';
@@ -125,11 +127,12 @@ export class AlphaScene extends Phaser.Scene {
     };
     this.input.keyboard!.on('keydown-SPACE', dash).on('keydown-SHIFT', dash);
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
+      // Task 16: a floating joystick where the thumb lands (left half; right half for «Левша»).
       if (
         this.world &&
         !this.world.paused &&
-        p.x < this.scale.width / 2 &&
-        p.y > this.scale.height * 0.3
+        !this.stick.active &&
+        inJoystickZone(p.x, p.y, this.scale.width, this.scale.height, uiSettings.get().leftHanded)
       )
         Object.assign(this.stick, { active: true, id: p.id, x: p.x, y: p.y, dx: 0, dy: 0 });
     });
@@ -139,8 +142,15 @@ export class AlphaScene extends Phaser.Scene {
         this.stick.dy = p.y - this.stick.y;
       }
     });
-    this.input.on('pointerup', () => this.clearInput());
-    this.input.on('pointerupoutside', () => this.clearInput());
+    // Multi-touch: only the joystick's own finger releases it (a dash tap must not stop movement).
+    const release = (p: Phaser.Input.Pointer) => {
+      if (this.stick.active && p.id === this.stick.id) {
+        this.stick.active = false;
+        this.stick.dx = this.stick.dy = 0;
+      }
+    };
+    this.input.on('pointerup', release);
+    this.input.on('pointerupoutside', release);
     const visibility = () => {
       if (document.hidden && this.world) {
         this.world.setPaused(true);
@@ -296,6 +306,10 @@ export class AlphaScene extends Phaser.Scene {
           }
           break;
         }
+        case 'dash':
+          // Task 16: the touch dash button = Space / Shift (queued for the next input sample).
+          this.world?.requestDash();
+          break;
         case 'skip-offer':
           this.world?.skipSkillOffer();
           this.clearInput();
@@ -416,19 +430,20 @@ export class AlphaScene extends Phaser.Scene {
     const dt = frameStep(delta, import.meta.env.DEV || __QA_BUILD__ ? this.timeScale : 1);
     this.biome.update(this.cameras.main.worldView, time / 1000, Math.min(0.05, delta / 1000));
     if (this.world) {
-      let dx =
-        Number(this.keys.D.isDown || this.keys.RIGHT.isDown) -
-        Number(this.keys.A.isDown || this.keys.LEFT.isDown);
-      let dy =
-        Number(this.keys.S.isDown || this.keys.DOWN.isDown) -
-        Number(this.keys.W.isDown || this.keys.UP.isDown);
-      if ((document.activeElement as HTMLElement)?.matches('input,select,textarea')) dx = dy = 0;
-      if (this.stick.active && Math.hypot(this.stick.dx, this.stick.dy) > 8) {
-        dx = this.stick.dx;
-        dy = this.stick.dy;
-      }
+      // Task 16: keyboard and the touch joystick produce one movement vector (same input path).
+      const typing = (document.activeElement as HTMLElement)?.matches('input,select,textarea');
+      const k = this.keys;
+      const keys = typing
+        ? keyboardVector(false, false, false, false)
+        : keyboardVector(
+            k.D.isDown || k.RIGHT.isDown,
+            k.A.isDown || k.LEFT.isDown,
+            k.S.isDown || k.DOWN.isDown,
+            k.W.isDown || k.UP.isDown,
+          );
+      const move = movementInput(keys, this.stick);
       this.world.setViewport(this.scale.width, this.scale.height);
-      this.world.setMovement(dx, dy);
+      this.world.setMovement(move.x, move.y);
       this.world.update(dt);
       this.draw(this.world.getSnapshot());
     } else if (this.graphics) {
@@ -455,6 +470,7 @@ export class AlphaScene extends Phaser.Scene {
     const frameEvents = this.world!.getEvents(this.lastEvent);
     // Task 14: sound reads the same events (presentation only; nothing flows back).
     soundFrame(frameEvents);
+    hapticFrame(frameEvents);
     for (const event of frameEvents) {
       this.lastEvent = event.sequence;
       const e = event.event;
@@ -874,13 +890,20 @@ export class AlphaScene extends Phaser.Scene {
     this.drawFeel(s);
     this.joystick.clear();
     if (this.stick.active) {
+      // Task 16: the ring is the full-speed radius; the inner circle marks the dead zone.
       const d = Math.hypot(this.stick.dx, this.stick.dy),
-        r = Math.min(45, d),
+        r = Math.min(JOYSTICK.radius, d),
         a = Math.atan2(this.stick.dy, this.stick.dx);
-      this.joystick.lineStyle(2, 0xc6edce, 0.3).strokeCircle(this.stick.x, this.stick.y, 55);
       this.joystick
-        .fillStyle(0xc6edce, 0.3)
-        .fillCircle(this.stick.x + Math.cos(a) * r, this.stick.y + Math.sin(a) * r, 20);
+        .fillStyle(0x0b1222, 0.25)
+        .fillCircle(this.stick.x, this.stick.y, JOYSTICK.radius)
+        .lineStyle(2, 0xc6edce, 0.45)
+        .strokeCircle(this.stick.x, this.stick.y, JOYSTICK.radius)
+        .lineStyle(1, 0xc6edce, 0.25)
+        .strokeCircle(this.stick.x, this.stick.y, JOYSTICK.radius * JOYSTICK.deadZone);
+      this.joystick
+        .fillStyle(0xc6edce, 0.5)
+        .fillCircle(this.stick.x + Math.cos(a) * r, this.stick.y + Math.sin(a) * r, 22);
     }
   }
   /** Task 08.5 §5: floating numbers (pooled, capped) and the player-hit vignette. */

@@ -12,6 +12,7 @@ export type AlphaCommand =
         | 'finish'
         | 'reroll'
         | 'skip-offer'
+        | 'dash'
         | 'abandon'
         | 'kill-on-screen';
     }
