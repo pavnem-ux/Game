@@ -409,6 +409,23 @@
   stroke: #7a5418;
   stroke-width: 1.4;
 }
+/* Task 19: ore — cool steel-blue crystal next to the gold coin. */
+.kit-ore {
+  border-color: rgba(130, 190, 230, 0.45);
+  background: rgba(12, 26, 40, 0.6);
+  color: #b9dcf2;
+}
+.kit-ore .ore-outer {
+  fill: #5d8fb4;
+  stroke: #b9dcf2;
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+}
+.kit-ore .ore-facet {
+  fill: none;
+  stroke: #2c4c66;
+  stroke-width: 1;
+}
 
 /* ── Tier frames ── */
 .kit-tier-frame {

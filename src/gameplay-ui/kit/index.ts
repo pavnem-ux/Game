@@ -7,6 +7,7 @@ export {
   CompareList,
   ConfirmModal,
   CurrencyBadge,
+  OreBadge,
   Panel,
   ProgressBar,
   Tabs,

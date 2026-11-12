@@ -4,7 +4,7 @@ Spec: [task-19-gear-upgrades-ore.md](task-19-gear-upgrades-ore.md) (owner's file
 `task-19-gear` stacked on `task-16-mobile` (PR #16 was not merged into `main` yet when this task
 started; the spec's base is "main with Task 16 merged"). Rebase onto `main` once #16 is merged.
 
-Current: Phase 2
+Current: Phase 3
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/17
 
@@ -16,7 +16,7 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/17
 - [x] 1.3 Shop / equipment UI
 - [x] Phase 1 tests
 - [x] 2.1 Ore rewards, first-victory bonus, dedup
-- [ ] 2.2 Ore UI
+- [x] 2.2 Ore UI
 - [ ] 3.1 Upgrade logic (pure)
 - [ ] 3.2 Stats with upgrade levels
 - [ ] 3.3 Forge UI
@@ -37,6 +37,11 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/17
 - Paper doll: helmet / armor / gloves left, amulet / ring / pants right of a slim figure, weapon
   across the bottom; at ≤ 760 px two slot columns without the figure. Shop and filter tabs list all
   7 slots (from `GEAR_SLOTS`). Checked at 1280×800, 1024×768, 844×390, 390×844: no horizontal scroll.
+- Ore: `runOre(outcome, mapId, firstVictory)` in `equipment/economy.ts` (`ORE_RULES`); "first
+  victory" = the map was not in `completedMaps` before this run. Credited in `applyRunResult`
+  (same snapshot and run-ID dedup as XP/Gold); stored per recent run (`ore`, optional) and in
+  `RunSummary.oreGained`. UI: «Руда» badge next to Gold in the menu top bar (hub, shop, forge — all
+  menu pages), «Руда» row on the results screen (with «первая победа ×3»).
 - Debug «Лучшее снаряжение»: the Mage gets the magic helmet / gloves / pants.
 
 ## Verification log

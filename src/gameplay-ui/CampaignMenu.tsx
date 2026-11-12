@@ -5,7 +5,7 @@ import { ProgressionPage } from './CampaignPages';
 import { SaveWarning, SettingsPage } from './SaveManagement';
 import { BuildLabel } from './BuildLabel';
 import { ShopPage } from './ShopPages';
-import { Backdrop, CurrencyBadge } from './kit';
+import { Backdrop, CurrencyBadge, OreBadge } from './kit';
 import { RU } from './strings-ru';
 import { HubPage } from './meta/Hub';
 import { CharacterSelectPage } from './meta/CharacterSelect';
@@ -81,7 +81,10 @@ export function CampaignMenu() {
             </button>
           ))}
         </nav>
-        <CurrencyBadge amount={profile?.gold ?? 0} />
+        <span className="meta-currencies">
+          <CurrencyBadge amount={profile?.gold ?? 0} />
+          <OreBadge amount={profile?.ore ?? 0} />
+        </span>
       </header>
       <SaveWarning />
       <div className="meta-content" key={ui.page}>

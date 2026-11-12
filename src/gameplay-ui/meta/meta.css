@@ -18,6 +18,11 @@
   backdrop-filter: blur(3px);
   min-width: 0;
 }
+.meta-currencies {
+  display: inline-flex;
+  gap: var(--sp-2);
+  flex: none;
+}
 .meta-brand {
   border: 0;
   background: none;

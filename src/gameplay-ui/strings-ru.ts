@@ -114,6 +114,7 @@ export const RU = Object.freeze({
       back: 'Назад',
     }),
     gold: (amount: string) => `Золото: ${amount}`,
+    ore: (amount: string) => `Руда: ${amount}`,
     hub: Object.freeze({
       fight: 'В бой',
       fightHint: 'Открыть карту похода',

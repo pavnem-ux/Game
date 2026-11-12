@@ -297,6 +297,22 @@ export function CurrencyBadge({ amount, size = 'm' }: { amount: number; size?: '
   );
 }
 
+/** Task 19: ore («Руда») counter — a faceted ore crystal (original inline SVG) + amount. */
+export function OreBadge({ amount, size = 'm' }: { amount: number; size?: 's' | 'm' | 'l' }) {
+  return (
+    <span
+      className={`kit-currency kit-ore kit-currency-${size}`}
+      aria-label={RU.meta.ore(String(amount))}
+    >
+      <svg viewBox="0 0 20 20" width="1em" height="1em" aria-hidden="true">
+        <path d="M10 1.5 L17 7 L14.5 17.5 L5.5 17.5 L3 7 Z" className="ore-outer" />
+        <path d="M10 1.5 L10 17.5 M3 7 L10 10 L17 7" className="ore-facet" />
+      </svg>
+      {formatGold(amount)}
+    </span>
+  );
+}
+
 /** Tier frame: coloured border, corner gem and tier glow around equipment content. */
 export function TierFrame({
   tier,
