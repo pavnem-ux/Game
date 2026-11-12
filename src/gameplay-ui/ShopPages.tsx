@@ -13,6 +13,9 @@ import {
   highestClearedMap,
   isOwned,
   isTierUnlocked,
+  itemDisplayName,
+  itemLevel,
+  upgradedStats,
 } from '../equipment';
 import type { GearItem, GearSlot, GearStat, Tier } from '../equipment';
 import { campaignStore } from './campaign-state';
@@ -35,8 +38,9 @@ const statText = (stat: GearStat, value: number) => {
   const { label, unit } = GEAR_STAT_LABELS[stat];
   return `${label} +${Math.round(value * 10) / 10}${unit}`;
 };
-export function ItemStats({ item }: { item: GearItem }) {
-  const entries = Object.entries(item.stats) as [GearStat, number][];
+/** Item stat lines; Task 19: at the item's forge `level` (default +0). */
+export function ItemStats({ item, level = 0 }: { item: GearItem; level?: number }) {
+  const entries = Object.entries(upgradedStats(item, level)) as [GearStat, number][];
   if (!entries.length) return <p className="gear-stats">Без бонусов</p>;
   return (
     <ul className="gear-stats">
@@ -118,6 +122,8 @@ export function ShopPage() {
         {items.map((item) => {
           const owned = isOwned(state, item);
           const wearing = equippedBy(item.id);
+          const level = itemLevel(profile.itemLevels, item.id);
+          const name = itemDisplayName(item, level);
           const open = isTierUnlocked(item.tier as Tier, cleared);
           const short = profile.gold < item.price;
           const unlockAt = TIER_CONFIG[item.tier as Tier].unlockAfterMap;
@@ -132,16 +138,16 @@ export function ShopPage() {
             <li
               key={item.id}
               className={`shop-cell ${owned ? 'owned' : ''} ${open ? '' : 'locked'}`}
-              aria-label={`${item.name}: ${stateText}`}
+              aria-label={`${name}: ${stateText}`}
             >
               <TierFrame tier={item.tier} className="shop-card">
                 <div className="shop-card-head">
-                  <strong>{item.name}</strong>
+                  <strong>{name}</strong>
                   <small style={{ color: TIER_CONFIG[item.tier as Tier].color }}>
                     {tierLabel(item)}
                   </small>
                 </div>
-                <ItemStats item={item} />
+                <ItemStats item={item} level={level} />
                 <p className="shop-state">{stateText}</p>
                 {wearing.length > 0 ? (
                   <span className="item-stamp">{RU.meta.shop.equippedStamp}</span>

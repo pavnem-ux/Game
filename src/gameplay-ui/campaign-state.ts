@@ -35,6 +35,7 @@ export type MenuPage =
   | 'talents'
   | 'maps'
   | 'shop'
+  | 'forge'
   | 'progression'
   | 'settings';
 export interface CampaignUiState {
@@ -44,6 +45,8 @@ export interface CampaignUiState {
    * a character card; null = the selected class.
    */
   readonly viewClass: CharacterClass | null;
+  /** Task 19 (presentation only): item preselected when the forge is opened from an item. */
+  readonly forgeItem: string | null;
   readonly selectedMapId: number;
   readonly progression: ProgressionState;
   /** Validated import waiting for the player's confirmation (nothing replaced yet). */
@@ -134,6 +137,7 @@ function ensure(): CampaignUiState {
     state = Object.freeze({
       page: 'hub',
       viewClass: null,
+      forgeItem: null,
       selectedMapId: initial.profile?.highestUnlockedMap ?? 1,
       progression: initial,
       lastResult: null,
@@ -207,11 +211,15 @@ export const campaignStore = {
     return service!;
   },
   setPage(page: MenuPage) {
-    update({ page, viewClass: null });
+    update({ page, viewClass: null, forgeItem: null });
   },
   /** Task 13: open Equipment / Talents for a class without selecting it (presentation only). */
   openForClass(page: 'equipment' | 'talents', characterClass: CharacterClass | null) {
     update({ page, viewClass: characterClass });
+  },
+  /** Task 19: open the forge with an item preselected (presentation only). */
+  openForge(itemId: string | null) {
+    update({ page: 'forge', viewClass: null, forgeItem: itemId });
   },
   selectMap(mapId: number) {
     const profile = ensure().progression.profile;

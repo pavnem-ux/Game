@@ -13,9 +13,10 @@ const N = RU.meta.nav;
 /** Hub tiles: page, title, one-line description, glyph. Accessible names differ from the nav. */
 const TILES: readonly { id: MenuPage; title: string; text: string; glyph: string }[] = [
   { id: 'character', title: N.character, text: 'Выбор героя и его сила', glyph: '♜' },
-  { id: 'equipment', title: N.equipment, text: 'Оружие, броня, амулет, кольцо', glyph: '⛨' },
+  { id: 'equipment', title: N.equipment, text: 'Семь слотов снаряжения', glyph: '⛨' },
   { id: 'talents', title: N.talents, text: 'Ветви умений класса', glyph: '❖' },
   { id: 'shop', title: N.shop, text: 'Снаряжение за золото', glyph: '⚖' },
+  { id: 'forge', title: N.forge, text: 'Улучшение предметов за золото и руду', glyph: '⚒' },
   { id: 'progression', title: N.progression, text: 'Летопись забегов', glyph: '☾' },
   { id: 'settings', title: N.settings, text: 'Сохранения и игра', glyph: '⚙' },
 ];

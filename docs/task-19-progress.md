@@ -4,7 +4,7 @@ Spec: [task-19-gear-upgrades-ore.md](task-19-gear-upgrades-ore.md) (owner's file
 `task-19-gear` stacked on `task-16-mobile` (PR #16 was not merged into `main` yet when this task
 started; the spec's base is "main with Task 16 merged"). Rebase onto `main` once #16 is merged.
 
-Current: Phase 3
+Current: Phase 4
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/17
 
@@ -19,7 +19,7 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/17
 - [x] 2.2 Ore UI
 - [x] 3.1 Upgrade logic (pure)
 - [x] 3.2 Stats with upgrade levels
-- [ ] 3.3 Forge UI
+- [x] 3.3 Forge UI
 - [ ] 4 Save v5 migration / validation
 - [ ] 5 Full checks, docs, PR
 
@@ -52,6 +52,14 @@ levels)` → `composeRunStats` (caps once). Character and Equipment screens use 
   `permanentStats(…, itemLevels)`.
 - Store: `campaignStore.upgradeItem(id)` → one validated save (Gold + ore + level); a failed write
   keeps the old profile. Debug: `grantOre`, `setItemLevel` (DEV/QA panel only).
+- Forge UI (`meta/ForgeScreen.tsx`): page «Кузница» in the menu nav (after «Магазин») and a hub
+  tile; «В кузницу» in the Equipment item preview opens it with that item selected. Owned
+  upgradeable items (equipped first) with slot filter and level pips; detail panel: level, current vs
+  next stats, Gold + ore cost (red when short), «Улучшить до +N» (disabled with the reason). Item
+  names show the level («… +3») in the forge, equipment (doll, grid, compare), shop and character
+  cards; item stat lines show upgraded values. On phones the detail panel scrolls into view on pick.
+- DEV panel «Снаряжение и магазин»: «Выдать руду», item + level (+0…+10) → «Установить уровень
+  предмета».
 - Debug «Лучшее снаряжение»: the Mage gets the magic helmet / gloves / pants.
 
 ## Verification log

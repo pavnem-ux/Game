@@ -8,6 +8,9 @@ import {
   SLOT_LABELS,
   findItem,
   isEligible,
+  isUpgradeable,
+  itemDisplayName,
+  itemLevel,
   permanentStats,
   starterWeapon,
 } from '../../equipment';
@@ -58,6 +61,9 @@ export function EquipmentPage() {
     ...profile.ownedItems.map((id) => findItem(id)).filter((i): i is GearItem => !!i),
   ].filter((i) => isEligible(i, cls, i.slot) && (filter === 'all' || i.slot === filter));
   const isEquipped = (item: GearItem) => loadout[item.slot] === item.id;
+  // Task 19: names and stats at the item's forge level («Кольцо точности +3»).
+  const levelOf = (item: GearItem) => itemLevel(profile.itemLevels, item.id);
+  const nameOf = (item: GearItem) => itemDisplayName(item, levelOf(item));
   const preview = (id: string | null) => {
     const item = id ? findItem(id) : null;
     if (!item || isEquipped(item)) return null;
@@ -108,12 +114,12 @@ export function EquipmentPage() {
               >
                 <button
                   className="doll-slot-button"
-                  aria-label={`${SLOT_LABELS[slot]}: ${item ? item.name : E.empty}`}
+                  aria-label={`${SLOT_LABELS[slot]}: ${item ? nameOf(item) : E.empty}`}
                   aria-pressed={filter === slot}
                   onClick={() => setFilter(filter === slot ? 'all' : slot)}
                 >
                   <small>{SLOT_LABELS[slot]}</small>
-                  <strong>{item ? item.name : E.empty}</strong>
+                  <strong>{item ? nameOf(item) : E.empty}</strong>
                   {item && <span className="doll-tier">{tierLabel(item)}</span>}
                 </button>
                 {item && !item.starter && (
@@ -156,7 +162,7 @@ export function EquipmentPage() {
                       <button
                         className={`item-card ${selected === item.id ? 'selected' : ''}`}
                         aria-pressed={selected === item.id}
-                        aria-label={`${item.name}${isEquipped(item) ? `, ${E.equipped.toLowerCase()}` : ''}`}
+                        aria-label={`${nameOf(item)}${isEquipped(item) ? `, ${E.equipped.toLowerCase()}` : ''}`}
                         onClick={() => setSelected(selected === item.id ? null : item.id)}
                         // Task 16: pointer events (mouse only: a touch tap must not leave a stuck
                         // hover preview; a tap selects the item instead).
@@ -165,17 +171,17 @@ export function EquipmentPage() {
                         onFocus={() => setHovered(item.id)}
                         onBlur={() => setHovered(null)}
                       >
-                        <strong>{item.name}</strong>
+                        <strong>{nameOf(item)}</strong>
                         <small className="item-tier">
                           {SLOT_LABELS[item.slot]} · {tierLabel(item)}
                         </small>
-                        <ItemStats item={item} />
+                        <ItemStats item={item} level={levelOf(item)} />
                         {isEquipped(item) && <span className="item-stamp">{E.equipped}</span>}
                       </button>
                     </TierFrame>
                     {hover?.item.id === item.id && (
                       <Tooltip placement="top">
-                        <strong>{E.compare(item.name)}</strong>
+                        <strong>{E.compare(nameOf(item))}</strong>
                         <CompareList deltas={hover.deltas} empty={E.noChange} />
                       </Tooltip>
                     )}
@@ -189,13 +195,18 @@ export function EquipmentPage() {
               className="equipment-preview"
               role="group"
               aria-label="Предпросмотр снаряжения"
-              title={E.compare(chosen.item.name)}
+              title={E.compare(nameOf(chosen.item))}
             >
               <CompareList deltas={chosen.deltas} empty={E.noChange} />
               <div className="preview-actions">
                 <Button variant="primary" onClick={() => equip(chosen.item.id)}>
                   {E.equip}
                 </Button>
+                {isUpgradeable(chosen.item) && (
+                  <Button onClick={() => campaignStore.openForge(chosen.item.id)}>
+                    ⚒ {RU.meta.forge.toForge}
+                  </Button>
+                )}
                 <Button onClick={() => setSelected(null)}>{RU.meta.modal.cancel}</Button>
               </div>
             </Panel>

@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react';
 import { CHARACTER_CLASSES } from '../../character-stats';
 import type { CombatAttributes } from '../../character-stats';
 import { CLASS_LABELS, WEAPON_LABELS } from '../../gameplay';
-import { findItem, permanentStats } from '../../equipment';
+import { findItem, itemDisplayName, itemLevel, permanentStats } from '../../equipment';
 import { xpToNextLevel } from '../../profile';
 import { availableTalentPoints } from '../../talents';
 import { campaignStore } from '../campaign-state';
@@ -94,7 +94,11 @@ export function CharacterSelectPage() {
                 ))}
               </dl>
               <p className="character-weapon">
-                {C.weapon(weapon && !weapon.starter ? weapon.name : WEAPON_LABELS[c])}
+                {C.weapon(
+                  weapon && !weapon.starter
+                    ? itemDisplayName(weapon, itemLevel(profile.itemLevels, weapon.id))
+                    : WEAPON_LABELS[c],
+                )}
               </p>
               <div className="character-actions">
                 <Button

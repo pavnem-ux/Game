@@ -12,6 +12,7 @@ import { CharacterSelectPage } from './meta/CharacterSelect';
 import { EquipmentPage } from './meta/EquipmentScreen';
 import { TalentsPage } from './meta/TalentsScreen';
 import { MapPathPage } from './meta/MapPath';
+import { ForgePage } from './meta/ForgeScreen';
 import './meta/meta.css';
 
 const N = RU.meta.nav;
@@ -21,6 +22,7 @@ const PAGES: readonly { id: MenuPage; label: string }[] = [
   { id: 'equipment', label: N.equipment },
   { id: 'talents', label: N.talents },
   { id: 'shop', label: N.shop },
+  { id: 'forge', label: N.forge },
   { id: 'maps', label: N.maps },
   { id: 'progression', label: N.progression },
   { id: 'settings', label: N.settings },
@@ -94,6 +96,7 @@ export function CampaignMenu() {
         {ui.page === 'talents' && <TalentsPage />}
         {ui.page === 'maps' && <MapPathPage />}
         {ui.page === 'shop' && <ShopPage />}
+        {ui.page === 'forge' && <ForgePage />}
         {ui.page === 'progression' && <ProgressionPage />}
         {ui.page === 'settings' && <SettingsPage />}
       </div>
