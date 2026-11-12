@@ -5,7 +5,7 @@ blank lines and aligned the biome table). Branch `task-18-visuals` from `main` a
 (Task 15 merged). Rendering only: simulation, balance and collisions unchanged. Tasks 16/17 are not
 on `main`, so the «Качество графики» setting is new here (step 3.4).
 
-Current: Phase 2 (biomes)
+Current: Phase 3 (light)
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/15
 
@@ -17,11 +17,11 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/15
 - [x] 1.2 Player / enemies / elites / bosses
 - [x] 1.3 Projectiles, pickups, chests
 - [x] Phase 1 tests
-- [ ] 2.1 Ground
-- [ ] 2.2 Decor
-- [ ] 2.3 Particles
-- [ ] 2.4 Per-map variation / signature
-- [ ] Phase 2 tests
+- [x] 2.1 Ground
+- [x] 2.2 Decor
+- [x] 2.3 Particles
+- [x] 2.4 Per-map variation / signature
+- [x] Phase 2 tests
 - [ ] 3.1 Darkness overlay + player light
 - [ ] 3.2 Light sources
 - [ ] 3.3 Boss phase
@@ -55,8 +55,24 @@ role, ranged)`, `playerProjectileKey`, `chestTextureKey`, `textureSize`, `unitSc
   sprites; HP bars, marks and stun lines are on `overlay` (above sprites); telegraphs, zones, slow
   rings and elite rings stay on the ground graphics. Death puff fx at the enemy's last drawn
   position (`lastEnemyPos`, updated in place; cleared on start/menu).
+- Biomes (2.1–2.4): `render-rng.ts` (mulberry32 `renderRandom`, `mapVisualSeed(mapId)`; never the
+  simulation streams), `biomes.ts` (pure: `BIOMES` per act — Лес / Топь / Пепелище / Стужа: palette,
+  8 decor keys, particle kind, darkness, signature kinds; `mapLook(mapId)`: hue shift ±14°, brightness
+  0.92–1.08, signature feature (clearing / flower ring / bog lake / barrow circle / ruin circle /
+  ember rift / frozen lake / ice ring) 420–940 from the centre, 2–3 winding paths; `decorLayout(look,
+density)`: 190 × density props, never within 170 of the spawn centre or inside the signature,
+  lower density = prefix of the full layout; `shiftColor`). `decor-art.ts` (32 props drawn on a
+  `Pen`, base-anchored with baked shadows; `fx-mote`, `fx-fog`). `BiomeRenderer.ts`: `build(mapId,
+quality)` (no-op for the same map/quality) — ground tile 256² baked per map (`ground-map-<id>`) as a
+  tileSprite, one static graphics for paths + signature + start ring + wall, decor images; `update()`
+  culls decor outside the view and moves particles (Float32Array state, wrap around the view):
+  fireflies (additive flicker), fog banks (¼ count, faint), ash falling + embers rising, snow. The
+  scene builds the sandbox look at create and the map's look at `start()`; `World.ts` stays for the
+  prototype.
 - Tests: `tests/engine/visual-sprites.test.ts` (keys for every entity type, art for every key on a
-  recording pen, pool reuse, same seed ⇒ same results with/without the render-side mapping).
+  recording pen, pool reuse, same seed ⇒ same results with/without the render-side mapping),
+  `tests/engine/visual-biomes.test.ts` (acts → biomes, art for every prop, same map ⇒ same look and
+  layout, all 40 maps differ, decor off the spawn centre / signature / edge, density prefix, palette).
 
 ## FPS baseline (before, dev server, headless Chromium without GPU — compare relatively)
 
@@ -80,5 +96,8 @@ reservedSlots` = 80 on map 40, and this task must not change balance. FPS is mea
   its cap **and** in the sandbox at the alpha cap of 120 (≈112 alive while measuring).
 
 ## Verification log
+
+- Phase 2: typecheck ✓, format ✓, `npm test` 1315 ✓, build ✓, `test:e2e` 3 PASS. FPS (no quality
+  setting yet): desktop map 40 40.9 / sandbox 49.2; phone ×4 map 40 38.1 / sandbox 26.8.
 
 - Phase 1: typecheck ✓, format ✓, `npm test` 1310 ✓, build ✓, `test:production` 2 PASS, `test:e2e` 3 PASS.
