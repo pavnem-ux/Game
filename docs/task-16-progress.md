@@ -4,19 +4,19 @@ Spec: [task-16-mobile-browsers.md](task-16-mobile-browsers.md) (owner's file; Pr
 blank lines). Branch `task-16-mobile` from `main` at `6d89106` (Tasks 14, 15 and 18 merged: the
 «Качество графики» setting from Task 18 is reused and extended here). Gameplay balance unchanged.
 
-Current: Phase 1 (touch input)
+Current: Phase 3 (browsers & performance)
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/16
 
 ## Checklist
 
 - [x] 0.1 Branch, spec, progress file, draft PR, baseline screenshots + FPS
-- [ ] 1.1 Joystick → input sample
-- [ ] 1.2 Dash / pause buttons, multi-touch, «Левша», haptics
-- [ ] Phase 1 tests
-- [ ] 2.1 Canvas / DPR, safe areas, orientation notice, gesture blocking, fullscreen
-- [ ] 2.2 Responsive menus and HUD
-- [ ] Phase 2 e2e (mobile emulation with touch)
+- [x] 1.1 Joystick → input sample
+- [x] 1.2 Dash / pause buttons, multi-touch, «Левша», haptics
+- [x] Phase 1 tests
+- [x] 2.1 Canvas / DPR, safe areas, orientation notice, gesture blocking, fullscreen
+- [x] 2.2 Responsive menus and HUD
+- [x] Phase 2 e2e (mobile emulation with touch)
 - [ ] 3.1 Browser compatibility fixes
 - [ ] 3.2 Quality setting extension + FPS in the debug overlay
 - [ ] Phase 3 FPS table
@@ -31,6 +31,40 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/16
   (JPEG).
 - `tests/visual-fps.mjs` (Task 18) gains a landscape phone profile `phone 844×390 landscape, CPU ×4`
   (`FPS_PROFILES="phone 844"`).
+
+## Code map (Task 16)
+
+- Touch input (1.1): `src/engine/touch-input.ts` (pure): `JOYSTICK` (60 px full speed, 10% dead
+  zone), `joystickVector`, `keyboardVector`, `movementInput` (active joystick outside its dead zone
+  wins), `inJoystickZone` (left half below the top 30%; right half for «Левша»). `AlphaScene.update`
+  builds one vector from keys + joystick and calls `world.setMovement` before `world.update` — the
+  same input-sample path for both. The joystick stores its origin in canvas px and the offset in CSS
+  px; only its own pointer releases it (multi-touch).
+- Touch controls (1.2): `TouchControls.tsx` (dash button 84 px, conic cooldown ring, bottom right /
+  left for «Левша», touch devices only), bridge command `dash` → `world.requestDash()` (same as
+  Space/Shift). `touch.ts`: `isTouchDevice` / `useTouchDevice` (coarse pointer or first touch),
+  `pulse()` and `hapticFrame()` (dash 12 ms, level-up 25 ms; scene calls it next to `soundFrame`).
+  Settings `leftHanded`, `haptics` (UiSettings; Settings page «Сенсорное управление»).
+- DPR (2.1): `AlphaCanvas` sizes the canvas to CSS × DPR (DPR ≤ quality `dprCap`: 2 / 1.5 / 1),
+  `Phaser.Scale.NONE` + zoom 1/DPR, ResizeObserver + settings subscription, `registry.dpr`. The scene
+  zooms the main camera by DPR and gives the world the CSS viewport (`cssViewport()`), so spawning
+  and simulation are unchanged. `screen-space.ts` (`pinToScreen`, `screenToZoomed`) keeps joystick,
+  hit vignette and the light map in canvas pixels under the zoom; `LightRenderer` maps world → light
+  map with `zoom × resolution`.
+- Device chrome (2.1): `DeviceChrome.tsx`: `OrientationNotice` (portrait phone ≤ 600 px during a
+  run: «Поверните устройство», pauses the run), `FullscreenButton` (Fullscreen API incl. webkit
+  prefix; hidden where missing), `useBlockGestures` (iOS gesture events, multi-finger canvas moves);
+  arena `contextmenu` blocked; `viewport-fit=cover`.
+- Layout (2.2, `alpha.css` Task 16 blocks): shell `100vh` → `100dvh`, no min-height; safe-area
+  offsets for HUD and bottom HUD; outer header/footer hidden on phones (≤ 760 px wide or ≤ 560 px
+  high); compact HUD for short screens (text ≥ 12 px); coarse pointers: 44 px targets in menus and
+  in-run dialogs; menu nav = one horizontally scrolling row (own row on portrait phones, active item
+  scrolled into view by `CampaignMenu`); skill-bar dash pill hidden on touch (the big button
+  replaces it).
+- Tests: `tests/engine/touch-input.test.ts`; `tests/mobile-browser.mjs` (in `npm run test:e2e`):
+  joystick, dash button = Space, multi-touch; at 844×390 and 768×1024 a run from the hub, move,
+  dash, card pick by tap, results, every menu screen without horizontal scroll, tap targets ≥ 44
+  px. Alpha e2e: portrait shows the rotate notice and pauses; landscape joystick.
 
 ## Baseline (before)
 
@@ -49,7 +83,15 @@ FPS (dev server, headless Chromium without GPU, CPU ×4, 8 s; compare relatively
 
 ## Decisions
 
+- Desktop is unchanged except the dash button and coarse-pointer target sizes, which only appear on
+  touch devices; the mouse-drag joystick that already existed on desktop stays.
+- «Поверните устройство» pauses the run (it would otherwise keep running behind the notice).
+- Menus on phones hide the outer page header/footer (the menu has its own brand bar).
+
 - Map 40 holds at most 80 enemies (campaign cap); 120-enemy numbers come from the sandbox (as in
   Task 18).
 
 ## Verification log
+
+- Phases 1–2: typecheck ✓, format ✓, `npm test` 1322 ✓, build ✓, `test:production` 2 PASS,
+  `test:e2e` 4 PASS (incl. mobile).
