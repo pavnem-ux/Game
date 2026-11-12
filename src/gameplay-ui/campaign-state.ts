@@ -1,7 +1,17 @@
 import type { CharacterClass } from '../character-stats';
 import { getCampaignMap } from '../campaign';
-import { buyItem, equipItem, isMapUnlocked, unequipSlot, upgradeProfileItem } from '../profile';
+import {
+  buyItem,
+  equipItem,
+  isMapUnlocked,
+  unequipSlot,
+  upgradeProfileItem,
+  buyProfilePet,
+  setProfileActivePet,
+  upgradeProfilePet,
+} from '../profile';
 import { EquipmentError, UpgradeError } from '../equipment';
+import { PetError } from '../pets';
 import type { GearSlot } from '../equipment';
 import {
   createProgressionService,
@@ -185,7 +195,9 @@ function gearChange(change: (p: PlayerProfile) => PlayerProfile): string | null 
   try {
     next = change(profile);
   } catch (error) {
-    return error instanceof EquipmentError || error instanceof UpgradeError
+    return error instanceof EquipmentError ||
+      error instanceof UpgradeError ||
+      error instanceof PetError
       ? error.reason
       : 'invalid';
   }
@@ -245,6 +257,18 @@ export const campaignStore = {
    */
   upgradeItem(itemId: string): string | null {
     return gearChange((p) => upgradeProfileItem(p, itemId));
+  },
+  /** Task 20: buy a shop pet (Gold deducted and the pet owned in one validated save). */
+  buyPet(petId: string): string | null {
+    return gearChange((p) => buyProfilePet(p, petId));
+  },
+  /** Task 20: the one active pet for every class (null = none). */
+  setActivePet(petId: string | null): string | null {
+    return gearChange((p) => setProfileActivePet(p, petId));
+  },
+  /** Task 20 forge: pet level +1 (Gold, ore and the level in one validated save). */
+  upgradePet(petId: string): string | null {
+    return gearChange((p) => upgradeProfilePet(p, petId));
   },
   /** Task 11: unequip a slot (weapon → starter weapon, other slots → empty). */
   unequipSlot(characterClass: CharacterClass, slot: GearSlot): string | null {

@@ -15,6 +15,7 @@ import type { TalentRanks } from '../talents';
 import type { PlayerProfile } from '../profile';
 import { campaignStore } from './campaign-state';
 import { GEAR_SLOTS, SHOP_ITEMS, isEligible } from '../equipment';
+import { PET_IDS } from '../pets';
 import type { GearSlot, Loadout } from '../equipment';
 /** Task 19: magic templates of the new slots for the Mage's best-gear debug loadout. */
 const MAGE_GEAR: Partial<Record<GearSlot, string>> = {
@@ -209,6 +210,22 @@ export const campaignDebug = {
   },
   grantGold(amount: number) {
     return edit((p) => ({ ...p, gold: p.gold + amount }));
+  },
+  /** Task 20 §1.5: owns every pet, quest pets included (no Gold spent; validated save). */
+  unlockAllPets() {
+    return edit((p) => ({ ...p, ownedPets: [...PET_IDS] }));
+  },
+  /** Task 20 §1.5: sets a pet's level 1–5 (the pet becomes owned; nothing spent). */
+  setPetLevel(petId: string, level: number) {
+    return edit((p) => {
+      const levels: Record<string, number> = { ...p.petLevels, [petId]: level };
+      if (level === 1) delete levels[petId];
+      return {
+        ...p,
+        ownedPets: p.ownedPets.includes(petId) ? p.ownedPets : [...p.ownedPets, petId],
+        petLevels: levels,
+      };
+    });
   },
   /** Task 19 §1.5: adds ore (validated save). */
   grantOre(amount: number) {

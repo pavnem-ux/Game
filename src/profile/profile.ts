@@ -13,7 +13,8 @@ import type { RunOutcome, RunStatsSummary } from './rewards';
 /** v3 (Task 10): 40 maps; a completed map 10 now unlocks map 11 (see migrateV2toV3). */
 /** v4 (Task 11): `ownedItems` and per-class `loadout` (see migrateV3toV4). */
 /** v5 (Task 19): `ore`, `itemLevels`, loadout slots helmet/gloves/pants (see migrateV4toV5). */
-export const PROFILE_SCHEMA_VERSION = 5;
+/** v6 (Task 20): `ownedPets`, `petLevels`, `activePet` (see migrateV5toV6). */
+export const PROFILE_SCHEMA_VERSION = 6;
 export const MAX_RECENT_RUNS = 20;
 export const MAX_PROCESSED_RUN_IDS = 50;
 
@@ -77,6 +78,12 @@ export interface PlayerProfile {
   readonly ownedItems: readonly string[];
   /** Task 19: forge upgrade level (1–10) per owned item id; absent id = +0. Account-wide. */
   readonly itemLevels: Readonly<Record<string, number>>;
+  /** Task 20: unlocked pets (account-wide), in unlock order. */
+  readonly ownedPets: readonly string[];
+  /** Task 20: pet level 2–5 per owned pet id; absent = level 1. */
+  readonly petLevels: Readonly<Record<string, number>>;
+  /** Task 20: the one active pet (shared by every class) or null. */
+  readonly activePet: string | null;
 }
 
 /** A brand-new profile. Identity and time are supplied by the caller (no hidden clock/RNG). */
@@ -109,5 +116,8 @@ export function createProfile(profileId: string, createdAt: string): PlayerProfi
     processedRunIds: Object.freeze([]),
     ownedItems: Object.freeze([]),
     itemLevels: Object.freeze({}),
+    ownedPets: Object.freeze([]),
+    petLevels: Object.freeze({}),
+    activePet: null,
   });
 }
