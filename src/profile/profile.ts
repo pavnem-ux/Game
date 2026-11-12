@@ -34,6 +34,8 @@ export interface RecentRun {
   readonly bossKilled: boolean;
   readonly xp: number;
   readonly gold: number;
+  /** Task 19: ore credited by this run (absent in older saves = 0). */
+  readonly ore?: number;
   readonly levelBefore: number;
   readonly levelAfter: number;
   readonly levelsGained: number;
@@ -58,6 +60,8 @@ export interface PlayerProfile {
   readonly selectedClass: CharacterClass;
   readonly classes: Readonly<Record<CharacterClass, ClassProgress>>;
   readonly gold: number;
+  /** Task 19: second currency «Руда» (victory rewards; spent in the forge). */
+  readonly ore: number;
   /** Highest playable map id (Map 1 is always unlocked). */
   readonly highestUnlockedMap: number;
   readonly completedMaps: readonly number[];
@@ -93,6 +97,7 @@ export function createProfile(profileId: string, createdAt: string): PlayerProfi
       ) as Record<CharacterClass, ClassProgress>,
     ),
     gold: 0,
+    ore: 0,
     highestUnlockedMap: 1,
     completedMaps: Object.freeze([]),
     bestResults: Object.freeze({}),

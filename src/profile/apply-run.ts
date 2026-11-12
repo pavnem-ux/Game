@@ -4,6 +4,7 @@ import { addClassXp, talentPoints } from './class-xp';
 import { MAX_PROCESSED_RUN_IDS, MAX_RECENT_RUNS } from './profile';
 import type { MapBest, PlayerProfile, RecentRun } from './profile';
 import { runRewards, validateRunStatsSummary } from './rewards';
+import { runOre } from '../equipment/economy';
 import type { RunResult } from './rewards';
 
 /**
@@ -20,6 +21,8 @@ export interface RunSummary {
   readonly outcome: RunResult['outcome'];
   readonly xpGained: number;
   readonly goldGained: number;
+  /** Task 19: ore credited (victory only; ×3 on the first victory on the map). */
+  readonly oreGained: number;
   readonly levelBefore: number;
   readonly levelAfter: number;
   readonly levelsGained: number;
@@ -66,6 +69,7 @@ function summaryFromRecent(run: RecentRun): RunSummary {
     outcome: run.outcome,
     xpGained: run.xp,
     goldGained: run.gold,
+    oreGained: run.ore ?? 0,
     levelBefore: run.levelBefore,
     levelAfter: run.levelAfter,
     levelsGained: run.levelsGained,
@@ -92,6 +96,7 @@ export function applyRunResult(
           outcome: result.outcome,
           xpGained: 0,
           goldGained: 0,
+          oreGained: 0,
           levelBefore: profile.classes[result.characterClass].level,
           levelAfter: profile.classes[result.characterClass].level,
           levelsGained: 0,
@@ -116,6 +121,8 @@ export function applyRunResult(
   const { progress, levelsGained } = addClassXp(before, rewards.xp);
   const victory = result.outcome === 'victory';
   const finished = result.outcome !== 'abandoned';
+  // Task 19: ore in the same snapshot as XP / Gold (×3 when the map had never been won).
+  const ore = runOre(result.outcome, result.mapId, !profile.completedMaps.includes(result.mapId));
 
   // Unlocks: only a victory unlocks the next map; unlocked maps stay unlocked.
   const next = victory ? nextMapAfter(result.mapId) : null;
@@ -156,6 +163,7 @@ export function applyRunResult(
     bossKilled: result.bossKilled,
     xp: rewards.xp,
     gold: rewards.gold,
+    ore,
     levelBefore: before.level,
     levelAfter: progress.level,
     levelsGained,
@@ -168,6 +176,7 @@ export function applyRunResult(
     ...profile,
     classes: Object.freeze({ ...profile.classes, [result.characterClass]: progress }),
     gold: profile.gold + rewards.gold,
+    ore: profile.ore + ore,
     highestUnlockedMap,
     completedMaps: Object.freeze(completedMaps),
     bestResults: finished
@@ -195,6 +204,7 @@ export function applyRunResult(
       outcome: result.outcome,
       xpGained: rewards.xp,
       goldGained: rewards.gold,
+      oreGained: ore,
       levelBefore: before.level,
       levelAfter: progress.level,
       levelsGained,

@@ -208,6 +208,8 @@ function recentRun(raw: unknown, i: number): RecentRun {
     bossKilled: typeof v.bossKilled === 'boolean' ? v.bossKilled : invalid(`${p}.bossKilled`),
     xp: int(v.xp, `${p}.xp`),
     gold: int(v.gold, `${p}.gold`),
+    // Task 19: optional (absent in older runs).
+    ...(v.ore === undefined ? {} : { ore: int(v.ore, `${p}.ore`) }),
     levelBefore,
     levelAfter,
     levelsGained: int(or(v.levelsGained, levelAfter - levelBefore), `${p}.levelsGained`),
@@ -276,6 +278,7 @@ export function normalizeProfile(data: Json, version = SAVE_SCHEMA_VERSION): Pla
     selectedClass: cls(or(data.selectedClass, 'warrior'), 'selectedClass'),
     classes,
     gold: int(or(data.gold, 0), 'gold'),
+    ore: int(or(data.ore, 0), 'ore'),
     highestUnlockedMap,
     completedMaps: Object.freeze(completedMaps),
     bestResults: Object.freeze(bestResults),

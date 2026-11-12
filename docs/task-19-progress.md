@@ -15,7 +15,7 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/17
 - [x] 1.2 Loadout + stats pipeline
 - [x] 1.3 Shop / equipment UI
 - [x] Phase 1 tests
-- [ ] 2.1 Ore rewards, first-victory bonus, dedup
+- [x] 2.1 Ore rewards, first-victory bonus, dedup
 - [ ] 2.2 Ore UI
 - [ ] 3.1 Upgrade logic (pure)
 - [ ] 3.2 Stats with upgrade levels
