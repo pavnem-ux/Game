@@ -35,9 +35,6 @@ await page.getByRole('button', { name: 'Начать забег' }).click();
 await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
 const command = (a) => page.evaluate((x) => window.__alpha.command(x), a);
 const advance = (s) => page.evaluate((x) => window.__alpha.advance(x), s);
-// Hide the debug overlay so it does not cover the arena.
-const hide = page.getByRole('button', { name: 'Скрыть' });
-if (await hide.count()) await hide.click();
 const scene = async (mapId, characterClass, name, boss = false) => {
   await command({ type: 'restart', options: { characterClass, level: 30, campaign: { mapId } } });
   await command({ type: 'protection', enabled: true });
@@ -45,8 +42,21 @@ const scene = async (mapId, characterClass, name, boss = false) => {
   await command({ type: 'group', count: 18, distance: 260 });
   if (boss) {
     await command({ type: 'campaign-boss-now' });
-    await advance(6);
+    await advance(15);
   } else await advance(1);
+  // Close level-up offers (auto-collected XP) so the arena is visible.
+  for (let i = 0; i < 10; i++) {
+    const offer = await page.evaluate(() => window.__alpha.state().world?.skills.offer ?? null);
+    if (!offer) break;
+    const card = offer.cards[0];
+    await command({
+      type: 'choose-skill',
+      card: card.kind === 'skill' ? card.skillId : `bonus:${card.bonusId}`,
+    });
+  }
+  // Hide the debug overlay so it does not cover the arena.
+  const hide = page.getByRole('button', { name: 'Скрыть' });
+  if (await hide.count()) await hide.click();
   await page.waitForTimeout(500);
   await page.screenshot({ path: `${out}/${prefix}-${name}.png` });
 };
