@@ -31,7 +31,7 @@ export interface DamageBySource {
 }
 export interface RunStatsSnapshot {
   readonly damageDealt: number;
-  /** Highest first. Source ids: `weapon:<id>`, `skill:<id>`, `synergy:<id>`, `talent:<nodeId>`, `status:<effect>`, `debug`. */
+  /** Highest first. Source ids: `weapon:<id>`, `skill:<id>`, `synergy:<id>`, `talent:<nodeId>`, `pet.<id>`, `status:<effect>`, `debug`. */
   readonly bySource: readonly DamageBySource[];
   readonly damageTaken: number;
   readonly takenByType: readonly Readonly<{ type: EnemyType | 'unknown'; damage: number }>[];
@@ -51,6 +51,8 @@ export interface RunStatsSnapshot {
   readonly lowHpTimes: readonly number[];
   /** Damage dealt per second over the last 5 s of simulation time. */
   readonly dps: number;
+  /** Task 20: the pet's own support — HP healed (firefly) and barrier granted (hedgehog). */
+  readonly petSupport: Readonly<{ healing: number; barrier: number; actions: number }>;
   /** Task 14: dashes used and direct hits avoided during dash i-frames. */
   readonly dash: Readonly<{ used: number; hitsAvoided: number }>;
   /** Task 14: level-up offer controls used this run and the skills banished (in order). */
@@ -113,6 +115,7 @@ export class RunStats {
   private readonly bucketIndex = new Array<number>(BUCKETS).fill(-1);
   private readonly bucketDamage = new Array<number>(BUCKETS).fill(0);
   private damageDealt = 0;
+  private readonly pet = { healing: 0, barrier: 0, actions: 0 };
   private damageTaken = 0;
   private lowMoments = 0;
   private low = false;
@@ -187,6 +190,13 @@ export class RunStats {
       case 'healing':
         if (event.entityId === this.resolve.playerId) this.checkLowHp(time);
         return;
+      // Task 20: pet heals / barriers (its damage comes through Core events as `pet.<id>`).
+      case 'pet-action':
+        if (event.action === 'heal') this.pet.healing += event.amount;
+        else if (event.action === 'barrier') this.pet.barrier += event.amount;
+        if (event.action !== 'idle') this.pet.actions++;
+        this.version++;
+        return;
       // Task 14: dash.
       case 'dash-started':
         this.dashesUsed++;
@@ -260,6 +270,7 @@ export class RunStats {
           .sort((a, b) => b.damage - a.damage || a.source.localeCompare(b.source)),
       ),
       damageTaken: this.damageTaken,
+      petSupport: Object.freeze({ ...this.pet }),
       takenByType: Object.freeze(
         [...this.taken]
           .map(([type, damage]) => Object.freeze({ type, damage }))
@@ -330,7 +341,8 @@ export class RunStats {
     if (!originId) return `status:${effectId}`;
     return originId.startsWith('skill:') ||
       originId.startsWith('synergy:') ||
-      originId.startsWith('talent:')
+      originId.startsWith('talent:') ||
+      originId.startsWith('pet.')
       ? originId
       : `weapon:${originId}`;
   }

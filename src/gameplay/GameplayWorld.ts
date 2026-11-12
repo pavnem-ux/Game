@@ -89,6 +89,8 @@ import {
 } from './enemy-types';
 import type { EnemyKind, NewEnemyKind } from './enemy-types';
 import { coinValue, normalChance, skipCoins } from '../equipment/economy';
+import { isPetId, petLevelFactor } from '../pets';
+import type { PetId } from '../pets';
 /** The sole world scheduler. All damage is resolved by existing modules, one boundary at a time. */
 export class GameplayWorld {
   readonly core: CombatCore;
@@ -211,6 +213,8 @@ export class GameplayWorld {
     // Task 19: forge levels scale the equipped items' stats (validated; read at world start only).
     const itemLevels = options.equipment?.itemLevels;
     if (itemLevels !== undefined) validateItemLevels(itemLevels);
+    // Task 20: the active pet (validated before anything is created).
+    if (options.pet) validatePetSpec(options.pet);
     this.loadout = options.equipment?.loadout ?? null;
     this.permanentModifiers = addModifiers(
       this.talents.modifiers,
@@ -312,6 +316,8 @@ export class GameplayWorld {
           targetId === world.bossEnemyId && world.bossDefinition
             ? world.bossDefinition.control
             : null,
+        pet: options.pet ?? null,
+        recordPet: (event) => world.record('pets', [event]),
       },
       this.run,
       skillRandom,
@@ -537,7 +543,12 @@ export class GameplayWorld {
       kills: this.kills,
       progression: this.experience.getState(),
       crystals: this.experience.getCrystals(),
-      coins: Object.freeze({ collected: this.coins.collected, piles: this.coins.getPiles() }),
+      coins: Object.freeze({
+        collected: this.coins.collected,
+        piles: this.coins.getPiles(),
+        ...(this.coins.bonus > 0 ? { petBonus: this.coins.bonus } : {}),
+      }),
+      pet: this.skills.pet?.snapshot() ?? null,
       spawning: Object.freeze({
         settings: this.spawnSettings,
         nextSpawnAt: this.nextSpawnAt,
@@ -723,6 +734,27 @@ export class GameplayWorld {
       this.campaignRun.status !== 'active'
     )
       this.skills.talents.clearEntities();
+    // Task 20: the pet stays through death/revival (frozen with the world); removed at run end.
+    if (
+      this.skills.pet &&
+      (this.survival.getState().runState === 'ended' || this.campaignRun.status !== 'active')
+    )
+      this.skills.setPet(null);
+  }
+  /** Task 20 kitten: pickup-radius multiplier and coin bonus % (1 / 0 without it). */
+  private get pickupScale(): number {
+    return this.skills.pet?.pickupScale ?? 1;
+  }
+  private get petCoinPercent(): number {
+    return this.skills.pet?.coinPercent ?? 0;
+  }
+  /**
+   * Task 20 debug (DEV/QA controller only): spawn or replace the run's pet at the current clock;
+   * null removes it. Validated like the run-start option.
+   */
+  spawnPet(spec: Readonly<{ id: PetId; level: number }> | null): void {
+    if (spec) validatePetSpec(spec);
+    this.skills.setPet(spec);
   }
   decide(decision: RevivalDecision): void {
     const result = this.survival.decide(decision, this.statuses);
@@ -1258,7 +1290,7 @@ export class GameplayWorld {
     }
   }
   private collectRemainingCoins() {
-    const events = this.coins.collectAll();
+    const events = this.coins.collectAll(this.petCoinPercent);
     if (events.length) this.record('progression', events);
   }
   // ── Task 08 debug helpers (reachable only through the DEV/QA testing controller) ──
@@ -1544,14 +1576,19 @@ export class GameplayWorld {
       });
     }
     this.controlIndex++;
-    this.progression(this.experience.collect(this.body, this.body.radius));
-    const coins = this.coins.collect(this.body, this.body.radius);
+    this.progression(this.experience.collect(this.body, this.body.radius, this.pickupScale));
+    const coins = this.coins.collect(
+      this.body,
+      this.body.radius,
+      this.pickupScale,
+      this.petCoinPercent,
+    );
     if (coins.length) this.record('progression', coins);
     // Task 12 debug: auto-collect everything once per second (measurement only; off by default).
     if (this.autoCollectAt !== null && this.clock >= this.autoCollectAt - 1e-9) {
       this.autoCollectAt += 1;
       this.progression(this.experience.collectAll());
-      const all = this.coins.collectAll();
+      const all = this.coins.collectAll(this.petCoinPercent);
       if (all.length) this.record('progression', all);
     }
     // Task 12: chests open by touch (player radius + chest radius), as a pickup of this step.
@@ -1599,7 +1636,7 @@ export class GameplayWorld {
       ]);
     } else if (content === 'magnet') {
       const xp = this.experience.collectAll();
-      const coins = this.coins.collectAll();
+      const coins = this.coins.collectAll(this.petCoinPercent);
       for (const e of xp) if (e.type === 'xp-collected') amount += e.amount;
       for (const e of coins) if (e.type === 'coins-collected') amount += e.amount;
       this.progression(xp);
@@ -1947,11 +1984,18 @@ export class GameplayWorld {
         channel === 'progression' ||
         channel === 'chests' ||
         channel === 'skill' ||
-        channel === 'movement'
+        channel === 'movement' ||
+        channel === 'pets'
       )
         this.runStats.consume(entry);
     }
     if (this.history.length > ALPHA.eventHistoryLimit)
       this.history.splice(0, this.history.length - ALPHA.eventHistoryLimit);
   }
+}
+/** Task 20: a run's pet option — a known pet id and a level 1–5. */
+function validatePetSpec(spec: unknown): void {
+  const v = spec as { id?: unknown; level?: unknown } | null;
+  if (!v || typeof v !== 'object' || !isPetId(v.id)) throw new RangeError('Unknown pet.');
+  petLevelFactor(v.level as number); // throws on anything but a whole number 1–5
 }

@@ -11,7 +11,8 @@ import {
   upgradeProfilePet,
 } from '../profile';
 import { EquipmentError, UpgradeError } from '../equipment';
-import { PetError } from '../pets';
+import { PetError, isPetId, petLevel } from '../pets';
+import type { PetId } from '../pets';
 import type { GearSlot } from '../equipment';
 import {
   createProgressionService,
@@ -406,9 +407,16 @@ export const campaignStore = {
         talents: { ranks: profile.classes[cls].talents },
         // Task 11: this class's own loadout; changes apply to the next run.
         equipment: { loadout: profile.classes[cls].loadout, itemLevels: profile.itemLevels },
+        // Task 20: the profile's one active pet comes with whichever class starts the run.
+        pet: activePetOf(profile),
         campaign: { mapId, runId: generateRunId() },
       },
     });
     return true;
   },
 };
+/** Task 20: the run option for the profile's active pet (null = none). */
+export function activePetOf(profile: PlayerProfile): Readonly<{ id: PetId; level: number }> | null {
+  const id = profile.activePet;
+  return id && isPetId(id) ? Object.freeze({ id, level: petLevel(profile.petLevels, id) }) : null;
+}

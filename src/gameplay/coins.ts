@@ -28,6 +28,24 @@ export class RunCoins {
     this.collectedTotal += amount;
     return Object.freeze({ type: 'coins-granted', source, amount });
   }
+  /**
+   * Task 20 (kitten): extra coins on collected piles, as a fractional carry so the total bonus is
+   * exactly ⌊percent × collected⌋ over the run however the piles are split (applied once, at
+   * pickup; offer-skip grants get no bonus). The bonus is part of `collected`.
+   */
+  private bonusCarry = 0;
+  private bonusTotal = 0;
+  get bonus(): number {
+    return this.bonusTotal;
+  }
+  private credit(value: number, bonusPercent: number): number {
+    if (!(bonusPercent > 0)) return value;
+    this.bonusCarry += (value * bonusPercent) / 100;
+    const extra = Math.floor(this.bonusCarry + 1e-9);
+    this.bonusCarry -= extra;
+    this.bonusTotal += extra;
+    return value + extra;
+  }
   private sequence = 0;
   private readonly piles = new Map<string, CoinPile>();
   private readonly cells = new Map<string, string>();
@@ -71,26 +89,32 @@ export class RunCoins {
     if (!previous) this.cells.set(key, pile.id);
     return pile;
   }
-  collect(position: Point, playerRadius: number): readonly CoinEvent[] {
-    const reach = playerRadius + XP_RULES.pickupRadius + XP_RULES.crystalRadius;
+  /** `pickupScale` (Task 20 kitten) widens the pickup radius; `bonusPercent` adds coins. */
+  collect(
+    position: Point,
+    playerRadius: number,
+    pickupScale = 1,
+    bonusPercent = 0,
+  ): readonly CoinEvent[] {
+    const reach = playerRadius + XP_RULES.pickupRadius * pickupScale + XP_RULES.crystalRadius;
     const events: CoinEvent[] = [];
     for (const pile of [...this.piles.values()])
       if (Math.hypot(pile.x - position.x, pile.y - position.y) <= reach) {
         this.piles.delete(pile.id);
         this.cells.delete(this.key(pile));
-        this.collectedTotal += pile.value;
-        events.push(
-          Object.freeze({ type: 'coins-collected', pileId: pile.id, amount: pile.value }),
-        );
+        const amount = this.credit(pile.value, bonusPercent);
+        this.collectedTotal += amount;
+        events.push(Object.freeze({ type: 'coins-collected', pileId: pile.id, amount }));
       }
     return Object.freeze(events);
   }
   /** Collects every pile still on the ground (a won run pays them all). */
-  collectAll(): readonly CoinEvent[] {
+  collectAll(bonusPercent = 0): readonly CoinEvent[] {
     const events: CoinEvent[] = [];
     for (const pile of this.piles.values()) {
-      this.collectedTotal += pile.value;
-      events.push(Object.freeze({ type: 'coins-collected', pileId: pile.id, amount: pile.value }));
+      const amount = this.credit(pile.value, bonusPercent);
+      this.collectedTotal += amount;
+      events.push(Object.freeze({ type: 'coins-collected', pileId: pile.id, amount }));
     }
     this.piles.clear();
     this.cells.clear();

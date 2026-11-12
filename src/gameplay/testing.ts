@@ -4,6 +4,7 @@ import type { QaSnapshot } from './qa';
 import type { EnemyKind } from './enemy-types';
 import type { BuffId, ChestContent, ChestType } from './chests';
 import type { SynergyId, SynergyLevel } from '../skills';
+import type { PetId } from '../pets';
 export const createTestingWorld = (options: GameplayOptions): GameplayWorld =>
   new QaGameplayWorld(options);
 export interface TestingController {
@@ -47,6 +48,10 @@ export function createTestingController(
         break;
       case 'buff':
         if (!w.debugGrantBuff(a.buff as BuffId)) throw new Error('Buffs: campaign run only.');
+        break;
+      // Task 20 §1.5: spawn / replace (or remove, with id null) the pet in the current run.
+      case 'pet':
+        w.spawnPet(a.id === null ? null : { id: a.id as PetId, level: (a.level as number) ?? 1 });
         break;
       case 'dash':
         if (!w.requestDash()) throw new Error(`Dash unavailable: ${w.dashBlockReason()}.`);

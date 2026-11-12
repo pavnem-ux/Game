@@ -4,7 +4,7 @@ Spec: [task-20-pets.md](task-20-pets.md) (owner's file). Branch `task-20-pets` s
 `task-19-gear` (PR #17, itself stacked on #16): neither was merged into `main` when this task
 started, and pets need Task 19's ore and forge. Rebase onto `main` once #16 and #17 are merged.
 
-Current: Phase 2
+Current: Phase 3
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/18
 
@@ -15,9 +15,9 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/18
 - [x] 1.2 Shop / forge pet logic + store actions
 - [x] 1.3 Save v6 (migration, validation)
 - [x] Phase 1 tests
-- [ ] 2.1 Pet runtime: follow, lifecycle, boundaries
-- [ ] 2.2 Six effects
-- [ ] Phase 2 tests
+- [x] 2.1 Pet runtime: follow, lifecycle, boundaries
+- [x] 2.2 Six effects
+- [x] Phase 2 tests
 - [ ] 3.1 Pet selection (hub + equipment slot)
 - [ ] 3.2 Shop tab, forge tab
 - [ ] 3.3 HUD icon + cooldown ring; sprites, light
@@ -37,6 +37,29 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/18
 - Save v6 (`migrateV5toV6`): `ownedPets: []`, `petLevels: {}`, `activePet: null`. Validation: known
   unique pet ids; levels only for owned pets; the active pet must be owned.
 - Debug: `unlockAllPets`, `setPetLevel` (campaign debug, DEV/QA only).
+- Runtime `src/pets/runtime.ts` (`PetRunner`, framework-free) owned by the Skill Engine:
+  - The pet's timed action is an engine boundary in the **skill-action** slot (order after talent
+    entity actions), so GameplayWorld stays the only scheduler; tie order unchanged otherwise.
+    First action one interval after spawn; the target is chosen when the action resolves.
+  - Position: simulation anchor = player − facing × 40 (pure, like the ballista's «behind the
+    player»; frame-independent). Smooth follow is rendering only (Phase 3).
+  - Not a Combat Core entity (can't be targeted/damaged/collided). Survives death/revival (frozen
+    with the world); removed when the run ends (survival ended or campaign resolved).
+  - Damage: exact pre-resistance base = % × max(player physical, magical), `noCritical`, `procs=false`,
+    tags `pet` + `secondary`, attributed to `pet.<id>` (run stats / DPS, Russian label «Питомец
+    «…»»). Owlet: projectile (type of the higher stat; speed 520, travel 1.25 × range); fox: instant
+    magical hit (falls back to physical only if magical damage is 0) + Burn applied exactly as
+    listed (no player status modifiers), origin `pet.fox`. Talent direct bonuses, passives and
+    synergies never see pet hits.
+  - Heal: Combat Core heal (never revives). Barrier: the shared slot (`grantBarrier`, C2 rules).
+  - Auras (hedgehog resistance; wolf attack speed + movement %) join the engine's `modifiers()` →
+    `composeRunStats` once (caps once).
+  - Kitten: `RunCoins` credits +X% of each collected pile with a fractional carry (exactly ⌊X% ×
+    collected⌋ over the run; skip grants excluded); pickup radius ×1.15 for crystals and coins.
+    Coins enter the run result once via `coins.collected` (snapshot `coins.petBonus` when > 0).
+  - Events: channel `pets` (`pet-action`: shot / dash / heal / barrier / idle); run stats
+    `petSupport` (healing, barrier, actions). Persisted top sources accept `pet.<id>`.
+  - Debug: testing action `{ type: 'pet', id, level }` → `world.spawnPet` (DEV/QA controller).
 - `tests/pets/` added to the Vitest include list; `npm run test:pets`.
 
 ## Verification log

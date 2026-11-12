@@ -3,6 +3,7 @@ import { ALPHA_WEAPONS, WEAPON_LABELS } from '../gameplay';
 import type { EnemyType } from '../gameplay';
 import { SKILL_CATALOG, SYNERGY_RULES } from '../skills';
 import { TALENT_CONFIG } from '../talents';
+import { PET_CONFIG, isPetId } from '../pets';
 
 /**
  * Task 08.5 player-facing Russian text (one module for all new 08.5 strings; older screens keep
@@ -293,6 +294,11 @@ const SYNERGY_NAMES = new Map(SYNERGY_RULES.map((r) => [r.id as string, r.name] 
 
 /** `weapon:<id>` / `skill:<id>` / `synergy:<id>` / `status:<effect>` / `debug` → Russian label. */
 export function damageSourceLabel(source: string): string {
+  // Task 20: pet hits / Burn are their own source `pet.<id>`.
+  if (source.startsWith('pet.')) {
+    const pet = source.slice(4);
+    return `Питомец «${isPetId(pet) ? PET_CONFIG[pet].name : pet}»`;
+  }
   const [kind, id = ''] = source.split(':');
   switch (kind) {
     case 'weapon':

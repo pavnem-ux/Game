@@ -35,6 +35,9 @@ import { elementalDamageMultiplier, modifyPlayerEffect } from './modifiers';
 import { composeRunStats, NO_MODIFIERS } from './stats';
 import type { RunStatModifiers } from './stats';
 import { SynergyResolver } from './synergies';
+import { PetRunner } from '../pets/runtime';
+import type { PetDamageType, PetEvent, PetHost, Point2 } from '../pets/runtime';
+import type { PetId } from '../pets/config';
 import type {
   BonusRewardId,
   ChoiceResult,
@@ -91,6 +94,10 @@ export interface SkillHost {
     stunScale: number;
     stunImmunity: number;
   }> | null;
+  /** Task 20 (optional): the run's active pet (validated by the world). */
+  readonly pet?: Readonly<{ id: PetId; level: number }> | null;
+  /** Task 20 (optional): pet actions for run statistics and rendering. */
+  recordPet?(event: PetEvent): void;
 }
 /** Target state captured immediately before a hit; synergies and kill rules read only this. */
 export interface PreHit {
@@ -269,24 +276,40 @@ export class SkillEngine {
     extraTags: readonly CombatTag[],
     onHit?: (targetId: string) => void,
   ): void {
+    this.secondaryProjectile(
+      `talent:${nodeId}`,
+      origin,
+      targetId,
+      spec,
+      'physical',
+      ['talent', 'secondary', 'physical', 'projectile', ...extraTags],
+      onHit,
+    );
+  }
+  /**
+   * Secondary projectile (talent ballista, Task 20 pets): exact pre-resistance `baseDamage`, no
+   * crit, `procs=false`, attributed to `source`. Nothing is launched when the stat is 0.
+   */
+  private secondaryProjectile(
+    source: string,
+    origin: Point,
+    targetId: string,
+    spec: Readonly<{ speed: number; radius: number; range: number; baseDamage: number }>,
+    damageType: DamageType,
+    tags: readonly CombatTag[],
+    onHit?: (targetId: string) => void,
+  ): void {
     const body = this.body(targetId);
-    const phys = this.host.core.getEntity(this.host.playerId).physicalDamage;
-    if (!body || !(phys > 0) || !(spec.baseDamage >= 0)) return;
-    const source = `talent:${nodeId}`;
+    const player = this.host.core.getEntity(this.host.playerId);
+    const stat = damageType === 'physical' ? player.physicalDamage : player.magicalDamage;
+    if (!body || !(stat > 0) || !(spec.baseDamage >= 0)) return;
     const attack = this.host.core.createAttack({
       attackerId: this.host.playerId,
-      damageType: 'physical',
-      coefficient: spec.baseDamage / phys,
+      damageType,
+      coefficient: spec.baseDamage / stat,
       noCritical: true,
     });
     this.tagAttack(attack.id, source);
-    const tags = new Set<CombatTag>([
-      'talent',
-      'secondary',
-      'physical',
-      'projectile',
-      ...extraTags,
-    ]);
     const id = this.host.weapons.launchProjectile({
       sourceId: this.host.playerId,
       weaponId: `${source}#${++this.talentShots}`,
@@ -299,7 +322,7 @@ export class SkillEngine {
     });
     this.projectiles.set(id, {
       key: source,
-      tags,
+      tags: new Set<CombatTag>(tags),
       procs: false,
       hits: 0,
       maxHits: 1,
@@ -418,6 +441,99 @@ export class SkillEngine {
       host.characterClass,
     );
     this.synergies = new SynergyResolver(this);
+    if (host.pet) this.setPet(host.pet);
+  }
+
+  // ───────────────────────────── Task 20 pets ─────────────────────────────
+  /** The run's pet (null = none). Its timed actions are engine boundaries (skill-action slot). */
+  pet: PetRunner | null = null;
+  /**
+   * Creates (or removes, with null) the run's pet at the current clock — run start, or the debug
+   * spawn — and recomposes stats once for its aura.
+   */
+  setPet(spec: Readonly<{ id: PetId; level: number }> | null): void {
+    this.pet = spec ? new PetRunner(spec.id, spec.level, this.petHost) : null;
+    this.refreshStats();
+  }
+  private readonly petHost: PetHost = {
+    now: () => this.clock,
+    playerAlive: () => this.host.core.getEntity(this.host.playerId).alive,
+    playerPosition: () => ({ x: this.player.x, y: this.player.y }),
+    facing: () => this.host.facing(),
+    playerMaxHp: () => this.host.core.getEntity(this.host.playerId).maxHp,
+    playerDamage: () => {
+      const p = this.host.core.getEntity(this.host.playerId);
+      return { physical: p.physicalDamage, magical: p.magicalDamage };
+    },
+    enemiesInCircle: (center: Point2, radius: number) => this.enemiesInCircle(center, radius),
+    enemyPosition: (id: string) => this.enemyPosition(id),
+    petStrike: (source: string, targetId: string, baseDamage: number, type: PetDamageType) =>
+      this.petStrike(source, targetId, baseDamage, type),
+    petProjectile: (source, origin, targetId, spec, type) =>
+      this.secondaryProjectile(source, origin, targetId, spec, this.usableType(type), [
+        'pet',
+        'secondary',
+        this.usableType(type),
+        'projectile',
+      ]),
+    petStatus: (source, targetId, effect, stacks) => {
+      if (!this.host.core.getEntity(targetId).alive) return;
+      // Listed pet effect only: applied as given (no player status modifiers, no procs).
+      for (let i = 0; i < stacks; i++) {
+        const result = this.host.statuses.apply({
+          effectType: effect.effectType,
+          rawDamagePerTick: effect.rawDamagePerTick,
+          duration: effect.duration,
+          probabilityPercent: 100,
+          targetId,
+          sourceId: this.host.playerId,
+          originId: source,
+        });
+        this.host.recordStatus(result.events);
+      }
+    },
+    healPlayer: (amount: number) => {
+      if (!(amount > 0) || !this.host.core.getEntity(this.host.playerId).alive) return 0;
+      const result = this.host.core.heal(this.host.playerId, amount);
+      this.host.forwardCombat(result.events);
+      return result.healed;
+    },
+    grantBarrier: (amount: number, duration: number) => this.grantBarrier(amount, duration),
+    recordPet: (event: PetEvent) => this.host.recordPet?.(event),
+  };
+  /** A damage type with a usable (> 0) stat: the requested one, else the other. */
+  private usableType(type: PetDamageType): PetDamageType {
+    const p = this.host.core.getEntity(this.host.playerId);
+    const stat = type === 'physical' ? p.physicalDamage : p.magicalDamage;
+    return stat > 0 ? type : type === 'physical' ? 'magical' : 'physical';
+  }
+  /** Task 20: instant pet hit — exact base damage, no crit, `procs=false`, source `pet.<id>`. */
+  private petStrike(
+    source: string,
+    targetId: string,
+    baseDamage: number,
+    requested: PetDamageType,
+  ): boolean {
+    const type = this.usableType(requested);
+    const p = this.host.core.getEntity(this.host.playerId);
+    const stat = type === 'physical' ? p.physicalDamage : p.magicalDamage;
+    if (!(stat > 0) || !(baseDamage >= 0) || !this.host.core.getEntity(targetId).alive)
+      return false;
+    let landed = false;
+    this.withSource(source, () => {
+      const attack = this.host.core.createAttack({
+        attackerId: this.host.playerId,
+        damageType: type,
+        coefficient: baseDamage / stat,
+        noCritical: true,
+      });
+      this.tagAttack(attack.id, source);
+      const hit = this.hit(targetId, attack, new Set<CombatTag>(['pet', 'secondary', type]), {
+        procs: false,
+      });
+      landed = hit?.result.status === 'hit';
+    });
+    return landed;
   }
   get time() {
     return this.clock;
@@ -487,6 +603,13 @@ export class SkillEngine {
     };
     for (const [key, value] of Object.entries(this.external))
       m[key as keyof RunStatModifiers] += value;
+    // Task 20: the active pet's aura (hedgehog resistance, wolf attack / movement speed).
+    if (this.pet) {
+      const a = this.pet.modifiers();
+      m.resistance += a.resistance;
+      m.attackSpeed += a.attackSpeed;
+      m.movementSpeedPercent += a.movementSpeedPercent;
+    }
     // Task 09.1: timed talent stat buffs (refresh, don't stack) join the same composition.
     for (const [stat, value] of Object.entries(this.talents.statBuffs()))
       m[stat as keyof RunStatModifiers] += value ?? 0;
@@ -1338,6 +1461,11 @@ export class SkillEngine {
       }
     // Task 09.1: talent entity actions/expirations and talent buff expirations.
     for (const t of this.talents.scheduled()) consider(t.at, t.priority, 3e9 + t.order, t.run);
+    // Task 20: the pet's timed action (fixed time; the target is chosen when it resolves).
+    if (this.pet?.due != null) {
+      const pet = this.pet;
+      consider(pet.due!, 0, 4e9, () => pet.act());
+    }
     if (this.barrierUntil !== null)
       consider(this.barrierUntil, 1, 3, () => {
         this.host.core.setBarrier(this.host.playerId, 0);

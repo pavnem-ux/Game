@@ -1,5 +1,7 @@
 import type { TalentConfig, TalentRanks } from '../talents';
 import type { ItemLevels, Loadout } from '../equipment';
+import type { PetId } from '../pets';
+import type { PetEvent, PetSnapshot } from '../pets/runtime';
 import type { CoinEvent, CoinPile } from './coins';
 import type { RunStatsSnapshot } from './run-stats';
 import type { ExperienceEvent, RunProgression, XpCrystal } from './experience';
@@ -51,6 +53,8 @@ export interface GameplayOptions {
   /** Task 11: this class's equipped gear (validated: known items, right slot and class). */
   /** Task 11 loadout; Task 19 `itemLevels` (forge upgrade levels, absent = all +0). */
   readonly equipment?: Readonly<{ loadout: Loadout; itemLevels?: ItemLevels }>;
+  /** Task 20: the profile's active pet and its level 1–5 (absent / null = no pet). */
+  readonly pet?: Readonly<{ id: PetId; level: number }> | null;
 }
 export interface WorldEvent {
   readonly sequence: number;
@@ -66,7 +70,8 @@ export interface WorldEvent {
     | 'skill'
     | 'campaign'
     | 'chests'
-    | 'movement';
+    | 'movement'
+    | 'pets';
   readonly event:
     | CombatEvent
     | WeaponEvent
@@ -81,7 +86,8 @@ export interface WorldEvent {
     | CampaignEvent
     | CoinEvent
     | ChestEvent
-    | DashEvent;
+    | DashEvent
+    | PetEvent;
 }
 export interface GameplaySnapshot {
   readonly time: number;
@@ -117,7 +123,10 @@ export interface GameplaySnapshot {
   readonly progression: RunProgression;
   readonly crystals: readonly XpCrystal[];
   /** Task 11: coins collected this run and the piles on the ground (campaign runs only). */
-  readonly coins: Readonly<{ collected: number; piles: readonly CoinPile[] }>;
+  /** Task 11: coins; Task 20 `petBonus` = coins added by the kitten (already in `collected`). */
+  readonly coins: Readonly<{ collected: number; piles: readonly CoinPile[]; petBonus?: number }>;
+  /** Task 20: the run's pet for rendering / HUD (null = none). Positions only. */
+  readonly pet?: PetSnapshot | null;
   readonly spawning: Readonly<{
     settings: SpawnSettings;
     nextSpawnAt: number;
