@@ -16,6 +16,16 @@ import { oncePerKeyEvent } from './key-event-once';
 import { OFFHAND_WEAPON } from '../talents';
 import { cardKey } from '../skills';
 import { soundFrame } from '../gameplay-ui/sound';
+import { buildUnitTextures } from './visuals/texture-factory';
+import { DEPTH, UnitRenderer } from './visuals/UnitRenderer';
+import {
+  ART_SCALE,
+  chestTextureKey,
+  enemyTextureKey,
+  playerProjectileKey,
+  playerTextureKey,
+  unitScale,
+} from './visuals/keys';
 
 /** Task 08.5 §5.1: floating-number styles (crit larger and gold, player damage red). */
 const FLOAT_STYLES: Record<FloatingKind, { color: string; size: number }> = {
@@ -34,6 +44,11 @@ export class AlphaScene extends Phaser.Scene {
   private record = loadSave().bestSeconds;
   private error = '';
   private graphics!: Phaser.GameObjects.Graphics;
+  /** Task 18: HP bars, marks and control rings above the unit sprites. */
+  private overlay!: Phaser.GameObjects.Graphics;
+  private units!: UnitRenderer;
+  /** Task 18: last drawn position of each enemy (death puffs); entries are updated in place. */
+  private readonly lastEnemyPos = new Map<string, { x: number; y: number; color: number }>();
   private joystick!: Phaser.GameObjects.Graphics;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   private stick = { active: false, id: -1, x: 0, y: 0, dx: 0, dy: 0 };
@@ -62,6 +77,9 @@ export class AlphaScene extends Phaser.Scene {
   create() {
     createWorld(this);
     this.graphics = this.add.graphics().setDepth(5);
+    buildUnitTextures(this);
+    this.units = new UnitRenderer(this);
+    this.overlay = this.add.graphics().setDepth(DEPTH.overlay);
     this.joystick = this.add.graphics().setDepth(100).setScrollFactor(0);
     this.vignette = this.add.graphics().setDepth(90).setScrollFactor(0);
     this.cameras.main.setBounds(0, 0, ALPHA.arenaSize, ALPHA.arenaSize).centerOn(1800, 1800);
@@ -177,6 +195,7 @@ export class AlphaScene extends Phaser.Scene {
     this.runId++;
     this.lastEvent = 0;
     this.fx = [];
+    this.lastEnemyPos.clear();
     this.error = '';
     this.clearInput();
     this.keys && this.input.keyboard?.resetKeys();
@@ -202,6 +221,7 @@ export class AlphaScene extends Phaser.Scene {
           break;
         case 'menu':
           this.world = null;
+          this.lastEnemyPos.clear();
           this.resetFeel();
           this.clearInput();
           this.labels.forEach((t) => t.setVisible(false));
@@ -306,7 +326,12 @@ export class AlphaScene extends Phaser.Scene {
       this.world.setMovement(dx, dy);
       this.world.update(dt);
       this.draw(this.world.getSnapshot());
-    } else this.graphics?.clear();
+    } else if (this.graphics) {
+      this.graphics.clear();
+      this.overlay.clear();
+      this.units.begin();
+      this.units.end();
+    }
     this.hudTimer -= dt;
     if (this.hudTimer <= 0) {
       this.publish();
@@ -316,6 +341,8 @@ export class AlphaScene extends Phaser.Scene {
   private draw(s: GameplaySnapshot) {
     const g = this.graphics;
     g.clear();
+    const o = this.overlay.clear();
+    this.units.begin();
     this.cameras.main.centerOn(s.playerBody.x, s.playerBody.y);
     const frameEvents = this.world!.getEvents(this.lastEvent);
     // Task 14: sound reads the same events (presentation only; nothing flows back).
@@ -327,6 +354,14 @@ export class AlphaScene extends Phaser.Scene {
         this.fx.push({ event, until: event.time + 0.18, x: e.origin.x, y: e.origin.y });
       if (event.channel === 'skill' && e.type === 'skill-area')
         this.fx.push({ event, until: event.time + 0.25, x: e.center.x, y: e.center.y });
+      // Task 18: death puff where the enemy was last drawn.
+      if (event.channel === 'combat' && e.type === 'death' && e.entityId !== 'player') {
+        const last = this.lastEnemyPos.get(e.entityId);
+        if (last) {
+          this.fx.push({ event, until: event.time + 0.4, x: last.x, y: last.y });
+          this.lastEnemyPos.delete(e.entityId);
+        }
+      }
       if (event.channel === 'skill' && e.type === 'synergy-triggered')
         this.fx.push({
           event,
@@ -401,45 +436,26 @@ export class AlphaScene extends Phaser.Scene {
         g.lineStyle(1, 0xc9c0ff, 0.6).strokeCircle(t.x, t.y, 13);
       }
     }
-    for (const crystal of s.crystals) {
-      const { x, y } = crystal;
-      g.fillStyle(0xb4f1aa, 0.13).fillCircle(x, y, 12);
-      g.fillStyle(0xa7eaa7)
-        .fillTriangle(x, y - 5, x - 4, y, x + 4, y)
-        .fillTriangle(x - 4, y, x + 4, y, x, y + 6);
-      g.lineStyle(1, 0xe4ffe1, 0.7).lineBetween(x, y - 4, x - 2, y);
-    }
-    // Task 11: Gold coin piles (original simple shapes; bigger piles drawn slightly larger).
+    // Task 18: pickups and chests are pooled sprites (textures baked once).
+    for (const crystal of s.crystals)
+      this.units.item(
+        'crystal',
+        crystal.x,
+        crystal.y,
+        0.85 / ART_SCALE,
+        1,
+        1.5 + Math.sin(s.time * 3 + crystal.x * 0.05) * 1.5,
+      );
+    // Task 11: Gold coin piles (bigger piles drawn slightly larger).
     for (const pile of s.coins.piles) {
       const r = Math.min(9, 4 + Math.log2(pile.value + 1));
-      g.fillStyle(0xf0c862, 0.18).fillCircle(pile.x, pile.y, r + 6);
-      g.fillStyle(0xf0c862).fillCircle(pile.x, pile.y, r);
-      g.lineStyle(1, 0xfff1c4, 0.8).strokeCircle(pile.x, pile.y, r);
+      this.units.item('coin', pile.x, pile.y, r / 6 / ART_SCALE);
     }
     // Task 12: chests (original shapes): wooden — brown box with an iron band; enchanted — violet
     // box with a glowing rune. Blinking (alpha flicker) in the last 5 s of their life.
     for (const chest of s.chests?.items ?? []) {
       const alpha = chest.blinking ? (Math.floor(s.time * 6) % 2 === 0 ? 0.35 : 1) : 1;
-      const { x, y } = chest;
-      const enchanted = chest.type === 'enchanted';
-      g.fillStyle(enchanted ? 0xb68cff : 0xf0c862, 0.16 * alpha).fillCircle(x, y, 26);
-      g.fillStyle(0x060c0c, 0.35 * alpha).fillEllipse(x, y + 12, 34, 9);
-      g.fillStyle(enchanted ? 0x4b2f86 : 0x7a4b25, alpha).fillRoundedRect(
-        x - 15,
-        y - 11,
-        30,
-        22,
-        4,
-      );
-      g.fillStyle(enchanted ? 0x6a46b8 : 0x9a6232, alpha).fillRoundedRect(x - 15, y - 13, 30, 9, 4);
-      g.fillStyle(enchanted ? 0xd8c4ff : 0x3a3d40, alpha)
-        .fillRect(x - 15, y - 5, 30, 3)
-        .fillRect(x - 3, y - 6, 6, 8);
-      if (enchanted)
-        g.lineStyle(1, 0xf1e6ff, 0.8 * alpha)
-          .strokeCircle(x, y + 4, 4)
-          .lineBetween(x - 9, y + 6, x - 5, y + 2)
-          .lineBetween(x + 5, y + 2, x + 9, y + 6);
+      this.units.item(chestTextureKey(chest.type), chest.x, chest.y, 1 / ART_SCALE, alpha);
     }
     // Task 12: bombard telegraphs — a red ground circle that fills up until the strike lands.
     for (const strike of s.artilleryStrikes) {
@@ -468,80 +484,41 @@ export class AlphaScene extends Phaser.Scene {
         for (const elite of elites) if (elite.enemyId === enemy.entityId) eliteName = elite.name;
       const f = eliteName ? enemy.config.radius / (ranged ? 15 : 14) : 1;
       const hpWidth = isBoss ? 120 : eliteName ? 64 : 34;
-      const barY = y - 25 * f;
+      const role = isBoss ? 'boss' : eliteName ? 'elite' : 'normal';
+      const special = kind !== 'melee' && kind !== 'ranged';
+      const k = special && !eliteName ? enemy.config.radius / 14 : f;
+      const barY = y - 25 * (isBoss ? enemy.config.radius / 17 : k);
+      // Task 18: the unit is a pooled sprite (shadow, rim glow/aura, body, hit flash).
       if (eliteName)
-        g.lineStyle(isBoss ? 4 : 3, isBoss ? 0xff3b5c : ranged ? 0xb68cff : 0xff8a3d, 0.85)
-          .strokeCircle(x, y, enemy.config.radius + 7)
-          .lineStyle(1, 0xfff0c4, 0.5)
-          .strokeCircle(x, y, enemy.config.radius + 11);
-      // Task 12: the new normal kinds have their own shapes (elites/bosses keep theirs).
-      const special = eliteName ? null : kind === 'melee' || kind === 'ranged' ? null : kind;
-      const k = special ? enemy.config.radius / 14 : f;
-      g.fillStyle(0x060c0c, 0.4).fillEllipse(x, y + 15 * k, 34 * k, 12 * k);
-      const shape = () => {
-        if (special === 'swift')
-          g.fillTriangle(x, y - 17 * k, x - 12 * k, y + 13 * k, x + 12 * k, y + 13 * k)
-            .fillTriangle(x - 12 * k, y - 4 * k, x - 4 * k, y - 15 * k, x - 3 * k, y - 4 * k)
-            .fillTriangle(x + 12 * k, y - 4 * k, x + 4 * k, y - 15 * k, x + 3 * k, y - 4 * k);
-        else if (special === 'brute')
-          g.fillRoundedRect(x - 16 * k, y - 15 * k, 32 * k, 30 * k, 9 * k);
-        else if (special === 'bombard')
-          g.fillTriangle(x, y - 19 * k, x - 15 * k, y + 15 * k, x + 15 * k, y + 15 * k).fillRect(
-            x - 15 * k,
-            y + 6 * k,
-            30 * k,
-            9 * k,
-          );
-        else if (ranged)
-          g.fillTriangle(x, y - 18 * f, x - 17 * f, y + 14 * f, x + 17 * f, y + 14 * f);
-        else g.fillEllipse(x, y, 30 * f, 33 * f);
-      };
-      g.fillStyle(
-        isBoss
-          ? 0x8e1f3a
-          : eliteName
-            ? ranged
-              ? 0x7d4fc0
-              : 0xb5532b
-            : special === 'swift'
-              ? 0xc94f3d
-              : special === 'brute'
-                ? 0x7f7a6c
-                : special === 'bombard'
-                  ? 0x3f5fa8
-                  : ranged
-                    ? 0xb2739b
-                    : 0x87996e,
-      );
-      shape();
-      if (special === 'brute')
-        g.lineStyle(2, 0x4d493f, 0.9)
-          .lineBetween(x - 10 * k, y + 8 * k, x - 2 * k, y + 2 * k)
-          .lineBetween(x + 4 * k, y + 10 * k, x + 11 * k, y + 3 * k);
-      if (special === 'bombard')
-        g.fillStyle(0xff7a4d, 0.95)
-          .fillCircle(x, y - 22 * k, 4 * k)
-          .fillStyle(0xffd2a8, 0.5)
-          .fillCircle(x, y - 22 * k, 7 * k);
-      g.fillStyle(0x18231f).fillEllipse(x, y - 3 * k, 18 * k, 11 * k);
-      g.fillStyle(
-        special === 'swift'
-          ? 0xfff07a
-          : special === 'bombard'
-            ? 0x9fd8ff
-            : ranged
-              ? 0xffbebf
-              : 0xe9d497,
-      )
-        .fillRect(x - 6 * k, y - 6 * k, 4 * k, 3 * k)
-        .fillRect(x + 3 * k, y - 6 * k, 4 * k, 3 * k);
+        g.lineStyle(
+          isBoss ? 3 : 2,
+          isBoss ? 0xff3b5c : ranged ? 0xb68cff : 0xff8a3d,
+          0.55,
+        ).strokeCircle(x, y, enemy.config.radius + 7);
       const flash = this.flashes.strength(enemy.entityId, s.time);
-      if (flash > 0) {
-        g.fillStyle(0xffffff, 0.6 * flash);
-        shape();
-      }
-      g.fillStyle(0x19201b).fillRect(x - hpWidth / 2, barY, hpWidth, eliteName ? 5 : 3);
-      g.fillStyle(isBoss ? 0xff4d6d : eliteName ? 0xffb347 : ranged ? 0xe09ac1 : 0xc8d79c).fillRect(
+      const glowColor = isBoss ? 0xff3b5c : eliteName ? (ranged ? 0xb68cff : 0xff8a3d) : undefined;
+      this.units.unit(
+        enemy.entityId,
+        enemyTextureKey(kind, role, ranged),
+        x,
+        y,
+        role === 'normal' ? k / ART_SCALE : unitScale(role, enemy.config.radius, ranged),
+        s.time,
+        flash,
+        {
+          shadowWidth: 34 * (isBoss ? enemy.config.radius / 17 : k),
+          ...(glowColor !== undefined ? { glow: glowColor, glowScale: isBoss ? 1.6 : 1.1 } : {}),
+        },
+      );
+      const last = this.lastEnemyPos.get(enemy.entityId);
+      const tone = glowColor ?? (ranged ? 0xb2739b : 0x87996e);
+      if (last) {
+        last.x = x;
+        last.y = y;
+        last.color = tone;
+      } else this.lastEnemyPos.set(enemy.entityId, { x, y, color: tone });
+      o.fillStyle(0x19201b).fillRect(x - hpWidth / 2, barY, hpWidth, eliteName ? 5 : 3);
+      o.fillStyle(isBoss ? 0xff4d6d : eliteName ? 0xffb347 : ranged ? 0xe09ac1 : 0xc8d79c).fillRect(
         x - hpWidth / 2,
         barY,
         (hpWidth * enemy.entity.currentHp) / enemy.entity.maxHp,
@@ -556,7 +533,7 @@ export class AlphaScene extends Phaser.Scene {
           .setVisible(true);
       const mark = s.skillCombat.marks.find((m) => m.targetId === enemy.entityId);
       if (mark)
-        g.lineStyle(2, mark.kind === 'hunter' ? 0xffd27a : 0xd690ff, 0.9)
+        o.lineStyle(2, mark.kind === 'hunter' ? 0xffd27a : 0xd690ff, 0.9)
           .strokeCircle(x, y, 22)
           .lineBetween(x - 26, y, x - 18, y)
           .lineBetween(x + 18, y, x + 26, y);
@@ -575,7 +552,7 @@ export class AlphaScene extends Phaser.Scene {
           .setPosition(x, y + stun.offsetY)
           .setData('entityId', enemy.entityId)
           .setVisible(true);
-        g.lineStyle(2, 0xffe88e, 0.95).lineBetween(x - 7, y - 39, x + 7, y - 39);
+        o.lineStyle(2, 0xffe88e, 0.95).lineBetween(x - 7, y - 39, x + 7, y - 39);
       } else if (enemy.control && enemy.control.movementMultiplier < 1)
         g.lineStyle(2, 0x9fdcff, 0.7).strokeEllipse(x, y + 14, 34, 10);
       const effects = s.statuses.filter((v) => v.targetId === enemy.entityId);
@@ -643,13 +620,12 @@ export class AlphaScene extends Phaser.Scene {
           const t = i / 4;
           const gx = dash.from.x + (x - dash.from.x) * t,
             gy = dash.from.y + (y - dash.from.y) * t;
-          g.fillStyle(color, 0.12 + 0.12 * t * fade).fillTriangle(
+          this.units.item(
+            playerTextureKey(s.character.characterClass),
             gx,
-            gy - 12,
-            gx - 15,
-            gy + 17,
-            gx + 15,
-            gy + 17,
+            gy,
+            1 / ART_SCALE,
+            0.12 + 0.2 * t * fade,
           );
         }
       }
@@ -662,33 +638,18 @@ export class AlphaScene extends Phaser.Scene {
         .arc(x, y, 34, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.max(0, done))
         .strokePath();
     }
-    g.fillStyle(0x030d0c, 0.45).fillEllipse(x, y + 17, 38, 13);
-    g.fillStyle(color, s.player.alive ? 1 : 0.4).fillTriangle(
+    // Task 18: the player is a pooled sprite (class silhouette baked once); hit flash on damage.
+    const hitAge = s.time - this.playerHitAt;
+    this.units.unit(
+      'player',
+      playerTextureKey(s.character.characterClass),
       x,
-      y - 12,
-      x - 15,
-      y + 17,
-      x + 15,
-      y + 17,
+      y,
+      1 / ART_SCALE,
+      s.time,
+      hitAge >= 0 && hitAge < 0.15 ? 1 - hitAge / 0.15 : 0,
+      { alpha: s.player.alive ? 1 : 0.4, shadowWidth: 38 },
     );
-    g.fillStyle(0x203b38).fillCircle(x, y - 7, 10);
-    g.fillStyle(0xe6ffe3)
-      .fillRect(x - 6, y - 9, 4, 3)
-      .fillRect(x + 3, y - 9, 4, 3);
-    const weapon = s.character.characterClass;
-    g.lineStyle(3, color);
-    if (weapon === 'warrior')
-      g.lineBetween(x + 15, y + 8, x + 28, y - 19).lineBetween(x + 12, y, x + 24, y + 5);
-    if (weapon === 'mage') {
-      g.lineBetween(x + 19, y + 12, x + 19, y - 25);
-      g.fillStyle(color).fillCircle(x + 19, y - 27, 6);
-    }
-    if (weapon === 'archer')
-      g.beginPath()
-        .arc(x + 16, y, 20, -1.3, 1.3)
-        .strokePath();
-    if (weapon === 'rogue')
-      g.lineBetween(x - 17, y + 7, x - 24, y - 6).lineBetween(x + 17, y + 7, x + 24, y - 6);
     if (s.survival.directProtected)
       g.lineStyle(
         s.survival.fullyProtected ? 3 : 1,
@@ -697,24 +658,28 @@ export class AlphaScene extends Phaser.Scene {
       ).strokeCircle(x, y, 26);
     if (s.skillCombat.barrier > 0) g.lineStyle(2, 0xbfe4ff, 0.75).strokeCircle(x, y, 30);
     for (const p of s.playerProjectiles) {
-      const pc = p.weaponId.startsWith('skill:') ? skillColor(p.weaponId.slice(6)) : color;
-      g.lineStyle(weapon === 'archer' ? 3 : 5, pc, 0.4).lineBetween(
+      const skill = p.weaponId.startsWith('skill:');
+      const key = playerProjectileKey(p.weaponId, s.character.characterClass);
+      this.units.projectile(
+        key,
         p.x,
         p.y,
-        p.x - p.direction.x * 18,
-        p.y - p.direction.y * 18,
+        p.direction.x,
+        p.direction.y,
+        Math.max(0.8, p.radius / 5) / ART_SCALE,
+        key === 'proj-arrow' ? null : skill ? skillColor(p.weaponId.slice(6)) : color,
       );
-      g.fillStyle(pc).fillCircle(p.x, p.y, p.radius);
     }
-    for (const p of s.enemyProjectiles) {
-      g.lineStyle(3, 0xf3968c, 0.3).lineBetween(
+    for (const p of s.enemyProjectiles)
+      this.units.projectile(
+        'proj-enemy',
         p.x,
         p.y,
-        p.x - p.direction.x * 15,
-        p.y - p.direction.y * 15,
+        p.direction.x,
+        p.direction.y,
+        Math.max(0.8, p.radius / 5) / ART_SCALE,
+        null,
       );
-      g.fillStyle(0xffa391).fillCircle(p.x, p.y, p.radius);
-    }
     for (const f of this.fx) {
       const e = f.event.event;
       if (e.type === 'attack-started' && !e.projectileId) {
@@ -756,6 +721,21 @@ export class AlphaScene extends Phaser.Scene {
           if (e.shape === 'ring' && e.innerRadius) g.strokeCircle(f.x, f.y, e.innerRadius);
         }
       }
+      if (e.type === 'death') {
+        // Task 18: death puff — an expanding ring and a few motes, fading in 0.4 s.
+        const life = Math.max(0, (f.until - s.time) / 0.4);
+        const grow = 1 - life;
+        g.lineStyle(2, 0xdfe8d0, 0.55 * life).strokeCircle(f.x, f.y, 8 + grow * 22);
+        g.fillStyle(0xcfd8c0, 0.5 * life);
+        for (let i = 0; i < 6; i++) {
+          const a = (i * Math.PI) / 3 + f.x * 0.01;
+          g.fillCircle(
+            f.x + Math.cos(a) * (6 + grow * 20),
+            f.y + Math.sin(a) * (6 + grow * 20) - grow * 8,
+            2.2 * life + 0.4,
+          );
+        }
+      }
       if (e.type === 'synergy-triggered') {
         // Task 15: per-synergy flash; an awakened trigger draws a larger gold double ring.
         const life = Math.max(0, (f.until - s.time) / 0.8);
@@ -775,6 +755,7 @@ export class AlphaScene extends Phaser.Scene {
           .setColor(f.event.channel === 'skill' ? '#bfe9ff' : '#ffe4ba')
           .setVisible(true);
     }
+    this.units.end();
     this.labels.slice(label).forEach((t) => t.setVisible(false));
     this.damageLabels.slice(damageLabel).forEach((t) => t.setVisible(false));
     this.drawFeel(s);
