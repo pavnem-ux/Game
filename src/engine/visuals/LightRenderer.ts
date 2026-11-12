@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { MAX_LIGHTS, QUALITY_PRESETS } from './quality';
 import type { GraphicsQuality } from './quality';
 import { TintCache } from './tint-cache';
+import { pinToScreen, screenToZoomed } from '../screen-space';
 
 /** Task 18 light layer depth: above units/projectiles (7) and the HP overlay (8), below labels. */
 export const LIGHT_DEPTH = 9.5;
@@ -108,18 +109,24 @@ export class LightRenderer {
       const tw = Math.max(8, Math.ceil(w * this.scale)),
         th = Math.max(8, Math.ceil(h * this.scale));
       if (this.rt.width !== tw || this.rt.height !== th) this.rt.setSize(tw, th);
-      this.rt.setDisplaySize(w, h).setVisible(darkness > 0);
+      // Task 16: canvas pixels under a DPR-zoomed camera (texture pixel = 1 / resolution px).
+      pinToScreen(this.rt, cam, 1 / this.scale);
+      this.rt.setVisible(darkness > 0);
       this.rt.clear();
       if (darkness > 0) this.rt.fill(color, Math.min(0.95, darkness));
       this.add(player.x, player.y, player.radius, 1);
     } else if (this.vignette) {
-      const sx = player.x - cam.worldView.x,
-        sy = player.y - cam.worldView.y;
+      const z = cam.zoom;
+      const at = screenToZoomed(
+        cam,
+        (player.x - cam.worldView.x) * z,
+        (player.y - cam.worldView.y) * z,
+      );
       // The transparent core matches the player light radius; the edge covers the whole screen.
-      const scale = (player.radius / (VIGNETTE_SIZE * 0.18)) * 1.15;
+      const scale = ((player.radius * z) / (VIGNETTE_SIZE * 0.18)) * 1.15;
       this.vignette
-        .setPosition(sx, sy)
-        .setScale(Math.max(scale, (Math.hypot(w, h) * 2.2) / VIGNETTE_SIZE))
+        .setPosition(at.x, at.y)
+        .setScale(Math.max(scale, (Math.hypot(w, h) * 2.2) / VIGNETTE_SIZE) / z)
         .setTexture(this.tints.get(VIGNETTE_TEX, color === WARM_DARK ? 0xffffff : 0xffb0b0))
         .setAlpha(Math.min(0.92, darkness * 1.25))
         .setVisible(darkness > 0);
@@ -129,9 +136,10 @@ export class LightRenderer {
   add(x: number, y: number, radius: number, strength: number): void {
     if (!this.rt || this.count >= this.maxLights || strength <= 0) return;
     const cam = this.cam;
-    const sx = (x - cam.worldView.x) * this.scale,
-      sy = (y - cam.worldView.y) * this.scale;
-    const r = radius * this.scale;
+    const k = cam.zoom * this.scale; // world unit → light-map pixel
+    const sx = (x - cam.worldView.x) * k,
+      sy = (y - cam.worldView.y) * k;
+    const r = radius * k;
     if (sx < -r || sy < -r || sx > this.rt.width + r || sy > this.rt.height + r) return;
     this.count++;
     this.rt.stamp(LIGHT_TEX, undefined, sx, sy, {

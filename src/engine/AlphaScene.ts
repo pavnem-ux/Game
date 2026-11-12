@@ -17,6 +17,7 @@ import { cardKey } from '../skills';
 import { soundFrame } from '../gameplay-ui/sound';
 import { hapticFrame } from '../gameplay-ui/touch';
 import { JOYSTICK, inJoystickZone, keyboardVector, movementInput } from './touch-input';
+import { pinToScreen } from './screen-space';
 import { buildUnitTextures } from './visuals/texture-factory';
 import { BiomeRenderer } from './visuals/BiomeRenderer';
 import { BOSS_DARK, LightRenderer, WARM_DARK } from './visuals/LightRenderer';
@@ -136,10 +137,11 @@ export class AlphaScene extends Phaser.Scene {
       )
         Object.assign(this.stick, { active: true, id: p.id, x: p.x, y: p.y, dx: 0, dy: 0 });
     });
+    // Origin in canvas pixels; the offset in CSS px (the joystick's 60 px are CSS px at any DPR).
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
       if (this.stick.active && p.id === this.stick.id) {
-        this.stick.dx = p.x - this.stick.x;
-        this.stick.dy = p.y - this.stick.y;
+        this.stick.dx = (p.x - this.stick.x) / this.dpr;
+        this.stick.dy = (p.y - this.stick.y) / this.dpr;
       }
     });
     // Multi-touch: only the joystick's own finger releases it (a dash tap must not stop movement).
@@ -210,7 +212,7 @@ export class AlphaScene extends Phaser.Scene {
   private start(options: GameplayOptions) {
     const input = {
       ...options,
-      viewport: { width: this.scale.width, height: this.scale.height },
+      viewport: this.cssViewport(),
     };
     const next =
       (import.meta.env.DEV || __QA_BUILD__) && this.testingWorld
@@ -426,7 +428,18 @@ export class AlphaScene extends Phaser.Scene {
     this.lighting.setQuality(q);
     this.biome.build(this.mapId, q);
   }
+  /** Task 16: canvas pixels per CSS pixel (set by AlphaCanvas; capped by quality). */
+  private get dpr(): number {
+    const v = this.registry.get('dpr');
+    return typeof v === 'number' && v >= 1 ? v : 1;
+  }
+  /** Viewport in CSS pixels: what the world uses for spawning/culling (unchanged by DPR). */
+  private cssViewport() {
+    return { width: this.scale.width / this.dpr, height: this.scale.height / this.dpr };
+  }
   update(time: number, delta: number) {
+    // Task 16: the main camera shows the same world area at any DPR (zoom = DPR).
+    if (this.cameras.main.zoom !== this.dpr) this.cameras.main.setZoom(this.dpr);
     const dt = frameStep(delta, import.meta.env.DEV || __QA_BUILD__ ? this.timeScale : 1);
     this.biome.update(this.cameras.main.worldView, time / 1000, Math.min(0.05, delta / 1000));
     if (this.world) {
@@ -442,7 +455,9 @@ export class AlphaScene extends Phaser.Scene {
             k.W.isDown || k.UP.isDown,
           );
       const move = movementInput(keys, this.stick);
-      this.world.setViewport(this.scale.width, this.scale.height);
+      // The simulation sees the CSS-pixel viewport, as before (DPR never changes spawning).
+      const viewport = this.cssViewport();
+      this.world.setViewport(viewport.width, viewport.height);
       this.world.setMovement(move.x, move.y);
       this.world.update(dt);
       this.draw(this.world.getSnapshot());
@@ -889,21 +904,24 @@ export class AlphaScene extends Phaser.Scene {
     this.damageLabels.slice(damageLabel).forEach((t) => t.setVisible(false));
     this.drawFeel(s);
     this.joystick.clear();
+    pinToScreen(this.joystick, this.cameras.main);
     if (this.stick.active) {
-      // Task 16: the ring is the full-speed radius; the inner circle marks the dead zone.
+      // Task 16: drawn in canvas pixels; the ring is the full-speed radius, the inner circle the
+      // dead zone (both CSS px × DPR).
+      const k = this.dpr;
       const d = Math.hypot(this.stick.dx, this.stick.dy),
-        r = Math.min(JOYSTICK.radius, d),
+        r = Math.min(JOYSTICK.radius, d) * k,
         a = Math.atan2(this.stick.dy, this.stick.dx);
       this.joystick
         .fillStyle(0x0b1222, 0.25)
-        .fillCircle(this.stick.x, this.stick.y, JOYSTICK.radius)
-        .lineStyle(2, 0xc6edce, 0.45)
-        .strokeCircle(this.stick.x, this.stick.y, JOYSTICK.radius)
-        .lineStyle(1, 0xc6edce, 0.25)
-        .strokeCircle(this.stick.x, this.stick.y, JOYSTICK.radius * JOYSTICK.deadZone);
+        .fillCircle(this.stick.x, this.stick.y, JOYSTICK.radius * k)
+        .lineStyle(2 * k, 0xc6edce, 0.45)
+        .strokeCircle(this.stick.x, this.stick.y, JOYSTICK.radius * k)
+        .lineStyle(k, 0xc6edce, 0.25)
+        .strokeCircle(this.stick.x, this.stick.y, JOYSTICK.radius * JOYSTICK.deadZone * k);
       this.joystick
         .fillStyle(0xc6edce, 0.5)
-        .fillCircle(this.stick.x + Math.cos(a) * r, this.stick.y + Math.sin(a) * r, 22);
+        .fillCircle(this.stick.x + Math.cos(a) * r, this.stick.y + Math.sin(a) * r, 22 * k);
     }
   }
   /** Task 08.5 §5: floating numbers (pooled, capped) and the player-hit vignette. */
@@ -934,17 +952,19 @@ export class AlphaScene extends Phaser.Scene {
         .setVisible(true);
     });
     const v = this.vignette.clear();
+    pinToScreen(v, this.cameras.main);
     const hitAge = s.time - this.playerHitAt;
     if (hitAge >= 0 && hitAge < PLAYER_HIT_VIGNETTE) {
       const strength = 1 - hitAge / PLAYER_HIT_VIGNETTE;
       const w = this.scale.width,
-        h = this.scale.height;
+        h = this.scale.height,
+        k = this.dpr; // canvas pixels per CSS pixel
       for (let i = 0; i < 6; i++)
-        v.lineStyle(14, 0xd8323c, 0.32 * strength * (1 - i / 6)).strokeRect(
-          7 + i * 14,
-          7 + i * 14,
-          w - 14 - i * 28,
-          h - 14 - i * 28,
+        v.lineStyle(14 * k, 0xd8323c, 0.32 * strength * (1 - i / 6)).strokeRect(
+          (7 + i * 14) * k,
+          (7 + i * 14) * k,
+          w - (14 + i * 28) * k,
+          h - (14 + i * 28) * k,
         );
     }
   }

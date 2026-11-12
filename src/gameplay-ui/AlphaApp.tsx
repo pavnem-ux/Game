@@ -19,6 +19,7 @@ import { displayHp } from './format';
 import { installSound } from './sound';
 import { SynergyBanners } from './SynergyBanners';
 import { TouchControls } from './TouchControls';
+import { FullscreenButton, OrientationNotice, useBlockGestures } from './DeviceChrome';
 import './alpha.css';
 const DeveloperPanel =
   import.meta.env.DEV || __QA_BUILD__ ? lazy(() => import('./DeveloperPanel')) : null;
@@ -40,6 +41,7 @@ export function AlphaApp() {
   const state = useSyncExternalStore(alphaBridge.subscribe, alphaBridge.getSnapshot);
   const [debugOpen, setDebugOpen] = useState(false);
   useEffect(installSound, []);
+  useBlockGestures(state.screen !== 'menu');
   const [skillsOpen, setSkillsOpen] = useState(false);
   const skillsOpener = useRef<HTMLElement | null>(null);
   const openSkills = useCallback(() => {
@@ -65,7 +67,7 @@ export function AlphaApp() {
   const s = state.world;
   const hp = s ? displayHp(s.player.currentHp, s.player.maxHp) : null;
   return (
-    <div className="app-shell alpha-shell">
+    <div className={`app-shell alpha-shell${state.screen === 'menu' ? '' : ' in-run'}`}>
       <header className="topbar">
         <div className="brand">
           <span className="brand-mark">✳</span>
@@ -78,7 +80,13 @@ export function AlphaApp() {
           {__QA_BUILD__ ? 'QA PREVIEW' : 'COMBAT ALPHA'} <span>08 CAMPAIGN</span>
         </span>
       </header>
-      <main className={`arena alpha-arena screen-${state.screen}`}>
+      <main
+        className={`arena alpha-arena screen-${state.screen}`}
+        // Task 16: no long-press menu over the arena during play.
+        onContextMenu={(e) => {
+          if (state.screen !== 'menu') e.preventDefault();
+        }}
+      >
         <AlphaCanvas />
         <div className="vignette" />
         {state.screen === 'menu' && <CampaignMenu />}
@@ -143,6 +151,7 @@ export function AlphaApp() {
                   <span>ПОВЕРЖЕНО</span>
                   <strong>{s.kills.toString().padStart(3, '0')}</strong>
                 </div>
+                <FullscreenButton />
                 <button
                   className="icon-button"
                   aria-label="Пауза"
@@ -272,6 +281,7 @@ export function AlphaApp() {
             </div>
           </section>
         )}
+        <OrientationNotice inRun={state.screen !== 'menu'} playing={state.screen === 'playing'} />
         {state.error && (
           <div className="alpha-error" role="alert">
             {state.error}

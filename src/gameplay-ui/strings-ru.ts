@@ -60,6 +60,12 @@ export const RU = Object.freeze({
     graphicsHint:
       'Свет, частицы, густота декора и свечение. «Низкое» — быстрее на слабых устройствах; на игру не влияет.',
   }),
+  device: Object.freeze({
+    rotate: 'Поверните устройство',
+    rotateHint: 'Играть удобнее в горизонтальном положении. Забег на паузе.',
+    fullscreen: 'На весь экран',
+    exitFullscreen: 'Выйти из полноэкранного режима',
+  }),
   touch: Object.freeze({
     dash: 'Рывок',
     dashReady: 'Рывок готов',
