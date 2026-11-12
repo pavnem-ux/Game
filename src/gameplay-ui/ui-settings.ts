@@ -16,6 +16,10 @@ export interface UiSettings {
   readonly muted: boolean;
   /** Task 18 «Качество графики»: light resolution, particles, decor density, glow. */
   readonly graphicsQuality: GraphicsQuality;
+  /** Task 16 «Левша»: mirror the touch joystick and dash button sides. */
+  readonly leftHanded: boolean;
+  /** Task 16 «Вибрация»: light haptic on dash / level-up where supported. */
+  readonly haptics: boolean;
 }
 /** Touch-first devices (coarse pointer) default to Среднее; desktops to Высокое. */
 function touchDevice(): boolean {
@@ -32,6 +36,8 @@ export const DEFAULT_UI_SETTINGS: UiSettings = Object.freeze({
   musicVolume: 50,
   muted: false,
   graphicsQuality: defaultQuality(touchDevice()),
+  leftHanded: false,
+  haptics: true,
 });
 const volume = (v: unknown, fallback: number) =>
   typeof v === 'number' && Number.isFinite(v)
@@ -63,6 +69,8 @@ export function parseUiSettings(raw: string | null): UiSettings {
       graphicsQuality: isGraphicsQuality(s.graphicsQuality)
         ? s.graphicsQuality
         : DEFAULT_UI_SETTINGS.graphicsQuality,
+      leftHanded: typeof s.leftHanded === 'boolean' ? s.leftHanded : DEFAULT_UI_SETTINGS.leftHanded,
+      haptics: typeof s.haptics === 'boolean' ? s.haptics : DEFAULT_UI_SETTINGS.haptics,
     });
   } catch {
     return DEFAULT_UI_SETTINGS;

@@ -18,6 +18,7 @@ import { CampaignHud } from './CampaignHud';
 import { displayHp } from './format';
 import { installSound } from './sound';
 import { SynergyBanners } from './SynergyBanners';
+import { TouchControls } from './TouchControls';
 import './alpha.css';
 const DeveloperPanel =
   import.meta.env.DEV || __QA_BUILD__ ? lazy(() => import('./DeveloperPanel')) : null;
@@ -153,6 +154,7 @@ export function AlphaApp() {
               </div>
             </div>
             <CampaignHud world={s} />
+            <TouchControls world={s} active={state.screen === 'playing'} />
             <SynergyBanners
               events={state.events}
               runId={state.runId}
