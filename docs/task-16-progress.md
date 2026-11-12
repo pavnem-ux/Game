@@ -4,7 +4,7 @@ Spec: [task-16-mobile-browsers.md](task-16-mobile-browsers.md) (owner's file; Pr
 blank lines). Branch `task-16-mobile` from `main` at `6d89106` (Tasks 14, 15 and 18 merged: the
 «Качество графики» setting from Task 18 is reused and extended here). Gameplay balance unchanged.
 
-Current: Phase 3 (browsers & performance)
+Current: Phase 4 (delivery)
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/16
 
@@ -17,9 +17,9 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/16
 - [x] 2.1 Canvas / DPR, safe areas, orientation notice, gesture blocking, fullscreen
 - [x] 2.2 Responsive menus and HUD
 - [x] Phase 2 e2e (mobile emulation with touch)
-- [ ] 3.1 Browser compatibility fixes
-- [ ] 3.2 Quality setting extension + FPS in the debug overlay
-- [ ] Phase 3 FPS table
+- [x] 3.1 Browser compatibility fixes
+- [x] 3.2 Quality setting extension + FPS in the debug overlay
+- [x] Phase 3 FPS table
 - [ ] 4.1 Full checks (AGENTS.md §6 + e2e, `test:production`)
 - [ ] 4.2 Docs (`MOBILE.md`, README, `playtest.md`)
 - [ ] 4.3 PR description
@@ -66,6 +66,36 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/16
   dash, card pick by tap, results, every menu screen without horizontal scroll, tap targets ≥ 44
   px. Alpha e2e: portrait shows the rotate notice and pauses; landscape joystick.
 
+- Browsers (3.1): audio unlock also on `touchend` (iOS), `engine.setHidden()` suspends/resumes
+  the AudioContext on `visibilitychange` (and resumes from iOS `interrupted`); Phaser already pauses
+  its loop and rendering on a hidden tab, the scene pauses the run. Equipment hover uses pointer
+  events (mouse only). `-webkit-backdrop-filter` next to every `backdrop-filter`; plain fallbacks
+  before every `color-mix()`; `100vh` before `100dvh`. Vite `build.target`: es2020, chrome111,
+  edge111, firefox114, safari16.4, ios16.4. Private mode / unavailable storage: existing Task 08 save
+  warning.
+- Quality (3.2): `QUALITY_PRESETS` gains `dprCap` (2 / 1.5 / 1) and `damageNumbers` (40 / 24 / 12);
+  `FloatingNumbers.setLimit()` (pool unchanged, no allocation); `applyQuality()` applies both. FPS
+  is in the debug overlay (Task 08.5). Touch devices default to Среднее (Task 18).
+- Tests: `tests/engine/mobile-quality.test.ts` (caps, setLimit, DPR helpers, simulation identical
+  at every quality level).
+
+## FPS — Phase 3 (side by side with `main`, same session)
+
+`tests/visual-fps.mjs`, phone 844×390 landscape, CPU ×4, 8 s, two rounds averaged, `main` served
+from a worktree at the same time. The machine was much more loaded than at Phase 0 (`main` itself
+fell from ~30 to ~15 FPS), so only the side-by-side comparison is meaningful; absolute numbers say
+nothing about a real phone.
+
+| Quality                            | `main` map 40 (80) | branch map 40 (80) | `main` sandbox (≈114) | branch sandbox (≈114) |
+| ---------------------------------- | ------------------ | ------------------ | --------------------- | --------------------- |
+| Низкое (DPR 1)                     | 16.5               | 16.2               | 14.6                  | 16.3                  |
+| Среднее (DPR ≤ 1.5, touch default) | 15.8               | 18.3               | 14.9                  | 16.5                  |
+| Высокое (DPR ≤ 2)                  | 14.1               | 10.8               | 13.8                  | 11.9                  |
+
+Низкое/Среднее: equal or better than before while the arena now fills the screen. Высокое is
+slower because it renders at DPR 2 (4× pixels, sharper). The ≥ 50 FPS mid-range-phone target cannot
+be verified here (headless Chromium, no GPU, shared CPU) — it needs a real device (playtest).
+
 ## Baseline (before)
 
 Screenshots: `docs/mobile/before-*.jpg`. Observations: on a landscape phone the page header, footer
@@ -82,6 +112,8 @@ FPS (dev server, headless Chromium without GPU, CPU ×4, 8 s; compare relatively
 | phone 844×390 landscape | sandbox (≈112)      | 23.0 | 24.9   | 30.1 |
 
 ## Decisions
+
+- Phones are measured in landscape: portrait shows the rotate notice and pauses the run.
 
 - Desktop is unchanged except the dash button and coarse-pointer target sizes, which only appear on
   touch devices; the mouse-drag joystick that already existed on desktop stays.
