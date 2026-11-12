@@ -17,6 +17,7 @@ const TILES: readonly { id: MenuPage; title: string; text: string; glyph: string
   { id: 'talents', title: N.talents, text: 'Ветви умений класса', glyph: '❖' },
   { id: 'shop', title: N.shop, text: 'Снаряжение за золото', glyph: '⚖' },
   { id: 'forge', title: N.forge, text: 'Улучшение предметов за золото и руду', glyph: '⚒' },
+  { id: 'pets', title: N.pets, text: 'Спутник в каждом забеге', glyph: '❦' },
   { id: 'progression', title: N.progression, text: 'Летопись забегов', glyph: '☾' },
   { id: 'settings', title: N.settings, text: 'Сохранения и игра', glyph: '⚙' },
 ];

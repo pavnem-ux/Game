@@ -485,7 +485,8 @@
     'helmet figure amulet'
     'armor figure ring'
     'gloves figure pants'
-    'weapon weapon weapon';
+    'weapon weapon weapon'
+    'pet pet pet';
   gap: var(--sp-3);
   padding: var(--sp-4);
   border-radius: var(--radius-l);
@@ -1162,6 +1163,124 @@
   flex-wrap: wrap;
 }
 
+/* ── Task 20: Pets ── */
+.doll-slot-pet {
+  grid-area: pet;
+}
+.pet-slot-button {
+  display: flex !important;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  text-align: left;
+}
+.pet-slot-button > span:nth-child(2),
+.pet-slot-button > span:first-child {
+  display: grid;
+  gap: 2px;
+}
+.pet-slot-change {
+  margin-left: auto;
+  color: var(--gold-300);
+  font-size: var(--fs-s);
+  white-space: nowrap;
+}
+.pet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--sp-4);
+  list-style: none;
+  margin: var(--sp-4) 0 0;
+  padding: 0;
+}
+.pet-card {
+  height: 100%;
+}
+.pet-card.locked .pet-card-head,
+.pet-card.locked .pet-effects {
+  opacity: 0.6;
+}
+.pet-card.active {
+  box-shadow:
+    0 0 0 2px var(--gold-400),
+    var(--shadow-panel);
+}
+.pet-card-head {
+  display: flex;
+  gap: var(--sp-3);
+  align-items: center;
+}
+.pet-card-head > div {
+  display: grid;
+  gap: 2px;
+}
+.pet-name {
+  font-family: var(--font-serif);
+  font-size: var(--fs-l);
+}
+.pet-role,
+.pet-level {
+  color: var(--text-muted);
+}
+.pet-effects {
+  display: grid;
+  gap: 4px;
+  margin-top: var(--sp-3);
+}
+.pet-effects > small {
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: var(--fs-xs);
+}
+.pet-effects ul {
+  margin: 0;
+  padding-left: 1.1em;
+  font-size: var(--fs-s);
+}
+.pet-effects .pet-next {
+  color: var(--up);
+}
+.pet-source {
+  margin: var(--sp-2) 0 0;
+  color: var(--gold-300);
+}
+.pet-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+}
+.item-stamp.quest {
+  color: #b9dcf2;
+  border-color: rgba(130, 190, 230, 0.6);
+}
+.pet-forge-card {
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+}
+.pet-portrait .pet-halo {
+  fill: rgba(255, 236, 196, 0.08);
+}
+.pet-portrait.bob .pet-body {
+  animation: pet-bob 2.4s ease-in-out infinite;
+}
+@keyframes pet-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pet-portrait.bob .pet-body {
+    animation: none;
+  }
+}
+
 /* ── Task 19: Forge ── */
 .forge-screen .meta-page-head {
   flex-wrap: wrap;
@@ -1303,7 +1422,8 @@
       'helmet amulet'
       'armor ring'
       'gloves pants'
-      'weapon weapon';
+      'weapon weapon'
+      'pet pet';
   }
   .doll-figure {
     display: none;

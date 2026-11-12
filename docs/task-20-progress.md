@@ -18,8 +18,8 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/18
 - [x] 2.1 Pet runtime: follow, lifecycle, boundaries
 - [x] 2.2 Six effects
 - [x] Phase 2 tests
-- [ ] 3.1 Pet selection (hub + equipment slot)
-- [ ] 3.2 Shop tab, forge tab
+- [x] 3.1 Pet selection (hub + equipment slot)
+- [x] 3.2 Shop tab, forge tab
 - [ ] 3.3 HUD icon + cooldown ring; sprites, light
 - [ ] 4 Full checks, docs, PR
 
@@ -60,6 +60,13 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/18
   - Events: channel `pets` (`pet-action`: shot / dash / heal / barrier / idle); run stats
     `petSupport` (healing, barrier, actions). Persisted top sources accept `pet.<id>`.
   - Debug: testing action `{ type: 'pet', id, level }` → `world.spawnPet` (DEV/QA controller).
+- UI: page «Питомцы» (hub tile; not in the top nav to keep it short) — every pet as a card
+  (procedural SVG portrait, level, effect now / at the next level, source when not owned), «Взять
+  в забег» / «Оставить дома», links to the forge / shop. Equipment screen: a «Питомец» slot under
+  the paper doll (same for every class) that opens the page. Shop tab «Питомцы» (buy with
+  confirmation; quest pets read «Награда за задание»). Forge tabs «Предметы» / «Питомцы» (effect now
+  vs next, Gold + ore cost, «Улучшить до уровня N»). Presentation-only store state: `shopTab`,
+  `forgeItem = 'pet:<id>'`.
 - `tests/pets/` added to the Vitest include list; `npm run test:pets`.
 
 ## Verification log

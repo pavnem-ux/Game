@@ -47,6 +47,7 @@ export type MenuPage =
   | 'maps'
   | 'shop'
   | 'forge'
+  | 'pets'
   | 'progression'
   | 'settings';
 export interface CampaignUiState {
@@ -58,6 +59,8 @@ export interface CampaignUiState {
   readonly viewClass: CharacterClass | null;
   /** Task 19 (presentation only): item preselected when the forge is opened from an item. */
   readonly forgeItem: string | null;
+  /** Task 20 (presentation only): shop tab to open with (e.g. 'pets'); null = default. */
+  readonly shopTab: string | null;
   readonly selectedMapId: number;
   readonly progression: ProgressionState;
   /** Validated import waiting for the player's confirmation (nothing replaced yet). */
@@ -149,6 +152,7 @@ function ensure(): CampaignUiState {
       page: 'hub',
       viewClass: null,
       forgeItem: null,
+      shopTab: null,
       selectedMapId: initial.profile?.highestUnlockedMap ?? 1,
       progression: initial,
       lastResult: null,
@@ -224,7 +228,7 @@ export const campaignStore = {
     return service!;
   },
   setPage(page: MenuPage) {
-    update({ page, viewClass: null, forgeItem: null });
+    update({ page, viewClass: null, forgeItem: null, shopTab: null });
   },
   /** Task 13: open Equipment / Talents for a class without selecting it (presentation only). */
   openForClass(page: 'equipment' | 'talents', characterClass: CharacterClass | null) {
@@ -232,7 +236,11 @@ export const campaignStore = {
   },
   /** Task 19: open the forge with an item preselected (presentation only). */
   openForge(itemId: string | null) {
-    update({ page: 'forge', viewClass: null, forgeItem: itemId });
+    update({ page: 'forge', viewClass: null, forgeItem: itemId, shopTab: null });
+  },
+  /** Task 20: open the shop on a tab (presentation only). */
+  openShop(tab: string | null) {
+    update({ page: 'shop', viewClass: null, forgeItem: null, shopTab: tab });
   },
   selectMap(mapId: number) {
     const profile = ensure().progression.profile;
