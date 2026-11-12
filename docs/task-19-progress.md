@@ -4,7 +4,7 @@ Spec: [task-19-gear-upgrades-ore.md](task-19-gear-upgrades-ore.md) (owner's file
 `task-19-gear` stacked on `task-16-mobile` (PR #16 was not merged into `main` yet when this task
 started; the spec's base is "main with Task 16 merged"). Rebase onto `main` once #16 is merged.
 
-Current: Phase 5
+Current: Phase 5 (PR description)
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/17
 
@@ -21,7 +21,7 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/17
 - [x] 3.2 Stats with upgrade levels
 - [x] 3.3 Forge UI
 - [x] 4 Save v5 migration / validation
-- [ ] 5 Full checks, docs, PR
+- [x] 5 Full checks, docs, PR
 
 ## Decisions
 
@@ -68,3 +68,12 @@ levels)` → `composeRunStats` (caps once). Character and Equipment screens use 
 - Debug «Лучшее снаряжение»: the Mage gets the magic helmet / gloves / pants.
 
 ## Verification log
+
+- Phase 1–4 steps: `npm run typecheck`, `npm test` and `format:check` green before every commit.
+- Phase 5 (final): typecheck 0 errors; `npm test` 1350 passed; `format:check` OK; `npm run build`
+  OK; `test:production` 2 PASS; `test:build-policy` OK; fresh local QA build (`GAME_LOCAL_QA=1
+npm run build:qa`) + `test:qa` PASS; `test:e2e` 4 PASS (browser, alpha, campaign incl. forge and
+  «Руда», mobile incl. forge by touch at 844×390 / 768×1024).
+- Manual screenshots (scratch, not committed): equipment, shop, forge at 1280×800, 1024×768,
+  844×390, 390×844 — no horizontal page scroll.
+- Not verified: real devices; the ore / upgrade economy in real play (no bot measurement).
