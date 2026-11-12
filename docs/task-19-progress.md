@@ -4,7 +4,7 @@ Spec: [task-19-gear-upgrades-ore.md](task-19-gear-upgrades-ore.md) (owner's file
 `task-19-gear` stacked on `task-16-mobile` (PR #16 was not merged into `main` yet when this task
 started; the spec's base is "main with Task 16 merged"). Rebase onto `main` once #16 is merged.
 
-Current: Phase 1
+Current: Phase 2
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/17
 
@@ -13,8 +13,8 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/17
 - [x] 0 Branch, spec, progress file, draft PR
 - [x] 1.1 Helmet / gloves / pants templates, items, config
 - [x] 1.2 Loadout + stats pipeline
-- [ ] 1.3 Shop / equipment UI
-- [ ] Phase 1 tests
+- [x] 1.3 Shop / equipment UI
+- [x] Phase 1 tests
 - [ ] 2.1 Ore rewards, first-victory bonus, dedup
 - [ ] 2.2 Ore UI
 - [ ] 3.1 Upgrade logic (pure)
@@ -34,6 +34,9 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/17
 - The loadout and stats pipeline already iterates `GEAR_SLOTS`, so the new slots flow through
   `gearModifiers` → `composeRunStats` (caps once) with no new code path. Save validation fills a
   missing slot with `null`.
+- Paper doll: helmet / armor / gloves left, amulet / ring / pants right of a slim figure, weapon
+  across the bottom; at ≤ 760 px two slot columns without the figure. Shop and filter tabs list all
+  7 slots (from `GEAR_SLOTS`). Checked at 1280×800, 1024×768, 844×390, 390×844: no horizontal scroll.
 - Debug «Лучшее снаряжение»: the Mage gets the magic helmet / gloves / pants.
 
 ## Verification log

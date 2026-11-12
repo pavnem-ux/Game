@@ -474,12 +474,13 @@
 .paper-doll {
   position: relative;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: auto 1fr auto;
+  /* Task 19: 7 slots (helmet, gloves, pants added) on both sides of the figure. */
+  grid-template-columns: minmax(0, 1fr) 72px minmax(0, 1fr);
   grid-template-areas:
-    'amulet ring'
-    'figure figure'
-    'weapon armor';
+    'helmet figure amulet'
+    'armor figure ring'
+    'gloves figure pants'
+    'weapon weapon weapon';
   gap: var(--sp-3);
   padding: var(--sp-4);
   border-radius: var(--radius-l);
@@ -493,10 +494,11 @@
   position: relative;
   display: grid;
   place-items: center;
-  min-height: 230px;
+  min-height: 0;
 }
 .doll-silhouette {
-  height: 220px;
+  width: 72px;
+  height: auto;
   fill: rgba(255, 236, 196, 0.08);
   stroke: rgba(232, 196, 120, 0.35);
   stroke-width: 1.5;
@@ -516,6 +518,15 @@
 }
 .doll-slot-ring {
   grid-area: ring;
+}
+.doll-slot-helmet {
+  grid-area: helmet;
+}
+.doll-slot-gloves {
+  grid-area: gloves;
+}
+.doll-slot-pants {
+  grid-area: pants;
 }
 .doll-slot {
   display: grid;
@@ -1176,6 +1187,18 @@
   }
 }
 @media (max-width: 760px) {
+  /* Task 19: phones — two slot columns, no figure. */
+  .paper-doll {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      'helmet amulet'
+      'armor ring'
+      'gloves pants'
+      'weapon weapon';
+  }
+  .doll-figure {
+    display: none;
+  }
   .meta-ui .character-grid,
   .talent-columns,
   .equipment-layout,
