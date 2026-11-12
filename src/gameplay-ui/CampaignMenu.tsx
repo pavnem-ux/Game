@@ -1,4 +1,4 @@
-import { useEffect, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { campaignStore } from './campaign-state';
 import type { MenuPage } from './campaign-state';
 import { ProgressionPage } from './CampaignPages';
@@ -47,6 +47,14 @@ export function CampaignMenu() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [ui.page]);
+  // Task 16: on phones the nav is one scrolling row; keep the current page's item in view.
+  const navRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const active = navRef.current?.querySelector<HTMLElement>('.meta-nav-item.active');
+    const nav = navRef.current;
+    if (!active || !nav || nav.scrollWidth <= nav.clientWidth) return;
+    nav.scrollLeft = active.offsetLeft - (nav.clientWidth - active.offsetWidth) / 2;
+  }, [ui.page]);
   return (
     <section
       className={`overlay campaign-menu meta-ui meta-page-${ui.page}`}
@@ -61,7 +69,7 @@ export function CampaignMenu() {
         >
           <span aria-hidden="true">✦</span> {RU.meta.title}
         </button>
-        <nav className="meta-nav" aria-label={N.label}>
+        <nav className="meta-nav" aria-label={N.label} ref={navRef}>
           {PAGES.map((p) => (
             <button
               key={p.id}
