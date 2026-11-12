@@ -418,7 +418,7 @@ try {
   // Task 11: shop → buy (with confirmation, one atomic save) → equip on the Character screen.
   await nav.getByRole('button', { name: 'Магазин', exact: true }).click();
   const slots = page.getByRole('group', { name: 'Слоты магазина' });
-  assert.equal(await slots.getByRole('button').count(), 7); // Task 19: + Шлем, Перчатки, Штаны
+  assert.equal(await slots.getByRole('button').count(), 8); // Task 19: + Шлем, Перчатки, Штаны; Task 20: + Питомцы
   assert.match(
     await page.getByRole('listitem', { name: /^Добротный тяжёлый меч:/ }).innerText(),
     /Откроется после карты 8/,

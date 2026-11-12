@@ -317,6 +317,208 @@ export const ART: Readonly<Record<TextureKey, Draw>> = Object.freeze({
       p.fillStyle(0xffffff, 0.035 + (i / 16) * 0.05).fillCircle(c, c, r);
     }
   },
+  // Task 20 pets: small original shapes (~28 px), dark outline like the units.
+  'pet-firefly': (p, c) => {
+    const s = u(c);
+    p.fillStyle(0xffe27a, 0.22).fillCircle(s(0), s(4), 14 * ART_SCALE);
+    p.fillStyle(0xdff3ff, 0.75)
+      .fillEllipse(s(-7), s(-5), 12 * ART_SCALE, 8 * ART_SCALE)
+      .fillEllipse(s(7), s(-5), 12 * ART_SCALE, 8 * ART_SCALE);
+    blob(p, c, 0xffe27a, 14, 14, 4, 1.5);
+    blob(p, c, 0x4a3b2a, 11, 11, -5, 1.5);
+    p.fillStyle(0xffffff).fillRect(s(-3), s(-6), 2 * ART_SCALE, 2 * ART_SCALE);
+    p.fillStyle(0xffffff).fillRect(s(1), s(-6), 2 * ART_SCALE, 2 * ART_SCALE);
+  },
+  'pet-owlet': (p, c) => {
+    const s = u(c);
+    poly(
+      p,
+      c,
+      0xa07a52,
+      [
+        [-11, -10],
+        [-7, -15],
+        [-4, -9],
+      ],
+      1.5,
+    );
+    poly(
+      p,
+      c,
+      0xa07a52,
+      [
+        [11, -10],
+        [7, -15],
+        [4, -9],
+      ],
+      1.5,
+    );
+    blob(p, c, 0xc9a27a, 24, 26, 0, 1.5);
+    p.fillStyle(0xead6b8).fillEllipse(s(0), s(5), 13 * ART_SCALE, 12 * ART_SCALE);
+    p.fillStyle(0xfff6e2)
+      .fillCircle(s(-5), s(-4), 5 * ART_SCALE)
+      .fillCircle(s(5), s(-4), 5 * ART_SCALE);
+    p.fillStyle(0x1b1410)
+      .fillCircle(s(-5), s(-4), 2.4 * ART_SCALE)
+      .fillCircle(s(5), s(-4), 2.4 * ART_SCALE);
+    p.fillStyle(0xe3a43c).fillTriangle(s(-2), s(0), s(2), s(0), s(0), s(3));
+  },
+  'pet-fox': (p, c) => {
+    const s = u(c);
+    poly(
+      p,
+      c,
+      0xffd36b,
+      [
+        [10, 6],
+        [18, -2],
+        [16, 8],
+      ],
+      1.5,
+    );
+    poly(
+      p,
+      c,
+      0xff8a3d,
+      [
+        [-12, -14],
+        [-4, -6],
+        [-11, -2],
+      ],
+      1.5,
+    );
+    poly(
+      p,
+      c,
+      0xff8a3d,
+      [
+        [12, -14],
+        [4, -6],
+        [11, -2],
+      ],
+      1.5,
+    );
+    poly(
+      p,
+      c,
+      0xff8a3d,
+      [
+        [-11, -6],
+        [11, -6],
+        [7, 8],
+        [0, 13],
+        [-7, 8],
+      ],
+      1.5,
+    );
+    p.fillStyle(0xfff1e2).fillTriangle(s(-5), s(4), s(5), s(4), s(0), s(12));
+    p.fillStyle(0x1b1410)
+      .fillCircle(s(-5), s(-1), 1.8 * ART_SCALE)
+      .fillCircle(s(5), s(-1), 1.8 * ART_SCALE);
+  },
+  'pet-hedgehog': (p, c) => {
+    const s = u(c);
+    poly(
+      p,
+      c,
+      0x6e5a44,
+      [
+        [-15, 6],
+        [-13, -4],
+        [-9, 0],
+        [-7, -10],
+        [-3, -3],
+        [0, -13],
+        [3, -3],
+        [7, -10],
+        [9, 0],
+        [13, -4],
+        [15, 6],
+      ],
+      1.5,
+    );
+    blob(p, c, 0xd9c09a, 24, 15, 5, 1.5);
+    p.fillStyle(0x1b1410)
+      .fillCircle(s(-5), s(3), 1.8 * ART_SCALE)
+      .fillCircle(s(5), s(3), 1.8 * ART_SCALE)
+      .fillCircle(s(0), s(7), 2 * ART_SCALE);
+  },
+  'pet-kitten': (p, c) => {
+    const s = u(c);
+    poly(
+      p,
+      c,
+      0xf0c060,
+      [
+        [-12, -12],
+        [-4, -7],
+        [-11, -2],
+      ],
+      1.5,
+    );
+    poly(
+      p,
+      c,
+      0xf0c060,
+      [
+        [12, -12],
+        [4, -7],
+        [11, -2],
+      ],
+      1.5,
+    );
+    blob(p, c, 0xf0c060, 24, 22, 1, 1.5);
+    p.fillStyle(0x1b1410)
+      .fillCircle(s(-5), s(0), 2 * ART_SCALE)
+      .fillCircle(s(5), s(0), 2 * ART_SCALE);
+    p.fillStyle(0xe88a8a).fillTriangle(s(-2), s(4), s(2), s(4), s(0), s(6));
+    p.lineStyle(1.5 * ART_SCALE, 0x5a3f12, 0.9).strokeCircle(s(11), s(10), 4 * ART_SCALE);
+    p.fillStyle(0xffd36b).fillCircle(s(11), s(10), 4 * ART_SCALE);
+  },
+  'pet-wolf': (p, c) => {
+    const s = u(c);
+    p.fillStyle(0x9fd2ff, 0.2).fillCircle(s(0), s(0), 16 * ART_SCALE);
+    poly(
+      p,
+      c,
+      0x9fd2ff,
+      [
+        [-12, -15],
+        [-4, -6],
+        [-11, -2],
+      ],
+      1.5,
+    );
+    poly(
+      p,
+      c,
+      0x9fd2ff,
+      [
+        [12, -15],
+        [4, -6],
+        [11, -2],
+      ],
+      1.5,
+    );
+    poly(
+      p,
+      c,
+      0x9fd2ff,
+      [
+        [-11, -6],
+        [11, -6],
+        [6, 9],
+        [0, 14],
+        [-6, 9],
+      ],
+      1.5,
+    );
+    p.fillStyle(0xe6f4ff).fillTriangle(s(-5), s(5), s(5), s(5), s(0), s(13));
+    p.fillStyle(0xffffff)
+      .fillCircle(s(-5), s(-1), 2 * ART_SCALE)
+      .fillCircle(s(5), s(-1), 2 * ART_SCALE);
+    p.fillStyle(0x2b4660).fillCircle(s(0), s(9), 1.8 * ART_SCALE);
+  },
 });
 function chest(p: Pen, c: number, enchanted: boolean) {
   const s = u(c);

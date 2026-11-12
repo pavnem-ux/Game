@@ -1,7 +1,18 @@
 import type { CharacterClass } from '../character-stats';
 import { getCampaignMap } from '../campaign';
-import { buyItem, equipItem, isMapUnlocked, unequipSlot, upgradeProfileItem } from '../profile';
+import {
+  buyItem,
+  equipItem,
+  isMapUnlocked,
+  unequipSlot,
+  upgradeProfileItem,
+  buyProfilePet,
+  setProfileActivePet,
+  upgradeProfilePet,
+} from '../profile';
 import { EquipmentError, UpgradeError } from '../equipment';
+import { PetError, isPetId, petLevel } from '../pets';
+import type { PetId } from '../pets';
 import type { GearSlot } from '../equipment';
 import {
   createProgressionService,
@@ -36,6 +47,7 @@ export type MenuPage =
   | 'maps'
   | 'shop'
   | 'forge'
+  | 'pets'
   | 'progression'
   | 'settings';
 export interface CampaignUiState {
@@ -47,6 +59,8 @@ export interface CampaignUiState {
   readonly viewClass: CharacterClass | null;
   /** Task 19 (presentation only): item preselected when the forge is opened from an item. */
   readonly forgeItem: string | null;
+  /** Task 20 (presentation only): shop tab to open with (e.g. 'pets'); null = default. */
+  readonly shopTab: string | null;
   readonly selectedMapId: number;
   readonly progression: ProgressionState;
   /** Validated import waiting for the player's confirmation (nothing replaced yet). */
@@ -138,6 +152,7 @@ function ensure(): CampaignUiState {
       page: 'hub',
       viewClass: null,
       forgeItem: null,
+      shopTab: null,
       selectedMapId: initial.profile?.highestUnlockedMap ?? 1,
       progression: initial,
       lastResult: null,
@@ -185,7 +200,9 @@ function gearChange(change: (p: PlayerProfile) => PlayerProfile): string | null 
   try {
     next = change(profile);
   } catch (error) {
-    return error instanceof EquipmentError || error instanceof UpgradeError
+    return error instanceof EquipmentError ||
+      error instanceof UpgradeError ||
+      error instanceof PetError
       ? error.reason
       : 'invalid';
   }
@@ -211,7 +228,7 @@ export const campaignStore = {
     return service!;
   },
   setPage(page: MenuPage) {
-    update({ page, viewClass: null, forgeItem: null });
+    update({ page, viewClass: null, forgeItem: null, shopTab: null });
   },
   /** Task 13: open Equipment / Talents for a class without selecting it (presentation only). */
   openForClass(page: 'equipment' | 'talents', characterClass: CharacterClass | null) {
@@ -219,7 +236,11 @@ export const campaignStore = {
   },
   /** Task 19: open the forge with an item preselected (presentation only). */
   openForge(itemId: string | null) {
-    update({ page: 'forge', viewClass: null, forgeItem: itemId });
+    update({ page: 'forge', viewClass: null, forgeItem: itemId, shopTab: null });
+  },
+  /** Task 20: open the shop on a tab (presentation only). */
+  openShop(tab: string | null) {
+    update({ page: 'shop', viewClass: null, forgeItem: null, shopTab: tab });
   },
   selectMap(mapId: number) {
     const profile = ensure().progression.profile;
@@ -245,6 +266,18 @@ export const campaignStore = {
    */
   upgradeItem(itemId: string): string | null {
     return gearChange((p) => upgradeProfileItem(p, itemId));
+  },
+  /** Task 20: buy a shop pet (Gold deducted and the pet owned in one validated save). */
+  buyPet(petId: string): string | null {
+    return gearChange((p) => buyProfilePet(p, petId));
+  },
+  /** Task 20: the one active pet for every class (null = none). */
+  setActivePet(petId: string | null): string | null {
+    return gearChange((p) => setProfileActivePet(p, petId));
+  },
+  /** Task 20 forge: pet level +1 (Gold, ore and the level in one validated save). */
+  upgradePet(petId: string): string | null {
+    return gearChange((p) => upgradeProfilePet(p, petId));
   },
   /** Task 11: unequip a slot (weapon → starter weapon, other slots → empty). */
   unequipSlot(characterClass: CharacterClass, slot: GearSlot): string | null {
@@ -382,9 +415,16 @@ export const campaignStore = {
         talents: { ranks: profile.classes[cls].talents },
         // Task 11: this class's own loadout; changes apply to the next run.
         equipment: { loadout: profile.classes[cls].loadout, itemLevels: profile.itemLevels },
+        // Task 20: the profile's one active pet comes with whichever class starts the run.
+        pet: activePetOf(profile),
         campaign: { mapId, runId: generateRunId() },
       },
     });
     return true;
   },
 };
+/** Task 20: the run option for the profile's active pet (null = none). */
+export function activePetOf(profile: PlayerProfile): Readonly<{ id: PetId; level: number }> | null {
+  const id = profile.activePet;
+  return id && isPetId(id) ? Object.freeze({ id, level: petLevel(profile.petLevels, id) }) : null;
+}

@@ -21,6 +21,7 @@ import {
   isUpgradeable,
 } from '../equipment';
 import type { Loadout } from '../equipment';
+import { PET_LEVEL_RULES, isPetId } from '../pets';
 
 /**
  * Task 08 `saveSchema`: validation, defaults and migrations for the persisted profile.
@@ -98,11 +99,16 @@ export function migrateV4toV5(data: Json): Json {
     itemLevels: {},
   };
 }
+/** v5 → v6 (Task 20): `ownedPets: []`, `petLevels: {}`, `activePet: null`. Nothing else changes. */
+export function migrateV5toV6(data: Json): Json {
+  return { ...data, ownedPets: [], petLevels: {}, activePet: null };
+}
 export const migrations: Readonly<Record<number, Migration>> = Object.freeze({
   1: migrateV1toV2,
   2: migrateV2toV3,
   3: migrateV3toV4,
   4: migrateV4toV5,
+  5: migrateV5toV6,
 });
 
 export type SaveErrorCode =
@@ -270,6 +276,24 @@ export function normalizeProfile(data: Json, version = SAVE_SCHEMA_VERSION): Pla
     if (int(level, `itemLevels.${id}`, 0, UPGRADE_RULES.maxLevel) > 0)
       itemLevels[id] = level as number;
   }
+  // Task 20: pets — known unique ids; levels 1–5 of owned pets (1 not kept); active pet owned.
+  const petsRaw = or(data.ownedPets, []);
+  if (!Array.isArray(petsRaw)) invalid('ownedPets');
+  const ownedPets = (petsRaw as unknown[]).map((id, i) =>
+    isPetId(id) ? id : invalid(`ownedPets[${i}]`),
+  );
+  if (new Set(ownedPets).size !== ownedPets.length) invalid('ownedPets (duplicates)');
+  const petLevelsRaw = or(data.petLevels, {});
+  if (!isObject(petLevelsRaw)) invalid('petLevels');
+  const petLevels: Record<string, number> = {};
+  for (const [id, level] of Object.entries(petLevelsRaw as Json)) {
+    if (!isPetId(id) || !ownedPets.includes(id)) invalid(`petLevels.${id}`);
+    if (int(level, `petLevels.${id}`, 1, PET_LEVEL_RULES.maxLevel) > 1)
+      petLevels[id] = level as number;
+  }
+  const activeRaw = or(data.activePet, null);
+  if (activeRaw !== null && !(isPetId(activeRaw) && ownedPets.includes(activeRaw)))
+    invalid('activePet');
   const classesRaw = or(data.classes, {});
   if (!isObject(classesRaw)) invalid('classes');
   const classes = Object.freeze(
@@ -330,6 +354,9 @@ export function normalizeProfile(data: Json, version = SAVE_SCHEMA_VERSION): Pla
     processedRunIds: Object.freeze(processedRunIds),
     ownedItems: Object.freeze(ownedItems),
     itemLevels: Object.freeze(itemLevels),
+    ownedPets: Object.freeze(ownedPets),
+    petLevels: Object.freeze(petLevels),
+    activePet: activeRaw as string | null,
   });
 }
 

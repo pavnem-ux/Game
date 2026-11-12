@@ -1,5 +1,6 @@
 import type { CharacterClass } from '../../character-stats';
 import type { EnemyKind } from '../../gameplay/enemy-types';
+import type { PetId } from '../../pets/config';
 
 /**
  * Task 18 sprite texture keys (pure; no Phaser). Every unit/item look is drawn once into a texture
@@ -36,6 +37,13 @@ export const TEXTURE_KEYS = Object.freeze([
   'chest-enchanted',
   'shadow',
   'glow',
+  // Task 20 pets.
+  'pet-firefly',
+  'pet-owlet',
+  'pet-fox',
+  'pet-hedgehog',
+  'pet-kitten',
+  'pet-wolf',
 ] as const);
 export type TextureKey = (typeof TEXTURE_KEYS)[number];
 
@@ -51,6 +59,8 @@ export function playerProjectileKey(weaponId: string, characterClass: CharacterC
   return characterClass === 'archer' && !weaponId.startsWith('skill:') ? 'proj-arrow' : 'proj-bolt';
 }
 export const chestTextureKey = (type: 'wooden' | 'enchanted'): TextureKey => `chest-${type}`;
+/** Task 20: one texture per pet. */
+export const petTextureKey = (id: PetId): TextureKey => `pet-${id}`;
 
 /**
  * Art is drawn at this scale into textures and displayed at 1 / ART_SCALE. 1: the Canvas renderer

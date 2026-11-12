@@ -22,12 +22,14 @@ import { buildUnitTextures } from './visuals/texture-factory';
 import { BiomeRenderer } from './visuals/BiomeRenderer';
 import { BOSS_DARK, LightRenderer, WARM_DARK } from './visuals/LightRenderer';
 import { QUALITY_PRESETS } from './visuals/quality';
+import { PET_CONFIG, PET_FOLLOW } from '../pets/config';
 import type { GraphicsQuality } from './visuals/quality';
 import { DEPTH, UnitRenderer } from './visuals/UnitRenderer';
 import {
   ART_SCALE,
   chestTextureKey,
   enemyTextureKey,
+  petTextureKey,
   playerProjectileKey,
   playerTextureKey,
   unitScale,
@@ -59,6 +61,12 @@ export class AlphaScene extends Phaser.Scene {
   /** Task 18: darkness overlay and light sources («Последний свет»). */
   private lighting!: LightRenderer;
   private revivedAt = Number.NEGATIVE_INFINITY;
+  /**
+   * Task 20: drawn pet position — smoothly follows the simulation anchor (rendering only; the
+   * simulation uses the anchor). Reset when the pet appears.
+   */
+  private petDraw: { x: number; y: number; id: string } | null = null;
+  private frameSeconds = 1 / 60;
   /** Task 18: additive glows on projectiles / light sources (Высокое only). */
   private accentGlow = true;
   /** Task 18: last drawn position of each enemy (death puffs); entries are updated in place. */
@@ -415,6 +423,19 @@ export class AlphaScene extends Phaser.Scene {
       }
     for (const c of s.crystals) L.add(c.x, c.y, 44, 0.6);
     for (const pile of s.coins.piles) L.add(pile.x, pile.y, 40, 0.55);
+    // Task 20: the pet carries a small light (the firefly a bigger, warmer one).
+    if (s.pet && this.petDraw) {
+      const firefly = s.pet.id === 'firefly';
+      L.add(this.petDraw.x, this.petDraw.y, firefly ? 120 : 70, firefly ? 0.9 : 0.6);
+      if (this.accentGlow)
+        this.units.glow(
+          this.petDraw.x,
+          this.petDraw.y,
+          firefly ? 46 : 26,
+          PET_CONFIG[s.pet.id].color,
+          firefly ? 0.5 : 0.3,
+        );
+    }
   }
   /** Task 18 «Качество графики» (UI settings; presentation only). */
   private graphicsQuality(): GraphicsQuality {
@@ -442,6 +463,7 @@ export class AlphaScene extends Phaser.Scene {
     // Task 16: the main camera shows the same world area at any DPR (zoom = DPR).
     if (this.cameras.main.zoom !== this.dpr) this.cameras.main.setZoom(this.dpr);
     const dt = frameStep(delta, import.meta.env.DEV || __QA_BUILD__ ? this.timeScale : 1);
+    this.frameSeconds = Math.min(0.1, Math.max(0, delta / 1000));
     this.biome.update(this.cameras.main.worldView, time / 1000, Math.min(0.05, delta / 1000));
     if (this.world) {
       // Task 16: keyboard and the touch joystick produce one movement vector (same input path).
@@ -474,6 +496,44 @@ export class AlphaScene extends Phaser.Scene {
       this.publish();
       this.hudTimer = 0.1;
     }
+  }
+  /**
+   * Task 20: the pet sprite — smooth follow (exponential, rendering only), idle bob, and a short
+   * action animation (fox dash streak, owlet shot spark, heal/barrier ring on the player).
+   */
+  private drawPet(s: GameplaySnapshot) {
+    const pet = s.pet;
+    if (!pet) {
+      this.petDraw = null;
+      return;
+    }
+    if (!this.petDraw || this.petDraw.id !== pet.id)
+      this.petDraw = { x: pet.x, y: pet.y, id: pet.id };
+    const k = 1 - Math.exp(-PET_FOLLOW.rate * this.frameSeconds);
+    const d = this.petDraw;
+    d.x += (pet.x - d.x) * k;
+    d.y += (pet.y - d.y) * k;
+    const g = this.graphics;
+    const last = pet.lastAction;
+    const age = last ? s.time - (pet.nextActionAt! - pet.interval!) : Infinity;
+    const acting = last !== null && age >= 0 && age < 0.35;
+    let x = d.x,
+      y = d.y;
+    if (acting && last.action === 'dash' && last.to) {
+      // Fox: a quick streak through the target and back.
+      const t = Math.sin((age / 0.35) * Math.PI);
+      x = last.from.x + (last.to.x - last.from.x) * t;
+      y = last.from.y + (last.to.y - last.from.y) * t;
+      g.lineStyle(3, 0xff8a3d, 0.6 * (1 - age / 0.35)).lineBetween(last.from.x, last.from.y, x, y);
+    } else if (acting && last.action === 'shot')
+      g.fillStyle(0xfff0c0, 0.7 * (1 - age / 0.35)).fillCircle(d.x, d.y - 10, 5);
+    else if (acting && (last.action === 'heal' || last.action === 'barrier')) {
+      const c = last.action === 'heal' ? 0xffe27a : 0xbfd9ff;
+      const r = 20 + (age / 0.35) * 26;
+      g.lineStyle(2, c, 0.8 * (1 - age / 0.35)).strokeCircle(s.playerBody.x, s.playerBody.y, r);
+    }
+    const bob = 2 + Math.sin(s.time * 4) * 2;
+    this.units.item(petTextureKey(pet.id), x, y, (acting ? 1.1 : 0.9) / ART_SCALE, 1, bob);
   }
   private draw(s: GameplaySnapshot) {
     const g = this.graphics;
@@ -581,6 +641,7 @@ export class AlphaScene extends Phaser.Scene {
         g.lineStyle(1, 0xc9c0ff, 0.6).strokeCircle(t.x, t.y, 13);
       }
     }
+    this.drawPet(s);
     // Task 18: pickups and chests are pooled sprites (textures baked once).
     for (const crystal of s.crystals)
       this.units.item(

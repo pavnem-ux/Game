@@ -13,6 +13,7 @@ import { EquipmentPage } from './meta/EquipmentScreen';
 import { TalentsPage } from './meta/TalentsScreen';
 import { MapPathPage } from './meta/MapPath';
 import { ForgePage } from './meta/ForgeScreen';
+import { PetsPage } from './meta/PetsScreen';
 import './meta/meta.css';
 
 const N = RU.meta.nav;
@@ -97,6 +98,7 @@ export function CampaignMenu() {
         {ui.page === 'maps' && <MapPathPage />}
         {ui.page === 'shop' && <ShopPage />}
         {ui.page === 'forge' && <ForgePage />}
+        {ui.page === 'pets' && <PetsPage />}
         {ui.page === 'progression' && <ProgressionPage />}
         {ui.page === 'settings' && <SettingsPage />}
       </div>

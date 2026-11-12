@@ -94,18 +94,20 @@ export class RunExperience {
     if (!previous) this.cells.set(key, crystal.id);
     return crystal;
   }
-  collect(position: Point, playerRadius: number): readonly ExperienceEvent[] {
+  /** `pickupScale` (Task 20 kitten) widens the pickup radius (default 1 = unchanged). */
+  collect(position: Point, playerRadius: number, pickupScale = 1): readonly ExperienceEvent[] {
     if (
       !Number.isFinite(position.x) ||
       !Number.isFinite(position.y) ||
       !Number.isFinite(playerRadius) ||
-      playerRadius < 0
+      playerRadius < 0 ||
+      !(pickupScale > 0)
     )
       throw new RangeError('Invalid pickup geometry.');
     const collected = [...this.crystals.values()].filter(
       (c) =>
         Math.hypot(c.x - position.x, c.y - position.y) <=
-        playerRadius + XP_RULES.pickupRadius + XP_RULES.crystalRadius,
+        playerRadius + XP_RULES.pickupRadius * pickupScale + XP_RULES.crystalRadius,
     );
     const amount = collected.reduce((sum, c) => sum + c.value, 0);
     this.validateGain(amount);

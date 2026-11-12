@@ -30,6 +30,9 @@ import {
 } from '../kit';
 import { RU } from '../strings-ru';
 import { ItemStats, REFUSALS, tierLabel } from '../ShopPages';
+import { PET_CONFIG, isPetId, petLevel } from '../../pets';
+import { PetPortrait } from '../pets/PetPortrait';
+import { petLevelLabel } from '../pets/pet-text';
 
 const E = RU.meta.equipment;
 type SlotFilter = GearSlot | 'all';
@@ -135,6 +138,7 @@ export function EquipmentPage() {
               </TierFrame>
             );
           })}
+          <PetSlot />
         </div>
         <div className="equipment-side">
           <Panel
@@ -252,5 +256,32 @@ function DollSilhouette() {
       <circle cx="60" cy="30" r="20" />
       <path d="M30 60 Q60 48 90 60 L100 120 L86 124 L82 92 L80 150 L88 214 L70 214 L60 160 L50 214 L32 214 L40 150 L38 92 L34 124 L20 120 Z" />
     </svg>
+  );
+}
+
+/** Task 20: the profile's one active pet — the same slot for every class; opens «Питомцы». */
+function PetSlot() {
+  const ui = useSyncExternalStore(campaignStore.subscribe, campaignStore.getSnapshot);
+  const profile = ui.progression.profile!;
+  const P = RU.meta.pets;
+  const id = profile.activePet && isPetId(profile.activePet) ? profile.activePet : null;
+  return (
+    <div className="doll-slot doll-slot-pet kit-tier-frame tier-0">
+      <button
+        className="doll-slot-button pet-slot-button"
+        aria-label={`${P.slot}: ${id ? PET_CONFIG[id].name : P.none}. ${P.change}`}
+        onClick={() => campaignStore.setPage('pets')}
+      >
+        {id && <PetPortrait id={id} size={40} />}
+        <span>
+          <small>{P.slot}</small>
+          <strong>{id ? PET_CONFIG[id].name : P.none}</strong>
+          {id && (
+            <span className="doll-tier">{petLevelLabel(petLevel(profile.petLevels, id))}</span>
+          )}
+        </span>
+        <span className="pet-slot-change">{P.change} →</span>
+      </button>
+    </div>
   );
 }

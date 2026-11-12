@@ -3,6 +3,7 @@ import { ALPHA_WEAPONS, WEAPON_LABELS } from '../gameplay';
 import type { EnemyType } from '../gameplay';
 import { SKILL_CATALOG, SYNERGY_RULES } from '../skills';
 import { TALENT_CONFIG } from '../talents';
+import { PET_CONFIG, isPetId } from '../pets';
 
 /**
  * Task 08.5 player-facing Russian text (one module for all new 08.5 strings; older screens keep
@@ -109,6 +110,7 @@ export const RU = Object.freeze({
       talents: 'Таланты',
       shop: 'Магазин',
       forge: 'Кузница',
+      pets: 'Питомцы',
       maps: 'Карта похода',
       progression: 'Прогресс',
       settings: 'Настройки',
@@ -190,6 +192,38 @@ export const RU = Object.freeze({
       maxed: 'Освоено полностью',
       locked: 'Закрыто',
       pickNode: 'Выберите талант, чтобы увидеть его ранги.',
+    }),
+    /** Task 20 pets. */
+    pets: Object.freeze({
+      title: 'Питомцы',
+      intro:
+        'Питомец идёт в забег вместе с любым героем: активный питомец один на весь профиль. Его нельзя ранить, а его удары не запускают синергии.',
+      active: 'Активный',
+      choose: 'Взять в забег',
+      remove: 'Оставить дома',
+      none: 'Без питомца',
+      now: 'Сейчас',
+      next: (level: number) => `На уровне ${level}`,
+      maxed: 'Максимальный уровень',
+      locked: 'Не получен',
+      toShop: 'В магазин',
+      toForge: 'В кузницу',
+      slot: 'Питомец',
+      change: 'Сменить',
+      buy: 'Купить',
+      bought: (name: string) => `Куплен питомец «${name}»`,
+      confirmBuy: (name: string, price: number) => `Купить «${name}» за ${price} золота?`,
+      upgrade: (level: number) => `Улучшить до уровня ${level}`,
+      upgraded: (name: string, level: number) => `«${name}»: уровень ${level}`,
+      refusals: Object.freeze({
+        gold: 'Не хватает золота.',
+        ore: 'Не хватает руды.',
+        max: 'Питомец уже на максимальном уровне.',
+        owned: 'Уже есть.',
+        quest: 'Этого питомца можно получить только за задание.',
+        'not-owned': 'Питомец ещё не получен.',
+      }) as Readonly<Record<string, string>>,
+      failed: 'Не удалось сохранить.',
     }),
     /** Task 19 forge. */
     forge: Object.freeze({
@@ -293,6 +327,11 @@ const SYNERGY_NAMES = new Map(SYNERGY_RULES.map((r) => [r.id as string, r.name] 
 
 /** `weapon:<id>` / `skill:<id>` / `synergy:<id>` / `status:<effect>` / `debug` → Russian label. */
 export function damageSourceLabel(source: string): string {
+  // Task 20: pet hits / Burn are their own source `pet.<id>`.
+  if (source.startsWith('pet.')) {
+    const pet = source.slice(4);
+    return `Питомец «${isPetId(pet) ? PET_CONFIG[pet].name : pet}»`;
+  }
   const [kind, id = ''] = source.split(':');
   switch (kind) {
     case 'weapon':

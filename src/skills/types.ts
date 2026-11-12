@@ -28,7 +28,9 @@ export type CombatTag =
   /** Task 09.1 G6: the Warrior's off-hand sword (a talent secondary weapon). */
   | 'offhand'
   /** Task 09.1 G8: the Archer's ballista projectiles (a talent weapon). */
-  | 'ballista';
+  | 'ballista'
+  /** Task 20: hits of the player's pet (secondary; never procs). */
+  | 'pet';
 export type TargetingRule =
   | 'nearest'
   | 'cluster'
