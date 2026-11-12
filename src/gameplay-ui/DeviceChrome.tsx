@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { alphaBridge } from './store';
 import { RU } from './strings-ru';
+import { useTouchDevice } from './touch';
 
 /**
  * Task 16 device helpers (presentation only): the portrait-phone notice during a run (pauses the
@@ -32,7 +33,9 @@ function useMedia(query: string): boolean {
 /** «Поверните устройство»: shown during a run on a portrait phone; the run pauses meanwhile. */
 export function OrientationNotice({ inRun, playing }: { inRun: boolean; playing: boolean }) {
   const portrait = useMedia(PORTRAIT_PHONE);
-  const show = inRun && portrait;
+  // Phones only: a narrow desktop window keeps playing in any shape.
+  const touch = useTouchDevice();
+  const show = inRun && portrait && touch;
   useEffect(() => {
     if (show && playing) alphaBridge.send({ type: 'pause' });
   }, [show, playing]);
