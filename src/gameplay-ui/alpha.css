@@ -1605,3 +1605,239 @@ p.damage-note {
   font-weight: 700;
   text-shadow: 0 0 6px rgba(232, 195, 106, 0.5);
 }
+
+/* Task 16 touch controls: dash button (≥ 72 px, thumb-reachable, cooldown ring); «Левша» mirrors. */
+.touch-controls {
+  position: absolute;
+  inset: auto max(16px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) auto;
+  z-index: 40;
+  pointer-events: none;
+}
+.touch-controls.left-handed {
+  inset: auto auto max(18px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+}
+.touch-dash {
+  pointer-events: auto;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  border: 0;
+  display: grid;
+  place-content: center;
+  gap: 0;
+  color: #fff3cf;
+  font:
+    600 13px/1.1 system-ui,
+    sans-serif;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(18, 26, 44, 0.92) 0 58%, transparent 59%),
+    conic-gradient(#ecc46f var(--done, 0deg), rgba(255, 255, 255, 0.14) 0);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.touch-dash span {
+  font-size: 26px;
+}
+.touch-dash small {
+  font-size: 12px;
+  opacity: 0.85;
+}
+.touch-dash.is-ready {
+  box-shadow:
+    0 0 16px rgba(236, 196, 111, 0.55),
+    0 6px 18px rgba(0, 0, 0, 0.45);
+}
+.touch-dash:active {
+  transform: scale(0.95);
+}
+
+/* ── Task 16: responsive shell, safe areas, compact HUD, device notices ── */
+html,
+body {
+  overscroll-behavior: none; /* no pull-to-refresh / scroll chaining */
+}
+.app-shell.alpha-shell {
+  min-height: 0;
+  height: 100vh; /* fallback */
+  height: 100dvh;
+}
+.alpha-arena {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.alpha-arena .hud {
+  top: max(25px, env(safe-area-inset-top));
+  left: max(30px, env(safe-area-inset-left));
+  right: max(30px, env(safe-area-inset-right));
+}
+.alpha-arena .bottom-hud {
+  bottom: max(24px, env(safe-area-inset-bottom));
+  left: max(30px, env(safe-area-inset-left));
+  right: max(30px, env(safe-area-inset-right));
+}
+.hud-right {
+  gap: 8px;
+}
+.fullscreen-button {
+  pointer-events: auto;
+}
+/* Phones and short screens: the arena takes the whole screen during a run. */
+@media (max-height: 560px), (max-width: 760px) {
+  .alpha-shell.in-run .topbar,
+  .alpha-shell.in-run .page-footer {
+    display: none;
+  }
+}
+/* Landscape phones (short height): compact HUD, text ≥ 12 px, touch targets ≥ 44 px. */
+@media (max-height: 560px) {
+  .alpha-arena .hud {
+    top: max(8px, env(safe-area-inset-top));
+    left: max(10px, env(safe-area-inset-left));
+    right: max(10px, env(safe-area-inset-right));
+  }
+  .alpha-hud .health-panel {
+    min-width: 0;
+    padding: 6px 10px;
+    gap: 8px;
+  }
+  .alpha-hud .avatar,
+  .alpha-hud .level-label,
+  .alpha-arena .timer span,
+  .alpha-arena .kill-count span,
+  .alpha-arena .bottom-hud,
+  .alpha-mobile-summary {
+    display: none;
+  }
+  .alpha-hud .health-label,
+  .alpha-hud .health-label span,
+  .alpha-hud .run-level-label {
+    font-size: 12px;
+  }
+  .alpha-arena .timer strong {
+    font-size: 22px;
+  }
+  .alpha-arena .kill-count strong {
+    font-size: 18px;
+  }
+  .alpha-arena .icon-button {
+    width: 44px;
+    height: 44px;
+  }
+}
+/* Touch devices: every HUD button is a comfortable tap target. */
+@media (pointer: coarse) {
+  .alpha-arena .icon-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .developer-toggle {
+    bottom: auto;
+    top: max(70px, env(safe-area-inset-top));
+  }
+  /* The big touch dash button replaces the skill-bar dash pill. */
+  .skill-dash {
+    display: none;
+  }
+}
+.rotate-notice {
+  position: absolute;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  padding: 24px;
+  text-align: center;
+  background: #080c16;
+  color: #f3ead2;
+}
+.rotate-notice strong {
+  font-size: 22px;
+}
+.rotate-notice span {
+  font-size: 14px;
+  opacity: 0.8;
+  max-width: 280px;
+}
+.rotate-icon {
+  font-size: 48px;
+  color: #ecc46f;
+  animation: rotate-hint 2.4s ease-in-out infinite;
+}
+@keyframes rotate-hint {
+  0%,
+  40% {
+    transform: rotate(0deg);
+  }
+  60%,
+  100% {
+    transform: rotate(90deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rotate-icon {
+    animation: none;
+  }
+}
+/* Task 16: touch tap targets ≥ 44 px in menus and in-run dialogs (coarse pointers only). */
+@media (pointer: coarse) {
+  .meta-ui .meta-nav-item,
+  .meta-ui .meta-brand,
+  .meta-ui .kit-tab,
+  .meta-ui .kit-button,
+  .meta-ui .hub-hero-pick,
+  .meta-ui .doll-slot-button,
+  .alpha-arena .kit-button,
+  .alpha-arena .button,
+  .alpha-arena .text-button {
+    min-height: 44px;
+  }
+  .meta-ui .map-node-button {
+    min-width: 44px;
+  }
+}
+/* Task 16: menus on phones — no outer page chrome, one scrolling nav row, safe-area padding. */
+@media (max-height: 560px), (max-width: 760px) {
+  .alpha-shell .topbar,
+  .alpha-shell .page-footer {
+    display: none;
+  }
+  .meta-ui .meta-topbar {
+    gap: 4px 12px;
+    padding: max(6px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 6px
+      max(12px, env(safe-area-inset-left));
+  }
+  .meta-ui .meta-nav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .meta-ui .meta-nav::-webkit-scrollbar {
+    display: none;
+  }
+  .meta-ui .meta-nav-item {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+  .meta-ui .meta-content {
+    padding: 12px max(14px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom))
+      max(14px, env(safe-area-inset-left));
+  }
+}
+/* Narrow (portrait) phones: brand + Gold on the first row, the nav on its own full-width row. */
+@media (max-width: 760px) {
+  .meta-ui .meta-topbar {
+    flex-wrap: wrap;
+  }
+  .meta-ui .meta-nav {
+    order: 3;
+    flex: 1 1 100%;
+  }
+}

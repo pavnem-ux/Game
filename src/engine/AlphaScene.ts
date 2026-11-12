@@ -15,6 +15,9 @@ import { oncePerKeyEvent } from './key-event-once';
 import { OFFHAND_WEAPON } from '../talents';
 import { cardKey } from '../skills';
 import { soundFrame } from '../gameplay-ui/sound';
+import { hapticFrame } from '../gameplay-ui/touch';
+import { JOYSTICK, inJoystickZone, keyboardVector, movementInput } from './touch-input';
+import { pinToScreen } from './screen-space';
 import { buildUnitTextures } from './visuals/texture-factory';
 import { BiomeRenderer } from './visuals/BiomeRenderer';
 import { BOSS_DARK, LightRenderer, WARM_DARK } from './visuals/LightRenderer';
@@ -125,22 +128,31 @@ export class AlphaScene extends Phaser.Scene {
     };
     this.input.keyboard!.on('keydown-SPACE', dash).on('keydown-SHIFT', dash);
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
+      // Task 16: a floating joystick where the thumb lands (left half; right half for «Левша»).
       if (
         this.world &&
         !this.world.paused &&
-        p.x < this.scale.width / 2 &&
-        p.y > this.scale.height * 0.3
+        !this.stick.active &&
+        inJoystickZone(p.x, p.y, this.scale.width, this.scale.height, uiSettings.get().leftHanded)
       )
         Object.assign(this.stick, { active: true, id: p.id, x: p.x, y: p.y, dx: 0, dy: 0 });
     });
+    // Origin in canvas pixels; the offset in CSS px (the joystick's 60 px are CSS px at any DPR).
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
       if (this.stick.active && p.id === this.stick.id) {
-        this.stick.dx = p.x - this.stick.x;
-        this.stick.dy = p.y - this.stick.y;
+        this.stick.dx = (p.x - this.stick.x) / this.dpr;
+        this.stick.dy = (p.y - this.stick.y) / this.dpr;
       }
     });
-    this.input.on('pointerup', () => this.clearInput());
-    this.input.on('pointerupoutside', () => this.clearInput());
+    // Multi-touch: only the joystick's own finger releases it (a dash tap must not stop movement).
+    const release = (p: Phaser.Input.Pointer) => {
+      if (this.stick.active && p.id === this.stick.id) {
+        this.stick.active = false;
+        this.stick.dx = this.stick.dy = 0;
+      }
+    };
+    this.input.on('pointerup', release);
+    this.input.on('pointerupoutside', release);
     const visibility = () => {
       if (document.hidden && this.world) {
         this.world.setPaused(true);
@@ -200,7 +212,7 @@ export class AlphaScene extends Phaser.Scene {
   private start(options: GameplayOptions) {
     const input = {
       ...options,
-      viewport: { width: this.scale.width, height: this.scale.height },
+      viewport: this.cssViewport(),
     };
     const next =
       (import.meta.env.DEV || __QA_BUILD__) && this.testingWorld
@@ -296,6 +308,10 @@ export class AlphaScene extends Phaser.Scene {
           }
           break;
         }
+        case 'dash':
+          // Task 16: the touch dash button = Space / Shift (queued for the next input sample).
+          this.world?.requestDash();
+          break;
         case 'skip-offer':
           this.world?.skipSkillOffer();
           this.clearInput();
@@ -408,27 +424,42 @@ export class AlphaScene extends Phaser.Scene {
   private applyQuality() {
     const q = this.graphicsQuality();
     this.units.glowEnabled = QUALITY_PRESETS[q].glow;
+    this.floating.setLimit(QUALITY_PRESETS[q].damageNumbers);
     this.accentGlow = QUALITY_PRESETS[q].accentGlow;
     this.lighting.setQuality(q);
     this.biome.build(this.mapId, q);
   }
+  /** Task 16: canvas pixels per CSS pixel (set by AlphaCanvas; capped by quality). */
+  private get dpr(): number {
+    const v = this.registry.get('dpr');
+    return typeof v === 'number' && v >= 1 ? v : 1;
+  }
+  /** Viewport in CSS pixels: what the world uses for spawning/culling (unchanged by DPR). */
+  private cssViewport() {
+    return { width: this.scale.width / this.dpr, height: this.scale.height / this.dpr };
+  }
   update(time: number, delta: number) {
+    // Task 16: the main camera shows the same world area at any DPR (zoom = DPR).
+    if (this.cameras.main.zoom !== this.dpr) this.cameras.main.setZoom(this.dpr);
     const dt = frameStep(delta, import.meta.env.DEV || __QA_BUILD__ ? this.timeScale : 1);
     this.biome.update(this.cameras.main.worldView, time / 1000, Math.min(0.05, delta / 1000));
     if (this.world) {
-      let dx =
-        Number(this.keys.D.isDown || this.keys.RIGHT.isDown) -
-        Number(this.keys.A.isDown || this.keys.LEFT.isDown);
-      let dy =
-        Number(this.keys.S.isDown || this.keys.DOWN.isDown) -
-        Number(this.keys.W.isDown || this.keys.UP.isDown);
-      if ((document.activeElement as HTMLElement)?.matches('input,select,textarea')) dx = dy = 0;
-      if (this.stick.active && Math.hypot(this.stick.dx, this.stick.dy) > 8) {
-        dx = this.stick.dx;
-        dy = this.stick.dy;
-      }
-      this.world.setViewport(this.scale.width, this.scale.height);
-      this.world.setMovement(dx, dy);
+      // Task 16: keyboard and the touch joystick produce one movement vector (same input path).
+      const typing = (document.activeElement as HTMLElement)?.matches('input,select,textarea');
+      const k = this.keys;
+      const keys = typing
+        ? keyboardVector(false, false, false, false)
+        : keyboardVector(
+            k.D.isDown || k.RIGHT.isDown,
+            k.A.isDown || k.LEFT.isDown,
+            k.S.isDown || k.DOWN.isDown,
+            k.W.isDown || k.UP.isDown,
+          );
+      const move = movementInput(keys, this.stick);
+      // The simulation sees the CSS-pixel viewport, as before (DPR never changes spawning).
+      const viewport = this.cssViewport();
+      this.world.setViewport(viewport.width, viewport.height);
+      this.world.setMovement(move.x, move.y);
       this.world.update(dt);
       this.draw(this.world.getSnapshot());
     } else if (this.graphics) {
@@ -455,6 +486,7 @@ export class AlphaScene extends Phaser.Scene {
     const frameEvents = this.world!.getEvents(this.lastEvent);
     // Task 14: sound reads the same events (presentation only; nothing flows back).
     soundFrame(frameEvents);
+    hapticFrame(frameEvents);
     for (const event of frameEvents) {
       this.lastEvent = event.sequence;
       const e = event.event;
@@ -873,14 +905,24 @@ export class AlphaScene extends Phaser.Scene {
     this.damageLabels.slice(damageLabel).forEach((t) => t.setVisible(false));
     this.drawFeel(s);
     this.joystick.clear();
+    pinToScreen(this.joystick, this.cameras.main);
     if (this.stick.active) {
+      // Task 16: drawn in canvas pixels; the ring is the full-speed radius, the inner circle the
+      // dead zone (both CSS px × DPR).
+      const k = this.dpr;
       const d = Math.hypot(this.stick.dx, this.stick.dy),
-        r = Math.min(45, d),
+        r = Math.min(JOYSTICK.radius, d) * k,
         a = Math.atan2(this.stick.dy, this.stick.dx);
-      this.joystick.lineStyle(2, 0xc6edce, 0.3).strokeCircle(this.stick.x, this.stick.y, 55);
       this.joystick
-        .fillStyle(0xc6edce, 0.3)
-        .fillCircle(this.stick.x + Math.cos(a) * r, this.stick.y + Math.sin(a) * r, 20);
+        .fillStyle(0x0b1222, 0.25)
+        .fillCircle(this.stick.x, this.stick.y, JOYSTICK.radius * k)
+        .lineStyle(2 * k, 0xc6edce, 0.45)
+        .strokeCircle(this.stick.x, this.stick.y, JOYSTICK.radius * k)
+        .lineStyle(k, 0xc6edce, 0.25)
+        .strokeCircle(this.stick.x, this.stick.y, JOYSTICK.radius * JOYSTICK.deadZone * k);
+      this.joystick
+        .fillStyle(0xc6edce, 0.5)
+        .fillCircle(this.stick.x + Math.cos(a) * r, this.stick.y + Math.sin(a) * r, 22 * k);
     }
   }
   /** Task 08.5 §5: floating numbers (pooled, capped) and the player-hit vignette. */
@@ -911,17 +953,19 @@ export class AlphaScene extends Phaser.Scene {
         .setVisible(true);
     });
     const v = this.vignette.clear();
+    pinToScreen(v, this.cameras.main);
     const hitAge = s.time - this.playerHitAt;
     if (hitAge >= 0 && hitAge < PLAYER_HIT_VIGNETTE) {
       const strength = 1 - hitAge / PLAYER_HIT_VIGNETTE;
       const w = this.scale.width,
-        h = this.scale.height;
+        h = this.scale.height,
+        k = this.dpr; // canvas pixels per CSS pixel
       for (let i = 0; i < 6; i++)
-        v.lineStyle(14, 0xd8323c, 0.32 * strength * (1 - i / 6)).strokeRect(
-          7 + i * 14,
-          7 + i * 14,
-          w - 14 - i * 28,
-          h - 14 - i * 28,
+        v.lineStyle(14 * k, 0xd8323c, 0.32 * strength * (1 - i / 6)).strokeRect(
+          (7 + i * 14) * k,
+          (7 + i * 14) * k,
+          w - (14 + i * 28) * k,
+          h - (14 + i * 28) * k,
         );
     }
   }

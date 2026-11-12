@@ -71,6 +71,24 @@ function GameplaySettings() {
         </select>
       </label>
       <p className="faint">{RU.settings.graphicsHint}</p>
+      <h3>{RU.settings.touch}</h3>
+      <label className="settings-toggle">
+        <input
+          type="checkbox"
+          checked={settings.leftHanded}
+          onChange={(e) => uiSettings.set({ leftHanded: e.target.checked })}
+        />
+        {RU.settings.leftHanded}
+      </label>
+      <label className="settings-toggle">
+        <input
+          type="checkbox"
+          checked={settings.haptics}
+          onChange={(e) => uiSettings.set({ haptics: e.target.checked })}
+        />
+        {RU.settings.haptics}
+      </label>
+      <p className="faint">{RU.settings.touchHint}</p>
     </section>
   );
 }

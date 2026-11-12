@@ -157,8 +157,10 @@ export function EquipmentPage() {
                         aria-pressed={selected === item.id}
                         aria-label={`${item.name}${isEquipped(item) ? `, ${E.equipped.toLowerCase()}` : ''}`}
                         onClick={() => setSelected(selected === item.id ? null : item.id)}
-                        onMouseEnter={() => setHovered(item.id)}
-                        onMouseLeave={() => setHovered(null)}
+                        // Task 16: pointer events (mouse only: a touch tap must not leave a stuck
+                        // hover preview; a tap selects the item instead).
+                        onPointerEnter={(e) => e.pointerType === 'mouse' && setHovered(item.id)}
+                        onPointerLeave={(e) => e.pointerType === 'mouse' && setHovered(null)}
                         onFocus={() => setHovered(item.id)}
                         onBlur={() => setHovered(null)}
                       >
