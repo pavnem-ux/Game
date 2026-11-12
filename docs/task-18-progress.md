@@ -5,7 +5,7 @@ blank lines and aligned the biome table). Branch `task-18-visuals` from `main` a
 (Task 15 merged). Rendering only: simulation, balance and collisions unchanged. Tasks 16/17 are not
 on `main`, so the «Качество графики» setting is new here (step 3.4).
 
-Current: Phase 3 (light)
+Current: done — PR ready for review (not merged); phone FPS target not met (see below)
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/15
 
@@ -22,14 +22,14 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/15
 - [x] 2.3 Particles
 - [x] 2.4 Per-map variation / signature
 - [x] Phase 2 tests
-- [ ] 3.1 Darkness overlay + player light
-- [ ] 3.2 Light sources
-- [ ] 3.3 Boss phase
-- [ ] 3.4 Quality setting
-- [ ] 4.1 Full checks (AGENTS.md §6 + e2e, `test:production`)
-- [ ] 4.2 "After" screenshots (all quality levels), FPS table
-- [ ] 4.3 Docs (`VISUALS.md`, README, `playtest.md`)
-- [ ] 4.4 PR description
+- [x] 3.1 Darkness overlay + player light
+- [x] 3.2 Light sources
+- [x] 3.3 Boss phase
+- [x] 3.4 Quality setting
+- [x] 4.1 Full checks (AGENTS.md §6 + e2e, `test:production`)
+- [x] 4.2 "After" screenshots (all quality levels), FPS table
+- [x] 4.3 Docs (`VISUALS.md`, README, `playtest.md`)
+- [x] 4.4 PR description
 
 ## Tools
 
@@ -74,6 +74,24 @@ quality)` (no-op for the same map/quality) — ground tile 256² baked per map (
   `tests/engine/visual-biomes.test.ts` (acts → biomes, art for every prop, same map ⇒ same look and
   layout, all 40 maps differ, decor off the spawn centre / signature / edge, density prefix, palette).
 
+- Light (3.1–3.3): `LightRenderer.ts` (render texture × `lightResolution`, filled with the act's
+  darkness and erased with `light-radial` stamps — Canvas `destination-out`; Low: `light-vignette`
+  image around the player; warm `glow` halo above the darkness; `MAX_LIGHTS` 48 / 24 / 0).
+  `AlphaScene.drawLights()`: darkness = biome darkness (+0.12 boss), boss colours `BOSS_DARK`, player
+  light 260 × flicker, sources in priority order (telegraphs, enemy shots, boss, chests, player shots,
+  zones, skill areas, crystals, coins), accent glows on Высокое only; revive → `cameras.main.flash`
+  and darkness fades back over 0.8 s. Depths: darkness 9.5, overlay (HP bars) 9.7, particles 9.6.
+- `tint-cache.ts`: baked tinted/white copies (Canvas ignores `setTint`/`setTintFill`); used for glows,
+  bolts, particles, halo, hit-flash silhouettes.
+- Quality (3.4): `quality.ts` (`QUALITY_PRESETS`, `MAX_LIGHTS`, `defaultQuality(touch)`),
+  `UiSettings.graphicsQuality` (default from `(pointer: coarse)`), Settings select «Качество
+  графики»; `AlphaScene.applyQuality()` on create and on every settings change.
+- Performance changes: unit shadows baked into textures (`drawArt`), `ART_SCALE` 1 (1:1 draws), hit
+  flash = body texture swap, view culling, no per-frame depth sort, ≤ 32 free glows, setTexture only
+  on change.
+- Tests: `tests/engine/visual-quality.test.ts`; campaign e2e expects `graphicsQuality: 'high'`.
+- Docs: `docs/VISUALS.md`, README, `playtest.md` §5.7, `docs/visuals/*.jpg` (before / after-<quality>).
+
 ## FPS baseline (before, dev server, headless Chromium without GPU — compare relatively)
 
 | Profile               | Scenario | Quality | Enemies alive | FPS         | p95 frame      |
@@ -86,7 +104,29 @@ quality)` (no-op for the same map/quality) — ground tile 256² baked per map (
 (Two runs each. The level-30 mage keeps killing during the window, so "alive" is the count at the
 end.)
 
+## FPS — final (2 runs each, same session; `main` served from a worktree on port 5174)
+
+| Profile / scenario            | `main` (before) | High | Medium | Low  |
+| ----------------------------- | --------------- | ---- | ------ | ---- |
+| desktop 1280×800, map 40      | 40.6            | 41.9 | 40.8   | 41.0 |
+| desktop 1280×800, sandbox     | 46.6            | 45.2 | 44.7   | 48.6 |
+| phone 390×844 CPU ×4, map 40  | 43.5            | 33.8 | 33.3   | 39.4 |
+| phone 390×844 CPU ×4, sandbox | 34.2            | 27.5 | 34.3   | 32.2 |
+
+Desktop: target met. Phone (CPU ×4): **not met** — High/Medium up to ~22% slower on map 40, Low ≈
+before (not "noticeably faster"). Investigation (CPU profiles, layer and commit bisects): Phaser
+**Canvas** draws each sprite separately (save/restore + drawImage), while the old renderer drew all
+units in one Graphics; the Phase 2 commit (sprites + biomes) was already ~8% slower on the phone, the
+light layer and glows add the rest. Frame times quantise to vsync (16.7 / 33 ms), so small savings
+show as noisy steps. Next step for the owner: WebGL (`Phaser.AUTO`) batches sprites — not measurable
+here (headless without GPU; software WebGL ran at 16–21 FPS).
+
 ## Decisions
+
+- The game runs on `Phaser.CANVAS`: tints are baked (`TintCache`) so colours match on Canvas and WebGL.
+- The Phase 2 commit (`84f7d67`) imported `visuals/quality.ts` without adding it (it was untracked);
+  the Phase 3 commit adds it. History was not rewritten.
+- Screenshots in `docs/visuals/` are JPEG (q 82): 20 shots in 1.4 MB instead of 9.7 MB of PNG.
 
 - The shot script chooses any open level-up offer before capturing (XP is auto-collected during
   the scripted seconds); the "before" set was retaken that way from the old renderer.
@@ -96,6 +136,9 @@ reservedSlots` = 80 on map 40, and this task must not change balance. FPS is mea
   its cap **and** in the sandbox at the alpha cap of 120 (≈112 alive while measuring).
 
 ## Verification log
+
+- Phase 3/4: typecheck ✓, format ✓, `npm test` 1317 ✓, build ✓, `test:production` 2 PASS, QA +
+  `test:qa` PASS, `test:e2e` 3 PASS.
 
 - Phase 2: typecheck ✓, format ✓, `npm test` 1315 ✓, build ✓, `test:e2e` 3 PASS. FPS (no quality
   setting yet): desktop map 40 40.9 / sandbox 49.2; phone ×4 map 40 38.1 / sandbox 26.8.
