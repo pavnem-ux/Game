@@ -442,7 +442,17 @@ try {
   await mobile.goto(base + '/?debug');
   await mobile.waitForFunction(() => !!window.__alpha);
   await mobile.getByRole('button', { name: 'Начать забег' }).click();
+  // Task 16: in portrait a phone shows «Поверните устройство» and the run pauses.
+  await mobile.getByText('Поверните устройство').first().waitFor();
+  await mobile.waitForFunction(() => window.__alpha.state().screen === 'paused');
+  // Rotate to landscape (the play orientation), resume, collapse the debug overlay.
+  await mobile.setViewportSize({ width: 844, height: 390 });
+  await mobile.getByText('Поверните устройство').first().waitFor({ state: 'detached' });
+  await mobile.evaluate(() =>
+    window.__alpha.command({ type: 'restart', options: { characterClass: 'warrior' } }),
+  );
   await mobile.waitForFunction(() => window.__alpha.state().screen === 'playing');
+  await mobile.getByRole('button', { name: 'Скрыть' }).click();
   const x0 = await mobile.evaluate(() => window.__alpha.state().world.playerBody.x);
   const canvas = await mobile.locator('canvas').boundingBox();
   const client = await mobile.context().newCDPSession(mobile);

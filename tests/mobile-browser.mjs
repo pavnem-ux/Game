@@ -75,7 +75,8 @@ async function open(viewport) {
     { x: ox + 80, y: oy, id: 1 },
     { x: box.x + box.width / 2, y: box.y + box.height / 2, id: 2 },
   ]);
-  await touch('touchEnd', [{ x: ox + 80, y: oy, id: 1 }]);
+  // CDP touchEnd lists the points being released: lift only the dash finger.
+  await touch('touchEnd', [{ x: box.x + box.width / 2, y: box.y + box.height / 2, id: 2 }]);
   await page.waitForTimeout(60);
   await advance(0.3);
   let s = await state();
@@ -84,7 +85,7 @@ async function open(viewport) {
   const x1 = s.world.playerBody.x;
   await advance(0.5);
   assert.ok((await state()).world.playerBody.x > x1 + 40, 'joystick kept working during the tap');
-  await touch('touchEnd', []);
+  await touch('touchEnd', [{ x: ox + 80, y: oy, id: 1 }]);
   await page.waitForTimeout(60);
   await advance(0.3);
   const x2 = (await state()).world.playerBody.x;
@@ -106,6 +107,101 @@ async function open(viewport) {
   await context.close();
 }
 
+// ── Phase 2: a whole run and every menu screen, landscape phone and tablet ──
+const MENU_PAGES = [
+  'Главная',
+  'Персонаж',
+  'Экипировка',
+  'Таланты',
+  'Магазин',
+  'Карта похода',
+  'Прогресс',
+  'Настройки',
+];
+async function noHorizontalScroll(page, where) {
+  const over = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  assert.ok(over <= 0, `${where}: no horizontal page scroll (${over})`);
+}
+async function tapTarget(locator, what) {
+  const box = await locator.boundingBox();
+  assert.ok(box && box.height >= 44 && box.width >= 44, `${what} is a ≥ 44 px tap target`);
+  return box;
+}
+for (const viewport of [
+  { width: 844, height: 390 },
+  { width: 768, height: 1024 },
+]) {
+  const tag = `${viewport.width}×${viewport.height}`;
+  const { context, page, state, command, advance, touch } = await open(viewport);
+  // Start a map from the hub (touch tap on «Начать забег · карта N»).
+  const start = page.getByRole('button', { name: /^Начать забег · карта/ });
+  await tapTarget(start, `${tag} hub start`);
+  await start.tap();
+  await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
+  await command({ type: 'protection', enabled: true });
+  await page.getByRole('button', { name: 'Скрыть' }).click();
+  await noHorizontalScroll(page, `${tag} run`);
+  // The arena fills the viewport (no outer header/footer on phones).
+  const canvas = await page.locator('.game-canvas canvas').boundingBox();
+  assert.ok(canvas.y + canvas.height <= viewport.height + 1, `${tag}: arena fits the screen`);
+  // Move with the joystick.
+  const ox = canvas.x + Math.min(160, canvas.width * 0.2),
+    oy = canvas.y + canvas.height * 0.75;
+  const x0 = (await state()).world.playerBody.x;
+  await touch('touchStart', [{ x: ox, y: oy, id: 1 }]);
+  await touch('touchMove', [{ x: ox + 70, y: oy, id: 1 }]);
+  await page.waitForTimeout(80);
+  await advance(0.6);
+  await touch('touchEnd', [{ x: ox + 70, y: oy, id: 1 }]);
+  await page.waitForTimeout(80);
+  assert.ok((await state()).world.playerBody.x > x0 + 50, `${tag}: joystick moves`);
+  // Dash with the button.
+  const dash = page.locator('.touch-dash');
+  await tapTarget(dash, `${tag} dash button`);
+  const used = (await state()).world.dash.used;
+  await dash.tap();
+  await page.waitForTimeout(80);
+  await advance(0.3);
+  assert.equal((await state()).world.dash.used, used + 1, `${tag}: dash button dashes`);
+  // Pick a level-up card by tapping it; the controls are tap targets.
+  await command({ type: 'grant-xp', amount: 20 });
+  await page.waitForFunction(() => window.__alpha.state().screen === 'level-up');
+  await tapTarget(page.getByRole('button', { name: /^Перебросить/ }), `${tag} reroll`);
+  const card = page.locator('.upgrade-grid .skill-card').first();
+  await card.scrollIntoViewIfNeeded();
+  await tapTarget(card, `${tag} card`);
+  await card.tap();
+  await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
+  assert.equal((await state()).world.skills.pendingChoices, 0, `${tag}: card picked`);
+  // Pause button is a tap target.
+  await tapTarget(page.getByRole('button', { name: 'Пауза', exact: true }), `${tag} pause`);
+  // Finish via debug → results → back to the menu.
+  await command({ type: 'campaign-force', outcome: 'victory' });
+  await page.waitForFunction(() => window.__alpha.state().screen === 'results');
+  await noHorizontalScroll(page, `${tag} results`);
+  for (const name of ['Ещё раз →', 'В меню']) {
+    const button = page.locator('.results-actions').getByRole('button', { name, exact: true });
+    await button.scrollIntoViewIfNeeded();
+    await tapTarget(button, `${tag} results «${name}»`);
+  }
+  await page.locator('.results-actions').getByRole('button', { name: 'В меню' }).tap();
+  await page.waitForFunction(() => window.__alpha.state().screen === 'menu');
+  // Menus: every screen opens without horizontal scroll; nav items are tap targets.
+  for (const name of MENU_PAGES) {
+    const nav = page.locator('.meta-nav').getByRole('button', { name, exact: true });
+    await nav.scrollIntoViewIfNeeded();
+    await tapTarget(nav, `${tag} nav «${name}»`);
+    await nav.tap();
+    await page.waitForTimeout(150);
+    await noHorizontalScroll(page, `${tag} ${name}`);
+  }
+  await context.close();
+}
+
 await browser.close();
 if (errors.length) throw new Error(errors.join('\n'));
-console.log('PASS mobile: touch joystick, dash button (= Space), multi-touch joystick + dash.');
+console.log(
+  'PASS mobile: touch joystick, dash button (= Space), multi-touch; 844×390 and 768×1024: run from the hub, move, dash, pick a card, results, all menu screens without horizontal scroll, tap targets ≥ 44 px.',
+);
