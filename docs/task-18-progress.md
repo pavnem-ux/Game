@@ -7,7 +7,7 @@ on `main`, so the «Качество графики» setting is new here (step 
 
 Current: Phase 1 (sprites)
 
-Draft PR: (pending)
+Draft PR: https://github.com/pavnem-ux/Game/pull/15
 
 ## Checklist
 
