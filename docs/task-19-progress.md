@@ -4,7 +4,7 @@ Spec: [task-19-gear-upgrades-ore.md](task-19-gear-upgrades-ore.md) (owner's file
 `task-19-gear` stacked on `task-16-mobile` (PR #16 was not merged into `main` yet when this task
 started; the spec's base is "main with Task 16 merged"). Rebase onto `main` once #16 is merged.
 
-Current: Phase 4
+Current: Phase 5
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/17
 
@@ -20,7 +20,7 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/17
 - [x] 3.1 Upgrade logic (pure)
 - [x] 3.2 Stats with upgrade levels
 - [x] 3.3 Forge UI
-- [ ] 4 Save v5 migration / validation
+- [x] 4 Save v5 migration / validation
 - [ ] 5 Full checks, docs, PR
 
 ## Decisions
@@ -60,6 +60,11 @@ levels)` → `composeRunStats` (caps once). Character and Equipment screens use 
   cards; item stat lines show upgraded values. On phones the detail panel scrolls into view on pick.
 - DEV panel «Снаряжение и магазин»: «Выдать руду», item + level (+0…+10) → «Установить уровень
   предмета».
+- Save v5 (`migrateV4toV5`): adds `ore: 0`, `itemLevels: {}` and empty `helmet` / `gloves` /
+  `pants` to every existing loadout; nothing else changes. Validation: ore whole ≥ 0; item levels
+  whole 0–10 for owned, upgradeable items (0 accepted, not kept); new slots checked like the old
+  ones. Older-version test fixtures built from current profiles now drop the v5-only fields (a real
+  v1–v4 save never had them); the newer-version cases use v6.
 - Debug «Лучшее снаряжение»: the Mage gets the magic helmet / gloves / pants.
 
 ## Verification log

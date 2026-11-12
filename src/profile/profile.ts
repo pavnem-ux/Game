@@ -12,7 +12,8 @@ import type { RunOutcome, RunStatsSummary } from './rewards';
 /** v2 (Task 09): per-class `talents` ranks replace the `talentsSpent` placeholder. */
 /** v3 (Task 10): 40 maps; a completed map 10 now unlocks map 11 (see migrateV2toV3). */
 /** v4 (Task 11): `ownedItems` and per-class `loadout` (see migrateV3toV4). */
-export const PROFILE_SCHEMA_VERSION = 4;
+/** v5 (Task 19): `ore`, `itemLevels`, loadout slots helmet/gloves/pants (see migrateV4toV5). */
+export const PROFILE_SCHEMA_VERSION = 5;
 export const MAX_RECENT_RUNS = 20;
 export const MAX_PROCESSED_RUN_IDS = 50;
 

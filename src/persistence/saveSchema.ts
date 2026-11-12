@@ -79,10 +79,30 @@ export function migrateV3toV4(data: Json): Json {
     ownedItems: [],
   };
 }
+/**
+ * v4 → v5 (Task 19): `ore: 0`, `itemLevels: {}`, and every class loadout gains empty `helmet`,
+ * `gloves`, `pants` slots. Nothing else changes (Gold, XP, levels, maps, talents, items, loadouts).
+ */
+export function migrateV4toV5(data: Json): Json {
+  const classes: Json = {};
+  if (isObject(data.classes))
+    for (const [id, value] of Object.entries(data.classes))
+      classes[id] =
+        isObject(value) && isObject(value.loadout)
+          ? { ...value, loadout: { ...value.loadout, helmet: null, gloves: null, pants: null } }
+          : value; // a missing loadout gets the default; anything else is left for validation
+  return {
+    ...data,
+    ...(isObject(data.classes) ? { classes } : {}),
+    ore: 0,
+    itemLevels: {},
+  };
+}
 export const migrations: Readonly<Record<number, Migration>> = Object.freeze({
   1: migrateV1toV2,
   2: migrateV2toV3,
   3: migrateV3toV4,
+  4: migrateV4toV5,
 });
 
 export type SaveErrorCode =
