@@ -227,11 +227,99 @@ for (const viewport of [
   assert.equal(after.ore, before.ore - 1, `${tag}: forge ore`);
   await page.getByRole('heading', { name: 'Обычный шлем стража +1' }).waitFor();
   await noHorizontalScroll(page, `${tag} forge`);
+  // Task 20: pets by touch — shop tab (buy with confirmation), «Питомцы» page (activate), forge pet
+  // tab (upgrade), then a run starts with the pet.
+  await page.evaluate(() => {
+    const p = JSON.parse(localStorage.getItem('skazki.profile'));
+    p.gold += 2000;
+    p.ore += 10;
+    localStorage.setItem('skazki.profile', JSON.stringify(p));
+  });
+  await page.reload();
+  await page.waitForFunction(() => !!window.__alpha);
+  const nav = (name) => page.locator('.meta-nav').getByRole('button', { name, exact: true });
+  await nav('Магазин').scrollIntoViewIfNeeded();
+  await nav('Магазин').tap();
+  const petsTab = page.getByRole('group', { name: 'Слоты магазина' }).getByRole('button', {
+    name: 'Питомцы',
+  });
+  await petsTab.scrollIntoViewIfNeeded();
+  await tapTarget(petsTab, `${tag} shop pets tab`);
+  // The DEV toggle (debug builds only) overlaps this tab at 844×390: press it through the DOM.
+  await petsTab.evaluate((el) => el.click());
+  const owletCard = page.getByRole('group', { name: 'Совёнок Угу' });
+  const buy = owletCard.getByRole('button', { name: /Купить/ });
+  await buy.scrollIntoViewIfNeeded();
+  await tapTarget(buy, `${tag} buy pet`);
+  // Quest pets cannot be bought.
+  assert.equal(
+    await page
+      .getByRole('group', { name: 'Светлячок Лучик' })
+      .getByRole('button', { name: /Купить/ })
+      .count(),
+    0,
+    `${tag}: quest pet not for sale`,
+  );
+  await buy.tap();
+  await page.getByRole('dialog').getByRole('button', { name: 'Подтвердить' }).tap();
+  await page.waitForFunction(() =>
+    JSON.parse(localStorage.getItem('skazki.profile')).ownedPets.includes('owlet'),
+  );
+  await noHorizontalScroll(page, `${tag} shop pets`);
+  // «Питомцы» page from the hub tile: make the owlet the active pet.
+  await nav('Главная').scrollIntoViewIfNeeded();
+  await nav('Главная').tap();
+  const tile = page.locator('.hub-tile', { hasText: 'Питомцы' });
+  await tile.scrollIntoViewIfNeeded();
+  await tile.tap();
+  const choose = page.getByRole('group', { name: 'Совёнок Угу' }).getByRole('button', {
+    name: 'Взять в забег',
+  });
+  await choose.scrollIntoViewIfNeeded();
+  await tapTarget(choose, `${tag} activate pet`);
+  await choose.tap();
+  await page.waitForFunction(
+    () => JSON.parse(localStorage.getItem('skazki.profile')).activePet === 'owlet',
+  );
+  await noHorizontalScroll(page, `${tag} pets page`);
+  // Forge → «Питомцы» → upgrade to level 2 (500 Gold, 10 ore).
+  await nav('Кузница').scrollIntoViewIfNeeded();
+  await nav('Кузница').tap();
+  await page
+    .getByRole('group', { name: 'Разделы кузницы' })
+    .getByRole('button', { name: 'Питомцы' })
+    .evaluate((el) => el.click()); // under the DEV toggle (debug builds)
+  const upPet = page.getByRole('button', { name: /Улучшить до уровня 2/ });
+  await upPet.scrollIntoViewIfNeeded();
+  await tapTarget(upPet, `${tag} upgrade pet`);
+  const beforePet = await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.profile')));
+  await upPet.tap();
+  await page.waitForFunction(
+    () => JSON.parse(localStorage.getItem('skazki.profile')).petLevels.owlet === 2,
+  );
+  const afterPet = await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.profile')));
+  assert.equal(afterPet.gold, beforePet.gold - 500, `${tag}: pet upgrade Gold`);
+  assert.equal(afterPet.ore, beforePet.ore - 10, `${tag}: pet upgrade ore`);
+  await noHorizontalScroll(page, `${tag} forge pets`);
+  // A run brings the active pet (any class).
+  await nav('Главная').scrollIntoViewIfNeeded();
+  await nav('Главная').tap();
+  await page.getByRole('button', { name: /^Начать забег · карта/ }).tap();
+  await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
+  assert.deepEqual(
+    await page.evaluate(() => {
+      const p = window.__alpha.state().world.pet;
+      return p && [p.id, p.level];
+    }),
+    ['owlet', 2],
+    `${tag}: the run starts with the active pet`,
+  );
+  await page.locator('.pet-hud').waitFor();
   await context.close();
 }
 
 await browser.close();
 if (errors.length) throw new Error(errors.join('\n'));
 console.log(
-  'PASS mobile: touch joystick, dash button (= Space), multi-touch; 844×390 and 768×1024: run from the hub, move, dash, pick a card, results, all menu screens without horizontal scroll, tap targets ≥ 44 px; Task 19 forge upgrade by touch.',
+  'PASS mobile: touch joystick, dash button (= Space), multi-touch; 844×390 and 768×1024: run from the hub, move, dash, pick a card, results, all menu screens without horizontal scroll, tap targets ≥ 44 px; Task 19 forge upgrade by touch; Task 20 pets (buy, activate, upgrade, run with the pet) by touch.',
 );

@@ -4,7 +4,7 @@ Spec: [task-20-pets.md](task-20-pets.md) (owner's file). Branch `task-20-pets` s
 `task-19-gear` (PR #17, itself stacked on #16): neither was merged into `main` when this task
 started, and pets need Task 19's ore and forge. Rebase onto `main` once #16 and #17 are merged.
 
-Current: Phase 4
+Current: done — PR ready for review (stacked on #17 → #16)
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/18
 
@@ -21,7 +21,7 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/18
 - [x] 3.1 Pet selection (hub + equipment slot)
 - [x] 3.2 Shop tab, forge tab
 - [x] 3.3 HUD icon + cooldown ring; sprites, light
-- [ ] 4 Full checks, docs, PR
+- [x] 4 Full checks, docs, PR
 
 ## Decisions
 
@@ -77,3 +77,15 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/18
 - `tests/pets/` added to the Vitest include list; `npm run test:pets`.
 
 ## Verification log
+
+- Each step: typecheck, `npm test`, `format:check` green before the commit.
+- Phase 4 (final): typecheck 0 errors; `npm test` 1378 passed; `format:check` OK; `npm run build`
+  OK; `test:production` 2 PASS; `test:build-policy` OK; fresh local QA build + `test:qa` PASS;
+  `test:e2e` 4 PASS (browser, alpha, campaign — shop now has 8 tabs —, mobile incl. pets by touch at
+  844×390 and 768×1024).
+- Measurement (60 s, archer/mage level 30, stationary dummies): action counts match the timers
+  (owlet 50, fox 10, hedgehog 6, firefly 7). Dummies die to one pet hit, so damage tables use the
+  exact formulas (`docs/PETS.md` §2).
+- The DEV toggle (debug builds only) overlaps the top-right tab rows at 844×390; the mobile e2e
+  presses those two tabs through the DOM (their ≥ 44 px size is still checked). Players never see it.
+- Not verified: balance in real play; real devices.
