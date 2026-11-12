@@ -106,6 +106,9 @@ describe('Task 11 Phase 2 — gear in the save (schema v4)', () => {
     expect(loaded.profile.classes.warrior.loadout).toEqual({
       weapon: 'heavy_sword-t1',
       armor: 'plate-t2',
+      helmet: null,
+      gloves: null,
+      pants: null,
       amulet: null,
       ring: null,
     });

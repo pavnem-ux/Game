@@ -19,7 +19,15 @@ export interface EquipmentState {
   readonly loadouts: Loadouts;
 }
 export const defaultLoadout = (c: CharacterClass): Loadout =>
-  Object.freeze({ weapon: starterWeapon(c).id, armor: null, amulet: null, ring: null });
+  Object.freeze({
+    weapon: starterWeapon(c).id,
+    helmet: null,
+    armor: null,
+    gloves: null,
+    pants: null,
+    amulet: null,
+    ring: null,
+  });
 export const defaultLoadouts = (): Loadouts =>
   Object.freeze(
     Object.fromEntries(CHARACTER_CLASSES.map((c) => [c, defaultLoadout(c)])) as Record<

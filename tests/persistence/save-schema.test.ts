@@ -63,7 +63,15 @@ describe('saveSchema (Task 08 §1.4, step 4.1)', () => {
       lifetimeXp: 0,
       talents: {},
       // Task 11: a missing loadout defaults to the starter weapon and empty slots.
-      loadout: { weapon: 'starter_daggers', armor: null, amulet: null, ring: null },
+      loadout: {
+        weapon: 'starter_daggers',
+        helmet: null,
+        gloves: null,
+        pants: null,
+        armor: null,
+        amulet: null,
+        ring: null,
+      },
     });
     expect(r.profile.stats.runs).toBe(0);
     expect(r.profile.recentRuns).toEqual([]);

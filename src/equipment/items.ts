@@ -4,6 +4,7 @@ import {
   STARTER_WEAPONS,
   TIER1_STAT_VALUES,
   TIERS,
+  SECOND_STAT_REDUCED_SLOTS,
   TIER_CONFIG,
   WEAPON_PRICE_FACTOR,
   WEAPON_SECOND_STAT_FACTOR,
@@ -35,7 +36,8 @@ function makeItem(template: GearTemplate, tier: Tier): GearItem {
   const weapon = template.slot === 'weapon';
   const stats: Partial<Record<GearStat, number>> = {};
   template.stats.forEach((stat, i) => {
-    const share = weapon && i > 0 ? WEAPON_SECOND_STAT_FACTOR : 1;
+    const reduced = SECOND_STAT_REDUCED_SLOTS.includes(template.slot);
+    const share = reduced && i > 0 ? WEAPON_SECOND_STAT_FACTOR : 1;
     stats[stat] = round(TIER1_STAT_VALUES[stat] * tc.multiplier * share);
   });
   return Object.freeze({
@@ -53,7 +55,7 @@ function makeItem(template: GearTemplate, tier: Tier): GearItem {
   });
 }
 
-/** All 85 shop items (17 templates × 5 tiers), template order then tier. */
+/** All 130 shop items (26 templates × 5 tiers), template order then tier. */
 export const SHOP_ITEMS: readonly GearItem[] = Object.freeze(
   GEAR_TEMPLATES.flatMap((template) => TIERS.map((tier) => makeItem(template, tier))),
 );

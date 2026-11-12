@@ -66,11 +66,14 @@ describe('Task 11 §1.5 shop / equipment actions (campaign store, validated save
   });
   it('debug: unlock all items; equip the best tier for a class', () => {
     expect(debug.campaignDebug.unlockAllItems()).toBe(true);
-    expect(profile().ownedItems).toHaveLength(85);
+    expect(profile().ownedItems).toHaveLength(130);
     expect(debug.campaignDebug.equipBestTier('mage')).toBe(true);
     expect(profile().classes.mage.loadout).toEqual({
       weapon: 'flame_staff-t5',
+      helmet: 'mage_circlet-t5',
       armor: 'plate-t5',
+      gloves: 'sorcerer_gloves-t5',
+      pants: 'mystic_trousers-t5',
       amulet: 'amulet_magic-t5',
       ring: 'ring_precision-t5',
     });
