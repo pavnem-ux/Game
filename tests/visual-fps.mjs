@@ -20,6 +20,13 @@ const profiles = [
     throttle: 4,
     touch: true,
   },
+  // Task 16: landscape is the play orientation on phones.
+  {
+    name: 'phone 844×390 landscape, CPU ×4',
+    viewport: { width: 844, height: 390 },
+    throttle: 4,
+    touch: true,
+  },
 ];
 // FPS_PROFILES=phone|desktop limits the run to one profile.
 const only = process.env.FPS_PROFILES;
