@@ -9,9 +9,13 @@ import {
   buyProfilePet,
   setProfileActivePet,
   upgradeProfilePet,
+  claimProfileQuest,
+  withProfileLoadoutCounter,
 } from '../profile';
 import { EquipmentError, UpgradeError } from '../equipment';
 import { PetError, isPetId, petLevel } from '../pets';
+import { QuestError } from '../quests';
+import type { RunQuestSummary } from '../quests';
 import type { PetId } from '../pets';
 import type { GearSlot } from '../equipment';
 import {
@@ -108,6 +112,8 @@ export function runResultFrom(
     stats: summarizeRunStats(world.runStats),
     // Task 11: coins collected this run (converted to Gold once, with the result).
     coins: world.coins.collected,
+    // Task 21: quest counters of this run (added once, with the result).
+    quest: runQuestSummary(world),
   });
 }
 
@@ -198,11 +204,13 @@ function gearChange(change: (p: PlayerProfile) => PlayerProfile): string | null 
   if (!profile) return 'no-profile';
   let next: PlayerProfile;
   try {
-    next = change(profile);
+    // Task 21: gear actions keep the best tier-4+ loadout counter (forge quest) in the same save.
+    next = withProfileLoadoutCounter(change(profile));
   } catch (error) {
     return error instanceof EquipmentError ||
       error instanceof UpgradeError ||
-      error instanceof PetError
+      error instanceof PetError ||
+      error instanceof QuestError
       ? error.reason
       : 'invalid';
   }
@@ -266,6 +274,13 @@ export const campaignStore = {
    */
   upgradeItem(itemId: string): string | null {
     return gearChange((p) => upgradeProfileItem(p, itemId));
+  },
+  /**
+   * Task 21: claim a completed quest — Gold, ore, item / pet (or their Gold fallback) and the
+   * claim mark in one validated save. Returns the refusal reason or null.
+   */
+  claimQuest(questId: string): string | null {
+    return gearChange((p) => claimProfileQuest(p, questId));
   },
   /** Task 20: buy a shop pet (Gold deducted and the pet owned in one validated save). */
   buyPet(petId: string): string | null {
@@ -427,4 +442,25 @@ export const campaignStore = {
 export function activePetOf(profile: PlayerProfile): Readonly<{ id: PetId; level: number }> | null {
   const id = profile.activePet;
   return id && isPetId(id) ? Object.freeze({ id, level: petLevel(profile.petLevels, id) }) : null;
+}
+/**
+ * Task 21: the run's quest counters from the world snapshot — kills of the new enemy types, chests
+ * opened, synergies opened (level ≥ 1) / awakened (level 3). Debug-forced synergy levels never count.
+ */
+export function runQuestSummary(world: GameplaySnapshot): RunQuestSummary {
+  const kills = (type: string) =>
+    world.runStats?.killsByType?.find((k) => k.type === type)?.count ?? 0;
+  const real = (world.synergyLevels ?? []).filter((s) => !s.forced);
+  return Object.freeze({
+    killsByType: Object.freeze({
+      swift: kills('swift'),
+      brute: kills('brute'),
+      bombard: kills('bombard'),
+    }),
+    chestsOpened:
+      (world.runStats?.chests?.opened.wooden ?? 0) +
+      (world.runStats?.chests?.opened.enchanted ?? 0),
+    synergiesOpened: Object.freeze(real.filter((s) => s.level >= 1).map((s) => s.id)),
+    synergiesAwakened: Object.freeze(real.filter((s) => s.level >= 3).map((s) => s.id)),
+  });
 }

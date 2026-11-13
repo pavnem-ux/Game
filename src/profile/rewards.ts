@@ -1,6 +1,7 @@
 import type { CharacterClass } from '../character-stats';
 import { CAMPAIGN_BALANCE, getCampaignMap } from '../campaign';
 import { runGold } from '../equipment/economy';
+import type { RunQuestSummary } from '../quests/counters';
 
 /**
  * Task 08 run rewards (pure). Victory: full map XP to the class and Gold to the profile. Defeat:
@@ -25,6 +26,8 @@ export interface RunResult {
   readonly stats?: RunStatsSummary;
   /** Task 11: Gold coins collected during the run (absent = 0). */
   readonly coins?: number;
+  /** Task 21: quest counters of this run (kills by type, chests, synergies; absent = none). */
+  readonly quest?: RunQuestSummary;
 }
 /**
  * Task 08.5 §2: the only run statistics that are persisted (in `recentRuns`). Whole numbers for

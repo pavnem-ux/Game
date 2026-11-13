@@ -1,3 +1,4 @@
+import { NO_QUEST_COUNTERS } from '../../src/quests';
 import { describe, expect, it } from 'vitest';
 import {
   SAVE_KEY,
@@ -114,10 +115,18 @@ describe('Task 09 §1.4 talent persistence (schema v2)', () => {
   });
   it('an old v1 profile migrates without loss (talents empty, talentsSpent dropped)', () => {
     // Task 19: v1 had no ore / item levels (v5 fields); the migrated profile gets the defaults.
-    const v2 = { ...seeded(), ore: 0, itemLevels: {} };
+    const v2 = {
+      ...seeded(),
+      ore: 0,
+      itemLevels: {},
+      questCounters: NO_QUEST_COUNTERS,
+      questsClaimed: [],
+    };
     const v1 = JSON.parse(JSON.stringify(v2));
     delete v1.ore;
     delete v1.itemLevels;
+    delete v1.questCounters;
+    delete v1.questsClaimed;
     v1.schemaVersion = 1;
     for (const c of Object.keys(v1.classes)) {
       delete v1.classes[c].talents;

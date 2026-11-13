@@ -26,6 +26,7 @@
     "test:talents": "vitest run tests/talents",
     "test:equipment": "vitest run tests/equipment",
     "test:pets": "vitest run tests/pets",
+    "test:quests": "vitest run tests/quests",
     "test:production": "node tests/alpha-production.mjs",
     "build:qa": "npm run typecheck && vite build --mode qa",
     "test:build-policy": "node tests/qa-build.test.mjs && node tests/build-info.test.mjs",

@@ -53,6 +53,9 @@ function v4Save() {
   data.ownedItems = ['plate-t1', 'flame_staff-t1', 'ring_fury-t1'];
   delete data.ore;
   delete data.itemLevels;
+  // Task 21: quest counters / claims are v7 fields (a real v4 save has none).
+  delete data.questCounters;
+  delete data.questsClaimed;
   for (const run of data.recentRuns) delete run.ore;
   for (const c of Object.keys(data.classes))
     data.classes[c].loadout = {
@@ -92,7 +95,7 @@ function v5Profile(): PlayerProfile {
 
 describe('Task 19 §1.4 — save schema v5', () => {
   it('a v4 save migrates without loss: ore 0, item levels {}, empty helmet/gloves/pants', () => {
-    expect(SAVE_SCHEMA_VERSION).toBe(6); // Task 20: v5 → v6 adds pets only
+    expect(SAVE_SCHEMA_VERSION).toBe(7); // Task 20/21: v5 → v6 → v7 add pets / quests only
     const v4 = v4Save();
     const r = parseProfileJson(JSON.stringify(v4));
     if (!r.ok) throw r.error;
@@ -111,7 +114,15 @@ describe('Task 19 §1.4 — save schema v5', () => {
       expect(rest).toEqual(restOld);
     }
     // Everything else is unchanged.
-    const { classes: _a, schemaVersion: _b, ore: _c, itemLevels: _d, ...others } = r.profile;
+    const {
+      classes: _a,
+      schemaVersion: _b,
+      ore: _c,
+      itemLevels: _d,
+      questCounters: _e,
+      questsClaimed: _f,
+      ...others
+    } = r.profile;
     const { classes: _a2, schemaVersion: _b2, ...othersOld } = v4;
     expect(others).toEqual(othersOld);
     // The migration itself only adds the new fields.

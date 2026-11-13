@@ -4,6 +4,8 @@ import type { ClassProgress } from './class-xp';
 import { NEW_CLASS_PROGRESS } from './class-xp';
 import { defaultLoadout } from '../equipment';
 import type { RunOutcome, RunStatsSummary } from './rewards';
+import { NO_QUEST_COUNTERS } from '../quests/counters';
+import type { QuestCounters } from '../quests/counters';
 
 /**
  * Task 08 player profile (persisted as one JSON document by the save store in Phase 4).
@@ -14,7 +16,8 @@ import type { RunOutcome, RunStatsSummary } from './rewards';
 /** v4 (Task 11): `ownedItems` and per-class `loadout` (see migrateV3toV4). */
 /** v5 (Task 19): `ore`, `itemLevels`, loadout slots helmet/gloves/pants (see migrateV4toV5). */
 /** v6 (Task 20): `ownedPets`, `petLevels`, `activePet` (see migrateV5toV6). */
-export const PROFILE_SCHEMA_VERSION = 6;
+/** v7 (Task 21): `questCounters`, `questsClaimed` (see migrateV6toV7). */
+export const PROFILE_SCHEMA_VERSION = 7;
 export const MAX_RECENT_RUNS = 20;
 export const MAX_PROCESSED_RUN_IDS = 50;
 
@@ -84,6 +87,10 @@ export interface PlayerProfile {
   readonly petLevels: Readonly<Record<string, number>>;
   /** Task 20: the one active pet (shared by every class) or null. */
   readonly activePet: string | null;
+  /** Task 21: lifetime quest counters (total kills stay in `stats.enemiesKilled`). */
+  readonly questCounters: QuestCounters;
+  /** Task 21: quests whose reward was claimed, in claim order. */
+  readonly questsClaimed: readonly string[];
 }
 
 /** A brand-new profile. Identity and time are supplied by the caller (no hidden clock/RNG). */
@@ -119,5 +126,7 @@ export function createProfile(profileId: string, createdAt: string): PlayerProfi
     ownedPets: Object.freeze([]),
     petLevels: Object.freeze({}),
     activePet: null,
+    questCounters: NO_QUEST_COUNTERS,
+    questsClaimed: Object.freeze([]),
   });
 }

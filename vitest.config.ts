@@ -23,6 +23,7 @@ export default defineConfig({
       'tests/ui-kit/**/*.test.ts',
       'tests/audio/**/*.test.ts',
       'tests/pets/**/*.test.ts',
+      'tests/quests/**/*.test.ts',
     ],
   },
 });

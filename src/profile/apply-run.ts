@@ -5,6 +5,7 @@ import { MAX_PROCESSED_RUN_IDS, MAX_RECENT_RUNS } from './profile';
 import type { MapBest, PlayerProfile, RecentRun } from './profile';
 import { runRewards, validateRunStatsSummary } from './rewards';
 import { runOre } from '../equipment/economy';
+import { addRunToCounters, validateRunQuestSummary } from '../quests/counters';
 import type { RunResult } from './rewards';
 
 /**
@@ -59,6 +60,7 @@ export function validateRunResult(result: RunResult): void {
   if (result.stats !== undefined) validateRunStatsSummary(result.stats);
   if (result.coins !== undefined && (!Number.isSafeInteger(result.coins) || result.coins < 0))
     throw new RangeError('coins must be a whole number ≥ 0.');
+  if (result.quest !== undefined) validateRunQuestSummary(result.quest);
 }
 
 function summaryFromRecent(run: RecentRun): RunSummary {
@@ -194,6 +196,11 @@ export function applyRunResult(
     processedRunIds: Object.freeze(
       [...profile.processedRunIds, result.runId].slice(-MAX_PROCESSED_RUN_IDS),
     ),
+    // Task 21: quest counters, once per finalized run (same snapshot and run-ID de-duplication).
+    questCounters: addRunToCounters(profile.questCounters, {
+      ...result,
+      ...(result.quest ? { quest: validateRunQuestSummary(result.quest) } : {}),
+    }),
   });
   return Object.freeze({
     profile: next_,

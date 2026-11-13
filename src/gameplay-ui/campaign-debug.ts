@@ -9,13 +9,21 @@ import {
 } from '../persistence';
 import { REPORT_FORMAT } from './bug-report';
 import { MAX_UI_SEED } from '../gameplay';
-import { MAX_CLASS_LEVEL, NEW_CLASS_PROGRESS, addClassXp, createProfile } from '../profile';
+import {
+  MAX_CLASS_LEVEL,
+  NEW_CLASS_PROGRESS,
+  addClassXp,
+  createProfile,
+  withProfileLoadoutCounter,
+} from '../profile';
 import { TALENT_CONFIG, TALENT_RULES, superpowerActive, validateTalentRanks } from '../talents';
 import type { TalentRanks } from '../talents';
 import type { PlayerProfile } from '../profile';
 import { campaignStore } from './campaign-state';
 import { GEAR_SLOTS, SHOP_ITEMS, isEligible } from '../equipment';
 import { PET_IDS } from '../pets';
+import { NO_QUEST_COUNTERS, QUEST_BY_ID, SYNERGY_IDS } from '../quests';
+import type { QuestCounters, QuestGoal } from '../quests';
 import type { GearSlot, Loadout } from '../equipment';
 /** Task 19: magic templates of the new slots for the Mage's best-gear debug loadout. */
 const MAGE_GEAR: Partial<Record<GearSlot, string>> = {
@@ -46,7 +54,8 @@ function minimumLevel(characterClass: CharacterClass, from: number, ranks: Talen
 function edit(change: (p: PlayerProfile) => PlayerProfile): boolean {
   const profile = campaignStore.getSnapshot().progression.profile;
   if (!profile) return false;
-  return campaignStore.service().replaceProfile(change(profile)).ok;
+  // Task 21: debug gear edits keep the best tier-4+ loadout counter like real gear actions.
+  return campaignStore.service().replaceProfile(withProfileLoadoutCounter(change(profile))).ok;
 }
 /**
  * Task 08.5 §3.4: extracts the embedded save from a «Сообщить о проблеме» report. Only the
@@ -211,6 +220,78 @@ export const campaignDebug = {
   grantGold(amount: number) {
     return edit((p) => ({ ...p, gold: p.gold + amount }));
   },
+  /**
+   * Task 21 §1.6: completes a quest by raising its own source data through the validated save
+   * (map won + next unlocked, class level, total kills, a counter, an item level or the tier
+   * counter). Nothing is claimed. Returns false for an unknown quest or a refused save.
+   */
+  completeQuest(questId: string): boolean {
+    const quest = QUEST_BY_ID.get(questId);
+    if (!quest) return false;
+    const g = quest.goal;
+    return edit((p) => {
+      const c = p.questCounters;
+      switch (g.kind) {
+        case 'map-win':
+          return {
+            ...p,
+            completedMaps: [...new Set([...p.completedMaps, g.mapId])].sort((a, b) => a - b),
+            highestUnlockedMap: Math.max(
+              p.highestUnlockedMap,
+              Math.min(CAMPAIGN_MAPS.length, g.mapId + 1),
+            ),
+          };
+        case 'kills':
+          return {
+            ...p,
+            stats: { ...p.stats, enemiesKilled: Math.max(p.stats.enemiesKilled, g.count) },
+          };
+        case 'class-level': {
+          const cur = p.classes[g.characterClass];
+          if (cur.level >= g.level) return p;
+          return {
+            ...p,
+            classes: {
+              ...p.classes,
+              [g.characterClass]: { ...progressAt(g.level, cur.talents), loadout: cur.loadout },
+            },
+          };
+        }
+        case 'item-level': {
+          const id = p.ownedItems[0] ?? 'ring_precision-t1';
+          return {
+            ...p,
+            ownedItems: p.ownedItems.includes(id) ? p.ownedItems : [...p.ownedItems, id],
+            itemLevels: { ...p.itemLevels, [id]: Math.max(p.itemLevels[id] ?? 0, g.level) },
+          };
+        }
+        default:
+          return { ...p, questCounters: completeCounter(c, g) };
+      }
+    });
+  },
+  /** Task 21 §1.6: adds to a lifetime counter (`swift`/`brute`/`bombard`/`elite`/`chests`). */
+  addQuestCounter(counter: 'swift' | 'brute' | 'bombard' | 'elite' | 'chests', amount: number) {
+    if (!Number.isSafeInteger(amount) || amount < 0) return false;
+    return edit((p) => {
+      const c = p.questCounters;
+      if (counter === 'elite')
+        return { ...p, questCounters: { ...c, eliteKills: c.eliteKills + amount } };
+      if (counter === 'chests')
+        return { ...p, questCounters: { ...c, chestsOpened: c.chestsOpened + amount } };
+      return {
+        ...p,
+        questCounters: {
+          ...c,
+          killsByType: { ...c.killsByType, [counter]: c.killsByType[counter] + amount },
+        },
+      };
+    });
+  },
+  /** Task 21 §1.6: clears quest counters and claims (the rest of the profile stays). */
+  resetQuests(): boolean {
+    return edit((p) => ({ ...p, questCounters: NO_QUEST_COUNTERS, questsClaimed: [] }));
+  },
   /** Task 20 §1.5: owns every pet, quest pets included (no Gold spent; validated save). */
   unlockAllPets() {
     return edit((p) => ({ ...p, ownedPets: [...PET_IDS] }));
@@ -294,3 +375,44 @@ export const campaignDebug = {
     }
   },
 };
+/** Task 21 debug: a quest counter raised to its goal. */
+function completeCounter(c: QuestCounters, g: QuestGoal): QuestCounters {
+  const synergies = [...SYNERGY_IDS].sort();
+  switch (g.kind) {
+    case 'type-kills':
+      return g.type === 'elite'
+        ? { ...c, eliteKills: Math.max(c.eliteKills, g.count) }
+        : {
+            ...c,
+            killsByType: { ...c.killsByType, [g.type]: Math.max(c.killsByType[g.type], g.count) },
+          };
+    case 'bosses':
+      return {
+        ...c,
+        bossesDefeated: [
+          ...new Set([...c.bossesDefeated, ...CAMPAIGN_MAPS.map((m) => m.id).slice(0, g.count)]),
+        ].sort((a, b) => a - b),
+      };
+    case 'chests':
+      return { ...c, chestsOpened: Math.max(c.chestsOpened, g.count) };
+    case 'synergies-opened':
+      return {
+        ...c,
+        synergiesOpened: [
+          ...new Set([...c.synergiesOpened, ...synergies.slice(0, g.count)]),
+        ].sort(),
+      };
+    case 'synergies-awakened': {
+      const pick = synergies.slice(0, g.count);
+      return {
+        ...c,
+        synergiesOpened: [...new Set([...c.synergiesOpened, ...pick])].sort(),
+        synergiesAwakened: [...new Set([...c.synergiesAwakened, ...pick])].sort(),
+      };
+    }
+    case 'tier-loadout':
+      return { ...c, bestTierLoadout: Math.max(c.bestTierLoadout, g.items) };
+    default:
+      return c;
+  }
+}
