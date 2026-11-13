@@ -9,6 +9,7 @@ import { RunStatsPanel } from './RunStatsPanel';
 import { RU } from './strings-ru';
 import { ReportButton } from './ReportButton';
 import { runGold, runOre } from '../equipment';
+import { QUEST_BY_ID } from '../quests';
 
 /** Results of a finished campaign run. Rewards come from the committed summary only. */
 export function ResultsScreen({ world }: { world: GameplaySnapshot }) {
@@ -85,6 +86,18 @@ export function ResultsScreen({ world }: { world: GameplaySnapshot }) {
           </p>
         )}
         {!victory && <p className="results-note">Поражение не открывает следующую карту.</p>}
+        {/* Task 21: quests that became claimable with this run. */}
+        {last?.newQuests && last.newQuests.length > 0 && (
+          <div className="results-quests" role="status">
+            <strong>✧ {RU.meta.quests.completedToast(last.newQuests.length)}</strong>
+            <ul>
+              {last.newQuests.map((id) => (
+                <li key={id}>{QUEST_BY_ID.get(id)?.title ?? id}</li>
+              ))}
+            </ul>
+            <small>Заберите награду в разделе «Задания» на главной.</small>
+          </div>
+        )}
         <RunStatsPanel stats={world.runStats} />
         <p className="results-seed" aria-label={`${RU.seed.label}: ${world.seed}`}>
           {RU.seed.label}: <code>{world.seed}</code>

@@ -14,7 +14,7 @@ import {
 } from '../profile';
 import { EquipmentError, UpgradeError } from '../equipment';
 import { PetError, isPetId, petLevel } from '../pets';
-import { QuestError } from '../quests';
+import { QuestError, claimableQuests } from '../quests';
 import type { RunQuestSummary } from '../quests';
 import type { PetId } from '../pets';
 import type { GearSlot } from '../equipment';
@@ -52,6 +52,7 @@ export type MenuPage =
   | 'shop'
   | 'forge'
   | 'pets'
+  | 'quests'
   | 'progression'
   | 'settings';
 export interface CampaignUiState {
@@ -72,7 +73,13 @@ export interface CampaignUiState {
   /** Last save-management message for the player (null = none). */
   readonly saveMessage: Readonly<{ tone: 'ok' | 'error'; text: string }> | null;
   /** Commit result of the latest finished campaign run (results screen). */
-  readonly lastResult: Readonly<{ runId: string; result: RunResult; commit: CommitResult }> | null;
+  readonly lastResult: Readonly<{
+    runId: string;
+    result: RunResult;
+    commit: CommitResult;
+    /** Task 21: quests that became claimable with this run (results toast). */
+    newQuests?: readonly string[];
+  }> | null;
 }
 
 /** Task 08.5: the persisted part of the in-memory run statistics (whole-number damage). */
@@ -195,8 +202,18 @@ function commitResolved(world: GameplaySnapshot, outcome?: RunResult['outcome'])
   if (!result || committed.has(result.runId) || !service) return;
   if (!service.getState().profile) return; // load error: nothing may change
   committed.add(result.runId);
+  const before = new Set(claimableQuests(service.getState().profile!));
   const commit = service.commitRun(result, new Date().toISOString());
-  update({ lastResult: Object.freeze({ runId: result.runId, result, commit }) });
+  const after = service.getState().profile;
+  const newQuests = after ? claimableQuests(after).filter((id) => !before.has(id)) : [];
+  update({
+    lastResult: Object.freeze({
+      runId: result.runId,
+      result,
+      commit,
+      newQuests: Object.freeze(newQuests),
+    }),
+  });
 }
 /** Applies one gear change through the validated save path; returns a refusal reason or null. */
 function gearChange(change: (p: PlayerProfile) => PlayerProfile): string | null {

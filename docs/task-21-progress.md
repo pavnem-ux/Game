@@ -3,7 +3,7 @@
 Spec: [task-21-quests.md](task-21-quests.md) (owner's file). Branch `task-21-quests` from `main` at
 `b2d5b3b` (Tasks 16, 19, 20 merged: ore, items, pets exist).
 
-Current: Phase 3
+Current: Phase 4
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/19
 
@@ -15,8 +15,8 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/19
 - [x] 1.3 Quest evaluation + claim (fallback rewards)
 - [x] Phase 1 tests
 - [x] 2 Save v7 + retroactive completion
-- [ ] 3.1 «Задания» screen
-- [ ] 3.2 Hub badge, toasts
+- [x] 3.1 «Задания» screen
+- [x] 3.2 Hub badge, toasts
 - [ ] 4 Full checks, docs, PR
 
 ## Decisions
@@ -45,6 +45,14 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/19
   `bestTierLoadout` from the current loadouts) and `questsClaimed: []`. Validation: counters whole
   ≥ 0, known distinct maps / synergies, awakened ⊆ opened; claimed ids known, unique and complete in
   that profile.
+- UI: «Задания» page (hub tile with a gold badge = rewards waiting; not in the top nav): group tabs
+  with the claimable count per group, «Только доступные» filter, rows sorted claimable → in progress
+  → claimed, progress bar «1 240 / 5 000», reward chips (Gold, ore, item name, pet portrait) and the
+  Gold fallback note for owned rewards, «Забрать» (one validated save). Results screen: «Выполнено
+  задание!» with the quests this run completed (store computes claimable before / after the commit:
+  `lastResult.newQuests`). Phones: one column, full-width «Забрать».
+- DEV panel «Задания»: quest → «Выполнить задание», counter + amount → «Прибавить к счётчику»,
+  «Сбросить задания».
 - Debug: `completeQuest` (raises the quest's own source data through a validated save),
   `addQuestCounter`, `resetQuests`.
 
