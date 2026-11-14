@@ -14,7 +14,7 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/20
 - [x] 1 Top: next-event countdown, info bar trimmed
 - [x] 2 Bottom: removed elements, active skills bottom-left, pause menu completeness
 - [x] 3 Offer screen: no hints / hotkeys / «Навыки»
-- [ ] 4.1 Rarity rows (equipment + shop)
+- [x] 4.1 Rarity rows (equipment + shop)
 - [ ] 4.2 Equipped item details → forge deep link
 - [ ] 4.3 Equip panel placement
 - [ ] 4.4 Forge mode switch
@@ -48,5 +48,9 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/20
 - Offer screen: hotkey hint line, the R / B / S / 1–3 handler and the «Навыки» button removed;
   banish hint no longer mentions 1–3. Mouse / touch buttons and Tab / Enter focus remain. Alpha e2e:
   pressing r/b/s/1/2/3/R/B/S leaves `world.skills` unchanged; banish / skip / pick done by clicks.
+- Rarity rows: `meta/TierRows.tsx` groups the (already filtered) items by tier with a tier-coloured
+  header and count; empty rows are hidden. Starter weapons (tier 0) sit in the «Обычный» row and keep
+  their «Стартовое» label. Used by the Экипировка owned list and the Магазин grid (pets tab
+  unchanged).
 
 ## Verification log

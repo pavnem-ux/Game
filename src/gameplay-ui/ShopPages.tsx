@@ -22,6 +22,7 @@ import { campaignStore } from './campaign-state';
 import { PET_CONFIG, PET_IDS, checkPetPurchase, petLevel } from '../pets';
 import type { PetId } from '../pets';
 import { PetCard } from './meta/PetsScreen';
+import { TierRows } from './meta/TierRows';
 import { Button, ConfirmModal, Tabs, TierFrame, disabledReason } from './kit';
 import { RU } from './strings-ru';
 
@@ -129,8 +130,11 @@ export function ShopPage() {
               {message}
             </p>
           )}
-          <ul className="shop-grid" aria-label="Товары">
-            {items.map((item) => {
+          <TierRows
+            items={items}
+            label="Товары"
+            className="shop-rows"
+            render={(item) => {
               const owned = isOwned(state, item);
               const wearing = equippedBy(item.id);
               const level = itemLevel(profile.itemLevels, item.id);
@@ -184,8 +188,8 @@ export function ShopPage() {
                   </TierFrame>
                 </li>
               );
-            })}
-          </ul>
+            }}
+          />
         </>
       )}
       {buying && (

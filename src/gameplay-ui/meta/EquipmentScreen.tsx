@@ -30,6 +30,7 @@ import {
 } from '../kit';
 import { RU } from '../strings-ru';
 import { ItemStats, REFUSALS, tierLabel } from '../ShopPages';
+import { TierRows } from './TierRows';
 import { PET_CONFIG, isPetId, petLevel } from '../../pets';
 import { PetPortrait } from '../pets/PetPortrait';
 import { petLevelLabel } from '../pets/pet-text';
@@ -159,8 +160,11 @@ export function EquipmentPage() {
             {owned.length === 0 ? (
               <p className="meta-empty">{E.noItems}</p>
             ) : (
-              <ul className="owned-grid">
-                {owned.map((item) => (
+              <TierRows
+                items={owned}
+                label={E.owned}
+                className="owned-rows"
+                render={(item) => (
                   <li key={item.id} className="owned-cell">
                     <TierFrame tier={item.tier}>
                       <button
@@ -190,8 +194,8 @@ export function EquipmentPage() {
                       </Tooltip>
                     )}
                   </li>
-                ))}
-              </ul>
+                )}
+              />
             )}
           </Panel>
           {chosen && (
