@@ -1029,13 +1029,15 @@ p.damage-note {
   pointer-events: none;
   max-width: 92vw;
 }
-.campaign-hud-map {
-  color: #f1eddb;
+/* Task 22: one countdown to the nearest scheduled event. */
+.campaign-hud-next {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
 }
-.campaign-hud-time {
-  color: #c3e3b6;
+.campaign-hud-next.next-elite {
+  color: #f6dc9c;
 }
-.campaign-hud-boss-countdown {
+.campaign-hud-next.next-boss {
   color: #ff9db0;
 }
 .campaign-alert {

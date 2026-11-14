@@ -133,17 +133,17 @@ try {
       }
     }
   };
-  // 5.4 HUD: map, stage, time left, boss countdown; elite alert; boss HP bar.
+  // 5.4 HUD (Task 22): coins + one countdown to the nearest scheduled event (no map name, stage,
+  // time left or separate boss countdown any more); boss HP bar.
   const hud = page.getByLabel('Кампания', { exact: true });
   await hud.waitFor();
-  assert.match(await hud.innerText(), /1\. Опушка забытых сказок/);
-  assert.match(await hud.innerText(), /Этап: Начало/);
-  assert.match(await hud.innerText(), /Осталось 9:\d\d|Осталось 10:00/);
-  assert.match(await hud.innerText(), /Босс через 9:\d\d|Босс через 10:00/);
+  assert.match(await hud.innerText(), /Элита через \d:\d\d/);
+  assert.doesNotMatch(await hud.innerText(), /Опушка забытых сказок|Этап:|Осталось|Босс через/);
   assert.match(await page.locator('.run-level-label').innerText(), /Уровень забега \d+/);
   await fastForward(112);
+  // Shortly before the first elite the countdown reads 0:0N.
   await page.waitForFunction(() =>
-    document.querySelector('.campaign-alert')?.textContent?.includes('Элита через'),
+    /Элита через 0:0\d/.test(document.querySelector('.campaign-hud-next')?.textContent ?? ''),
   );
   await page.screenshot({ path: 'artifacts/campaign-05-hud-elite.png' });
   // Task 08.5 §2.3 debug overlay: live DPS and damage per source (?debug only).
@@ -163,7 +163,9 @@ try {
   await fastForward(600);
   await page.getByRole('progressbar', { name: 'Здоровье босса' }).waitFor();
   assert.match(await page.getByLabel('Босс: Терновый страж').innerText(), /Терновый страж/);
-  assert.match(await hud.innerText(), /Время вышло — добейте босса/);
+  // Task 22: after the map duration nothing is scheduled — the countdown is hidden (coins stay).
+  assert.equal(await page.locator('.campaign-hud-next').count(), 0);
+  assert.match(await hud.innerText(), /◎ \d+/);
   await page.screenshot({ path: 'artifacts/campaign-06-boss.png' });
   s = await state();
   assert.equal(s.world.campaign.durationReached, true);
