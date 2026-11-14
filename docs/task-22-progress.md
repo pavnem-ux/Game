@@ -4,7 +4,7 @@ Spec: [task-22-hud-declutter.md](task-22-hud-declutter.md) (owner's file). Branc
 `main` at `af39a8c` (Tasks 16–21 merged). Presentation only: simulation, balance and economy
 unchanged.
 
-Current: Phase 5
+Current: done — PR ready for review
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/20
 
@@ -18,7 +18,7 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/20
 - [x] 4.2 Equipped item details → forge deep link
 - [x] 4.3 Equip panel placement
 - [x] 4.4 Forge mode switch
-- [ ] 5 Full checks, after screenshots, playtest, PR
+- [x] 5 Full checks, after screenshots, playtest, PR
 
 ## Decisions
 
@@ -68,3 +68,13 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/20
   (844×390, 768×1024, by touch) — the same with the helmet.
 
 ## Verification log
+
+- Each step: typecheck, `npm test`, `format:check` green before the commit.
+- Phase 5 (final): typecheck 0 errors; `npm test` 1403 passed; `format:check` OK; `npm run build`
+  OK; `test:production` 2 PASS; `test:build-policy` OK; fresh local QA build + `test:qa` PASS;
+  `test:e2e` 4 PASS (browser; alpha incl. «R/B/S/1–3 do nothing» and click-driven banish / skip /
+  pick; campaign incl. countdown, «Надеть» in view, equipped details → forge → back; mobile incl.
+  the same by touch at 844×390 and 768×1024).
+- After screenshots: `docs/hud/after-*.jpg` (run, offer, equipment, shop, forge, equip panel,
+  equipped details; desktop 1280×720 and mobile 844×390).
+- Not verified: real devices.
