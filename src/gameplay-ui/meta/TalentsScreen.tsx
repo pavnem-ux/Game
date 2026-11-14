@@ -13,10 +13,10 @@ import {
 import type { TalentNode } from '../../talents';
 import { campaignStore } from '../campaign-state';
 import { Button, ClassEmblem, Panel, Tabs, romanRank } from '../kit';
-import { RU } from '../strings-ru';
+import { EN } from '../strings-en';
 
-const T = RU.talents;
-const M = RU.meta.talents;
+const T = EN.talents;
+const M = EN.meta.talents;
 /** How long the «just learned» glow plays on a node (ms). */
 const LEARN_FLASH = 700;
 
@@ -38,7 +38,7 @@ export function TalentsPage() {
     const t = setTimeout(() => setFlash(null), LEARN_FLASH);
     return () => clearTimeout(t);
   }, [flash]);
-  if (!profile) return <p className="campaign-empty">Профиль недоступен.</p>;
+  if (!profile) return <p className="campaign-empty">Profile unavailable.</p>;
   const cls = shown ?? ui.viewClass ?? profile.selectedClass;
   const progress = profile.classes[cls];
   const ranks = progress.talents;
@@ -56,7 +56,7 @@ export function TalentsPage() {
     const rank = (ranks[n.id] ?? 0) + 1;
     const result = campaignStore.purchaseTalent(cls, n.id);
     uiSound(result.ok ? 'ui-buy' : 'ui-error');
-    if (!result.ok) setMessage(T.reasons[result.reason ?? ''] ?? RU.meta.talents.locked);
+    if (!result.ok) setMessage(T.reasons[result.reason ?? ''] ?? EN.meta.talents.locked);
     else {
       setFlash(n.id);
       setMessage(M.learned(n.name, romanRank(rank)));
@@ -96,7 +96,7 @@ export function TalentsPage() {
                 className={`talent-column ${branch.superpower ? 'superpower' : ''} ${
                   locked ? 'locked' : ''
                 }`}
-                aria-label={`Ветка ${branch.branch}. ${branch.name}`}
+                aria-label={`Branch ${branch.branch}. ${branch.name}`}
               >
                 <h3>
                   {branch.name}
@@ -157,7 +157,7 @@ export function TalentsPage() {
             );
           })}
         </div>
-        <Panel className="talent-detail" aria-label="Описание таланта" title={current?.name}>
+        <Panel className="talent-detail" aria-label="Talent details" title={current?.name}>
           {current ? (
             <TalentDetail
               cls={cls}

@@ -2,8 +2,8 @@ import type { CharacterClass } from '../../character-stats';
 
 /**
  * Task 13: original procedural class emblems (inline SVG, no external art). A shield-shaped crest
- * in the class accent colour with a simple mark: crossed swords (Воин), staff with a star (Маг),
- * bow and arrow (Лучник), twin daggers under a crescent (Разбойник).
+ * in the class accent colour with a simple mark: crossed swords (Warrior), staff with a star (Mage),
+ * bow and arrow (Archer), twin daggers under a crescent (Rogue).
  */
 export function ClassEmblem({
   characterClass,

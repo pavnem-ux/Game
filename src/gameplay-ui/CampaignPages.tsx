@@ -5,6 +5,7 @@ import { talentPoints, xpToNextLevel } from '../profile';
 import { campaignStore } from './campaign-state';
 import { clock } from './campaign-format';
 import { Button, Panel } from './kit';
+import { formatNumber } from './strings-en';
 
 const useCampaign = () => useSyncExternalStore(campaignStore.subscribe, campaignStore.getSnapshot);
 
@@ -12,22 +13,22 @@ const useCampaign = () => useSyncExternalStore(campaignStore.subscribe, campaign
 export function ProgressionPage() {
   const { progression } = useCampaign();
   const profile = progression.profile;
-  if (!profile) return <p className="campaign-empty">Профиль недоступен.</p>;
+  if (!profile) return <p className="campaign-empty">Profile unavailable.</p>;
   const cls = profile.selectedClass;
   const p = profile.classes[cls];
   const next = xpToNextLevel(p.level);
   return (
     <div className="campaign-page progression-page">
-      <h2 className="meta-title">Прогресс</h2>
+      <h2 className="meta-title">Progress</h2>
       <div className="progression-grid">
-        <Panel className="progression-card" aria-label="Класс" title={CLASS_LABELS[cls]}>
+        <Panel className="progression-card" aria-label="Class" title={CLASS_LABELS[cls]}>
           <p>
-            Уровень <b>{p.level}</b> / 50 · {next === null ? 'максимум' : `XP ${p.xp} / ${next}`}
+            Level <b>{p.level}</b> / 50 · {next === null ? 'max' : `XP ${p.xp} / ${next}`}
           </p>
           <div
             className="campaign-bar"
             role="progressbar"
-            aria-label="Опыт класса"
+            aria-label="Class XP"
             aria-valuemin={0}
             aria-valuemax={next ?? 1}
             aria-valuenow={next === null ? 1 : p.xp}
@@ -35,21 +36,22 @@ export function ProgressionPage() {
             <div style={{ width: `${next === null ? 100 : (p.xp / next) * 100}%` }} />
           </div>
           <p>
-            Очки талантов: <b>{talentPoints(p.level)}</b> · Всего опыта: {p.lifetimeXp}
+            Talent points: <b>{talentPoints(p.level)}</b> · Lifetime XP:{' '}
+            {formatNumber(p.lifetimeXp)}
           </p>
           <p>
-            Золото: <b>◎ {profile.gold}</b>
+            Gold: <b>◎ {formatNumber(profile.gold)}</b>
           </p>
         </Panel>
-        <Panel className="progression-card" aria-label="Кампания" title="Кампания">
+        <Panel className="progression-card" aria-label="Campaign" title="Campaign">
           <p>
-            Пройдено карт: <b>{profile.completedMaps.length}</b> / {CAMPAIGN_MAPS.length} · открыта
-            до карты {profile.highestUnlockedMap}
+            Maps cleared: <b>{profile.completedMaps.length}</b> / {CAMPAIGN_MAPS.length} · unlocked
+            up to map {profile.highestUnlockedMap}
           </p>
           <div
             className="campaign-bar"
             role="progressbar"
-            aria-label="Прогресс кампании"
+            aria-label="Campaign progress"
             aria-valuemin={0}
             aria-valuemax={CAMPAIGN_MAPS.length}
             aria-valuenow={profile.completedMaps.length}
@@ -59,30 +61,30 @@ export function ProgressionPage() {
             />
           </div>
           <p>
-            Забегов {profile.stats.runs} · побед {profile.stats.wins} · поражений{' '}
-            {profile.stats.defeats} · повержено {profile.stats.enemiesKilled} · лучшее время{' '}
-            {clock(profile.stats.bestSurvivalTime)}
+            Runs {profile.stats.runs} · victories {profile.stats.wins} · defeats{' '}
+            {profile.stats.defeats} · defeated {formatNumber(profile.stats.enemiesKilled)} · best
+            time {clock(profile.stats.bestSurvivalTime)}
           </p>
         </Panel>
-        <Panel className="progression-card" aria-label="Развитие" title="Развитие">
-          <p>Снаряжение и таланты героя — на своих экранах.</p>
+        <Panel className="progression-card" aria-label="Development" title="Development">
+          <p>Hero equipment and talents have their own screens.</p>
           <div className="progression-links">
-            <Button onClick={() => campaignStore.setPage('equipment')}>⛨ Экипировка</Button>
-            <Button onClick={() => campaignStore.setPage('talents')}>❖ Таланты</Button>
+            <Button onClick={() => campaignStore.setPage('equipment')}>⛨ Equipment</Button>
+            <Button onClick={() => campaignStore.setPage('talents')}>❖ Talents</Button>
           </div>
         </Panel>
       </div>
-      <Panel className="recent-runs" aria-label="Последние забеги" title="Последние забеги">
+      <Panel className="recent-runs" aria-label="Recent runs" title="Recent runs">
         {profile.recentRuns.length === 0 ? (
-          <p>Пока нет забегов.</p>
+          <p>No runs yet.</p>
         ) : (
           <ol>
             {profile.recentRuns.map((r) => (
               <li key={r.runId} className={`recent-run outcome-${r.outcome}`}>
-                <b>{OUTCOME_LABELS[r.outcome]}</b> · карта {r.mapId} ·{' '}
-                {CLASS_LABELS[r.characterClass]} · {clock(r.elapsed)} · {r.kills} повержено · +
-                {r.xp} XP · +{r.gold} золота
-                {r.unlockedMap ? ` · открыта карта ${r.unlockedMap}` : ''}
+                <b>{OUTCOME_LABELS[r.outcome]}</b> · map {r.mapId} ·{' '}
+                {CLASS_LABELS[r.characterClass]} · {clock(r.elapsed)} · {r.kills} defeated · +{r.xp}{' '}
+                XP · +{r.gold} Gold
+                {r.unlockedMap ? ` · unlocked map ${r.unlockedMap}` : ''}
               </li>
             ))}
           </ol>
@@ -92,7 +94,7 @@ export function ProgressionPage() {
   );
 }
 export const OUTCOME_LABELS = {
-  victory: 'Победа',
-  defeat: 'Поражение',
-  abandoned: 'Отказ',
+  victory: 'Victory',
+  defeat: 'Defeat',
+  abandoned: 'Abandoned',
 } as const;

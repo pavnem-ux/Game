@@ -7,15 +7,15 @@ import type { QuestGroup, QuestProgress } from '../../quests';
 import type { PlayerProfile } from '../../profile';
 import { campaignStore } from '../campaign-state';
 import { Button, CurrencyBadge, OreBadge, ProgressBar, Tabs, formatGold } from '../kit';
-import { RU } from '../strings-ru';
+import { EN } from '../strings-en';
 import { PetPortrait } from '../pets/PetPortrait';
 
-const Q = RU.meta.quests;
+const Q = EN.meta.quests;
 type GroupFilter = QuestGroup | 'all';
 
 /**
- * Task 21 «Задания»: group tabs, «Только доступные» filter, each quest with its progress bar,
- * rewards (owned item / pet rewards show their Gold fallback) and «Забрать» (one atomic save).
+ * Task 21 «Quests»: group tabs, «Claimable only» filter, each quest with its progress bar,
+ * rewards (owned item / pet rewards show their Gold fallback) and «Claim» (one atomic save).
  * Completion is evaluated from the profile; this screen only reads it and calls the store.
  */
 export function QuestsPage() {
@@ -26,7 +26,7 @@ export function QuestsPage() {
   const [message, setMessage] = useState<Readonly<{ tone: 'ok' | 'error'; text: string }> | null>(
     null,
   );
-  if (!profile) return <p className="campaign-empty">Профиль недоступен.</p>;
+  if (!profile) return <p className="campaign-empty">Profile unavailable.</p>;
   const all = allQuestProgress(profile);
   const available = (g: GroupFilter) =>
     all.filter((q) => q.state === 'complete' && (g === 'all' || q.quest.group === g)).length;
@@ -60,7 +60,7 @@ export function QuestsPage() {
       </header>
       <p className="meta-note">{Q.intro}</p>
       <Tabs
-        label="Группы заданий"
+        label="Quest groups"
         items={[
           { id: 'all' as GroupFilter, label: labelWithCount(Q.all, available('all')) },
           ...QUEST_GROUPS.map((g) => ({
@@ -117,7 +117,7 @@ function QuestRow({
         <small className="quest-group">{QUEST_GROUP_LABELS[q.quest.group]}</small>
         <strong>{q.quest.title}</strong>
         <ProgressBar
-          label={`Прогресс: ${q.quest.title}`}
+          label={`Progress: ${q.quest.title}`}
           value={q.current}
           max={q.target}
           tone={q.state === 'in-progress' ? 'xp' : 'gold'}

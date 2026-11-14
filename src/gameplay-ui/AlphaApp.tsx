@@ -53,7 +53,7 @@ export function AlphaApp() {
             FANTASY <b>SURVIVORS</b>
           </span>
         </div>
-        <span className="header-caption">ХРОНИКИ ПОСЛЕДНЕГО СВЕТА</span>
+        <span className="header-caption">CHRONICLES OF THE LAST LIGHT</span>
         <span className="build-badge">
           {__QA_BUILD__ ? 'QA PREVIEW' : 'COMBAT ALPHA'} <span>08 CAMPAIGN</span>
         </span>
@@ -78,7 +78,7 @@ export function AlphaApp() {
                 <div className="health-details">
                   <div className="health-label">
                     <strong>
-                      {CLASS_LABELS[s.character.characterClass]} · ур. класса{' '}
+                      {CLASS_LABELS[s.character.characterClass]} · class lv.{' '}
                       {s.character.permanentLevel}
                     </strong>
                     <span>
@@ -88,7 +88,7 @@ export function AlphaApp() {
                   <div
                     className="health-track"
                     role="progressbar"
-                    aria-label="Здоровье"
+                    aria-label="Health"
                     aria-valuemin={0}
                     aria-valuemax={hp!.max}
                     aria-valuenow={hp!.current}
@@ -97,13 +97,13 @@ export function AlphaApp() {
                   </div>
                   <div className="alpha-run-xp">
                     <span className="run-level-label">
-                      Уровень забега {s.progression.level} · опыт забега {s.progression.xp} /{' '}
+                      Run level {s.progression.level} · run XP {s.progression.xp} /{' '}
                       {s.progression.nextXp}
                     </span>
                     <div
                       className="alpha-xp-track"
                       role="progressbar"
-                      aria-label="Опыт забега"
+                      aria-label="Run XP"
                       aria-valuemin={0}
                       aria-valuemax={s.progression.nextXp}
                       aria-valuenow={s.progression.xp}
@@ -114,25 +114,23 @@ export function AlphaApp() {
                     </div>
                   </div>
                   <div className="level-label">
-                    <span>
-                      {s.survival.revivalUsed ? 'ВОСКРЕШЕНИЕ ИСПОЛЬЗОВАНО' : 'ВОСКРЕШЕНИЕ 1 / 1'}
-                    </span>
+                    <span>{s.survival.revivalUsed ? 'REVIVAL USED' : 'REVIVAL 1 / 1'}</span>
                   </div>
                 </div>
               </div>
               <div className="timer">
-                <span>ВРЕМЯ В РУИНАХ</span>
+                <span>TIME IN THE RUINS</span>
                 <strong data-testid="alpha-timer">{time(s.time)}</strong>
               </div>
               <div className="hud-right">
                 <div className="kill-count">
-                  <span>ПОВЕРЖЕНО</span>
+                  <span>DEFEATED</span>
                   <strong>{s.kills.toString().padStart(3, '0')}</strong>
                 </div>
                 <FullscreenButton />
                 <button
                   className="icon-button"
-                  aria-label="Пауза"
+                  aria-label="Pause"
                   disabled={state.screen !== 'playing'}
                   onClick={() => alphaBridge.send({ type: 'pause' })}
                 >
@@ -149,13 +147,13 @@ export function AlphaApp() {
             />
             <SkillBar world={s} />
             <div className="alpha-mobile-summary">
-              {time(s.time)} · {s.kills} повержено
+              {time(s.time)} · {s.kills} defeated
             </div>
-            <div className="alpha-effects" aria-label="Эффекты игрока">
+            <div className="alpha-effects" aria-label="Player effects">
               {s.survival.fullyProtected && (
                 <span className="full-protection">
-                  ПОЛНАЯ ЗАЩИТА ·{' '}
-                  {Math.max(0, s.survival.fullInvulnerableUntil! - s.time).toFixed(1)} с
+                  FULL PROTECTION ·{' '}
+                  {Math.max(0, s.survival.fullInvulnerableUntil! - s.time).toFixed(1)} s
                 </span>
               )}
               {s.statuses
@@ -163,7 +161,7 @@ export function AlphaApp() {
                 .map((g) => (
                   <span key={g.id} className={`effect-${g.effectType}`}>
                     {g.effectType.toUpperCase()} ×{g.stacks.length} ·{' '}
-                    {Math.max(0, g.expiresAt - s.time).toFixed(1)} с
+                    {Math.max(0, g.expiresAt - s.time).toFixed(1)} s
                   </span>
                 ))}
             </div>
@@ -173,11 +171,11 @@ export function AlphaApp() {
                 <span className="weapon-icon">{symbols[s.character.characterClass]}</span>
                 <div>
                   <strong>{WEAPON_LABELS[s.character.characterClass]}</strong>
-                  <span>АВТОАТАКА · {s.enemies.filter((e) => e.alive).length} ВРАГОВ</span>
+                  <span>AUTO-ATTACK · {s.enemies.filter((e) => e.alive).length} ENEMIES</span>
                 </div>
               </div>
               <span className="pause-hint">
-                <kbd>P</kbd> ПАУЗА
+                <kbd>P</kbd> PAUSE
               </span>
             </div>
           </>
@@ -196,15 +194,15 @@ export function AlphaApp() {
             <div className="small-modal">
               <div className="modal-sigil">◇</div>
               <div className="eyebrow centered">
-                {state.screen === 'revival' ? 'МИР ЖДЁТ ВАШЕГО РЕШЕНИЯ' : 'ЗАБЕГ ЗАВЕРШЁН'}
+                {state.screen === 'revival' ? 'THE WORLD AWAITS YOUR DECISION' : 'RUN OVER'}
               </div>
               <h2 id="alpha-dialog-title">
-                {state.screen === 'revival' ? 'Ещё одна искра.' : 'Искра погасла.'}
+                {state.screen === 'revival' ? 'One more spark.' : 'The spark has faded.'}
               </h2>
               <p>
                 {state.screen === 'revival'
-                  ? 'Вернитесь с 50% HP и защитой на 3 секунды. Арена и враги останутся прежними.'
-                  : `${time(s?.time ?? 0)} в руинах · ${s?.kills ?? 0} повержено`}
+                  ? 'Return with 50% HP and 3 seconds of protection. The arena and enemies stay as they are.'
+                  : `${time(s?.time ?? 0)} in the ruins · ${s?.kills ?? 0} defeated`}
               </p>
               {state.screen === 'revival' && (
                 <>
@@ -212,13 +210,13 @@ export function AlphaApp() {
                     className="button primary"
                     onClick={() => alphaBridge.send({ type: 'revive' })}
                   >
-                    Воскреснуть · Revive
+                    Revive
                   </button>
                   <button
                     className="text-button"
                     onClick={() => alphaBridge.send({ type: 'finish' })}
                   >
-                    Завершить забег · End Run
+                    End run
                   </button>
                 </>
               )}
@@ -235,12 +233,12 @@ export function AlphaApp() {
                     })
                   }
                 >
-                  Новый забег →
+                  New run →
                 </button>
               )}
               {state.screen !== 'revival' && (
                 <button className="text-button" onClick={() => alphaBridge.send({ type: 'menu' })}>
-                  Выбрать класс
+                  Choose class
                 </button>
               )}
             </div>
@@ -258,7 +256,7 @@ export function AlphaApp() {
             aria-expanded={debugOpen}
             onClick={() => setDebugOpen(!debugOpen)}
           >
-            {__QA_BUILD__ ? 'QA' : 'DEV'} · {debugOpen ? 'Закрыть' : 'Тестирование'}
+            {__QA_BUILD__ ? 'QA' : 'DEV'} · {debugOpen ? 'Close' : 'Testing'}
           </button>
         )}
         {debug && s && DebugOverlay && (
@@ -267,14 +265,14 @@ export function AlphaApp() {
           </Suspense>
         )}
         {debug && debugOpen && DeveloperPanel && (
-          <Suspense fallback={<div className="developer-panel">Загрузка…</div>}>
+          <Suspense fallback={<div className="developer-panel">Loading…</div>}>
             <DeveloperPanel state={state} />
           </Suspense>
         )}
       </main>
       <footer className="page-footer">
-        <span>✦ СОХРАНИТЕ СВОЙ СВЕТ</span>
-        <span>WASD / СТРЕЛКИ · АТАКА АВТОМАТИЧЕСКАЯ</span>
+        <span>✦ KEEP YOUR LIGHT</span>
+        <span>WASD / ARROWS · AUTOMATIC ATTACKS</span>
       </footer>
     </div>
   );

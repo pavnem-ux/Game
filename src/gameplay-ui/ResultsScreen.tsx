@@ -6,7 +6,7 @@ import { campaignStore } from './campaign-state';
 import { clock } from './campaign-format';
 import { SaveWarning } from './SaveManagement';
 import { RunStatsPanel } from './RunStatsPanel';
-import { RU } from './strings-ru';
+import { EN, formatNumber } from './strings-en';
 import { ReportButton } from './ReportButton';
 import { runGold, runOre } from '../equipment';
 import { QUEST_BY_ID } from '../quests';
@@ -35,40 +35,40 @@ export function ResultsScreen({ world }: { world: GameplaySnapshot }) {
         <div className="eyebrow centered">
           {map.id}. {map.name} · {CLASS_LABELS[world.character.characterClass]}
         </div>
-        <h2 id="results-title">{victory ? 'Победа.' : 'Поражение.'}</h2>
+        <h2 id="results-title">{victory ? 'Victory.' : 'Defeat.'}</h2>
         <dl className="results-grid">
-          <dt>Время</dt>
+          <dt>Time</dt>
           <dd>{clock(Math.min(c.resolvedAt ?? world.time, c.duration))}</dd>
-          <dt>Повержено</dt>
+          <dt>Defeated</dt>
           <dd>{world.kills}</dd>
-          <dt>Элиты</dt>
+          <dt>Elites</dt>
           <dd>{c.eliteKills}</dd>
-          <dt>Босс</dt>
-          <dd>{c.bossKilled ? `${map.bossName} повержен` : 'не повержен'}</dd>
-          <dt>Уровень забега</dt>
+          <dt>Boss</dt>
+          <dd>{c.bossKilled ? `${map.bossName} defeated` : 'not defeated'}</dd>
+          <dt>Run level</dt>
           <dd>{world.progression.level}</dd>
-          <dt>Опыт класса</dt>
+          <dt>Class XP</dt>
           <dd>{summary ? `+${summary.xpGained} XP` : '…'}</dd>
-          <dt>Монеты</dt>
+          <dt>Coins</dt>
           <dd>
             {world.coins.collected}
             {!victory && ` (50% → ${gold.coins})`}
           </dd>
-          <dt>Бонус за победу</dt>
-          <dd>{victory ? `+${gold.bonus}` : 'нет'}</dd>
-          <dt>Золото</dt>
-          <dd>{summary ? `+${summary.goldGained}` : '…'}</dd>
-          <dt>Руда</dt>
+          <dt>Victory bonus</dt>
+          <dd>{victory ? `+${gold.bonus}` : 'none'}</dd>
+          <dt>Gold</dt>
+          <dd>{summary ? `+${formatNumber(summary.goldGained)}` : '…'}</dd>
+          <dt>Ore</dt>
           <dd>
             {summary
               ? summary.oreGained > 0
-                ? `+${summary.oreGained}${firstWin ? ' (первая победа ×3)' : ''}`
+                ? `+${summary.oreGained}${firstWin ? ' (first victory ×3)' : ''}`
                 : victory
                   ? '+0'
-                  : 'нет'
+                  : 'none'
               : '…'}
           </dd>
-          <dt>Уровни</dt>
+          <dt>Levels</dt>
           <dd>
             {summary
               ? summary.levelsGained > 0
@@ -76,40 +76,40 @@ export function ResultsScreen({ world }: { world: GameplaySnapshot }) {
                 : `${summary.levelAfter}`
               : '…'}
           </dd>
-          <dt>Очки талантов</dt>
+          <dt>Talent points</dt>
           <dd>{summary ? `+${summary.talentPointsGained}` : '…'}</dd>
         </dl>
         {summary?.newlyUnlockedMap && (
           <p className="results-unlock">
-            ✦ Открыта карта {summary.newlyUnlockedMap}:{' '}
+            ✦ Map unlocked {summary.newlyUnlockedMap}:{' '}
             {getCampaignMap(summary.newlyUnlockedMap).name}
           </p>
         )}
-        {!victory && <p className="results-note">Поражение не открывает следующую карту.</p>}
+        {!victory && <p className="results-note">A defeat does not unlock the next map.</p>}
         {/* Task 21: quests that became claimable with this run. */}
         {last?.newQuests && last.newQuests.length > 0 && (
           <div className="results-quests" role="status">
-            <strong>✧ {RU.meta.quests.completedToast(last.newQuests.length)}</strong>
+            <strong>✧ {EN.meta.quests.completedToast(last.newQuests.length)}</strong>
             <ul>
               {last.newQuests.map((id) => (
                 <li key={id}>{QUEST_BY_ID.get(id)?.title ?? id}</li>
               ))}
             </ul>
-            <small>Заберите награду в разделе «Задания» на главной.</small>
+            <small>Claim the reward under «Quests» on the home screen.</small>
           </div>
         )}
         <RunStatsPanel stats={world.runStats} />
-        <p className="results-seed" aria-label={`${RU.seed.label}: ${world.seed}`}>
-          {RU.seed.label}: <code>{world.seed}</code>
+        <p className="results-seed" aria-label={`${EN.seed.label}: ${world.seed}`}>
+          {EN.seed.label}: <code>{world.seed}</code>
         </p>
         <p className={`results-save save-${saveState}`} role="status">
           {last?.commit.saved
-            ? 'Прогресс сохранён.'
+            ? 'Progress saved.'
             : saveState === 'not-persisted'
-              ? 'Хранилище браузера недоступно: прогресс сохранится только до закрытия страницы.'
+              ? 'Browser storage is unavailable: progress is kept only until the page is closed.'
               : last
-                ? 'Не удалось сохранить прогресс. Он остаётся в этой сессии — попробуйте сохранить в «Настройках».'
-                : 'Сохранение…'}
+                ? 'Could not save progress. It stays in this session — try saving in «Settings».'
+                : 'Saving…'}
         </p>
         <SaveWarning />
         <div className="results-actions">
@@ -118,10 +118,10 @@ export function ResultsScreen({ world }: { world: GameplaySnapshot }) {
             autoFocus
             onClick={() => campaignStore.startRun(c.mapId, world.character.characterClass)}
           >
-            Ещё раз →
+            Again →
           </button>
           <button className="text-button" onClick={() => campaignStore.quitToMenu()}>
-            В меню
+            To menu
           </button>
           <ReportButton />
         </div>

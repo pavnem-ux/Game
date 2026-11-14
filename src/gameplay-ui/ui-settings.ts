@@ -7,21 +7,21 @@ import { defaultQuality, isGraphicsQuality } from '../engine/visuals/quality';
 import type { GraphicsQuality } from '../engine/visuals/quality';
 export const UI_SETTINGS_KEY = 'skazki.settings';
 export interface UiSettings {
-  /** «Тряска экрана»: camera shake on player hits and boss heavy attacks (default on). */
+  /** «Screen shake»: camera shake on player hits and boss heavy attacks (default on). */
   readonly screenShake: boolean;
-  /** Task 14 sound: «Общая громкость», «Эффекты», «Музыка» (0–100) and «Без звука». */
+  /** Task 14 sound: «Master volume», «Effects», «Music» (0–100) and «Muted». */
   readonly masterVolume: number;
   readonly sfxVolume: number;
   readonly musicVolume: number;
   readonly muted: boolean;
-  /** Task 18 «Качество графики»: light resolution, particles, decor density, glow. */
+  /** Task 18 «Graphics quality»: light resolution, particles, decor density, glow. */
   readonly graphicsQuality: GraphicsQuality;
-  /** Task 16 «Левша»: mirror the touch joystick and dash button sides. */
+  /** Task 16 «Left-handed»: mirror the touch joystick and dash button sides. */
   readonly leftHanded: boolean;
-  /** Task 16 «Вибрация»: light haptic on dash / level-up where supported. */
+  /** Task 16 «Vibration»: light haptic on dash / level-up where supported. */
   readonly haptics: boolean;
 }
-/** Touch-first devices (coarse pointer) default to Среднее; desktops to Высокое. */
+/** Touch-first devices (coarse pointer) default to Medium; desktops to High. */
 function touchDevice(): boolean {
   try {
     return globalThis.matchMedia?.('(pointer: coarse)').matches ?? false;

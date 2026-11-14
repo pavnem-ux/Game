@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import type { GameplaySnapshot } from '../gameplay';
-import { damageSourceLabel } from './strings-ru';
-import { RU_DEBUG } from './strings-ru-debug';
+import { damageSourceLabel } from './strings-en';
+import { EN_DEBUG } from './strings-en-debug';
 import { audioDirector } from './sound';
 import { uiSettings } from './ui-settings';
 
-const whole = (n: number) => Math.round(n).toLocaleString('ru-RU');
+const whole = (n: number) => Math.round(n).toLocaleString('en-US');
 /** Run level reached by 5:00, 10:00 and 15:00 of simulation time ('—' = not reached yet). */
 export function levelMarks(world: GameplaySnapshot): string {
   return [300, 600, 900]
@@ -24,7 +24,7 @@ export function levelMarks(world: GameplaySnapshot): string {
  */
 export default function DebugOverlay({ world, fps }: { world: GameplaySnapshot; fps?: number }) {
   const [open, setOpen] = useState(true);
-  const t = RU_DEBUG.overlay;
+  const t = EN_DEBUG.overlay;
   const stats = world.runStats;
   if (!open)
     return (
@@ -52,7 +52,7 @@ export default function DebugOverlay({ world, fps }: { world: GameplaySnapshot; 
         <dt>{t.coinsPerMinute}</dt>
         <dd data-testid="debug-coins">
           {world.coins.collected} ·{' '}
-          {whole(world.time > 0 ? (world.coins.collected * 60) / world.time : 0)}/мин
+          {whole(world.time > 0 ? (world.coins.collected * 60) / world.time : 0)}/min
         </dd>
         {/* Task 12 §1.5: run-level timeline (level reached by 5:00 / 10:00 / 15:00). */}
         <dt>{t.levelTimeline}</dt>

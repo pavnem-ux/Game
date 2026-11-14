@@ -19,16 +19,16 @@ import type { ChestContent, ChestType } from '../gameplay/chests';
 
 /** Task 12 debug labels (Russian). */
 const ENEMY_KIND_LABELS: Record<EnemyKind, string> = {
-  melee: 'Ближний бой',
-  ranged: 'Стрелок',
-  swift: 'Стремительный бес',
-  brute: 'Каменный тролль',
-  bombard: 'Колдун-бомбардир',
+  melee: 'Melee',
+  ranged: 'Ranged',
+  swift: 'Swift Imp',
+  brute: 'Stone Troll',
+  bombard: 'Bombard Warlock',
 };
 const CONTENT_LABELS: Record<ChestContent, string> = {
-  heal: 'Лечение 15%',
-  gold: 'Золото',
-  magnet: 'Магнит',
+  heal: 'Heal 15%',
+  gold: 'Gold',
+  magnet: 'Magnet',
   fury: BUFFS.fury.name,
   haste: BUFFS.haste.name,
   lightStep: BUFFS.lightStep.name,
@@ -118,14 +118,14 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
   return (
     <aside className="developer-panel" aria-label="Developer Testing Mode">
       <h2>Developer Testing Mode</h2>
-      <p>Временный баланс · изменения класса/уровня начинают новый мир.</p>
+      <p>Provisional balance · class/level changes start a new world.</p>
       <fieldset aria-label="Campaign Debug">
-        <legend>Кампания · профиль</legend>
-        <button onClick={() => campaignDebug.unlockMaps()}>Открыть все карты</button>
+        <legend>Campaign · profile</legend>
+        <button onClick={() => campaignDebug.unlockMaps()}>Unlock all maps</button>
         <label>
-          Карта
+          Map
           <input
-            aria-label="Debug карта"
+            aria-label="Debug map"
             type="number"
             min={1}
             max={CAMPAIGN_MAPS.length}
@@ -135,15 +135,15 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
         </label>
         <button
           onClick={() => {
-            if (!campaignDebug.jumpToMap(jumpMap)) window.alert('Карта не найдена.');
+            if (!campaignDebug.jumpToMap(jumpMap)) window.alert('Map not found.');
           }}
         >
-          Перейти к карте
+          Jump to map
         </button>
         <label>
-          Уровень класса
+          Class level
           <input
-            aria-label="Debug уровень класса"
+            aria-label="Debug class level"
             type="number"
             min="1"
             max="50"
@@ -154,16 +154,16 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
         <button
           onClick={() => {
             const r = campaignDebug.setClassLevel(characterClass, debugLevel);
-            if (r?.talentsReset) window.alert('Дерево талантов сброшено: не помещается в уровень.');
+            if (r?.talentsReset) window.alert('Talent tree reset: it does not fit the level.');
           }}
         >
-          Установить уровень ({CLASS_LABELS[characterClass]})
+          Set level ({CLASS_LABELS[characterClass]})
         </button>
 
         <label>
           XP
           <input
-            aria-label="Debug XP класса"
+            aria-label="Debug class XP"
             type="number"
             min="0"
             value={debugXp}
@@ -171,23 +171,23 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
           />
         </label>
         <button onClick={() => campaignDebug.grantXp(characterClass, debugXp)}>
-          Выдать XP классу
+          Grant class XP
         </button>
         <label>
-          Золото
+          Gold
           <input
-            aria-label="Debug золото"
+            aria-label="Debug gold"
             type="number"
             min="0"
             value={debugGold}
             onChange={(e) => setDebugGold(Number(e.target.value))}
           />
         </label>
-        <button onClick={() => campaignDebug.grantGold(debugGold)}>Выдать золото</button>
+        <button onClick={() => campaignDebug.grantGold(debugGold)}>Grant Gold</button>
         <label>
-          Сид
+          Seed
           <input
-            aria-label="Debug сид"
+            aria-label="Debug seed"
             inputMode="numeric"
             value={debugSeed}
             onChange={(e) => setDebugSeed(e.target.value.trim())}
@@ -196,29 +196,28 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
         <button
           onClick={() => {
             if (!campaignDebug.startWithSeed(debugSeed))
-              window.alert('Сид: целое число 0–4294967295.');
+              window.alert('Seed: an integer 0–4294967295.');
           }}
         >
-          Начать выбранную карту с этим сидом
+          Start the selected map with this seed
         </button>
         <button onClick={() => setSaveView(saveView ? '' : campaignDebug.inspectSave())}>
-          {saveView ? 'Скрыть сохранение' : 'Показать сохранение'}
+          {saveView ? 'Hide save' : 'Show save'}
         </button>
         <button
           onClick={() => {
-            if (window.confirm('Сбросить тестовый прогресс кампании?'))
-              campaignDebug.resetProgress();
+            if (window.confirm('Reset test campaign progress?')) campaignDebug.resetProgress();
           }}
         >
-          Сбросить тестовый прогресс
+          Reset test progress
         </button>
-        <button onClick={() => setCrashNow(true)}>Сымитировать сбой</button>
+        <button onClick={() => setCrashNow(true)}>Simulate a crash</button>
         <label className="debug-file">
-          Загрузить отчёт → импорт сохранения
+          Load report → import save
           <input
             type="file"
             accept="application/json,.json"
-            aria-label="Debug файл отчёта"
+            aria-label="Debug report file"
             onChange={(e) => {
               const f = e.target.files?.[0];
               e.target.value = '';
@@ -230,30 +229,30 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
             }}
           />
         </label>
-        {saveView && <textarea aria-label="Debug сохранение" readOnly rows={10} value={saveView} />}
+        {saveView && <textarea aria-label="Debug save" readOnly rows={10} value={saveView} />}
       </fieldset>
       <fieldset aria-label="Gear Debug">
-        <legend>Снаряжение и магазин</legend>
-        <button onClick={() => campaignDebug.unlockAllItems()}>Открыть все предметы</button>
+        <legend>Equipment and shop</legend>
+        <button onClick={() => campaignDebug.unlockAllItems()}>Unlock all items</button>
         <button onClick={() => campaignDebug.equipBestTier(characterClass)}>
-          Лучшее снаряжение ({CLASS_LABELS[characterClass]})
+          Best equipment ({CLASS_LABELS[characterClass]})
         </button>
         {/* Task 19 §1.5: ore and forge levels (validated saves; DEV/QA only). */}
         <label>
-          Руда
+          Ore
           <input
-            aria-label="Debug руда"
+            aria-label="Debug ore"
             type="number"
             min="0"
             value={debugOre}
             onChange={(e) => setDebugOre(Number(e.target.value))}
           />
         </label>
-        <button onClick={() => campaignDebug.grantOre(debugOre)}>Выдать руду</button>
+        <button onClick={() => campaignDebug.grantOre(debugOre)}>Grant Ore</button>
         <label>
-          Предмет
+          Item
           <select
-            aria-label="Debug предмет кузницы"
+            aria-label="Debug forge item"
             value={levelItem}
             onChange={(e) => setLevelItem(e.target.value)}
           >
@@ -265,9 +264,9 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
           </select>
         </label>
         <label>
-          Уровень
+          Level
           <select
-            aria-label="Debug уровень предмета"
+            aria-label="Debug item level"
             value={itemLevelValue}
             onChange={(e) => setItemLevelValue(Number(e.target.value))}
           >
@@ -279,16 +278,16 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
           </select>
         </label>
         <button onClick={() => campaignDebug.setItemLevel(levelItem, itemLevelValue)}>
-          Установить уровень предмета
+          Set item level
         </button>
       </fieldset>
       {/* Task 21 §1.6: quests (validated saves; DEV/QA only). */}
       <fieldset aria-label="Quest Debug">
-        <legend>Задания</legend>
+        <legend>Quests</legend>
         <label>
-          Задание
+          Quest
           <select
-            aria-label="Debug задание"
+            aria-label="Debug quest"
             value={debugQuest}
             onChange={(e) => setDebugQuest(e.target.value)}
           >
@@ -299,48 +298,48 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
             ))}
           </select>
         </label>
-        <button onClick={() => campaignDebug.completeQuest(debugQuest)}>Выполнить задание</button>
+        <button onClick={() => campaignDebug.completeQuest(debugQuest)}>Complete quest</button>
         <label>
-          Счётчик
+          Counter
           <select
-            aria-label="Debug счётчик заданий"
+            aria-label="Debug quest counter"
             value={questCounter}
             onChange={(e) => setQuestCounter(e.target.value as typeof questCounter)}
           >
-            <option value="swift">Стремительные</option>
-            <option value="brute">Громилы</option>
-            <option value="bombard">Бомбардиры</option>
-            <option value="elite">Элиты</option>
-            <option value="chests">Сундуки</option>
+            <option value="swift">Swift</option>
+            <option value="brute">Brutes</option>
+            <option value="bombard">Bombards</option>
+            <option value="elite">Elites</option>
+            <option value="chests">Chests</option>
           </select>
         </label>
         <input
-          aria-label="Debug прибавка к счётчику"
+          aria-label="Debug counter increment"
           type="number"
           min="0"
           value={questAmount}
           onChange={(e) => setQuestAmount(Number(e.target.value))}
         />
         <button onClick={() => campaignDebug.addQuestCounter(questCounter, questAmount)}>
-          Прибавить к счётчику
+          Add to counter
         </button>
         <button
           onClick={() => {
-            if (window.confirm('Сбросить задания (счётчики и полученные награды)?'))
+            if (window.confirm('Reset quests (counters and claimed rewards)?'))
               campaignDebug.resetQuests();
           }}
         >
-          Сбросить задания
+          Reset quests
         </button>
       </fieldset>
       {/* Task 20 §1.5: pets (validated saves / the current run; DEV/QA only). */}
       <fieldset aria-label="Pet Debug">
-        <legend>Питомцы</legend>
-        <button onClick={() => campaignDebug.unlockAllPets()}>Открыть всех питомцев</button>
+        <legend>Pets</legend>
+        <button onClick={() => campaignDebug.unlockAllPets()}>Unlock all pets</button>
         <label>
-          Питомец
+          Pet
           <select
-            aria-label="Debug питомец"
+            aria-label="Debug pet"
             value={debugPet}
             onChange={(e) => setDebugPet(e.target.value)}
           >
@@ -352,9 +351,9 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
           </select>
         </label>
         <label>
-          Уровень
+          Level
           <select
-            aria-label="Debug уровень питомца"
+            aria-label="Debug pet level"
             value={debugPetLevel}
             onChange={(e) => setDebugPetLevel(Number(e.target.value))}
           >
@@ -366,19 +365,19 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
           </select>
         </label>
         <button onClick={() => campaignDebug.setPetLevel(debugPet, debugPetLevel)}>
-          Установить уровень питомца
+          Set pet level
         </button>
         <button onClick={() => send({ type: 'pet', id: debugPet, level: debugPetLevel })}>
-          Призвать питомца в забег
+          Summon pet into the run
         </button>
-        <button onClick={() => send({ type: 'pet', id: null })}>Убрать питомца из забега</button>
+        <button onClick={() => send({ type: 'pet', id: null })}>Remove pet from the run</button>
       </fieldset>
       <fieldset aria-label="Talent Debug">
-        <legend>Таланты · {CLASS_LABELS[characterClass]}</legend>
+        <legend>Talents · {CLASS_LABELS[characterClass]}</legend>
         <label>
-          Талант
+          Talent
           <select
-            aria-label="Debug талант"
+            aria-label="Debug talent"
             value={talentNode}
             onChange={(e) => setTalentNode(e.target.value)}
           >
@@ -392,9 +391,9 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
           </select>
         </label>
         <label>
-          Ранг
+          Rank
           <select
-            aria-label="Debug ранг таланта"
+            aria-label="Debug talent rank"
             value={talentRank}
             onChange={(e) => setTalentRank(Number(e.target.value))}
           >
@@ -408,39 +407,39 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
         <button
           onClick={() => {
             if (!campaignDebug.setTalentRank(characterClass, talentNode, talentRank))
-              window.alert('Ранг не установлен (нужно больше 26 очков?).');
+              window.alert('Rank not set (needs more than 26 points?).');
           }}
         >
-          Установить ранг таланта
+          Set talent rank
         </button>
         <button onClick={() => campaignDebug.resetTalents(characterClass)}>
-          Сбросить дерево талантов
+          Reset talent tree
         </button>
         <button onClick={() => campaignDebug.toggleSuperpowerPreset(characterClass)}>
-          Пресет сверхспособности вкл/выкл
+          Toggle superpower preset
         </button>
       </fieldset>
       {w?.campaign && (
         <fieldset aria-label="Campaign Run Debug">
-          <legend>Кампания · забег</legend>
+          <legend>Campaign · run</legend>
           <button onClick={() => send({ type: 'campaign-skip' })}>
-            К следующему событию ({w.campaign.nextEvent?.id ?? '—'})
+            Skip to next event ({w.campaign.nextEvent?.id ?? '—'})
           </button>
-          <button onClick={() => send({ type: 'campaign-boss-now' })}>Призвать босса</button>
+          <button onClick={() => send({ type: 'campaign-boss-now' })}>Summon boss</button>
           <button onClick={() => alphaBridge.send({ type: 'kill-on-screen' })}>
-            Убить всех на экране
+            Kill everything on screen
           </button>
           <button onClick={() => send({ type: 'campaign-boss-hp', fraction: 0.1 })}>
-            HP босса → 10%
+            Boss HP → 10%
           </button>
           <button onClick={() => send({ type: 'campaign-force', outcome: 'victory' })}>
-            Победа
+            Victory
           </button>
           <button onClick={() => send({ type: 'campaign-force', outcome: 'defeat' })}>
-            Поражение
+            Defeat
           </button>
-          <div role="group" aria-label="Ускорение забега">
-            Ускорение
+          <div role="group" aria-label="Run speed-up">
+            Speed-up
             {DEBUG_TIME_SCALES.map((scale) => (
               <button
                 key={scale}
@@ -465,31 +464,28 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
             />{' '}
             God Mode {state.qa.godMode ? 'ON' : 'OFF'}
           </label>
-          <p>
-            Останавливает только потерю HP. Атаки, статусы и таймеры продолжают работать. Новый
-            забег: OFF.
-          </p>
+          <p>Stops HP loss only. Attacks, statuses and timers keep running. New run: OFF.</p>
         </fieldset>
       )}
       {w && (
         <fieldset aria-label="Choice and Dash Debug">
-          <legend>Выбор и рывок · Task 14</legend>
+          <legend>Choices and dash · Task 14</legend>
           <button onClick={() => send({ type: 'grant-choices', rerolls: 3, banishes: 2 })}>
-            +3 переброса, +2 изгнания
+            +3 rerolls, +2 banishes
           </button>
           <button onClick={() => send({ type: 'dash-cooldown', seconds: 0 })}>
-            Рывок без перезарядки
+            Dash without cooldown
           </button>
           <button onClick={() => send({ type: 'dash-cooldown', seconds: null })}>
-            Обычная перезарядка рывка
+            Normal dash cooldown
           </button>
         </fieldset>
       )}
       {w && state.qa && (
         <fieldset aria-label="Synergy Diagnostics">
-          <legend>Synergy Diagnostics · Синергии</legend>
+          <legend>Synergy Diagnostics</legend>
           <button onClick={() => send({ type: 'reset-synergy-counters' })}>
-            Сбросить счётчики синергий
+            Reset synergy counters
           </button>
           {state.qa.synergies.map((synergy) => (
             <div className="synergy-diagnostic" key={synergy.id} data-synergy-id={synergy.id}>
@@ -503,19 +499,19 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
               <code>{synergy.id}</code>
               <p>
                 {synergy.unlocked
-                  ? `Разблокирована парой: ${synergy.completedPairs.map((p) => p.join(' + ')).join('; ')}`
-                  : 'Заблокирована'}{' '}
-                · пары: {synergy.unlockPairs.map((p) => p.join(' + ')).join(' | ')}
+                  ? `Unlocked by pair: ${synergy.completedPairs.map((p) => p.join(' + ')).join('; ')}`
+                  : 'Locked'}{' '}
+                · pairs: {synergy.unlockPairs.map((p) => p.join(' + ')).join(' | ')}
               </p>
               <p data-testid={`synergy-level-${synergy.id}`}>
-                Уровень: <b>{['—', 'I', 'II', 'III'][synergy.level]}</b>
-                {synergy.forced ? ' (задан вручную)' : ''} · лучшая пара:{' '}
-                {synergy.bestPair ? synergy.bestPair.join(' + ') : 'нет'}
+                Level: <b>{['—', 'I', 'II', 'III'][synergy.level]}</b>
+                {synergy.forced ? ' (set manually)' : ''} · best pair:{' '}
+                {synergy.bestPair ? synergy.bestPair.join(' + ') : 'none'}
               </p>
               <label>
-                Задать уровень{' '}
+                Set level{' '}
                 <select
-                  aria-label={`Уровень синергии ${synergy.name}`}
+                  aria-label={`Synergy level ${synergy.name}`}
                   value={synergy.forced ? String(synergy.level) : 'auto'}
                   onChange={(e) =>
                     send({
@@ -525,31 +521,31 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
                     })
                   }
                 >
-                  <option value="auto">по рангам</option>
-                  <option value="0">закрыта</option>
+                  <option value="auto">by ranks</option>
+                  <option value="0">locked</option>
                   <option value="1">I</option>
                   <option value="2">II</option>
                   <option value="3">III</option>
                 </select>
               </label>
               <p>
-                Активаций: <b>{synergy.count}</b>
+                Activations: <b>{synergy.count}</b>
               </p>
               <p>
                 {synergy.lastTime === null
-                  ? 'Ещё не срабатывала'
-                  : `Последняя: ${synergy.lastTime.toFixed(2)} с · цель ${synergy.lastTargetId}`}
+                  ? 'Not triggered yet'
+                  : `Last: ${synergy.lastTime.toFixed(2)} s · target ${synergy.lastTargetId}`}
               </p>
             </div>
           ))}
         </fieldset>
       )}
       <fieldset>
-        <legend>Персонаж</legend>
+        <legend>Character</legend>
         <label>
-          Класс
+          Class
           <select
-            aria-label="DEV класс"
+            aria-label="DEV class"
             value={characterClass}
             onChange={(e) => setClass(e.target.value as CharacterClass)}
           >
@@ -561,9 +557,9 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
           </select>
         </label>
         <label>
-          Уровень
+          Level
           <input
-            aria-label="DEV уровень"
+            aria-label="DEV level"
             type="number"
             min="1"
             max="50"
@@ -571,13 +567,13 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
             onChange={(e) => setLevel(Number(e.target.value))}
           />
         </label>
-        <button onClick={restart}>Начать / повторить конфигурацию</button>
+        <button onClick={restart}>Start / repeat configuration</button>
         {w && (
           <>
             <p>
-              Текущий: {CLASS_LABELS[w.character.characterClass]} · {w.survival.runState}
+              Current: {CLASS_LABELS[w.character.characterClass]} · {w.survival.runState}
               <br />
-              Revival: {w.survival.revivalUsed ? 'использован' : 'доступен'}
+              Revival: {w.survival.revivalUsed ? 'used' : 'available'}
             </p>
             <details>
               <summary>Character Stats</summary>
@@ -586,7 +582,7 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
             <label>
               HP
               <input
-                aria-label="Тестовое HP"
+                aria-label="Test HP"
                 type="number"
                 min="0"
                 max={w.player.maxHp}
@@ -595,12 +591,12 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
                 onChange={(e) => setHp(Number(e.target.value))}
               />
             </label>
-            <button onClick={() => send({ type: 'hp', value: hp })}>Установить HP</button>
-            <button onClick={() => send({ type: 'heal' })}>Восстановить HP</button>
-            <button onClick={() => send({ type: 'death' })}>Контролируемая смерть</button>
+            <button onClick={() => send({ type: 'hp', value: hp })}>Set HP</button>
+            <button onClick={() => send({ type: 'heal' })}>Restore HP</button>
+            <button onClick={() => send({ type: 'death' })}>Controlled death</button>
             <p>
-              Урон снижает HP целыми единицами; лечение сохраняет дроби. После смерти — Revive или
-              новый мир.
+              Damage lowers HP in whole units; healing keeps fractions. After death — Revive or a
+              new world.
             </p>
           </>
         )}
@@ -609,12 +605,12 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
         <>
           <fieldset>
             <legend>
-              Враги · живых {enemies.length} / {w.spawning.settings.maxActive}
+              Enemies · alive {enemies.length} / {w.spawning.settings.maxActive}
             </legend>
             <label>
-              Дистанция
+              Distance
               <input
-                aria-label="Дистанция спавна"
+                aria-label="Spawn distance"
                 type="number"
                 min="0"
                 max="1500"
@@ -623,16 +619,16 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
               />
             </label>
             <button onClick={() => send({ type: 'spawn', kind: 'melee', distance })}>
-              Добавить melee
+              Add melee
             </button>
             <button onClick={() => send({ type: 'spawn', kind: 'ranged', distance })}>
-              Добавить ranged
+              Add ranged
             </button>
             {/* Task 12 §1.5: N enemies of any kind. */}
             <label>
-              Тип врага
+              Enemy type
               <select
-                aria-label="Debug тип врага"
+                aria-label="Debug enemy type"
                 value={enemyKind}
                 onChange={(e) => setEnemyKind(e.target.value as EnemyKind)}
               >
@@ -644,12 +640,12 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
               </select>
             </label>
             <button onClick={() => send({ type: 'spawn-n', kind: enemyKind, count, distance })}>
-              Добавить {count} · {ENEMY_KIND_LABELS[enemyKind]}
+              Add {count} · {ENEMY_KIND_LABELS[enemyKind]}
             </button>
             <label>
-              Размер группы
+              Group size
               <input
-                aria-label="Размер группы"
+                aria-label="Group size"
                 type="number"
                 min="1"
                 max="24"
@@ -657,18 +653,16 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
                 onChange={(e) => setCount(Number(e.target.value))}
               />
             </label>
-            <button onClick={() => send({ type: 'group', count, distance })}>
-              Добавить группу
-            </button>
-            <button onClick={() => send({ type: 'clear-enemies' })}>Убрать врагов</button>
+            <button onClick={() => send({ type: 'group', count, distance })}>Add group</button>
+            <button onClick={() => send({ type: 'clear-enemies' })}>Remove enemies</button>
           </fieldset>
           {/* Task 12 §1.5: chests, buffs, auto-collect (campaign runs). */}
           <fieldset aria-label="Chest Debug">
-            <legend>Сундуки и усиления</legend>
+            <legend>Chests and buffs</legend>
             <label>
-              Сундук
+              Chest
               <select
-                aria-label="Debug сундук"
+                aria-label="Debug chest"
                 value={chestType}
                 onChange={(e) => setChestType(e.target.value as ChestType)}
               >
@@ -677,13 +671,13 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
               </select>
             </label>
             <label>
-              Содержимое
+              Contents
               <select
-                aria-label="Debug содержимое сундука"
+                aria-label="Debug chest contents"
                 value={chestContent}
                 onChange={(e) => setChestContent(e.target.value as ChestContent | '')}
               >
-                <option value="">Случайное</option>
+                <option value="">Random</option>
                 {(chestType === 'wooden'
                   ? (['heal', 'gold'] as const)
                   : (['magnet', ...BUFF_IDS] as const)
@@ -703,32 +697,32 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
                 })
               }
             >
-              Создать сундук
+              Spawn chest
             </button>
             {BUFF_IDS.map((b) => (
               <button key={b} onClick={() => send({ type: 'buff', buff: b })}>
-                Усиление: {BUFFS[b].name}
+                Buff: {BUFFS[b].name}
               </button>
             ))}
             {state.qa && (
               <label>
                 <input
                   type="checkbox"
-                  aria-label="Автосбор опыта и монет"
+                  aria-label="Auto-collect XP and coins"
                   checked={state.qa.autoCollect}
                   onChange={(e) => send({ type: 'auto-collect', enabled: e.target.checked })}
                 />
-                Автосбор опыта и монет (каждую секунду)
+                Auto-collect XP and coins (every second)
               </label>
             )}
           </fieldset>
           <fieldset>
-            <legend>Навыки</legend>
+            <legend>Skills</legend>
             <p>
-              Слоты {w.skills.slots.auto.used}/4 · {w.skills.slots.passive.used}/6 · перебросов{' '}
-              {w.skills.rerolls} · ожидает выборов {w.skills.pendingChoices}
+              Slots {w.skills.slots.auto.used}/4 · {w.skills.slots.passive.used}/6 · rerolls{' '}
+              {w.skills.rerolls} · pending choices {w.skills.pendingChoices}
             </p>
-            <ul aria-label="Приобретённые навыки QA">
+            <ul aria-label="Acquired skills QA">
               {w.skills.owned.map((skill) => (
                 <li key={skill.skillId}>
                   {skill.name} · {['', 'I', 'II', 'III', 'IV', 'V'][skill.rank]}
@@ -738,30 +732,30 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
                       send({ type: 'grant-skill', skillId: skill.skillId, rank: skill.rank + 1 })
                     }
                   >
-                    Улучшить {skill.name}
+                    Upgrade {skill.name}
                   </button>
                 </li>
               ))}
             </ul>
             <label>
-              Навык
+              Skill
               <select
-                aria-label="DEV навык"
+                aria-label="DEV skill"
                 value={skillId}
                 onChange={(e) => setSkillId(e.target.value)}
               >
                 <option value="">—</option>
                 {skillsForClass(w.character.characterClass).map((d) => (
                   <option key={d.id} value={d.id}>
-                    {d.name} ({d.kind === 'auto' ? 'актив.' : 'пассив.'})
+                    {d.name} ({d.kind === 'auto' ? 'active' : 'passive'})
                   </option>
                 ))}
               </select>
             </label>
             <label>
-              Ранг
+              Rank
               <input
-                aria-label="DEV ранг"
+                aria-label="DEV rank"
                 type="number"
                 min="1"
                 max="5"
@@ -773,14 +767,14 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
               disabled={!skillId}
               onClick={() => send({ type: 'grant-skill', skillId, rank: skillRank })}
             >
-              Выдать навык
+              Grant skill
             </button>
           </fieldset>
           <fieldset>
-            <legend>XP и волны</legend>
+            <legend>XP and waves</legend>
             <p>
-              Забег: уровень {w.progression.level} · {w.progression.xp}/{w.progression.nextXp} XP ·
-              всего {w.progression.totalXp}. Постоянный уровень не меняется.
+              Run: level {w.progression.level} · {w.progression.xp}/{w.progression.nextXp} XP ·
+              total {w.progression.totalXp}. The permanent level does not change.
             </p>
             <label>
               XP
@@ -793,36 +787,37 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
                 onChange={(e) => setXpAmount(Number(e.target.value))}
               />
             </label>
-            <button onClick={() => send({ type: 'grant-xp', amount: xpAmount })}>Выдать XP</button>
+            <button onClick={() => send({ type: 'grant-xp', amount: xpAmount })}>Grant XP</button>
             <button
               onClick={() =>
                 send({ type: 'grant-xp', amount: w.progression.nextXp - w.progression.xp })
               }
             >
-              Следующий уровень забега
+              Next run level
             </button>
             <button onClick={() => send({ type: 'xp-crystal', value: xpAmount, distance: 90 })}>
-              Кристалл справа
+              Crystal to the right
             </button>
             <p>
-              Кристаллов: {w.crystals.length}. Следующая волна через{' '}
-              {Math.max(0, w.spawning.nextSpawnAt - w.time).toFixed(2)} с · волн {w.spawning.waves}.
+              Crystals: {w.crystals.length}. Next wave in{' '}
+              {Math.max(0, w.spawning.nextSpawnAt - w.time).toFixed(2)} s · waves {w.spawning.waves}
+              .
             </p>
             <label>
               <input
-                aria-label="Непрерывный спавн"
+                aria-label="Continuous spawning"
                 type="checkbox"
                 checked={w.spawning.settings.enabled}
                 onChange={(e) =>
                   send({ type: 'spawning', settings: { enabled: e.target.checked } })
                 }
               />{' '}
-              Непрерывный спавн
+              Continuous spawning
             </label>
             <label>
-              Интервал, с
+              Interval, s
               <input
-                aria-label="Интервал волн"
+                aria-label="Wave interval"
                 type="number"
                 min="0.25"
                 max="60"
@@ -832,9 +827,9 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
               />
             </label>
             <label>
-              Врагов / волна
+              Enemies / wave
               <input
-                aria-label="Врагов в волне"
+                aria-label="Enemies per wave"
                 type="number"
                 min="1"
                 max="24"
@@ -843,9 +838,9 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
               />
             </label>
             <label>
-              Максимум живых
+              Max alive
               <input
-                aria-label="Лимит врагов"
+                aria-label="Enemy limit"
                 type="number"
                 min="1"
                 max="120"
@@ -867,23 +862,23 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
                 })
               }
             >
-              Применить волны
+              Apply waves
             </button>
             <p>
-              Применение параметров начинает новый интервал от текущего времени. Пауза/Revive
-              сохраняют расписание.
+              Applying settings starts a new interval from the current time. Pause/Revive keep the
+              schedule.
             </p>
           </fieldset>
           <fieldset>
             <legend>Poison / Burn / Bleed</legend>
             <label>
-              Цель
+              Target
               <select
-                aria-label="Цель эффекта"
+                aria-label="Effect target"
                 value={validTarget}
                 onChange={(e) => setTarget(e.target.value)}
               >
-                <option value="player">Игрок</option>
+                <option value="player">Player</option>
                 {enemies.map((e) => (
                   <option key={e.entityId} value={e.entityId}>
                     {e.entityId} · {e.config.behavior}
@@ -892,9 +887,9 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
               </select>
             </label>
             <label>
-              Эффект
+              Effect
               <select
-                aria-label="Тип эффекта"
+                aria-label="Effect type"
                 value={effect}
                 onChange={(e) => setEffect(e.target.value)}
               >
@@ -904,9 +899,9 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
               </select>
             </label>
             <label>
-              Стаки
+              Stacks
               <input
-                aria-label="Стаки эффекта"
+                aria-label="Effect stacks"
                 type="number"
                 min="1"
                 max="20"
@@ -917,7 +912,7 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
             <label>
               Raw / tick
               <input
-                aria-label="Урон эффекта"
+                aria-label="Effect damage"
                 type="number"
                 min="0"
                 value={damage}
@@ -925,9 +920,9 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
               />
             </label>
             <label>
-              Длительность, с
+              Duration, s
               <input
-                aria-label="Длительность эффекта"
+                aria-label="Effect duration"
                 type="number"
                 min="0.1"
                 step="0.1"
@@ -947,15 +942,15 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
                 })
               }
             >
-              Применить эффект
+              Apply effect
             </button>
             <button onClick={() => send({ type: 'cleanse', targetId: validTarget })}>
-              Очистить эффекты
+              Clear effects
             </button>
             <label>
-              On-hit шанс, %
+              On-hit chance, %
               <input
-                aria-label="Шанс on-hit"
+                aria-label="On-hit chance"
                 type="number"
                 min="0"
                 max="100"
@@ -966,24 +961,24 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
             <button
               onClick={() => send({ type: 'on-hit', effectType: effect, damage, duration, chance })}
             >
-              Назначить on-hit оружию
+              Assign on-hit to weapon
             </button>
-            <p>Использует выбранные тип, raw/tick и длительность. 0% отключает эффект.</p>
+            <p>Uses the selected type, raw/tick and duration. 0% disables the effect.</p>
             <div className="dev-groups">
               {groups.length ? (
                 groups.map((g) => (
                   <p key={g.id}>
-                    {g.effectType} ×{g.stacks.length} · ещё {(g.expiresAt - w.time).toFixed(2)}с ·
-                    тик через {Math.max(0, g.nextTickAt - w.time).toFixed(2)}с
+                    {g.effectType} ×{g.stacks.length} · {(g.expiresAt - w.time).toFixed(2)}s left ·
+                    tick in {Math.max(0, g.nextTickAt - w.time).toFixed(2)}s
                   </p>
                 ))
               ) : (
-                <p>На цели нет эффектов</p>
+                <p>No effects on the target</p>
               )}
             </div>
           </fieldset>
           <fieldset>
-            <legend>Бой</legend>
+            <legend>Combat</legend>
             <label>
               <input
                 type="checkbox"
@@ -994,14 +989,14 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
                   send({ type: 'protection', enabled });
                 }}
               />{' '}
-              Тестовая полная защита
+              Test full protection
             </label>
-            <p>Не изменяет штатный таймер воскрешения; не мешает контролируемой смерти.</p>
+            <p>Does not change the normal revival timer; does not block a controlled death.</p>
             <button onClick={() => alphaBridge.send({ type: w.paused ? 'resume' : 'pause' })}>
-              {w.paused ? 'Продолжить бой' : 'Пауза боя'}
+              {w.paused ? 'Resume combat' : 'Pause combat'}
             </button>
             <details open>
-              <summary>Последние боевые события (до 20)</summary>
+              <summary>Recent combat events (up to 20)</summary>
               <div className="dev-events">
                 {state.events
                   .filter(

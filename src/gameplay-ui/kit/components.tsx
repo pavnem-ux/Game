@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef } from 'react';
 import type { ReactNode } from 'react';
-import { RU } from '../strings-ru';
+import { EN } from '../strings-en';
 import { formatGold, progressFraction } from './logic';
 import type { StatDelta } from './logic';
 
@@ -164,8 +164,8 @@ export function Tabs<T extends string | number>({
 export function ConfirmModal({
   title,
   children,
-  confirmLabel = RU.meta.modal.confirm,
-  cancelLabel = RU.meta.modal.cancel,
+  confirmLabel = EN.meta.modal.confirm,
+  cancelLabel = EN.meta.modal.cancel,
   variant = 'primary',
   onConfirm,
   onCancel,
@@ -284,10 +284,10 @@ export function ProgressBar({
   );
 }
 
-/** Gold badge: coin glyph + amount (accessible name «Золото: N»). */
+/** Gold badge: coin glyph + amount (accessible name «Gold: N»). */
 export function CurrencyBadge({ amount, size = 'm' }: { amount: number; size?: 's' | 'm' | 'l' }) {
   return (
-    <span className={`kit-currency kit-currency-${size}`} aria-label={RU.meta.gold(String(amount))}>
+    <span className={`kit-currency kit-currency-${size}`} aria-label={EN.meta.gold(String(amount))}>
       <svg viewBox="0 0 20 20" width="1em" height="1em" aria-hidden="true">
         <circle cx="10" cy="10" r="8.5" className="coin-outer" />
         <circle cx="10" cy="10" r="5.5" className="coin-inner" />
@@ -297,12 +297,12 @@ export function CurrencyBadge({ amount, size = 'm' }: { amount: number; size?: '
   );
 }
 
-/** Task 19: ore («Руда») counter — a faceted ore crystal (original inline SVG) + amount. */
+/** Task 19: ore («Ore») counter — a faceted ore crystal (original inline SVG) + amount. */
 export function OreBadge({ amount, size = 'm' }: { amount: number; size?: 's' | 'm' | 'l' }) {
   return (
     <span
       className={`kit-currency kit-ore kit-currency-${size}`}
-      aria-label={RU.meta.ore(String(amount))}
+      aria-label={EN.meta.ore(String(amount))}
     >
       <svg viewBox="0 0 20 20" width="1em" height="1em" aria-hidden="true">
         <path d="M10 1.5 L17 7 L14.5 17.5 L5.5 17.5 L3 7 Z" className="ore-outer" />

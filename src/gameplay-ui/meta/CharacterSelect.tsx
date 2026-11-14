@@ -8,10 +8,10 @@ import { availableTalentPoints } from '../../talents';
 import { campaignStore } from '../campaign-state';
 import { displayHp } from '../format';
 import { Button, ClassEmblem, ProgressBar } from '../kit';
-import { RU } from '../strings-ru';
+import { EN } from '../strings-en';
 
-const C = RU.meta.character;
-const S = RU.meta.stats;
+const C = EN.meta.character;
+const S = EN.meta.stats;
 /** Key stats shown as bars on the class cards (relative to the strongest class in that stat). */
 const KEY_STATS: readonly (readonly [keyof CombatAttributes, string, (v: number) => string])[] = [
   ['maxHp', S.maxHp, (v) => String(displayHp(v, v).max)],
@@ -30,7 +30,7 @@ const KEY_STATS: readonly (readonly [keyof CombatAttributes, string, (v: number)
 export function CharacterSelectPage() {
   const ui = useSyncExternalStore(campaignStore.subscribe, campaignStore.getSnapshot);
   const profile = ui.progression.profile;
-  if (!profile) return <p className="campaign-empty">Профиль недоступен.</p>;
+  if (!profile) return <p className="campaign-empty">Profile unavailable.</p>;
   const stats = Object.fromEntries(
     CHARACTER_CLASSES.map((c) => {
       const p = profile.classes[c];
@@ -75,7 +75,7 @@ export function CharacterSelectPage() {
                 </span>
               </header>
               <ProgressBar
-                label={`Опыт класса ${CLASS_LABELS[c]}`}
+                label={`Class XP: ${CLASS_LABELS[c]}`}
                 value={next === null ? 1 : p.xp}
                 max={next ?? 1}
                 showText={`${C.level(p.level)} · ${C.xp(p.xp, next)}`}
