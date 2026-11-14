@@ -4,7 +4,7 @@ Spec: [task-22-hud-declutter.md](task-22-hud-declutter.md) (owner's file). Branc
 `main` at `af39a8c` (Tasks 16–21 merged). Presentation only: simulation, balance and economy
 unchanged.
 
-Current: Phase 4
+Current: Phase 5
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/20
 
@@ -17,7 +17,7 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/20
 - [x] 4.1 Rarity rows (equipment + shop)
 - [x] 4.2 Equipped item details → forge deep link
 - [x] 4.3 Equip panel placement
-- [ ] 4.4 Forge mode switch
+- [x] 4.4 Forge mode switch
 - [ ] 5 Full checks, after screenshots, playtest, PR
 
 ## Decisions
@@ -60,5 +60,11 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/20
 - Equip panel placement: the details / «Надеть» + compare panel renders at the top of the item area
   (above «Ваши предметы»), sticky at every size; on phones with a 60vh cap and its own scroll.
   Checked at 1280×720, 844×390, 390×844: «Надеть» is in the viewport after selecting the last item.
+- Forge mode switch: the same «Разделы кузницы» group (kit `Tabs`, `aria-pressed`) moved out of the
+  header into a large centred segmented control (`.forge-mode`, 48 px high, gold active segment,
+  full width on phones).
+- e2e: campaign (desktop) — «Надеть» in the viewport after selecting an item; equipped armor details
+  → «Улучшить в кузнице» → forge on «Обычные латы +1» → Питомцы / Предметы → «К экипировке». Mobile
+  (844×390, 768×1024, by touch) — the same with the helmet.
 
 ## Verification log

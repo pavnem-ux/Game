@@ -11,6 +11,19 @@ const browser = await chromium.launch({
   args: ['--no-sandbox', '--disable-dev-shm-usage'],
 });
 const errors = [];
+/** Task 22: the element is fully inside the viewport (no scrolling needed). */
+async function inViewport(locator, what) {
+  const box = await locator.boundingBox();
+  const vp = locator.page().viewportSize();
+  assert.ok(
+    box &&
+      box.y >= 0 &&
+      box.x >= 0 &&
+      box.y + box.height <= vp.height &&
+      box.x + box.width <= vp.width,
+    `${what} is visible without scrolling`,
+  );
+}
 try {
   const context = await browser.newContext({
     viewport: { width: 1280, height: 860 },
@@ -457,6 +470,8 @@ try {
   await gear.getByRole('button', { name: /^Обычные латы/ }).click();
   const preview = gear.getByRole('group', { name: 'Предпросмотр снаряжения' });
   assert.match(await preview.innerText(), /Здоровье\s+\+\d+/);
+  // Task 22: «Надеть» appears next to the selection — in the viewport without scrolling.
+  await inViewport(preview.getByRole('button', { name: 'Надеть' }), 'desktop «Надеть»');
   await preview.getByRole('button', { name: 'Надеть' }).click();
   await page.waitForFunction(
     (c) =>
@@ -489,6 +504,27 @@ try {
     .getByRole('button', { name: 'Надеть' })
     .click();
   await gear.getByRole('button', { name: 'Броня: Обычные латы +1' }).waitFor();
+  // Task 22: the equipped item's details → «Улучшить в кузнице» opens the forge on that item;
+  // the forge mode switch toggles Предметы / Питомцы; «К экипировке» returns.
+  await gear.getByRole('button', { name: /^Броня: Обычные латы \+1, подробнее/ }).click();
+  const equippedPanel = gear.getByRole('group', { name: 'Надетый предмет' });
+  assert.match(await equippedPanel.innerText(), /Обычные латы \+1[\s\S]*Здоровье \+5\.3%/);
+  await equippedPanel.getByRole('button', { name: /Улучшить в кузнице/ }).click();
+  await forge.getByRole('heading', { name: 'Обычные латы +1' }).waitFor();
+  const modes = page.getByRole('group', { name: 'Разделы кузницы' });
+  await modes.getByRole('button', { name: /Питомцы/ }).click();
+  assert.equal(
+    await modes.getByRole('button', { name: /Питомцы/ }).getAttribute('aria-pressed'),
+    'true',
+  );
+  await modes.getByRole('button', { name: /Предметы/ }).click();
+  await page.getByRole('group', { name: 'Улучшение предмета' }).waitFor();
+  await page.getByRole('button', { name: /К экипировке/ }).click();
+  await gear.getByRole('button', { name: /^Броня: Обычные латы \+1/ }).waitFor();
+  assert.equal(
+    await nav.getByRole('button', { name: 'Экипировка', exact: true }).getAttribute('aria-current'),
+    'page',
+  );
   const goldBefore = JSON.parse(await stored()).gold;
   await (await openMap(10)).click();
   await page.waitForFunction(() => window.__alpha.state().screen === 'playing');

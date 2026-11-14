@@ -227,6 +227,47 @@ for (const viewport of [
   assert.equal(after.ore, before.ore - 1, `${tag}: forge ore`);
   await page.getByRole('heading', { name: 'Обычный шлем стража +1' }).waitFor();
   await noHorizontalScroll(page, `${tag} forge`);
+  // Task 22: select an owned item → «Надеть» visible without scrolling; the equipped item's
+  // details → «Улучшить в кузнице» opens the forge on it; mode switch; back to Экипировка.
+  const navTo = (name) => page.locator('.meta-nav').getByRole('button', { name, exact: true });
+  await navTo('Экипировка').scrollIntoViewIfNeeded();
+  await navTo('Экипировка').tap();
+  const helmCard = page.locator('.owned-cell .item-card', { hasText: 'Обычный шлем стража +1' });
+  await helmCard.scrollIntoViewIfNeeded();
+  await helmCard.tap();
+  const equipBtn = page
+    .getByRole('group', { name: 'Предпросмотр снаряжения' })
+    .getByRole('button', { name: 'Надеть' });
+  await page.waitForTimeout(150);
+  const eb = await equipBtn.boundingBox();
+  const vp = page.viewportSize();
+  assert.ok(
+    eb && eb.y >= 0 && eb.y + eb.height <= vp.height,
+    `${tag}: «Надеть» visible without scrolling`,
+  );
+  await tapTarget(equipBtn, `${tag} «Надеть»`);
+  await equipBtn.tap();
+  const helmSlot = page.getByRole('button', { name: /^Шлем: Обычный шлем стража \+1, подробнее/ });
+  await helmSlot.scrollIntoViewIfNeeded();
+  await helmSlot.tap();
+  const toForge = page
+    .getByRole('group', { name: 'Надетый предмет' })
+    .getByRole('button', { name: /Улучшить в кузнице/ });
+  await tapTarget(toForge, `${tag} «Улучшить в кузнице»`);
+  await toForge.tap();
+  await page
+    .getByRole('group', { name: 'Улучшение предмета' })
+    .getByRole('heading', { name: 'Обычный шлем стража +1' })
+    .waitFor();
+  const modeSwitch = page.getByRole('group', { name: 'Разделы кузницы' });
+  const petsMode = modeSwitch.getByRole('button', { name: /Питомцы/ });
+  await tapTarget(petsMode, `${tag} forge mode switch`);
+  await petsMode.tap();
+  assert.equal(await petsMode.getAttribute('aria-pressed'), 'true');
+  await modeSwitch.getByRole('button', { name: /Предметы/ }).tap();
+  await page.getByRole('button', { name: /К экипировке/ }).tap();
+  await page.getByRole('region', { name: /^Снаряжение:/ }).waitFor();
+  await noHorizontalScroll(page, `${tag} equipment details`);
   // Task 20: pets by touch — shop tab (buy with confirmation), «Питомцы» page (activate), forge pet
   // tab (upgrade), then a run starts with the pet.
   await page.evaluate(() => {

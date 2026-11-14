@@ -99,19 +99,35 @@ export function ForgePage() {
           <CurrencyBadge amount={profile.gold} />
           <OreBadge amount={profile.ore} />
         </span>
-        <Tabs
-          label="Разделы кузницы"
-          items={[
-            { id: 'items' as const, label: F.items },
-            { id: 'pets' as const, label: RU.meta.pets.title },
-          ]}
-          value={tab}
-          onChange={(t) => {
-            setTab(t);
-            setMessage(null);
-          }}
-        />
       </header>
+      {/* Task 22: a prominent centred mode switch (Предметы / Питомцы). */}
+      <Tabs
+        label="Разделы кузницы"
+        className="forge-mode"
+        items={[
+          {
+            id: 'items' as const,
+            label: (
+              <>
+                <span aria-hidden="true">⚒</span> {F.items}
+              </>
+            ),
+          },
+          {
+            id: 'pets' as const,
+            label: (
+              <>
+                <span aria-hidden="true">❦</span> {RU.meta.pets.title}
+              </>
+            ),
+          },
+        ]}
+        value={tab}
+        onChange={(t) => {
+          setTab(t);
+          setMessage(null);
+        }}
+      />
       {tab === 'pets' ? (
         <PetForge initial={ui.forgeItem?.startsWith('pet:') ? ui.forgeItem.slice(4) : null} />
       ) : (
