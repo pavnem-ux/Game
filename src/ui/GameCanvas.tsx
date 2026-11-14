@@ -6,5 +6,5 @@ export function GameCanvas() {
     const game = createGame(ref.current!);
     return () => game.destroy(true);
   }, []);
-  return <div className="game-canvas" ref={ref} aria-label="Игровая арена" />;
+  return <div className="game-canvas" ref={ref} aria-label="Game arena" />;
 }

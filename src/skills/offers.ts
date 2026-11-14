@@ -123,7 +123,7 @@ export function rerollSkills(
 }
 
 /**
- * Task 14 «Изгнать»: a replacement for one banished card, following the reroll preference for that
+ * Task 14 «Banish»: a replacement for one banished card, following the reroll preference for that
  * slot — never a card already in the offer; the same category (new / upgrade) first so the managed
  * «at least one new and one upgrade» guarantee holds when possible; null when nothing is left.
  */

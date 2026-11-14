@@ -15,9 +15,9 @@ export interface RunStatModifiers {
   readonly magicalDamagePercent: number;
   readonly dodgeChance: number;
   readonly cooldownReduction: number;
-  /** Task 09.1: percent movement-speed bonus (talents «скорость движения +X%»). */
+  /** Task 09.1: percent movement-speed bonus (talents «movement speed +X%»). */
   readonly movementSpeedPercent: number;
-  /** Task 11 (additive; 0 for every earlier source): percent area size (gear «размер области»). */
+  /** Task 11 (additive; 0 for every earlier source): percent area size (gear «area size»). */
   readonly areaSizePercent: number;
 }
 export const NO_MODIFIERS: RunStatModifiers = Object.freeze({

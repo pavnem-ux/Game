@@ -16,10 +16,10 @@ export const distinctDotTypes = (statuses: DotReader, targetId: string): number 
 export function hpPercent(entity: { readonly currentHp: number; readonly maxHp: number }): number {
   return entity.maxHp > 0 ? (entity.currentHp / entity.maxHp) * 100 : 0;
 }
-/** «HP ниже X%»: strictly below. */
+/** «HP below X%»: strictly below. */
 export const hpBelow = (entity: { currentHp: number; maxHp: number }, percent: number) =>
   hpPercent(entity) < percent;
-/** «HP выше X%»: strictly above. */
+/** «HP above X%»: strictly above. */
 export const hpAbove = (entity: { currentHp: number; maxHp: number }, percent: number) =>
   hpPercent(entity) > percent;
 /** Target control/mark state as captured by the Skill Engine's pre-hit snapshot. */

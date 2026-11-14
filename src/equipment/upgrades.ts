@@ -3,7 +3,7 @@ import type { GearItem } from './items';
 import type { GearStat } from './config';
 
 /**
- * Task 19 §1.3 item upgrades («Кузница») — pure rules, numbers PROVISIONAL. Every owned item
+ * Task 19 §1.3 item upgrades («Forge») — pure rules, numbers PROVISIONAL. Every owned item
  * (weapons included, starter weapons excluded) has one account-wide level +0…+10. Each level adds
  * +5% of the item's base stats (+10 = ×1.5). An upgrade always succeeds: no randomness, no failure,
  * no downgrade. Cost of reaching level L: Gold = ⌈price × 0.1 × L⌉, Ore = ⌈tier × L / 2⌉.
@@ -54,7 +54,7 @@ export function upgradedStats(
     out[stat] = Math.round(v * k * 1000) / 1000;
   return Object.freeze(out);
 }
-/** «Кольцо точности +3» (no suffix at +0). */
+/** «Ring of Precision +3» (no suffix at +0). */
 export const itemDisplayName = (item: GearItem, level: number) =>
   level > 0 ? `${item.name} +${level}` : item.name;
 

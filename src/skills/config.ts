@@ -6,7 +6,7 @@ export const SKILL_RULES = Object.freeze({
   autoSlots: 4,
   passiveSlots: 6,
   rerollsPerRun: 3,
-  /** Task 14 (provisional): «Изгнать» uses per run. «Пропустить» is unlimited. */
+  /** Task 14 (provisional): «Banish» uses per run. «Skip» is unlimited. */
   banishesPerRun: 2,
   offerSize: 3,
 });
@@ -16,16 +16,16 @@ export const BONUS_REWARDS: Readonly<
   Record<BonusRewardId, Readonly<{ name: string; icon: string; summary: string }>>
 > = Object.freeze({
   recovery: Object.freeze({
-    name: 'Восстановление',
+    name: 'Restoration',
     icon: '✚',
-    summary: 'Лечение на 30% от Max HP (не выше Max HP).',
+    summary: 'Heals 30% of Max HP (never above Max HP).',
   }),
   barrier: Object.freeze({
-    name: 'Барьер',
+    name: 'Barrier',
     icon: '◈',
-    summary: 'Временный щит на 20% от Max HP на 12 с.',
+    summary: 'A temporary shield of 20% of Max HP for 12 s.',
   }),
-  gold: Object.freeze({ name: 'Золото', icon: '◎', summary: '+25 золота забега.' }),
+  gold: Object.freeze({ name: 'Gold', icon: '◎', summary: '+25 run Gold.' }),
 });
 export const BONUS_TUNING = Object.freeze({
   recoveryMaxHpPercent: 30,
@@ -78,7 +78,7 @@ export const SYNERGY_TUNING = Object.freeze({
 
 /**
  * Task 15 (catalog v3, provisional): synergy levels from the weakest rank of the best completed
- * pair — I (both owned), II (both rank ≥ 3), III «Пробуждение» (both rank 5). Level II multiplies
+ * pair — I (both owned), II (both rank ≥ 3), III «Awakening» (both rank 5). Level II multiplies
  * each synergy's main number (`SYNERGY_MAIN_NUMBER`) by 1.5; III = II + the awakened property.
  */
 export const SYNERGY_LEVEL_RULES = Object.freeze({
@@ -115,35 +115,35 @@ export const SYNERGY_TUNING_LEVEL_II: Tuning = Object.freeze(
 ) as Tuning;
 
 /**
- * Task 15 Level III «Пробуждение» properties (catalog v3, provisional). Damage coefficients here
+ * Task 15 Level III «Awakening» properties (catalog v3, provisional). Damage coefficients here
  * are the awakened effect's own numbers; the triggering proc keeps the Level II value.
  */
 export const SYNERGY_AWAKENING = Object.freeze({
   /** «Default Slow»: 30% for 2 s, like the ice ring at rank I; the global Slow cap still applies. */
   defaultSlow: Object.freeze({ strength: 0.3, duration: 2 }),
-  /** Паровой взрыв: the explosion hits every enemy within this radius of the target (once each). */
+  /** Steam Blast: the explosion hits every enemy within this radius of the target (once each). */
   thermalShock: Object.freeze({ radius: 80 }),
-  /** Огненная буря: 5 neighbours, 2 Burn stacks each; total cap 7 including mage.b1.n05. */
+  /** Firestorm: 5 neighbours, 2 Burn stacks each; total cap 7 including mage.b1.n05. */
   wildfire: Object.freeze({ maxTargets: 5, stacks: 2, totalCap: 7 }),
-  /** Ледяная шрапнель: shards into the nearest other enemies (magical ice) + default Slow. */
+  /** Ice Shrapnel: shards into the nearest other enemies (magical ice) + default Slow. */
   shatteredIce: Object.freeze({ shards: 3, radius: 150, coefficient: 0.25 }),
-  /** Сотрясение: extends the current Stun once per Stun, within the Stun limits. */
+  /** Concussion: extends the current Stun once per Stun, within the Stun limits. */
   skullCrusher: Object.freeze({ stunExtension: 0.3 }),
-  /** Неудержимый: up to 3 stacks (each melee kill +1, duration refreshed); +10% move speed. */
+  /** Unstoppable: up to 3 stacks (each melee kill +1, duration refreshed); +10% move speed. */
   battleMomentum: Object.freeze({ maxStacks: 3, movementSpeedPercent: 10 }),
-  /** Разлом: a rift at the wave's spot ticking physical damage + default Slow. */
+  /** Rift: a rift at the wave's spot ticking physical damage + default Slow. */
   seismicImpact: Object.freeze({ duration: 2, radius: 90, tickInterval: 0.5, coefficient: 0.15 }),
-  /** Чумной ливень: explosion around the target, 2 Poison stacks (3/tick, 4 s) each. */
+  /** Plague Downpour: explosion around the target, 2 Poison stacks (3/tick, 4 s) each. */
   toxicBarrage: Object.freeze({ radius: 80, poisonStacks: 2 }),
-  /** Мор: 5 neighbours, each half the dead target's Poison stacks (ceil, 1–5). */
+  /** Pestilence: 5 neighbours, each half the dead target's Poison stacks (ceil, 1–5). */
   plagueChain: Object.freeze({ maxTargets: 5, minStacks: 1, maxStacks: 5 }),
-  /** Инстинкт охотника: the bonus moves to the nearest poisoned enemy (≤ 3 times). */
+  /** Hunter's Instinct: the bonus moves to the nearest poisoned enemy (≤ 3 times). */
   deadlyPrecision: Object.freeze({ radius: 300, maxTransfers: 3 }),
-  /** Кровавый пир: dagger hits on bleeding targets heal % of Max HP, at most once per interval. */
+  /** Blood Feast: dagger hits on bleeding targets heal % of Max HP, at most once per interval. */
   bloodFrenzy: Object.freeze({ healPercent: 0.5, interval: 0.5 }),
-  /** Рваные раны: a critical hit adds 2 Bleed stacks (the group's duration refreshes). */
+  /** Lacerations: a critical hit adds 2 Bleed stacks (the group's duration refreshes). */
   deepWounds: Object.freeze({ stacks: 2 }),
-  /** Казнь: threshold 40%; a lethal execution explodes (physical + 1 Bleed stack each). */
+  /** Execution: threshold 40%; a lethal execution explodes (physical + 1 Bleed stack each). */
   finalCut: Object.freeze({
     hpThresholdPercent: 40,
     radius: 80,

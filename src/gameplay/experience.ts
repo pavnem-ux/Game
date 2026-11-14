@@ -121,7 +121,7 @@ export class RunExperience {
     return Object.freeze(events);
   }
   /**
-   * Task 12 («Магнит»): collects every crystal on the map through the normal collection path
+   * Task 12 («Magnet»): collects every crystal on the map through the normal collection path
    * (each crystal once, all XP kept, level-ups resolved by the same gain rule).
    */
   collectAll(): readonly ExperienceEvent[] {

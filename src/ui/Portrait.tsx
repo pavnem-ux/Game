@@ -3,7 +3,7 @@ export function Portrait() {
     <svg
       className="portrait"
       viewBox="0 0 360 380"
-      aria-label="Хранитель искры в древних руинах"
+      aria-label="Keeper of the spark in the ancient ruins"
       role="img"
     >
       <defs>

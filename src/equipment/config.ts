@@ -6,7 +6,7 @@ import type { CharacterClass } from '../character-stats';
  * Framework-independent: no Phaser/React/storage imports. Gear only changes existing combat
  * attributes, through the same run-modifier keys the talents use (`RunStatModifiers`).
  */
-/** Task 19 adds the shared «Шлем», «Перчатки», «Штаны» slots (7 slots in total). */
+/** Task 19 adds the shared «Helmet», «Gloves», «Legs» slots (7 slots in total). */
 export type GearSlot = 'weapon' | 'helmet' | 'armor' | 'gloves' | 'pants' | 'amulet' | 'ring';
 export const GEAR_SLOTS: readonly GearSlot[] = Object.freeze([
   'weapon',
@@ -18,13 +18,13 @@ export const GEAR_SLOTS: readonly GearSlot[] = Object.freeze([
   'ring',
 ]);
 export const SLOT_LABELS: Readonly<Record<GearSlot, string>> = Object.freeze({
-  weapon: 'Оружие',
-  helmet: 'Шлем',
-  armor: 'Броня',
-  gloves: 'Перчатки',
-  pants: 'Штаны',
-  amulet: 'Амулет',
-  ring: 'Кольцо',
+  weapon: 'Weapon',
+  helmet: 'Helmet',
+  armor: 'Armor',
+  gloves: 'Gloves',
+  pants: 'Legs',
+  amulet: 'Amulet',
+  ring: 'Ring',
 });
 
 /** Gear stats = existing combat attributes, named after their run-modifier keys. */
@@ -42,17 +42,17 @@ export type GearStat =
   | 'areaSizePercent';
 export const GEAR_STAT_LABELS: Readonly<Record<GearStat, { label: string; unit: string }>> =
   Object.freeze({
-    physicalDamagePercent: { label: 'Физический урон', unit: '%' },
-    magicalDamagePercent: { label: 'Магический урон', unit: '%' },
-    maxHpPercent: { label: 'Здоровье', unit: '%' },
-    resistance: { label: 'Сопротивление', unit: '' },
-    criticalChance: { label: 'Шанс крита', unit: ' п.п.' },
-    criticalDamage: { label: 'Крит. урон', unit: ' п.п.' },
-    attackSpeed: { label: 'Скорость атаки', unit: '' },
-    dodgeChance: { label: 'Уклонение', unit: ' п.п.' },
-    movementSpeedPercent: { label: 'Скорость движения', unit: '%' },
-    cooldownReduction: { label: 'Сокращение перезарядки', unit: ' п.п.' },
-    areaSizePercent: { label: 'Размер области', unit: '%' },
+    physicalDamagePercent: { label: 'Physical damage', unit: '%' },
+    magicalDamagePercent: { label: 'Magic damage', unit: '%' },
+    maxHpPercent: { label: 'Health', unit: '%' },
+    resistance: { label: 'Resistance', unit: '' },
+    criticalChance: { label: 'Crit chance', unit: ' pp' },
+    criticalDamage: { label: 'Crit damage', unit: ' pp' },
+    attackSpeed: { label: 'Attack speed', unit: '' },
+    dodgeChance: { label: 'Dodge', unit: ' pp' },
+    movementSpeedPercent: { label: 'Movement speed', unit: '%' },
+    cooldownReduction: { label: 'Cooldown reduction', unit: ' pp' },
+    areaSizePercent: { label: 'Area size', unit: '%' },
   });
 
 /** Tier-1 base value of each stat (spec §1.2). */
@@ -88,44 +88,44 @@ export const TIER_CONFIG: Readonly<
   >
 > = Object.freeze({
   1: {
-    name: 'Обычный',
+    name: 'Common',
     multiplier: 1,
     price: 80,
     unlockAfterMap: 0,
     color: '#c9c9c0',
-    adjective: { m: 'Обычный', f: 'Обычная', n: 'Обычное', pl: 'Обычные' },
+    adjective: { m: 'Common', f: 'Common', n: 'Common', pl: 'Common' },
   },
   2: {
-    name: 'Добротный',
+    name: 'Uncommon',
     multiplier: 2,
     price: 300,
     unlockAfterMap: 8,
     color: '#7fc77a',
-    adjective: { m: 'Добротный', f: 'Добротная', n: 'Добротное', pl: 'Добротные' },
+    adjective: { m: 'Uncommon', f: 'Uncommon', n: 'Uncommon', pl: 'Uncommon' },
   },
   3: {
-    name: 'Редкий',
+    name: 'Rare',
     multiplier: 3.5,
     price: 700,
     unlockAfterMap: 16,
     color: '#6fa8e8',
-    adjective: { m: 'Редкий', f: 'Редкая', n: 'Редкое', pl: 'Редкие' },
+    adjective: { m: 'Rare', f: 'Rare', n: 'Rare', pl: 'Rare' },
   },
   4: {
-    name: 'Эпический',
+    name: 'Epic',
     multiplier: 5,
     price: 1400,
     unlockAfterMap: 24,
     color: '#b67ae6',
-    adjective: { m: 'Эпический', f: 'Эпическая', n: 'Эпическое', pl: 'Эпические' },
+    adjective: { m: 'Epic', f: 'Epic', n: 'Epic', pl: 'Epic' },
   },
   5: {
-    name: 'Легендарный',
+    name: 'Legendary',
     multiplier: 7,
     price: 2500,
     unlockAfterMap: 32,
     color: '#f0b54a',
-    adjective: { m: 'Легендарный', f: 'Легендарная', n: 'Легендарное', pl: 'Легендарные' },
+    adjective: { m: 'Legendary', f: 'Legendary', n: 'Legendary', pl: 'Legendary' },
   },
 });
 /** Weapons cost ×1.25; the second weapon stat counts ×0.6 (spec §1.2). */
@@ -171,16 +171,16 @@ const t = (
 export const GEAR_TEMPLATES: readonly GearTemplate[] = Object.freeze([
   t(
     'heavy_sword',
-    'Тяжёлый меч',
+    'Heavy Sword',
     'm',
     'weapon',
     ['physicalDamagePercent', 'criticalDamage'],
     'warrior',
   ),
-  t('quick_sword', 'Быстрый меч', 'm', 'weapon', ['attackSpeed', 'criticalChance'], 'warrior'),
+  t('quick_sword', 'Quick Sword', 'm', 'weapon', ['attackSpeed', 'criticalChance'], 'warrior'),
   t(
     'assassin_dagger',
-    'Кинжал убийцы',
+    "Assassin's Dagger",
     'm',
     'weapon',
     ['criticalChance', 'criticalDamage'],
@@ -188,24 +188,17 @@ export const GEAR_TEMPLATES: readonly GearTemplate[] = Object.freeze([
   ),
   t(
     'shadow_dagger',
-    'Кинжал теней',
+    'Shadow Dagger',
     'm',
     'weapon',
     ['physicalDamagePercent', 'dodgeChance'],
     'rogue',
   ),
-  t(
-    'long_bow',
-    'Длинный лук',
-    'm',
-    'weapon',
-    ['physicalDamagePercent', 'criticalDamage'],
-    'archer',
-  ),
-  t('short_bow', 'Короткий лук', 'm', 'weapon', ['attackSpeed', 'movementSpeedPercent'], 'archer'),
+  t('long_bow', 'Longbow', 'm', 'weapon', ['physicalDamagePercent', 'criticalDamage'], 'archer'),
+  t('short_bow', 'Shortbow', 'm', 'weapon', ['attackSpeed', 'movementSpeedPercent'], 'archer'),
   t(
     'flame_staff',
-    'Посох пламени',
+    'Staff of Flame',
     'm',
     'weapon',
     ['magicalDamagePercent', 'areaSizePercent'],
@@ -213,41 +206,41 @@ export const GEAR_TEMPLATES: readonly GearTemplate[] = Object.freeze([
   ),
   t(
     'wisdom_staff',
-    'Посох мудрости',
+    'Staff of Wisdom',
     'm',
     'weapon',
     ['cooldownReduction', 'magicalDamagePercent'],
     'mage',
   ),
-  t('plate', 'Латы', 'pl', 'armor', ['maxHpPercent', 'resistance']),
-  t('leather_armor', 'Кожаный доспех', 'm', 'armor', ['dodgeChance', 'movementSpeedPercent']),
-  t('robe', 'Мантия', 'f', 'armor', ['cooldownReduction', 'areaSizePercent']),
-  t('amulet_power', 'Амулет силы', 'm', 'amulet', ['physicalDamagePercent']),
-  t('amulet_magic', 'Амулет магии', 'm', 'amulet', ['magicalDamagePercent']),
-  t('amulet_life', 'Амулет жизни', 'm', 'amulet', ['maxHpPercent']),
-  t('ring_precision', 'Кольцо точности', 'n', 'ring', ['criticalChance']),
-  t('ring_fury', 'Кольцо ярости', 'n', 'ring', ['criticalDamage']),
-  t('ring_speed', 'Кольцо скорости', 'n', 'ring', ['attackSpeed']),
+  t('plate', 'Plate Armor', 'pl', 'armor', ['maxHpPercent', 'resistance']),
+  t('leather_armor', 'Leather Armor', 'm', 'armor', ['dodgeChance', 'movementSpeedPercent']),
+  t('robe', 'Robe', 'f', 'armor', ['cooldownReduction', 'areaSizePercent']),
+  t('amulet_power', 'Amulet of Might', 'm', 'amulet', ['physicalDamagePercent']),
+  t('amulet_magic', 'Amulet of Magic', 'm', 'amulet', ['magicalDamagePercent']),
+  t('amulet_life', 'Amulet of Life', 'm', 'amulet', ['maxHpPercent']),
+  t('ring_precision', 'Ring of Precision', 'n', 'ring', ['criticalChance']),
+  t('ring_fury', 'Ring of Fury', 'n', 'ring', ['criticalDamage']),
+  t('ring_speed', 'Ring of Speed', 'n', 'ring', ['attackSpeed']),
   // Task 19 §1.1 (shared by all classes; second stat ×0.6).
-  t('guard_helm', 'Шлем стража', 'm', 'helmet', ['maxHpPercent', 'resistance']),
-  t('hunter_hood', 'Капюшон охотника', 'm', 'helmet', ['criticalChance', 'dodgeChance']),
-  t('mage_circlet', 'Венец мага', 'm', 'helmet', ['cooldownReduction', 'magicalDamagePercent']),
-  t('plate_gauntlets', 'Латные рукавицы', 'pl', 'gloves', ['physicalDamagePercent', 'resistance']),
-  t('trickster_gloves', 'Перчатки ловкача', 'pl', 'gloves', ['attackSpeed', 'criticalChance']),
-  t('sorcerer_gloves', 'Перчатки чародея', 'pl', 'gloves', [
+  t('guard_helm', "Guard's Helm", 'm', 'helmet', ['maxHpPercent', 'resistance']),
+  t('hunter_hood', "Hunter's Hood", 'm', 'helmet', ['criticalChance', 'dodgeChance']),
+  t('mage_circlet', "Mage's Circlet", 'm', 'helmet', ['cooldownReduction', 'magicalDamagePercent']),
+  t('plate_gauntlets', 'Plate Gauntlets', 'pl', 'gloves', ['physicalDamagePercent', 'resistance']),
+  t('trickster_gloves', "Trickster's Gloves", 'pl', 'gloves', ['attackSpeed', 'criticalChance']),
+  t('sorcerer_gloves', "Sorcerer's Gloves", 'pl', 'gloves', [
     'magicalDamagePercent',
     'areaSizePercent',
   ]),
-  t('plate_greaves', 'Латные поножи', 'pl', 'pants', ['maxHpPercent', 'resistance']),
-  t('leather_pants', 'Кожаные штаны', 'pl', 'pants', ['movementSpeedPercent', 'dodgeChance']),
-  t('mystic_trousers', 'Шаровары мистика', 'pl', 'pants', ['cooldownReduction', 'maxHpPercent']),
+  t('plate_greaves', 'Plate Greaves', 'pl', 'pants', ['maxHpPercent', 'resistance']),
+  t('leather_pants', 'Leather Trousers', 'pl', 'pants', ['movementSpeedPercent', 'dodgeChance']),
+  t('mystic_trousers', "Mystic's Breeches", 'pl', 'pants', ['cooldownReduction', 'maxHpPercent']),
 ]);
 
 /** Starting weapons: owned tier-0 items with no bonus, equipped by default (spec §1.1). */
 export const STARTER_WEAPONS: Readonly<Record<CharacterClass, { id: string; name: string }>> =
   Object.freeze({
-    warrior: { id: 'starter_sword', name: 'Меч новичка' },
-    rogue: { id: 'starter_daggers', name: 'Парные кинжалы новичка' },
-    archer: { id: 'starter_bow', name: 'Лук новичка' },
-    mage: { id: 'starter_staff', name: 'Посох новичка' },
+    warrior: { id: 'starter_sword', name: "Novice's Sword" },
+    rogue: { id: 'starter_daggers', name: "Novice's Daggers" },
+    archer: { id: 'starter_bow', name: "Novice's Bow" },
+    mage: { id: 'starter_staff', name: "Novice's Staff" },
   });

@@ -29,7 +29,6 @@ export interface GearItem {
 }
 
 const round = (v: number) => Math.round(v * 1000) / 1000;
-const lower = (s: string) => s.charAt(0).toLocaleLowerCase('ru') + s.slice(1);
 
 function makeItem(template: GearTemplate, tier: Tier): GearItem {
   const tc = TIER_CONFIG[tier];
@@ -43,8 +42,8 @@ function makeItem(template: GearTemplate, tier: Tier): GearItem {
   return Object.freeze({
     id: `${template.id}-t${tier}`,
     templateId: template.id,
-    // «Редкий тяжёлый меч», «Редкая мантия», «Редкие латы», «Редкое кольцо точности».
-    name: `${tc.adjective[template.gender]} ${lower(template.name)}`,
+    // «Rare Heavy Sword», «Rare Robe», «Rare Plate Armor», «Rare Ring of Precision».
+    name: `${tc.adjective[template.gender]} ${template.name}`,
     slot: template.slot,
     ...(template.characterClass ? { characterClass: template.characterClass } : {}),
     tier,

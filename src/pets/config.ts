@@ -37,8 +37,8 @@ const def = (d: PetDefinition): PetDefinition =>
 export const PET_CONFIG: Readonly<Record<PetId, PetDefinition>> = Object.freeze({
   firefly: def({
     id: 'firefly',
-    name: 'Светлячок Лучик',
-    role: 'Лечит героя',
+    name: 'Glimmer the Firefly',
+    role: 'Heals the hero',
     source: { kind: 'quest' },
     params: { healPercent: 2, interval: 8 },
     main: ['healPercent'],
@@ -47,8 +47,8 @@ export const PET_CONFIG: Readonly<Record<PetId, PetDefinition>> = Object.freeze(
   }),
   owlet: def({
     id: 'owlet',
-    name: 'Совёнок Угу',
-    role: 'Стреляет по ближайшему врагу',
+    name: 'Hoot the Owlet',
+    role: 'Shoots the nearest enemy',
     source: { kind: 'shop', price: 1500 },
     params: { damagePercent: 20, range: 400, interval: 1.2, speed: 520, radius: 6 },
     main: ['damagePercent'],
@@ -57,8 +57,8 @@ export const PET_CONFIG: Readonly<Record<PetId, PetDefinition>> = Object.freeze(
   }),
   fox: def({
     id: 'fox',
-    name: 'Лисёнок-огонёк',
-    role: 'Прорывается сквозь врага и поджигает',
+    name: 'Ember the Fox Cub',
+    role: 'Dashes through enemies and sets them ablaze',
     source: { kind: 'quest' },
     params: {
       damagePercent: 60,
@@ -74,8 +74,8 @@ export const PET_CONFIG: Readonly<Record<PetId, PetDefinition>> = Object.freeze(
   }),
   hedgehog: def({
     id: 'hedgehog',
-    name: 'Ёжик-хранитель',
-    role: 'Сопротивление и щит',
+    name: 'Guardian Hedgehog',
+    role: 'Resistance and a shield',
     source: { kind: 'shop', price: 2500 },
     params: { resistance: 6, barrierPercent: 5, interval: 10, barrierDuration: 1.5 },
     main: ['resistance', 'barrierPercent'],
@@ -84,8 +84,8 @@ export const PET_CONFIG: Readonly<Record<PetId, PetDefinition>> = Object.freeze(
   }),
   kitten: def({
     id: 'kitten',
-    name: 'Котёнок удачи',
-    role: 'Больше монет, шире подбор',
+    name: 'Lucky Kitten',
+    role: 'More coins, wider pickup',
     source: { kind: 'shop', price: 3000 },
     params: { coinPercent: 10, pickupRadiusPercent: 15 },
     main: ['coinPercent'],
@@ -94,8 +94,8 @@ export const PET_CONFIG: Readonly<Record<PetId, PetDefinition>> = Object.freeze(
   }),
   wolf: def({
     id: 'wolf',
-    name: 'Дух-волк',
-    role: 'Скорость атаки и движения',
+    name: 'Spirit Wolf',
+    role: 'Attack and movement speed',
     source: { kind: 'quest' },
     params: { attackSpeed: 8, movementSpeedPercent: 5 },
     main: ['attackSpeed'],

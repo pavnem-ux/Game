@@ -13,16 +13,16 @@ export const ALPHA = Object.freeze({
   eventHistoryLimit: 160,
 });
 export const CLASS_LABELS: Record<CharacterClass, string> = {
-  warrior: 'Воин',
-  mage: 'Маг',
-  archer: 'Лучник',
-  rogue: 'Разбойник',
+  warrior: 'Warrior',
+  mage: 'Mage',
+  archer: 'Archer',
+  rogue: 'Rogue',
 };
 export const WEAPON_LABELS: Record<CharacterClass, string> = {
-  warrior: 'Меч',
-  mage: 'Посох',
-  archer: 'Лук',
-  rogue: 'Парные кинжалы',
+  warrior: 'Sword',
+  mage: 'Staff',
+  archer: 'Bow',
+  rogue: 'Twin Daggers',
 };
 export const ALPHA_WEAPONS: Readonly<Record<CharacterClass, WeaponConfig>> = {
   warrior: {

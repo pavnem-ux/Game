@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import catalogMarkdown from '../../docs/talents.md?raw';
 import gapsMarkdown from '../../docs/talents-gaps.md?raw';
+import glossaryMarkdown from '../../docs/glossary-en.md?raw';
 import { CHARACTER_CLASSES } from '../../src/character-stats';
 import {
   TALENT_CATALOG_APPROVED,
@@ -38,24 +39,56 @@ function parseCatalog(md: string) {
   return { branches, nodes, appendix };
 }
 
-describe('Task 09 §1.1 talent catalog → config (verbatim, nothing invented)', () => {
+/** Task 23: RU → EN pairs from the glossary tables (`| RU | EN |`, † = proposal marker). */
+function parseGlossary(md: string): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const line of md.split('\n')) {
+    const m = /^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|/.exec(line);
+    if (m && /[\u0400-\u04ff]/.test(m[1]) && !map.has(m[1]))
+      map.set(m[1], m[2].replace('†', '').trim());
+  }
+  return map;
+}
+/** Numbers of a rank text, order-independent (the English text keeps every catalog number). */
+const numbersOf = (text: string) => (text.match(/\d+(?:\.\d+)?/g) ?? []).sort();
+
+describe('Task 09 §1.1 talent catalog → config (Task 23: English, same structure and numbers)', () => {
   const parsed = parseCatalog(catalogMarkdown);
+  const glossary = parseGlossary(glossaryMarkdown);
+  const en = (ru: string) => glossary.get(ru) ?? `<missing glossary entry: ${ru}>`;
   it('the config contains exactly the catalog: 12 branches, 56 nodes, 168 rank texts', () => {
     expect(parsed.branches).toHaveLength(12);
     expect(parsed.nodes).toHaveLength(56);
     expect(
       TALENT_CATALOG_DATA.branches.map((b) => [b.characterClass, b.branch, b.name, b.nodeCount]),
-    ).toEqual(parsed.branches.map((b) => [b.cls, b.branch, b.name, b.count]));
+    ).toEqual(parsed.branches.map((b) => [b.cls, b.branch, en(b.name), b.count]));
     expect(
       TALENT_CATALOG_DATA.nodes.map((n) => ({
         id: n.id,
         name: n.name,
         superpower: n.superpower,
-        ranks: n.ranks.map((r) => r.text),
+        ranks: n.ranks.length,
       })),
-    ).toEqual(parsed.nodes);
+    ).toEqual(
+      parsed.nodes.map((n) => ({
+        id: n.id,
+        name: en(n.name),
+        superpower: n.superpower,
+        ranks: n.ranks.length,
+      })),
+    );
     expect(TALENT_CONFIG.nodes.size).toBe(TALENT_RULES.totals.nodes);
     expect([...TALENT_CONFIG.nodes.values()].flatMap((n) => n.ranks)).toHaveLength(168);
+  });
+  it('Task 23: every English rank text keeps exactly the numbers of the Russian catalog text', () => {
+    const byId = new Map(parsed.nodes.map((n) => [n.id, n.ranks]));
+    for (const node of TALENT_CATALOG_DATA.nodes)
+      node.ranks.forEach((r, i) => {
+        expect(r.text, `${node.id} rank ${i + 1}`).not.toMatch(/[\u0400-\u04ff]/);
+        expect(numbersOf(r.text), `${node.id} rank ${i + 1}`).toEqual(
+          numbersOf(byId.get(node.id)![i]),
+        );
+      });
   });
   it('4 classes × 3 branches; branches 1–2 have 5 nodes from level 1, branch 3 has 4 at 30', () => {
     for (const cls of CHARACTER_CLASSES) {

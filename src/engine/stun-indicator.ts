@@ -1,7 +1,7 @@
 import type { EnemySnapshot } from '../enemy-ai';
 
 const STUN_BADGE = Object.freeze({
-  text: 'СТАН',
+  text: 'STUN',
   color: '#ffec9a',
   background: '#30230d',
   offsetY: -55,

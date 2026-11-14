@@ -27,7 +27,7 @@ export const COIN_RULES = Object.freeze({
   victoryBonusShare: 0.4,
   /** Defeat pays this share of the collected coins (rounded down), no bonus. Abandoned: nothing. */
   defeatCoinShare: 0.5,
-  /** Task 14 «Пропустить» (provisional): coins = this share of the map's victory Gold, at least min. */
+  /** Task 14 «Skip» (provisional): coins = this share of the map's victory Gold, at least min. */
   skipShare: 0.02,
   skipMin: 3,
 });
@@ -95,7 +95,7 @@ export function runGold(
 }
 
 /**
- * Task 19 §1.2 Ore («Руда») — second profile currency. PROVISIONAL. Victory only:
+ * Task 19 §1.2 Ore («Ore») — second profile currency. PROVISIONAL. Victory only:
  * `base + floor(mapId / perMaps)` (map 1: 2, map 4: 3, map 40: 12); the first victory on a map pays
  * ×firstVictoryMultiplier. Defeat / abandoned: 0.
  */

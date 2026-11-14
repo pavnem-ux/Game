@@ -17,67 +17,70 @@ export const SYNERGY_LEVEL_TEXT: Readonly<
   Record<SynergyId, Readonly<{ levelTwo: string; awakened: string; awakenedEffect: string }>>
 > = Object.freeze({
   thermal_shock: Object.freeze({
-    levelTwo: 'коэффициент взрыва ×0.825',
-    awakened: 'Паровой взрыв',
-    awakenedEffect: 'взрыв бьёт всех врагов в радиусе 80 от цели (одно попадание по врагу)',
+    levelTwo: 'explosion coefficient ×0.825',
+    awakened: 'Steam Blast',
+    awakenedEffect:
+      'the explosion hits every enemy within radius 80 of the target (one hit per enemy)',
   }),
   wildfire: Object.freeze({
-    levelTwo: 'урон Burn 4.5 за тик',
-    awakened: 'Огненная буря',
-    awakenedEffect: '5 соседей вместо 3, каждому 2 стака Burn (всего не более 7 целей с талантами)',
+    levelTwo: 'Burn damage 4.5 per tick',
+    awakened: 'Firestorm',
+    awakenedEffect:
+      '5 neighbours instead of 3, 2 Burn stacks each (no more than 7 targets in total with talents)',
   }),
   shattered_ice: Object.freeze({
-    levelTwo: 'бонус ×0.675',
-    awakened: 'Ледяная шрапнель',
-    awakenedEffect: '3 осколка в 3 ближайших врагов в радиусе 150: ×0.25 ледяного урона и Slow',
+    levelTwo: 'bonus ×0.675',
+    awakened: 'Ice Shrapnel',
+    awakenedEffect:
+      '3 shards into the 3 nearest enemies within radius 150: ×0.25 ice damage and Slow',
   }),
   skull_crusher: Object.freeze({
-    levelTwo: 'доп. урон ×0.75',
-    awakened: 'Сотрясение',
-    awakenedEffect:
-      'продлевает текущее оглушение цели на 0.3 с (раз за оглушение, в пределах лимитов)',
+    levelTwo: 'extra damage ×0.75',
+    awakened: 'Concussion',
+    awakenedEffect: "extends the target's current Stun by 0.3 s (once per Stun, within the caps)",
   }),
   battle_momentum: Object.freeze({
-    levelTwo: '+22.5 скорости атаки',
-    awakened: 'Неудержимый',
-    awakenedEffect: 'до 3 стаков (каждое убийство +1), пока бафф активен — +10% скорости бега',
+    levelTwo: '+22.5 Attack speed',
+    awakened: 'Unstoppable',
+    awakenedEffect: 'up to 3 stacks (each kill +1); while the buff is active, +10% movement speed',
   }),
   seismic_impact: Object.freeze({
-    levelTwo: 'волна ×0.75',
-    awakened: 'Разлом',
-    awakenedEffect: 'трещина радиусом 90 на 2 с: каждые 0.5 с ×0.15 физического урона и Slow',
+    levelTwo: 'wave ×0.75',
+    awakened: 'Rift',
+    awakenedEffect: 'a radius-90 rift for 2 s: ×0.15 physical damage and Slow every 0.5 s',
   }),
   toxic_barrage: Object.freeze({
-    levelTwo: 'взрыв ×0.9',
-    awakened: 'Чумной ливень',
-    awakenedEffect: 'взрыв бьёт всех в радиусе 80 и накладывает каждому 2 стака Poison',
+    levelTwo: 'explosion ×0.9',
+    awakened: 'Plague Downpour',
+    awakenedEffect:
+      'the explosion hits everyone within radius 80 and applies 2 Poison stacks to each',
   }),
   plague_chain: Object.freeze({
-    levelTwo: 'урон Poison 4.5 за тик',
-    awakened: 'Мор',
-    awakenedEffect: '5 соседей; каждый получает половину стаков Poison погибшего (1–5)',
+    levelTwo: 'Poison damage 4.5 per tick',
+    awakened: 'Pestilence',
+    awakenedEffect: "5 neighbours; each receives half of the dead enemy's Poison stacks (1–5)",
   }),
   deadly_precision: Object.freeze({
-    levelTwo: '+22.5% урона по цели',
-    awakened: 'Инстинкт охотника',
+    levelTwo: '+22.5% damage to the target',
+    awakened: "Hunter's Instinct",
     awakenedEffect:
-      'если цель с бонусом погибает, бонус переходит на ближайшего отравленного врага (до 3 раз)',
+      'if the target with the bonus dies, the bonus moves to the nearest poisoned enemy (up to 3 times)',
   }),
   blood_frenzy: Object.freeze({
-    levelTwo: '+22.5 скорости атаки',
-    awakened: 'Кровавый пир',
-    awakenedEffect: 'удары кинжалом по кровоточащим лечат 0.5% Max HP (не чаще раза в 0.5 с)',
+    levelTwo: '+22.5 Attack speed',
+    awakened: 'Blood Feast',
+    awakenedEffect: 'dagger hits on bleeding enemies heal 0.5% of Max HP (at most once per 0.5 s)',
   }),
   deep_wounds: Object.freeze({
-    levelTwo: 'урон Bleed 4.5 за тик',
-    awakened: 'Рваные раны',
-    awakenedEffect: 'крит добавляет 2 стака Bleed и обновляет длительность',
+    levelTwo: 'Bleed damage 4.5 per tick',
+    awakened: 'Lacerations',
+    awakenedEffect: 'a crit adds 2 Bleed stacks and refreshes the duration',
   }),
   final_cut: Object.freeze({
-    levelTwo: 'добивание ×1.8',
-    awakened: 'Казнь',
+    levelTwo: 'finisher ×1.8',
+    awakened: 'Execution',
     awakenedEffect:
-      'порог 40%; если удар убивает — кровавый взрыв радиусом 80 (×0.4 и 1 стак Bleed)',
+      'threshold 40%; if the hit kills, a radius-80 blood explosion (×0.4 and 1 Bleed stack)',
   }),
 });
 export const LEVEL_ROMAN = Object.freeze(['', 'I', 'II', 'III'] as const);
@@ -86,7 +89,7 @@ export function ranksOf(owned: readonly { skillId: string; rank: number }[]) {
   return new Map(owned.map((s) => [s.skillId, s.rank]));
 }
 /**
- * Task 15 card hint «▲ <Синергия> II/III»: synergies whose level this pick would raise to II or III
+ * Task 15 card hint «▲ <Synergy> II/III»: synergies whose level this pick would raise to II or III
  * (a new skill enters at rank I; an upgrade adds one rank). Unlocks (level I) keep their own hint.
  */
 export function cardLevelRaises(
@@ -202,10 +205,10 @@ export function synergyOverview(
       const fewest = Math.min(...pairs.map((p) => p.missing.length));
       const closest = pairs.filter((p) => p.missing.length === fewest);
       const explanation = available
-        ? `Открыто парой: ${done.join('; ')}. Сработает в бою, когда выполнится условие.`
+        ? `Unlocked by pair: ${done.join('; ')}. It triggers in battle when its condition is met.`
         : fewest === 1
-          ? `Не хватает одного навыка: ${unique(closest.flatMap((p) => p.missing)).join(' или ')}.`
-          : `Нужна любая пара из списка (оба навыка, ранг I или выше).`;
+          ? `One skill missing: ${unique(closest.flatMap((p) => p.missing)).join(' or ')}.`
+          : `Needs any pair from the list (both skills, rank I or higher).`;
       return Object.freeze({
         id: rule.id,
         name: rule.name,

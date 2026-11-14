@@ -292,6 +292,23 @@ names against them.
 | Глубокие раны        | Deep Wounds      |
 | Последний разрез     | Final Cut        |
 
+### Synergy awakenings (Level III)
+
+| RU                | EN                  |
+| ----------------- | ------------------- |
+| Паровой взрыв     | Steam Blast †       |
+| Огненная буря     | Firestorm †         |
+| Ледяная шрапнель  | Ice Shrapnel †      |
+| Сотрясение        | Concussion †        |
+| Неудержимый       | Unstoppable †       |
+| Разлом            | Rift †              |
+| Чумной ливень     | Plague Downpour †   |
+| Мор               | Pestilence †        |
+| Инстинкт охотника | Hunter's Instinct † |
+| Кровавый пир      | Blood Feast †       |
+| Рваные раны       | Lacerations †       |
+| Казнь             | Execution †         |
+
 ## Talent branches
 
 | RU                  | EN                |

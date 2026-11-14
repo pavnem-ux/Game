@@ -95,7 +95,7 @@ export interface SkillDamageReadout {
   readonly skillId: string;
   readonly rank: number;
   readonly kind: 'auto' | 'passive';
-  /** False for utility ranks without any unconditional direct damage ("Нет прямого урона"). */
+  /** False for utility ranks without any unconditional direct damage ("No direct damage"). */
   readonly hasDirectDamage: boolean;
   /** Actual cooldown after Cooldown Reduction (automatic skills). */
   readonly cooldown?: number;
@@ -140,7 +140,7 @@ const info = (kind: InfoLine['kind'], key: string, text: string): Spec => ({
 });
 const one = { count: 1, perTarget: false, secondary: false } as const;
 const area = { count: 1, perTarget: true, secondary: false } as const;
-const zone = (p: SkillParams, coefficient: number, label = 'Тик зоны') =>
+const zone = (p: SkillParams, coefficient: number, label = 'Zone tick') =>
   hit({
     key: 'tick',
     label,
@@ -154,18 +154,18 @@ const zone = (p: SkillParams, coefficient: number, label = 'Тик зоны') =>
 const PROFILES: Readonly<Record<string, (p: SkillParams, h: Helpers) => Spec[]>> = {
   // ─────────────── Mage ───────────────
   fireball: (p, { r }) => [
-    hit({ key: 'projectile', label: 'Снаряд', coefficient: p.coefficient, ...one }),
+    hit({ key: 'projectile', label: 'Bolt', coefficient: p.coefficient, ...one }),
     hit({
       key: 'explosion',
-      label: 'Взрыв (другие враги рядом)',
+      label: 'Explosion (other enemies nearby)',
       coefficient: p.explosionCoefficient,
       ...area,
       extraTags: ['area'],
     }),
-    info('area', 'explosion-radius', `Радиус взрыва ${dist(r(p.explosionRadius))}`),
+    info('area', 'explosion-radius', `Explosion radius ${dist(r(p.explosionRadius))}`),
     dot({
       key: 'burn',
-      label: 'Burn (цель и задетые взрывом)',
+      label: 'Burn (target and enemies caught in the explosion)',
       effectType: 'burn',
       damage: p.burnDamage,
       duration: p.burnDuration,
@@ -173,7 +173,7 @@ const PROFILES: Readonly<Record<string, (p: SkillParams, h: Helpers) => Spec[]>>
     }),
     hit({
       key: 'embers',
-      label: 'Искры',
+      label: 'Sparks',
       coefficient: p.emberCoefficient,
       count: p.embers,
       perTarget: false,
@@ -181,8 +181,8 @@ const PROFILES: Readonly<Record<string, (p: SkillParams, h: Helpers) => Spec[]>>
     }),
   ],
   flame_burst: (p, { r }) => [
-    hit({ key: 'ring', label: 'Огненное кольцо', coefficient: p.coefficient, ...area }),
-    info('area', 'radius', `Радиус ${dist(r(p.radius))}`),
+    hit({ key: 'ring', label: 'Ring of fire', coefficient: p.coefficient, ...area }),
+    info('area', 'radius', `Radius ${dist(r(p.radius))}`),
     dot({
       key: 'burn',
       label: 'Burn',
@@ -192,146 +192,146 @@ const PROFILES: Readonly<Record<string, (p: SkillParams, h: Helpers) => Spec[]>>
     }),
     hit({
       key: 'outer',
-      label: 'Внешний импульс',
+      label: 'Outer pulse',
       coefficient: p.outerCoefficient,
       ...area,
-      condition: `через ${fmt(p.outerDelay)} с, радиус ${dist(r(p.radius * p.outerRadiusFactor))}`,
+      condition: `after ${fmt(p.outerDelay)} s, radius ${dist(r(p.radius * p.outerRadiusFactor))}`,
     }),
   ],
   inferno: (p, { r }) => [
     zone(p, p.tickCoefficient),
-    info('area', 'radius', `Зона радиусом ${dist(r(p.radius))} на ${fmt(p.duration)} с`),
+    info('area', 'radius', `Radius-${dist(r(p.radius))} zone for ${fmt(p.duration)} s`),
     dot({
       key: 'burn',
-      label: 'Burn от тика зоны',
+      label: 'Burn from zone ticks',
       effectType: 'burn',
       damage: p.burnDamage,
       duration: p.burnDuration,
       chance: p.burnChance,
     }),
-    hit({ key: 'final', label: 'Финальный взрыв', coefficient: p.finalCoefficient, ...area }),
+    hit({ key: 'final', label: 'Final explosion', coefficient: p.finalCoefficient, ...area }),
   ],
   frost_nova: (p, { r }) => [
-    hit({ key: 'nova', label: 'Ледяной взрыв', coefficient: p.coefficient, ...area }),
-    info('area', 'radius', `Радиус ${dist(r(p.radius))}`),
-    info('control', 'slow', `Slow ${pct(p.slow)} на ${fmt(p.slowDuration)} с (предел 60%)`),
+    hit({ key: 'nova', label: 'Icy blast', coefficient: p.coefficient, ...area }),
+    info('area', 'radius', `Radius ${dist(r(p.radius))}`),
+    info('control', 'slow', `Slow ${pct(p.slow)} for ${fmt(p.slowDuration)} s (cap 60%)`),
     hit({
       key: 'second',
-      label: 'Второй импульс',
+      label: 'Second pulse',
       coefficient: p.secondCoefficient,
       ...area,
-      condition: `через ${fmt(p.secondDelay)} с`,
+      condition: `after ${fmt(p.secondDelay)} s`,
     }),
   ],
   ice_shards: (p) => [
     hit({
       key: 'shard',
-      label: 'Осколок',
+      label: 'Shard',
       coefficient: p.coefficient,
       count: p.count,
       perTarget: false,
       secondary: false,
     }),
     ...(p.pierce > 0
-      ? [info('note', 'pierce', `Пробивает ещё ${p.pierce} цель; одну цель — не больше раза`)]
+      ? [info('note', 'pierce', `Pierces ${p.pierce} more target(s); each target at most once`)]
       : []),
   ],
   blizzard: (p, { r }) => [
-    zone(p, p.tickCoefficient, 'Тик бури'),
-    info('area', 'radius', `Буря радиусом ${dist(r(p.radius))} на ${fmt(p.duration)} с`),
-    info('control', 'slow', `Slow ${pct(p.slow)} на ${fmt(p.slowDuration)} с за тик`),
+    zone(p, p.tickCoefficient, 'Storm tick'),
+    info('area', 'radius', `Radius-${dist(r(p.radius))} storm for ${fmt(p.duration)} s`),
+    info('control', 'slow', `Slow ${pct(p.slow)} for ${fmt(p.slowDuration)} s per tick`),
     hit({
       key: 'pulse',
-      label: 'Сильный импульс',
+      label: 'Strong pulse',
       coefficient: p.pulseCoefficient,
       ...area,
-      condition: `каждый ${p.pulseEvery}-й тик, только по уже замедленным`,
+      condition: `every ${p.pulseEvery}th tick, only against already slowed enemies`,
     }),
   ],
   // ─────────────── Warrior ───────────────
   ground_slam: (p) => [
-    hit({ key: 'slam', label: 'Удар в конусе', coefficient: p.coefficient, ...area }),
-    info('area', 'cone', `Конус ${fmt(p.range)} / ${fmt(p.arc)}°`),
-    info('control', 'stun', `Stun ${fmt(p.stun)} с (предел 1.5 с, затем 1.2 с иммунитета)`),
+    hit({ key: 'slam', label: 'Cone strike', coefficient: p.coefficient, ...area }),
+    info('area', 'cone', `Cone ${fmt(p.range)} / ${fmt(p.arc)}°`),
+    info('control', 'stun', `Stun ${fmt(p.stun)} s (cap 1.5 s, then 1.2 s immunity)`),
     hit({
       key: 'follow',
-      label: 'Вторая волна',
+      label: 'Second wave',
       coefficient: p.followCoefficient,
       ...area,
-      condition: `через ${fmt(p.followDelay)} с, дальность ${fmt(p.followRange)}`,
+      condition: `after ${fmt(p.followDelay)} s, range ${fmt(p.followRange)}`,
     }),
   ],
   whirlwind: (p, { r }) => [
-    hit({ key: 'spin', label: 'Вихрь', coefficient: p.coefficient, ...area, count: p.pulses }),
-    info('area', 'radius', `Радиус ${dist(r(p.radius))}; не больше ${p.hitLimit} удар(а) по врагу`),
+    hit({ key: 'spin', label: 'Whirlwind', coefficient: p.coefficient, ...area, count: p.pulses }),
+    info('area', 'radius', `Radius ${dist(r(p.radius))}; at most ${p.hitLimit} hit(s) per enemy`),
   ],
   shield_bash: (p, { r }) => [
-    hit({ key: 'bash', label: 'Удар щитом', coefficient: p.coefficient, ...one }),
-    info('control', 'stun', `Stun ${fmt(p.stun)} с (предел 1.5 с, затем 1.2 с иммунитета)`),
+    hit({ key: 'bash', label: 'Shield Bash', coefficient: p.coefficient, ...one }),
+    info('control', 'stun', `Stun ${fmt(p.stun)} s (cap 1.5 s, then 1.2 s immunity)`),
     ...(p.adjacentRange > 0
-      ? [info('control', 'adjacent', `Оглушает ещё одного соседа в ${fmt(p.adjacentRange)}`)]
+      ? [info('control', 'adjacent', `Stuns one more neighbour within ${fmt(p.adjacentRange)}`)]
       : []),
     hit({
       key: 'shock',
-      label: 'Ударная волна',
+      label: 'Shockwave',
       coefficient: p.shockCoefficient,
       ...area,
       secondary: true,
-      condition: `если цель оглушена; радиус ${dist(r(p.shockRadius))}`,
+      condition: `if the target is stunned; radius ${dist(r(p.shockRadius))}`,
     }),
   ],
   earthquake: (p, { r }) => [
-    hit({ key: 'quake', label: 'Землетрясение', coefficient: p.coefficient, ...area }),
-    info('area', 'radius', `Радиус ${dist(r(p.radius))}`),
+    hit({ key: 'quake', label: 'Earthquake', coefficient: p.coefficient, ...area }),
+    info('area', 'radius', `Radius ${dist(r(p.radius))}`),
     hit({
       key: 'ripple',
-      label: 'Повторная волна',
+      label: 'Echo wave',
       coefficient: p.rippleCoefficient,
       ...area,
-      condition: `через ${fmt(p.rippleDelay)} с`,
+      condition: `after ${fmt(p.rippleDelay)} s`,
     }),
   ],
   cleave: (p) => [
-    hit({ key: 'slash', label: 'Рассекающий удар', coefficient: p.coefficient, ...area }),
-    info('area', 'cone', `Конус ${fmt(p.range)} / ${fmt(p.arc)}°`),
+    hit({ key: 'slash', label: 'Cleave', coefficient: p.coefficient, ...area }),
+    info('area', 'cone', `Cone ${fmt(p.range)} / ${fmt(p.arc)}°`),
     hit({
       key: 'cross',
-      label: 'Встречный удар',
+      label: 'Return strike',
       coefficient: p.crossCoefficient,
       ...area,
-      condition: `через ${fmt(p.crossDelay)} с`,
+      condition: `after ${fmt(p.crossDelay)} s`,
     }),
   ],
   war_cry: (p, { r }) => [
     info(
       'buff',
       'buff',
-      `+${p.attackSpeed} Attack Speed и +${p.resistance} Resistance на ${fmt(p.duration)} с`,
+      `+${p.attackSpeed} Attack speed and +${p.resistance} Resistance for ${fmt(p.duration)} s`,
     ),
     ...(p.disruptSlow > 0
       ? [
           info(
             'control',
             'disrupt',
-            `Slow ${pct(p.disruptSlow)} на ${fmt(p.disruptDuration)} с в радиусе ${dist(r(p.disruptRadius))}`,
+            `Slow ${pct(p.disruptSlow)} for ${fmt(p.disruptDuration)} s within radius ${dist(r(p.disruptRadius))}`,
           ),
         ]
       : []),
     hit({
       key: 'counter',
-      label: 'Ответная волна',
+      label: 'Counter wave',
       coefficient: p.counterCoefficient,
       damageType: 'physical',
       extraTags: ['physical', 'melee', 'area'],
       ...area,
-      condition: `если враги в радиусе ${dist(r(p.counterRadius))} при кличе`,
+      condition: `if enemies are within radius ${dist(r(p.counterRadius))} on the cry`,
     }),
   ],
   // ─────────────── Archer ───────────────
   arrow_rain: (p, { r }) => [
     hit({
       key: 'arrow',
-      label: 'Стрела тика',
+      label: 'Tick arrow',
       coefficient: p.tickCoefficient,
       count: p.arrows,
       perTarget: false,
@@ -342,20 +342,20 @@ const PROFILES: Readonly<Record<string, (p: SkillParams, h: Helpers) => Spec[]>>
     info(
       'area',
       'radius',
-      `Зона радиусом ${dist(r(p.radius))} на ${fmt(p.duration)} с; до ${p.arrows} врагов за тик`,
+      `Radius-${dist(r(p.radius))} zone for ${fmt(p.duration)} s; up to ${p.arrows} enemies per tick`,
     ),
     hit({
       key: 'final',
-      label: 'Финальный залп',
+      label: 'Final volley',
       coefficient: p.finalCoefficient,
       ...area,
-      condition: `радиус ${dist(r(p.finalRadius))}`,
+      condition: `radius ${dist(r(p.finalRadius))}`,
     }),
   ],
   toxic_volley: (p, { r }) => [
     hit({
       key: 'arrow',
-      label: 'Стрела',
+      label: 'Arrow',
       coefficient: p.coefficient,
       count: p.count,
       perTarget: false,
@@ -371,30 +371,30 @@ const PROFILES: Readonly<Record<string, (p: SkillParams, h: Helpers) => Spec[]>>
     }),
     dot({
       key: 'patch',
-      label: 'Ядовитое пятно',
+      label: 'Poison pool',
       effectType: 'poison',
       damage: p.patchPoisonDamage,
       duration: p.poisonDuration,
-      condition: `каждые ${fmt(p.patchTick)} с, радиус ${dist(r(p.patchRadius))}, ${fmt(p.patchDuration)} с`,
+      condition: `every ${fmt(p.patchTick)} s, radius ${dist(r(p.patchRadius))}, ${fmt(p.patchDuration)} s`,
     }),
   ],
   piercing_arrow: (p, { r }) => [
-    hit({ key: 'arrow', label: 'Пробивающая стрела', coefficient: p.coefficient, ...area }),
-    info('note', 'pierce', `Пробивает до ${p.pierce} врагов`),
+    hit({ key: 'arrow', label: 'Piercing Arrow', coefficient: p.coefficient, ...area }),
+    info('note', 'pierce', `Pierces up to ${p.pierce} enemies`),
     hit({
       key: 'splash',
-      label: 'Всплеск у последней цели',
+      label: 'Burst at the last target',
       coefficient: p.splashCoefficient,
       ...area,
       secondary: true,
-      condition: `радиус ${dist(r(p.splashRadius))}`,
+      condition: `radius ${dist(r(p.splashRadius))}`,
     }),
   ],
   split_shot: (p) => [
-    hit({ key: 'arrow', label: 'Основная стрела', coefficient: p.coefficient, ...one }),
+    hit({ key: 'arrow', label: 'Main arrow', coefficient: p.coefficient, ...one }),
     hit({
       key: 'split',
-      label: 'Осколок',
+      label: 'Shard',
       coefficient: p.splitCoefficient,
       count: p.splits,
       perTarget: false,
@@ -402,19 +402,19 @@ const PROFILES: Readonly<Record<string, (p: SkillParams, h: Helpers) => Spec[]>>
     }),
     dot({
       key: 'split-poison',
-      label: 'Poison осколков',
+      label: 'Shard Poison',
       effectType: 'poison',
       damage: p.splitPoisonDamage,
       duration: p.splitPoisonDuration,
-      condition: 'только по уже отравленным',
+      condition: 'only against already poisoned enemies',
     }),
   ],
   poison_trap: (p, { r }) => [
-    hit({ key: 'trap', label: 'Срабатывание ловушки', coefficient: p.coefficient, ...area }),
+    hit({ key: 'trap', label: 'Trap trigger', coefficient: p.coefficient, ...area }),
     info(
       'area',
       'radius',
-      `Радиус ${dist(r(p.triggerRadius))}, ловушка живёт ${fmt(p.lifetime)} с`,
+      `Radius ${dist(r(p.triggerRadius))}, the trap lasts ${fmt(p.lifetime)} s`,
     ),
     dot({
       key: 'poison',
@@ -426,32 +426,38 @@ const PROFILES: Readonly<Record<string, (p: SkillParams, h: Helpers) => Spec[]>>
     }),
     dot({
       key: 'cloud',
-      label: 'Ядовитое облако',
+      label: 'Poison cloud',
       effectType: 'poison',
       damage: p.cloudPoisonDamage,
       duration: p.poisonDuration,
-      condition: `каждые ${fmt(p.cloudTick)} с, радиус ${dist(r(p.cloudRadius))}, ${fmt(p.cloudDuration)} с`,
+      condition: `every ${fmt(p.cloudTick)} s, radius ${dist(r(p.cloudRadius))}, ${fmt(p.cloudDuration)} s`,
     }),
   ],
   hunters_mark: (p) => [
-    info('buff', 'mark', `Метка: +${p.bonusPercent}% урона по цели на ${fmt(p.duration)} с`),
+    info('buff', 'mark', `Mark: +${p.bonusPercent}% damage to the target for ${fmt(p.duration)} s`),
     ...(p.spreadRange > 0
-      ? [info('note', 'spread', `При смерти метка переходит на врага в ${fmt(p.spreadRange)}`)]
+      ? [
+          info(
+            'note',
+            'spread',
+            `On death the mark passes to an enemy within ${fmt(p.spreadRange)}`,
+          ),
+        ]
       : []),
     hit({
       key: 'bonus-arrow',
-      label: 'Бонусная стрела',
+      label: 'Bonus arrow',
       coefficient: p.bonusArrowCoefficient,
       ...one,
       secondary: true,
-      condition: `при попадании по отмеченной цели, не чаще раза в ${fmt(p.bonusArrowCooldown)} с`,
+      condition: `on hitting the marked target, at most once per ${fmt(p.bonusArrowCooldown)} s`,
     }),
   ],
   // ─────────────── Rogue ───────────────
   blade_flurry: (p) => [
     hit({
       key: 'strike',
-      label: 'Удар',
+      label: 'Strike',
       coefficient: p.coefficient,
       count: p.hits,
       perTarget: false,
@@ -461,11 +467,11 @@ const PROFILES: Readonly<Record<string, (p: SkillParams, h: Helpers) => Spec[]>>
       ? [
           hit({
             key: 'last',
-            label: 'Последний удар (+шанс крита)',
+            label: 'Last strike (+crit chance)',
             coefficient: p.coefficient,
             ...one,
             critBonus: p.lastHitCritBonus,
-            condition: `входит в ${p.hits} удара, +${p.lastHitCritBonus} к шансу крита`,
+            condition: `part of ${p.hits} strikes, +${p.lastHitCritBonus} crit chance`,
           }),
         ]
       : []),
@@ -473,7 +479,7 @@ const PROFILES: Readonly<Record<string, (p: SkillParams, h: Helpers) => Spec[]>>
   fan_of_knives: (p) => [
     hit({
       key: 'knife',
-      label: 'Нож',
+      label: 'Dagger',
       coefficient: p.coefficient,
       count: p.count,
       perTarget: false,
@@ -482,11 +488,11 @@ const PROFILES: Readonly<Record<string, (p: SkillParams, h: Helpers) => Spec[]>>
     info(
       'note',
       'limit',
-      `Не больше ${p.maxHitsPerEnemy} нож(а) по одному врагу${p.pierce ? `, пробивание ${p.pierce}` : ''}`,
+      `At most ${p.maxHitsPerEnemy} dagger(s) per enemy${p.pierce ? `, pierce ${p.pierce}` : ''}`,
     ),
   ],
   lacerate: (p) => [
-    hit({ key: 'cut', label: 'Рваная рана', coefficient: p.coefficient, ...one }),
+    hit({ key: 'cut', label: 'Lacerate', coefficient: p.coefficient, ...one }),
     dot({
       key: 'bleed',
       label: 'Bleed',
@@ -496,7 +502,7 @@ const PROFILES: Readonly<Record<string, (p: SkillParams, h: Helpers) => Spec[]>>
     }),
     dot({
       key: 'extra-bleed',
-      label: 'Доп. стак Bleed',
+      label: 'Extra Bleed stack',
       effectType: 'bleed',
       damage: p.extraBleedChance > 0 ? p.bleedDamage : 0,
       duration: p.bleedDuration,
@@ -507,27 +513,27 @@ const PROFILES: Readonly<Record<string, (p: SkillParams, h: Helpers) => Spec[]>>
           info(
             'note',
             'per-stack',
-            `+${p.perStackBonusPercent}% урона удара за каждый стак Bleed на цели (до 10)`,
+            `+${p.perStackBonusPercent}% strike damage per Bleed stack on the target (up to 10)`,
           ),
         ]
       : []),
   ],
   shadow_strike: (p) => [
-    hit({ key: 'blade', label: 'Теневой клинок', coefficient: p.coefficient, ...one }),
-    ...(p.pierce > 0 ? [info('note', 'pierce', `Пробивает ещё ${p.pierce} цель`)] : []),
+    hit({ key: 'blade', label: 'Shadow blade', coefficient: p.coefficient, ...one }),
+    ...(p.pierce > 0 ? [info('note', 'pierce', `Pierces ${p.pierce} more target(s)`)] : []),
     hit({
       key: 'follow',
-      label: 'Повторный клинок',
+      label: 'Follow-up blade',
       coefficient: p.followCoefficient,
       ...one,
       secondary: true,
-      condition: `через ${fmt(p.followDelay)} с, не чаще раза в ${fmt(p.followCooldown)} с`,
+      condition: `after ${fmt(p.followDelay)} s, at most once per ${fmt(p.followCooldown)} s`,
     }),
   ],
   blood_blades: (p, { r }) => [
     hit({
       key: 'blade',
-      label: 'Клинок',
+      label: 'Blade',
       coefficient: p.coefficient,
       count: p.count,
       perTarget: false,
@@ -543,52 +549,58 @@ const PROFILES: Readonly<Record<string, (p: SkillParams, h: Helpers) => Spec[]>>
     }),
     dot({
       key: 'splash',
-      label: 'Bleed соседям',
+      label: 'Bleed to neighbours',
       effectType: 'bleed',
       damage: p.splashRadius > 0 ? p.bleedDamage : 0,
       duration: p.bleedDuration,
-      condition: `если цель уже кровоточит; радиус ${dist(r(p.splashRadius))}`,
+      condition: `if the target is already bleeding; radius ${dist(r(p.splashRadius))}`,
     }),
   ],
   death_mark: (p) => [
-    info('buff', 'mark', `Метка: +${p.bonusPercent}% урона по цели на ${fmt(p.duration)} с`),
+    info('buff', 'mark', `Mark: +${p.bonusPercent}% damage to the target for ${fmt(p.duration)} s`),
     ...(p.jumpRange > 0
-      ? [info('note', 'jump', `При смерти метка один раз прыгает на врага в ${fmt(p.jumpRange)}`)]
+      ? [
+          info(
+            'note',
+            'jump',
+            `On death the mark jumps once to an enemy within ${fmt(p.jumpRange)}`,
+          ),
+        ]
       : []),
     hit({
       key: 'execute',
-      label: 'Казнь',
+      label: 'Execution',
       coefficient: p.executeCoefficient,
       ...one,
       secondary: true,
-      condition: `по отмеченной цели ниже ${p.executeThresholdPercent}% HP, не чаще раза в ${fmt(p.executeCooldown)} с`,
+      condition: `on a marked target below ${p.executeThresholdPercent}% HP, at most once per ${fmt(p.executeCooldown)} s`,
     }),
   ],
   // ─────────────── Passives with direct effects ───────────────
   multishot: (p, { ctx }) => [
     hit({
       key: 'copy',
-      label: 'Доп. стрела базовой атаки',
+      label: 'Extra basic-attack arrow',
       coefficient: (ctx.weaponCoefficient ?? 1) * p.coefficientFactor,
       count: p.extraArrows,
       perTarget: false,
       secondary: false,
       damageType: 'physical',
-      condition: `${pct(p.coefficientFactor)} коэффициента лука${p.distinctTargets ? ', в разные цели' : ''}`,
+      condition: `${pct(p.coefficientFactor)} of the bow coefficient${p.distinctTargets ? ', at different targets' : ''}`,
     }),
   ],
   battle_fury: (p) => [
     info(
       'buff',
       'stacks',
-      `За убийство в ближнем бою: +${p.damagePerStack}% физ. урона за стак, до ${p.maxStacks} стаков, ${fmt(p.duration)} с`,
+      `Per melee kill: +${p.damagePerStack}% Physical damage per stack, up to ${p.maxStacks} stacks, ${fmt(p.duration)} s`,
     ),
     ...(p.empowerMultiplier > 1
       ? [
           info(
             'note',
             'empower',
-            `На максимуме стаков: усиленный удар ×${fmt(p.empowerMultiplier)} (доп. экземпляр ×${fmt(p.empowerMultiplier - 1)} от удара)`,
+            `At max stacks: an empowered strike ×${fmt(p.empowerMultiplier)} (an extra instance of ×${fmt(p.empowerMultiplier - 1)} of the strike)`,
           ),
         ]
       : []),
@@ -596,34 +608,32 @@ const PROFILES: Readonly<Record<string, (p: SkillParams, h: Helpers) => Spec[]>>
   serrated_blades: (p) => [
     dot({
       key: 'bleed',
-      label: 'Bleed от базовых ударов кинжалами',
+      label: 'Bleed from basic dagger strikes',
       effectType: 'bleed',
       damage: p.bleedDamage,
       duration: p.bleedDuration,
       chance: p.bleedChance,
     }),
     ...(p.critExtraStack > 0
-      ? [info('note', 'crit', `Крит базового удара: +${p.critExtraStack} стак Bleed`)]
+      ? [info('note', 'crit', `Basic-strike crit: +${p.critExtraStack} Bleed stack`)]
       : []),
   ],
   elemental_mastery: (p) => [
     info(
       'buff',
       'elemental',
-      `+${p.elementalDamagePercent}% к коэффициентам огненных и ледяных навыков (уже учтено в их уроне)`,
+      `+${p.elementalDamagePercent}% to fire and ice skill coefficients (already included in their damage)`,
     ),
     ...(p.burnDamagePercent > 0
-      ? [info('buff', 'burn', `Burn +${p.burnDamagePercent}% урона за тик`)]
+      ? [info('buff', 'burn', `Burn +${p.burnDamagePercent}% damage per tick`)]
       : []),
-    ...(p.slowBonus > 0
-      ? [info('control', 'slow', `Slow ледяных навыков +${pct(p.slowBonus)}`)]
-      : []),
+    ...(p.slowBonus > 0 ? [info('control', 'slow', `Ice skill Slow +${pct(p.slowBonus)}`)] : []),
     ...(p.alternateBonusPercent > 0
       ? [
           info(
             'note',
             'alternate',
-            `Чередование огня и льда: +${p.alternateBonusPercent}% за стак, до ${p.alternateMaxStacks}, ${fmt(p.alternateDuration)} с`,
+            `Alternating fire and ice: +${p.alternateBonusPercent}% per stack, up to ${p.alternateMaxStacks}, ${fmt(p.alternateDuration)} s`,
           ),
         ]
       : []),
@@ -631,15 +641,15 @@ const PROFILES: Readonly<Record<string, (p: SkillParams, h: Helpers) => Spec[]>>
 };
 /** Universal passives: truthful modifier descriptions (already contained in `stats`). */
 const PASSIVE_TEXT: Readonly<Record<string, (p: SkillParams) => string>> = {
-  power: (p) => `+${p.damagePercent}% физ. и маг. урона (уже в характеристиках)`,
+  power: (p) => `+${p.damagePercent}% Physical and Magic damage (already in your stats)`,
   haste: (p) => `+${p.attackSpeed} Attack Speed`,
   vitality: (p) => `+${p.maxHpPercent}% Max HP`,
   fortitude: (p) => `+${p.resistance} Resistance`,
-  precision: (p) => `+${p.criticalChance} к шансу крита (предел 75%)`,
-  deadly_strikes: (p) => `+${p.criticalDamage} к Crit Damage`,
+  precision: (p) => `+${p.criticalChance} Crit chance (cap 75%)`,
+  deadly_strikes: (p) => `+${p.criticalDamage} Crit damage`,
   swiftness: (p) => `+${p.movementSpeed} Movement Speed`,
-  toxic_mastery: (p) => `+${p.dotDamagePercent}% урона Poison/Burn/Bleed за тик`,
-  lingering_effects: (p) => `+${p.dotDurationPercent}% длительности Poison/Burn/Bleed`,
+  toxic_mastery: (p) => `+${p.dotDamagePercent}% Poison/Burn/Bleed damage per tick`,
+  lingering_effects: (p) => `+${p.dotDurationPercent}% Poison/Burn/Bleed duration`,
 };
 
 // ───────────────────────────── computation ─────────────────────────────

@@ -38,8 +38,8 @@ export type ChestType = 'wooden' | 'enchanted';
 export type BuffId = 'fury' | 'haste' | 'lightStep';
 export type ChestContent = 'heal' | 'gold' | 'magnet' | BuffId;
 export const CHEST_NAMES: Readonly<Record<ChestType, string>> = Object.freeze({
-  wooden: 'Деревянный сундук',
-  enchanted: 'Зачарованный сундук',
+  wooden: 'Wooden Chest',
+  enchanted: 'Enchanted Chest',
 });
 /** Enchanted contents, 25% each, in roll order. */
 export const ENCHANTED_CONTENTS: readonly ChestContent[] = Object.freeze([
@@ -55,27 +55,27 @@ export interface BuffDefinition {
   readonly modifiers: Partial<RunStatModifiers>;
 }
 /**
- * Buffs are temporary run modifiers composed by `composeRunStats` (caps once): «Ярость» damage
- * +20% (physical and magical: `damagePercent`), «Быстрые руки» attack speed +25 points (base 100),
- * «Лёгкий шаг» movement speed +20%.
+ * Buffs are temporary run modifiers composed by `composeRunStats` (caps once): «Fury» damage
+ * +20% (physical and magical: `damagePercent`), «Quick Hands» attack speed +25 points (base 100),
+ * «Light Step» movement speed +20%.
  */
 export const BUFFS: Readonly<Record<BuffId, BuffDefinition>> = Object.freeze({
   fury: Object.freeze({
     id: 'fury',
-    name: 'Ярость',
-    description: 'Урон +20%',
+    name: 'Fury',
+    description: 'Damage +20%',
     modifiers: Object.freeze({ damagePercent: 20 }),
   }),
   haste: Object.freeze({
     id: 'haste',
-    name: 'Быстрые руки',
-    description: 'Скорость атаки +25%',
+    name: 'Quick Hands',
+    description: 'Attack speed +25%',
     modifiers: Object.freeze({ attackSpeed: 25 }),
   }),
   lightStep: Object.freeze({
     id: 'lightStep',
-    name: 'Лёгкий шаг',
-    description: 'Скорость движения +20%',
+    name: 'Light Step',
+    description: 'Movement speed +20%',
     modifiers: Object.freeze({ movementSpeedPercent: 20 }),
   }),
 });

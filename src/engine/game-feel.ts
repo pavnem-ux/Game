@@ -19,7 +19,7 @@ export interface FloatingNumber {
   text: string;
 }
 /** Shown for a dodge (player-facing, Russian). */
-export const DODGE_TEXT = 'Уклон';
+export const DODGE_TEXT = 'Dodge';
 export function floatingText(kind: FloatingKind, value: number): string {
   if (kind === 'dodge') return DODGE_TEXT;
   const v = Math.round(value);
@@ -38,7 +38,7 @@ export class FloatingNumbers {
   readonly entries: readonly FloatingNumber[];
   private next = 0;
   private spawned = 0;
-  /** Task 16: numbers on screen at once (≤ capacity; «Качество графики»). */
+  /** Task 16: numbers on screen at once (≤ capacity; «Graphics quality»). */
   private limit: number;
   constructor(readonly capacity: number = FLOATING_LIMITS.capacity) {
     if (!Number.isInteger(capacity) || capacity < 1) throw new RangeError('Invalid capacity.');

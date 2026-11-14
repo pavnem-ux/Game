@@ -2,7 +2,7 @@ import { CAMPAIGN_MAPS, getCampaignMap } from '../campaign';
 import { NEW_CLASS_PROGRESS, addClassXp } from './class-xp';
 
 /**
- * Task 10 §1.4 «Рекомендуемый уровень» (pure): the permanent class level reached by clearing maps
+ * Task 10 §1.4 «Recommended level» (pure): the permanent class level reached by clearing maps
  * 1 … (mapId − 1) once each with their victory XP, from level 1, on the existing XP curve
  * (`addClassXp`). Map 1 → 1. Values are cached once (the inputs are static config).
  */

@@ -4,7 +4,7 @@ import type { PetId } from '../pets/config';
 
 /**
  * Task 21 quest catalogue — data only. Every number is PROVISIONAL (owner-controlled).
- * Quests are permanent (no daily/timed quests): в процессе → выполнено → награда получена.
+ * Quests are permanent (no daily/timed quests): in progress → complete → reward claimed.
  * Every goal reads monotonic profile data (maps won, class levels, lifetime counters, item
  * levels, the best tier-4+ loadout ever worn), so a completed quest never becomes incomplete.
  */
@@ -28,14 +28,14 @@ export const QUEST_GROUPS: readonly QuestGroup[] = Object.freeze([
   'forge',
 ]);
 export const QUEST_GROUP_LABELS: Readonly<Record<QuestGroup, string>> = Object.freeze({
-  campaign: 'Кампания',
-  hunt: 'Охота',
-  types: 'Виды врагов',
-  bosses: 'Боссы',
-  mastery: 'Мастерство',
-  synergy: 'Синергии',
-  chests: 'Сундуки',
-  forge: 'Кузница',
+  campaign: 'Campaign',
+  hunt: 'Hunting',
+  types: 'Enemy Types',
+  bosses: 'Bosses',
+  mastery: 'Mastery',
+  synergy: 'Synergies',
+  chests: 'Chests',
+  forge: 'Forge',
 });
 export type TypeCounter = 'swift' | 'brute' | 'bombard' | 'elite';
 export type QuestGoal =
@@ -76,12 +76,12 @@ const q = (
 ): QuestDefinition =>
   Object.freeze({ id, group, title, goal: Object.freeze(goal), reward: Object.freeze(reward) });
 const CLASS_NAMES: Readonly<Record<CharacterClass, string>> = {
-  warrior: 'Воин',
-  mage: 'Маг',
-  archer: 'Лучник',
-  rogue: 'Разбойник',
+  warrior: 'Warrior',
+  mage: 'Mage',
+  archer: 'Archer',
+  rogue: 'Rogue',
 };
-const fmt = (n: number) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+const fmt = (n: number) => n.toLocaleString('en-US');
 
 const CAMPAIGN = [5, 10, 15, 20, 25, 30, 35, 40].map((mapId, i) => {
   const gold = [300, 600, 900, 1200, 1500, 1800, 2100, 2500][i];
@@ -97,7 +97,7 @@ const CAMPAIGN = [5, 10, 15, 20, 25, 30, 35, 40].map((mapId, i) => {
   return q(
     `campaign.map${mapId}`,
     'campaign',
-    `Победить на карте ${mapId}`,
+    `Win on map ${mapId}`,
     { kind: 'map-win', mapId },
     { gold, ore, ...extra },
   );
@@ -106,7 +106,7 @@ const HUNT = [1000, 5000, 20000, 50000, 100000].map((count, i) =>
   q(
     `hunt.${count}`,
     'hunt',
-    `Победить ${fmt(count)} врагов`,
+    `Defeat ${fmt(count)} enemies`,
     { kind: 'kills', count },
     { gold: [200, 500, 1000, 2000, 4000][i], ore: [5, 15, 30, 60, 100][i] },
   ),
@@ -115,21 +115,21 @@ const TYPES = [
   q(
     'types.swift',
     'types',
-    'Победить 500 стремительных врагов',
+    'Defeat 500 swift enemies',
     { kind: 'type-kills', type: 'swift', count: 500 },
     { gold: 400, ore: 15 },
   ),
   q(
     'types.brute',
     'types',
-    'Победить 300 громил',
+    'Defeat 300 brutes',
     { kind: 'type-kills', type: 'brute', count: 300 },
     { gold: 400, ore: 15 },
   ),
   q(
     'types.bombard',
     'types',
-    'Победить 300 бомбардиров',
+    'Defeat 300 bombards',
     { kind: 'type-kills', type: 'bombard', count: 300 },
     { gold: 400, ore: 15 },
   ),
@@ -137,7 +137,7 @@ const TYPES = [
   q(
     'types.elite',
     'types',
-    'Победить 100 элитных врагов',
+    'Defeat 100 elite enemies',
     { kind: 'type-kills', type: 'elite', count: 100 },
     { gold: 400, ore: 15, pet: 'owlet' },
   ),
@@ -147,7 +147,7 @@ const BOSSES = [5, 15, 30, 40].map((count, i) =>
   q(
     `bosses.${count}`,
     'bosses',
-    `Победить ${count} разных боссов`,
+    `Defeat ${count} different bosses`,
     { kind: 'bosses', count },
     { gold: [1000, 2000, 3000, 5000][i], ore: [20, 50, 100, 100][i] },
   ),
@@ -157,7 +157,7 @@ const MASTERY = CHARACTER_CLASSES.flatMap((characterClass) =>
     q(
       `mastery.${characterClass}.${level}`,
       'mastery',
-      `${CLASS_NAMES[characterClass]}: уровень ${level}`,
+      `${CLASS_NAMES[characterClass]}: level ${level}`,
       { kind: 'class-level', characterClass, level },
       { gold: [300, 600, 1000, 1500, 2500][i] },
     ),
@@ -167,21 +167,21 @@ const SYNERGY = [
   q(
     'synergy.open',
     'synergy',
-    'Открыть любую синергию',
+    'Unlock any synergy',
     { kind: 'synergies-opened', count: 1 },
     { gold: 200 },
   ),
   q(
     'synergy.awaken',
     'synergy',
-    'Пробудить любую синергию',
+    'Awaken any synergy',
     { kind: 'synergies-awakened', count: 1 },
     { ore: 30 },
   ),
   q(
     'synergy.awaken6',
     'synergy',
-    'Пробудить 6 разных синергий',
+    'Awaken 6 different synergies',
     { kind: 'synergies-awakened', count: 6 },
     { pet: 'fox' },
   ),
@@ -190,7 +190,7 @@ const CHESTS = [25, 100, 300].map((count, i) =>
   q(
     `chests.${count}`,
     'chests',
-    `Открыть ${count} сундуков`,
+    `Open ${count} chests`,
     { kind: 'chests', count },
     { gold: [300, 800, 2000][i] },
   ),
@@ -199,21 +199,21 @@ const FORGE = [
   q(
     'forge.plus5',
     'forge',
-    'Улучшить любой предмет до +5',
+    'Upgrade any item to +5',
     { kind: 'item-level', level: 5 },
     { ore: 20 },
   ),
   q(
     'forge.plus10',
     'forge',
-    'Улучшить любой предмет до +10',
+    'Upgrade any item to +10',
     { kind: 'item-level', level: 10 },
     { ore: 60 },
   ),
   q(
     'forge.tier4',
     'forge',
-    'Надеть на одного героя 7 предметов 4-го уровня или выше',
+    'Equip one hero with 7 items of tier 4 or higher',
     { kind: 'tier-loadout', tier: 4, items: 7 },
     { gold: 3000 },
   ),

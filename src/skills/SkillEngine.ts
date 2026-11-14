@@ -1221,7 +1221,7 @@ export class SkillEngine {
     return true;
   }
   /**
-   * Task 15 (Skull Crusher III «Сотрясение»): extend the target's current Stun by `seconds`, at most
+   * Task 15 (Skull Crusher III «Concussion»): extend the target's current Stun by `seconds`, at most
    * once per Stun; the total never exceeds the Stun duration limit (× the target's stun scale) and
    * the immunity window moves with the new end. Returns the seconds added (0 = nothing changed).
    */
