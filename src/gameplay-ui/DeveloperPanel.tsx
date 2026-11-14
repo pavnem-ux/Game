@@ -12,6 +12,7 @@ import type { AlphaState } from './store';
 import { ENEMY_KINDS } from '../gameplay';
 import { SHOP_ITEMS } from '../equipment';
 import { PET_CONFIG, PET_IDS } from '../pets';
+import { QUESTS } from '../quests';
 import type { EnemyKind } from '../gameplay';
 import { BUFFS, BUFF_IDS, CHEST_NAMES } from '../gameplay/chests';
 import type { ChestContent, ChestType } from '../gameplay/chests';
@@ -74,6 +75,11 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
     [levelItem, setLevelItem] = useState('plate-t1'),
     [itemLevelValue, setItemLevelValue] = useState(10),
     [debugPet, setDebugPet] = useState<string>('owlet'),
+    [debugQuest, setDebugQuest] = useState<string>(QUESTS[0].id),
+    [questCounter, setQuestCounter] = useState<'swift' | 'brute' | 'bombard' | 'elite' | 'chests'>(
+      'swift',
+    ),
+    [questAmount, setQuestAmount] = useState(100),
     [debugPetLevel, setDebugPetLevel] = useState(1),
     [debugSeed, setDebugSeed] = useState(String(w?.seed ?? 1)),
     [jumpMap, setJumpMap] = useState(11),
@@ -274,6 +280,57 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
         </label>
         <button onClick={() => campaignDebug.setItemLevel(levelItem, itemLevelValue)}>
           Установить уровень предмета
+        </button>
+      </fieldset>
+      {/* Task 21 §1.6: quests (validated saves; DEV/QA only). */}
+      <fieldset aria-label="Quest Debug">
+        <legend>Задания</legend>
+        <label>
+          Задание
+          <select
+            aria-label="Debug задание"
+            value={debugQuest}
+            onChange={(e) => setDebugQuest(e.target.value)}
+          >
+            {QUESTS.map((q) => (
+              <option key={q.id} value={q.id}>
+                {q.title}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button onClick={() => campaignDebug.completeQuest(debugQuest)}>Выполнить задание</button>
+        <label>
+          Счётчик
+          <select
+            aria-label="Debug счётчик заданий"
+            value={questCounter}
+            onChange={(e) => setQuestCounter(e.target.value as typeof questCounter)}
+          >
+            <option value="swift">Стремительные</option>
+            <option value="brute">Громилы</option>
+            <option value="bombard">Бомбардиры</option>
+            <option value="elite">Элиты</option>
+            <option value="chests">Сундуки</option>
+          </select>
+        </label>
+        <input
+          aria-label="Debug прибавка к счётчику"
+          type="number"
+          min="0"
+          value={questAmount}
+          onChange={(e) => setQuestAmount(Number(e.target.value))}
+        />
+        <button onClick={() => campaignDebug.addQuestCounter(questCounter, questAmount)}>
+          Прибавить к счётчику
+        </button>
+        <button
+          onClick={() => {
+            if (window.confirm('Сбросить задания (счётчики и полученные награды)?'))
+              campaignDebug.resetQuests();
+          }}
+        >
+          Сбросить задания
         </button>
       </fieldset>
       {/* Task 20 §1.5: pets (validated saves / the current run; DEV/QA only). */}

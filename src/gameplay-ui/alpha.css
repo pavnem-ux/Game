@@ -1511,6 +1511,25 @@ p.damage-note {
   color: #8f978f;
 }
 
+/* Task 21: quests completed with a run (results screen). */
+.results-quests {
+  margin: 12px auto 0;
+  max-width: 460px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(240, 200, 98, 0.6);
+  background: rgba(40, 30, 12, 0.55);
+  color: #f6dc9c;
+  text-align: left;
+}
+.results-quests ul {
+  margin: 4px 0;
+  padding-left: 1.2em;
+}
+.results-quests small {
+  color: #c9b98f;
+}
+
 /* Task 20: pet HUD icon with a cooldown ring (timed pets). */
 .pet-hud {
   --progress: 1;

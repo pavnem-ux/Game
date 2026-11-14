@@ -233,6 +233,9 @@ for (const viewport of [
     const p = JSON.parse(localStorage.getItem('skazki.profile'));
     p.gold += 2000;
     p.ore += 10;
+    // Task 21: maps 1–4 won → the next run is map 5 (its quest completes with that win).
+    p.completedMaps = [1, 2, 3, 4];
+    p.highestUnlockedMap = 5;
     localStorage.setItem('skazki.profile', JSON.stringify(p));
   });
   await page.reload();
@@ -315,11 +318,42 @@ for (const viewport of [
     `${tag}: the run starts with the active pet`,
   );
   await page.locator('.pet-hud').waitFor();
+  // Task 21: winning map 5 completes «Победить на карте 5» → results toast, hub badge, claim by tap.
+  await command({ type: 'campaign-force', outcome: 'victory' });
+  await page.waitForFunction(() => window.__alpha.state().screen === 'results');
+  const toast = page.locator('.results-quests');
+  await toast.waitFor();
+  assert.match(await toast.innerText(), /Победить на карте 5/, `${tag}: quest toast`);
+  await page.locator('.results-actions').getByRole('button', { name: 'В меню' }).tap();
+  await page.waitForFunction(() => window.__alpha.state().screen === 'menu');
+  await nav('Главная').scrollIntoViewIfNeeded();
+  await nav('Главная').tap();
+  const questsTile = page.locator('.hub-tile', { hasText: 'Задания' });
+  await questsTile.scrollIntoViewIfNeeded();
+  assert.ok(
+    Number(await questsTile.locator('.hub-badge').innerText()) >= 1,
+    `${tag}: hub badge counts claimable quests`,
+  );
+  await questsTile.tap();
+  const map5 = page.getByRole('group', { name: /^Победить на карте 5/ });
+  const claimButton = map5.getByRole('button', { name: 'Забрать' });
+  await claimButton.scrollIntoViewIfNeeded();
+  await tapTarget(claimButton, `${tag} claim quest`);
+  const beforeClaim = await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.profile')));
+  await claimButton.tap();
+  await page.waitForFunction(() =>
+    JSON.parse(localStorage.getItem('skazki.profile')).questsClaimed.includes('campaign.map5'),
+  );
+  const afterClaim = await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.profile')));
+  assert.equal(afterClaim.gold, beforeClaim.gold + 300, `${tag}: quest Gold`);
+  assert.equal(afterClaim.ore, beforeClaim.ore + 10, `${tag}: quest ore`);
+  await map5.getByText('Получено').waitFor();
+  await noHorizontalScroll(page, `${tag} quests`);
   await context.close();
 }
 
 await browser.close();
 if (errors.length) throw new Error(errors.join('\n'));
 console.log(
-  'PASS mobile: touch joystick, dash button (= Space), multi-touch; 844×390 and 768×1024: run from the hub, move, dash, pick a card, results, all menu screens without horizontal scroll, tap targets ≥ 44 px; Task 19 forge upgrade by touch; Task 20 pets (buy, activate, upgrade, run with the pet) by touch.',
+  'PASS mobile: touch joystick, dash button (= Space), multi-touch; 844×390 and 768×1024: run from the hub, move, dash, pick a card, results, all menu screens without horizontal scroll, tap targets ≥ 44 px; Task 19 forge upgrade by touch; Task 20 pets (buy, activate, upgrade, run with the pet) by touch; Task 21 quest toast, hub badge, claim by touch.',
 );

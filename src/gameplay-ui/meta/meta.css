@@ -1163,6 +1163,115 @@
   flex-wrap: wrap;
 }
 
+/* ── Task 21: Quests ── */
+.hub-tile {
+  position: relative;
+}
+.hub-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 7px;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  background: var(--gold-400);
+  color: #1d1408;
+  font-weight: 800;
+  font-size: var(--fs-s);
+  box-shadow: 0 0 12px rgba(245, 196, 98, 0.6);
+}
+.hub-badge.inline {
+  position: static;
+  margin-left: var(--sp-2);
+}
+.quests-screen .meta-page-head {
+  flex-wrap: wrap;
+}
+.quests-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-left: auto;
+  min-height: 44px;
+  color: var(--text-muted);
+}
+.quests-filter input {
+  width: 20px;
+  height: 20px;
+}
+.quest-list {
+  display: grid;
+  gap: var(--sp-3);
+  list-style: none;
+  margin: var(--sp-4) 0 0;
+  padding: 0;
+}
+.quest-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) auto;
+  gap: var(--sp-4);
+  align-items: center;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--radius-l);
+  border: 1px solid var(--ink-line);
+  background: rgba(14, 20, 38, 0.82);
+}
+.quest-row.state-complete {
+  border-color: var(--gold-400);
+  box-shadow:
+    0 0 0 1px rgba(245, 196, 98, 0.35),
+    var(--shadow-panel);
+}
+.quest-row.state-claimed {
+  opacity: 0.6;
+}
+.quest-main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.quest-group {
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.quest-rewards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.quest-reward-item,
+.quest-reward-pet {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(182, 122, 230, 0.6);
+  font-size: var(--fs-s);
+}
+.quest-fallback {
+  flex-basis: 100%;
+  color: var(--text-muted);
+}
+.quest-state {
+  color: var(--text-faint);
+}
+@media (max-width: 760px) {
+  .quest-row {
+    grid-template-columns: 1fr;
+    gap: var(--sp-2);
+  }
+  .quest-action .kit-button {
+    width: 100%;
+  }
+}
+
 /* ── Task 20: Pets ── */
 .doll-slot-pet {
   grid-area: pet;

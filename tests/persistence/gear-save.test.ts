@@ -1,3 +1,4 @@
+import { NO_QUEST_COUNTERS } from '../../src/quests';
 import { describe, expect, it } from 'vitest';
 import {
   SAVE_KEY,
@@ -73,13 +74,15 @@ const json = (p: unknown) => JSON.parse(JSON.stringify(p));
 
 describe('Task 11 Phase 2 — gear in the save (schema v4)', () => {
   it('an old v3 save migrates without loss: ownedItems [], starter loadouts; Gold, XP, maps, talents kept', () => {
-    expect(SAVE_SCHEMA_VERSION).toBe(6); // Task 20
+    expect(SAVE_SCHEMA_VERSION).toBe(7); // Task 21
     const current = json(geared());
     const v3 = json(current);
     v3.schemaVersion = 3;
     // Task 19: v3 had no ore / item levels (v5 fields): the migrated profile gets 0 / {}.
     delete v3.ore;
     delete v3.itemLevels;
+    delete v3.questCounters; // Task 21 (v7) fields
+    delete v3.questsClaimed;
     delete v3.ownedItems;
     for (const c of Object.keys(v3.classes)) delete v3.classes[c].loadout;
     const r = parseProfileJson(JSON.stringify(v3));
@@ -94,7 +97,13 @@ describe('Task 11 Phase 2 — gear in the save (schema v4)', () => {
     }
     const { ownedItems: _o, classes: _c, schemaVersion: _v, ...others } = r.profile;
     const { ownedItems: _o2, classes: _c2, schemaVersion: _v2, ...othersOld } = current;
-    expect(others).toEqual({ ...othersOld, ore: 0, itemLevels: {} });
+    expect(others).toEqual({
+      ...othersOld,
+      ore: 0,
+      itemLevels: {},
+      questCounters: NO_QUEST_COUNTERS,
+      questsClaimed: [],
+    });
   });
   it('purchases and loadouts survive a reload (save store) and export → import', () => {
     const p = geared();

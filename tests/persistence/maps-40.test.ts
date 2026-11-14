@@ -3,6 +3,7 @@ import { getCampaignMap } from '../../src/campaign';
 import { migrateV2toV3, parseProfileJson, SAVE_SCHEMA_VERSION } from '../../src/persistence';
 import { applyRunResult, createProfile } from '../../src/profile';
 import type { PlayerProfile } from '../../src/profile';
+import { NO_QUEST_COUNTERS } from '../../src/quests';
 
 const NOW = '2026-11-10T12:00:00.000Z';
 function winUpTo(last: number): PlayerProfile {
@@ -30,6 +31,9 @@ function stripV5(data: Record<string, unknown> & { recentRuns?: Record<string, u
   delete data.ore;
   delete data.itemLevels;
   for (const run of data.recentRuns ?? []) delete run.ore;
+  // Task 21: quest counters / claims did not exist either (v7 starts them at 0).
+  delete data.questCounters;
+  delete data.questsClaimed;
   return data;
 }
 /** A save as Task 08–09 wrote it (schema v2, 10 maps): map 10 completed was the end. */
@@ -51,6 +55,8 @@ describe('Task 10 Phase 4.1 — saves with 40 maps', () => {
       ...v2,
       ore: 0,
       itemLevels: {},
+      questCounters: NO_QUEST_COUNTERS,
+      questsClaimed: [],
       schemaVersion: SAVE_SCHEMA_VERSION,
     });
   });
@@ -63,6 +69,8 @@ describe('Task 10 Phase 4.1 — saves with 40 maps', () => {
       ...v2,
       ore: 0,
       itemLevels: {},
+      questCounters: NO_QUEST_COUNTERS,
+      questsClaimed: [],
       schemaVersion: SAVE_SCHEMA_VERSION,
       highestUnlockedMap: 11,
     });

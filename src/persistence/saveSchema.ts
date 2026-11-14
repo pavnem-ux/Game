@@ -22,6 +22,14 @@ import {
 } from '../equipment';
 import type { Loadout } from '../equipment';
 import { PET_LEVEL_RULES, isPetId } from '../pets';
+import {
+  NO_QUEST_COUNTERS,
+  QUEST_BY_ID,
+  SYNERGY_IDS,
+  questProgress,
+  tierItemsWorn,
+} from '../quests';
+import type { QuestCounters } from '../quests';
 
 /**
  * Task 08 `saveSchema`: validation, defaults and migrations for the persisted profile.
@@ -103,12 +111,31 @@ export function migrateV4toV5(data: Json): Json {
 export function migrateV5toV6(data: Json): Json {
   return { ...data, ownedPets: [], petLevels: {}, activePet: null };
 }
+/**
+ * v6 → v7 (Task 21): quest counters (per-type kills, elites, bosses, chests, synergies start at 0;
+ * the best tier-4+ loadout is read from the current loadouts) and `questsClaimed: []`. Quests the
+ * profile already satisfies (maps won, class levels, total kills, item levels, worn tier-4 gear)
+ * become claimable through evaluation. Nothing else changes.
+ */
+export function migrateV6toV7(data: Json): Json {
+  let best = 0;
+  if (isObject(data.classes))
+    for (const value of Object.values(data.classes))
+      if (isObject(value) && isObject(value.loadout))
+        best = Math.max(best, tierItemsWorn(value.loadout as unknown as Loadout));
+  return {
+    ...data,
+    questCounters: { ...NO_QUEST_COUNTERS, bestTierLoadout: best },
+    questsClaimed: [],
+  };
+}
 export const migrations: Readonly<Record<number, Migration>> = Object.freeze({
   1: migrateV1toV2,
   2: migrateV2toV3,
   3: migrateV3toV4,
   4: migrateV4toV5,
   5: migrateV5toV6,
+  6: migrateV6toV7,
 });
 
 export type SaveErrorCode =
@@ -331,7 +358,14 @@ export function normalizeProfile(data: Json, version = SAVE_SCHEMA_VERSION): Pla
   if (new Set(processedRunIds).size !== processedRunIds.length)
     invalid('processedRunIds (duplicates)');
   const lastSavedAt = or(data.lastSavedAt, null);
-  return Object.freeze({
+  const questCounters = questCountersOf(or(data.questCounters, NO_QUEST_COUNTERS));
+  const claimedRaw = or(data.questsClaimed, []);
+  if (!Array.isArray(claimedRaw)) invalid('questsClaimed');
+  const questsClaimed = (claimedRaw as unknown[]).map((id, i) =>
+    typeof id === 'string' && QUEST_BY_ID.has(id) ? id : invalid(`questsClaimed[${i}]`),
+  );
+  if (new Set(questsClaimed).size !== questsClaimed.length) invalid('questsClaimed (duplicates)');
+  const profile: PlayerProfile = Object.freeze({
     schemaVersion: version,
     profileId: str(data.profileId, 'profileId', 100),
     createdAt: iso(data.createdAt, 'createdAt'),
@@ -357,7 +391,14 @@ export function normalizeProfile(data: Json, version = SAVE_SCHEMA_VERSION): Pla
     ownedPets: Object.freeze(ownedPets),
     petLevels: Object.freeze(petLevels),
     activePet: activeRaw as string | null,
+    questCounters,
+    questsClaimed: Object.freeze(questsClaimed),
   });
+  // Task 21: a claimed quest must be complete in this very profile (no claim of an incomplete one).
+  for (const id of questsClaimed)
+    if (questProgress({ ...profile, questsClaimed: [] }, QUEST_BY_ID.get(id)!).state !== 'complete')
+      invalid(`questsClaimed.${id} (incomplete)`);
+  return profile;
 }
 
 /** Parse → version check → migrate → normalize/validate. Never throws; never mutates input. */
@@ -411,4 +452,40 @@ export function parseProfileJson(text: string, options: ParseOptions = {}): Pars
     });
   }
   return parseProfile(raw, options);
+}
+/** Task 21: quest counters — whole numbers ≥ 0, known distinct maps / synergies. */
+function questCountersOf(raw: unknown): QuestCounters {
+  if (!isObject(raw)) invalid('questCounters');
+  const v = raw as Json;
+  const k = or(v.killsByType, {});
+  if (!isObject(k)) invalid('questCounters.killsByType');
+  const kk = k as Json;
+  const list = <T>(x: unknown, what: string, check: (e: unknown) => e is T): T[] => {
+    const arr = or(x, []);
+    if (!Array.isArray(arr)) invalid(what);
+    const items = (arr as unknown[]).map((e, i) => (check(e) ? e : invalid(`${what}[${i}]`)));
+    if (new Set(items).size !== items.length) invalid(`${what} (duplicates)`);
+    return items;
+  };
+  const isMap = (e: unknown): e is number =>
+    Number.isSafeInteger(e) && (e as number) >= 1 && (e as number) <= MAP_COUNT;
+  const isSynergy = (e: unknown): e is string => typeof e === 'string' && SYNERGY_IDS.has(e);
+  const opened = list(v.synergiesOpened, 'questCounters.synergiesOpened', isSynergy).sort();
+  const awakened = list(v.synergiesAwakened, 'questCounters.synergiesAwakened', isSynergy).sort();
+  if (awakened.some((id) => !opened.includes(id))) invalid('questCounters.synergiesAwakened');
+  return Object.freeze({
+    killsByType: Object.freeze({
+      swift: int(or(kk.swift, 0), 'questCounters.killsByType.swift'),
+      brute: int(or(kk.brute, 0), 'questCounters.killsByType.brute'),
+      bombard: int(or(kk.bombard, 0), 'questCounters.killsByType.bombard'),
+    }),
+    eliteKills: int(or(v.eliteKills, 0), 'questCounters.eliteKills'),
+    bossesDefeated: Object.freeze(
+      list(v.bossesDefeated, 'questCounters.bossesDefeated', isMap).sort((a, b) => a - b),
+    ),
+    chestsOpened: int(or(v.chestsOpened, 0), 'questCounters.chestsOpened'),
+    synergiesOpened: Object.freeze(opened),
+    synergiesAwakened: Object.freeze(awakened),
+    bestTierLoadout: int(or(v.bestTierLoadout, 0), 'questCounters.bestTierLoadout', 0, 7),
+  });
 }

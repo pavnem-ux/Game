@@ -20,3 +20,4 @@ export { applyRunResult, isMapUnlocked, nextMapAfter, validateRunResult } from '
 export type { ApplyRunOutcome, RunSummary } from './apply-run';
 export { buyItem, equipItem, equipmentStateOf, unequipSlot, upgradeProfileItem } from './equipment';
 export { buyProfilePet, setProfileActivePet, upgradeProfilePet } from './pets';
+export { claimProfileQuest, withProfileLoadoutCounter } from './quests';

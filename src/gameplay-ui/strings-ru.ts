@@ -111,6 +111,7 @@ export const RU = Object.freeze({
       shop: 'Магазин',
       forge: 'Кузница',
       pets: 'Питомцы',
+      quests: 'Задания',
       maps: 'Карта похода',
       progression: 'Прогресс',
       settings: 'Настройки',
@@ -192,6 +193,31 @@ export const RU = Object.freeze({
       maxed: 'Освоено полностью',
       locked: 'Закрыто',
       pickNode: 'Выберите талант, чтобы увидеть его ранги.',
+    }),
+    /** Task 21 quests. */
+    quests: Object.freeze({
+      title: 'Задания',
+      intro:
+        'Задания постоянные: прогресс копится во всех забегах (выход из забега не считается). Награду забирайте кнопкой «Забрать».',
+      all: 'Все',
+      onlyAvailable: 'Только доступные',
+      claim: 'Забрать',
+      claimed: 'Получено',
+      inProgress: 'В процессе',
+      complete: 'Выполнено',
+      empty: 'Нет заданий с наградой — продолжайте поход.',
+      reward: 'Награда',
+      fallback: (gold: number) => `уже есть — вместо этого ${gold} золота`,
+      claimedToast: (title: string) => `Награда получена: «${title}»`,
+      completedToast: (n: number) => (n === 1 ? 'Выполнено задание!' : `Выполнено заданий: ${n}`),
+      toQuests: 'К заданиям',
+      badge: (n: number) => `Доступно наград: ${n}`,
+      failed: 'Не удалось сохранить.',
+      refusals: Object.freeze({
+        incomplete: 'Задание ещё не выполнено.',
+        claimed: 'Награда уже получена.',
+        unknown: 'Неизвестное задание.',
+      }) as Readonly<Record<string, string>>,
     }),
     /** Task 20 pets. */
     pets: Object.freeze({

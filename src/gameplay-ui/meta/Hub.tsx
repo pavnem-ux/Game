@@ -7,6 +7,7 @@ import { campaignStore } from '../campaign-state';
 import type { MenuPage } from '../campaign-state';
 import { Button, ClassEmblem, Panel, ProgressBar } from '../kit';
 import { RU } from '../strings-ru';
+import { claimableQuests } from '../../quests';
 
 const H = RU.meta.hub;
 const N = RU.meta.nav;
@@ -18,6 +19,7 @@ const TILES: readonly { id: MenuPage; title: string; text: string; glyph: string
   { id: 'shop', title: N.shop, text: 'Снаряжение за золото', glyph: '⚖' },
   { id: 'forge', title: N.forge, text: 'Улучшение предметов за золото и руду', glyph: '⚒' },
   { id: 'pets', title: N.pets, text: 'Спутник в каждом забеге', glyph: '❦' },
+  { id: 'quests', title: N.quests, text: 'Цели похода и награды', glyph: '✧' },
   { id: 'progression', title: N.progression, text: 'Летопись забегов', glyph: '☾' },
   { id: 'settings', title: N.settings, text: 'Сохранения и игра', glyph: '⚙' },
 ];
@@ -28,6 +30,8 @@ export function HubPage() {
   const profile = ui.progression.profile;
   if (!profile) return <p className="campaign-empty">Профиль недоступен.</p>;
   const cls = profile.selectedClass;
+  // Task 21: number of quest rewards waiting (badge on the «Задания» tile).
+  const claimable = claimableQuests(profile).length;
   const progress = profile.classes[cls];
   const next = xpToNextLevel(progress.level);
   const map = CAMPAIGN_MAPS[ui.selectedMapId - 1];
@@ -92,7 +96,21 @@ export function HubPage() {
       </div>
       <nav className="hub-tiles" aria-label="Разделы">
         {TILES.map((t) => (
-          <button key={t.id} className="hub-tile" onClick={() => campaignStore.setPage(t.id)}>
+          <button
+            key={t.id}
+            className="hub-tile"
+            onClick={() => campaignStore.setPage(t.id)}
+            aria-label={
+              t.id === 'quests' && claimable > 0
+                ? `${t.title}. ${RU.meta.quests.badge(claimable)}`
+                : undefined
+            }
+          >
+            {t.id === 'quests' && claimable > 0 && (
+              <span className="hub-badge" aria-hidden="true">
+                {claimable}
+              </span>
+            )}
             <span className="hub-tile-glyph" aria-hidden="true">
               {t.glyph}
             </span>
