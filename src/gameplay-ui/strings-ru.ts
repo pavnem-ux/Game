@@ -313,10 +313,9 @@ export const RU = Object.freeze({
       reroll: (n: number) => `Перебросить · осталось ${n}`,
       banish: (n: number) => `Изгнать · осталось ${n}`,
       banishCancel: 'Отменить изгнание',
-      banishHint: 'Выберите карту, которую нужно изгнать до конца забега (или нажмите 1–3).',
+      banishHint: 'Выберите карту, которую нужно изгнать до конца забега.',
       banishCard: (name: string) => `Изгнать: ${name}`,
       skip: (coins: number) => (coins > 0 ? `Пропустить · +${coins} монет` : 'Пропустить'),
-      hotkeys: 'R — перебросить · B — изгнать · S — пропустить · 1–3 — выбрать',
       noRerolls: 'Перебросы закончились или переброс ничего не изменит',
       reasons: Object.freeze({
         'none-left': 'Изгнания закончились',

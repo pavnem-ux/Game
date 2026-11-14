@@ -1,17 +1,15 @@
-import {
-  lazy,
-  Suspense,
-  useState,
-  useSyncExternalStore,
-  useRef,
-  useCallback,
-  useEffect,
-} from 'react';
+import { lazy, Suspense, useState, useSyncExternalStore, useEffect } from 'react';
 import type { CharacterClass } from '../character-stats';
 import { CLASS_LABELS, WEAPON_LABELS } from '../gameplay';
 import { alphaBridge } from './store';
 import { AlphaCanvas } from './AlphaCanvas';
-import { EnhancedSkillDialog, LevelUpDialog, PauseDialog, SkillBar } from './SkillPanels';
+import {
+  ActiveSkills,
+  EnhancedSkillDialog,
+  LevelUpDialog,
+  PauseDialog,
+  SkillBar,
+} from './SkillPanels';
 import { CampaignMenu } from './CampaignMenu';
 import { ResultsScreen } from './ResultsScreen';
 import { CampaignHud } from './CampaignHud';
@@ -42,26 +40,6 @@ export function AlphaApp() {
   const [debugOpen, setDebugOpen] = useState(false);
   useEffect(installSound, []);
   useBlockGestures(state.screen !== 'menu');
-  const [skillsOpen, setSkillsOpen] = useState(false);
-  const skillsOpener = useRef<HTMLElement | null>(null);
-  const openSkills = useCallback(() => {
-    skillsOpener.current = document.activeElement as HTMLElement | null;
-    setSkillsOpen(true);
-  }, []);
-  const closeSkills = useCallback(() => {
-    setSkillsOpen(false);
-    requestAnimationFrame(() => {
-      if (skillsOpener.current?.isConnected) skillsOpener.current.focus();
-    });
-  }, []);
-  useEffect(() => {
-    setSkillsOpen(false);
-  }, [state.runId]);
-  // The Pause screen shows Skills inline; a quick-look overview opened during play is folded into it.
-  // This only changes UI state, never the simulation's pause ownership.
-  useEffect(() => {
-    if (state.screen === 'paused') setSkillsOpen(false);
-  }, [state.screen]);
   const debug =
     (import.meta.env.DEV || __QA_BUILD__) && new URLSearchParams(location.search).has('debug');
   const s = state.world;
@@ -169,13 +147,7 @@ export function AlphaApp() {
               runId={state.runId}
               active={state.screen === 'playing'}
             />
-            <SkillBar
-              world={s}
-              open={skillsOpen}
-              onOpen={openSkills}
-              onClose={closeSkills}
-              context={state.screen}
-            />
+            <SkillBar world={s} />
             <div className="alpha-mobile-summary">
               {time(s.time)} · {s.kills} повержено
             </div>
@@ -195,6 +167,7 @@ export function AlphaApp() {
                   </span>
                 ))}
             </div>
+            <ActiveSkills world={s} />
             <div className="bottom-hud">
               <div className="weapon">
                 <span className="weapon-icon">{symbols[s.character.characterClass]}</span>
@@ -203,10 +176,6 @@ export function AlphaApp() {
                   <span>АВТОАТАКА · {s.enemies.filter((e) => e.alive).length} ВРАГОВ</span>
                 </div>
               </div>
-              <span className="arena-caption">
-                {s.campaign ? s.campaign.mapName.toUpperCase() : 'ЗАБЫТАЯ РОЩА'} <i />{' '}
-                <small>ВОЛНА {s.spawning.waves + 1}</small>
-              </span>
               <span className="pause-hint">
                 <kbd>P</kbd> ПАУЗА
               </span>
@@ -214,9 +183,7 @@ export function AlphaApp() {
           </>
         )}
         {state.screen === 'enhanced-skill' && s && <EnhancedSkillDialog world={s} />}
-        {state.screen === 'level-up' && s?.skills.offer && (
-          <LevelUpDialog world={s} onOpenSkills={openSkills} hiddenBehindSkills={skillsOpen} />
-        )}
+        {state.screen === 'level-up' && s?.skills.offer && <LevelUpDialog world={s} />}
         {state.screen === 'paused' && s && <PauseDialog world={s} />}
         {state.screen === 'results' && s?.campaign && <ResultsScreen world={s} />}
         {(state.screen === 'revival' || state.screen === 'ended') && (
@@ -225,8 +192,6 @@ export function AlphaApp() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="alpha-dialog-title"
-            inert={skillsOpen}
-            aria-hidden={skillsOpen || undefined}
           >
             <div className="small-modal">
               <div className="modal-sigil">◇</div>

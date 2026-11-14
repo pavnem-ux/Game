@@ -103,20 +103,9 @@ export async function checkSkillsAccess(page) {
     await page.keyboard.press('Escape');
     await screenIs('playing');
 
-    // 5. Quick-look during play does not pause; pausing folds it into the Pause screen.
-    await page.getByRole('button', { name: 'Обзор навыков', exact: true }).click();
-    const quick = page.getByRole('complementary', { name: 'Обзор навыков', exact: true });
-    await quick.waitFor();
-    await quick.getByRole('region', { name: 'Синергии', exact: true }).waitFor();
-    const running = (await state()).world.time;
-    await page.evaluate(() => window.__alpha.advance(0.2));
-    assert.ok((await state()).world.time >= running + 0.2, 'quick-look leaves gameplay running');
-    await page.keyboard.press('p');
-    await screenIs('paused');
-    await quick.waitFor({ state: 'detached' });
-    await pauseDialog.getByRole('region', { name: 'Обзор навыков', exact: true }).waitFor();
-    await page.getByRole('button', { name: 'Продолжить', exact: false }).click();
-    await screenIs('playing');
+    // 5. Task 22: no in-run quick-look button any more (the full list is the Pause screen's).
+    assert.equal(await page.getByRole('button', { name: 'Обзор навыков', exact: true }).count(), 0);
+    assert.equal(await page.getByRole('button', { name: 'Навыки', exact: true }).count(), 0);
 
     // 6. Pending level-ups: hints on cards, Skills readable, queue/offers unchanged.
     await command({
@@ -148,15 +137,11 @@ export async function checkSkillsAccess(page) {
           `${card.skillId} shows its damage readout`,
         );
     }
-    await page.getByRole('button', { name: 'Обзор навыков', exact: true }).click();
-    const blocking = page.locator('#skill-overview');
-    await blocking.waitFor();
-    assert.ok((await blocking.innerText()).includes('Синергии'));
+    // Task 22: the offer screen has no «Навыки» button; nothing advances while it is open.
+    assert.equal(await page.getByRole('button', { name: 'Обзор навыков', exact: true }).count(), 0);
     await page.waitForTimeout(120);
-    assert.deepEqual((await state()).world, pending.world, 'nothing advances under Skills');
-    await page.getByRole('button', { name: 'Закрыть обзор навыков' }).click();
+    assert.deepEqual((await state()).world, pending.world, 'nothing advances during the offer');
     await screenIs('level-up');
-    assert.deepEqual((await state()).world.skills, pending.world.skills);
     if ((await state()).world.skills.offer.rerollAvailable) {
       await page.getByRole('button', { name: /Перебросить/ }).click();
       assert.equal((await state()).world.skills.rerolls, 2);

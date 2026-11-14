@@ -4,7 +4,7 @@ Spec: [task-22-hud-declutter.md](task-22-hud-declutter.md) (owner's file). Branc
 `main` at `af39a8c` (Tasks 16–21 merged). Presentation only: simulation, balance and economy
 unchanged.
 
-Current: Phase 2
+Current: Phase 4
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/20
 
@@ -12,8 +12,8 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/20
 
 - [x] 0 Branch, spec, progress file, draft PR, before screenshots
 - [x] 1 Top: next-event countdown, info bar trimmed
-- [ ] 2 Bottom: removed elements, active skills bottom-left, pause menu completeness
-- [ ] 3 Offer screen: no hints / hotkeys / «Навыки»
+- [x] 2 Bottom: removed elements, active skills bottom-left, pause menu completeness
+- [x] 3 Offer screen: no hints / hotkeys / «Навыки»
 - [ ] 4.1 Rarity rows (equipment + shop)
 - [ ] 4.2 Equipped item details → forge deep link
 - [ ] 4.3 Equip panel placement
@@ -33,5 +33,20 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/20
   вышло — добейте босса» line was part of the remaining-time element and is removed with it (the boss
   HP bar shows the boss). Campaign e2e updated: countdown present, removed texts absent, countdown
   hidden after the map duration.
+
+- Bottom: the skill bar keeps gold, barrier, dash, pet and buffs; removed the «Навыки» button, the
+  «Автоматические N/4 · Пассивные N/6» text, the passive icons and the map-name / wave caption.
+  `ActiveSkills` (automatic skills only, 40 px icons, small rank, dimmed overlay with the seconds
+  left) sits bottom-left above the weapon card; on short screens (landscape phones, where the weapon
+  card is hidden) in the corner. Pointer events off, so joystick touches pass through.
+- Pause menu completeness: it already showed active and passive skills with ranks, slot counts,
+  cooldowns and synergy levels; it now also shows a run line (map, stage, time left / time up, wave)
+  — everything the removed top/bottom elements showed.
+- The in-run quick-look overview (opened only by the removed buttons) is deleted with them;
+  `alpha-qa` / `skills-ui-browser` checks moved to the pause menu (no test removed: assertions now
+  check the buttons are gone and the same data in the pause menu).
+- Offer screen: hotkey hint line, the R / B / S / 1–3 handler and the «Навыки» button removed;
+  banish hint no longer mentions 1–3. Mouse / touch buttons and Tab / Enter focus remain. Alpha e2e:
+  pressing r/b/s/1/2/3/R/B/S leaves `world.skills` unchanged; banish / skip / pick done by clicks.
 
 ## Verification log
