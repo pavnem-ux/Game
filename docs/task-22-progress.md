@@ -15,8 +15,8 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/20
 - [x] 2 Bottom: removed elements, active skills bottom-left, pause menu completeness
 - [x] 3 Offer screen: no hints / hotkeys / «Навыки»
 - [x] 4.1 Rarity rows (equipment + shop)
-- [ ] 4.2 Equipped item details → forge deep link
-- [ ] 4.3 Equip panel placement
+- [x] 4.2 Equipped item details → forge deep link
+- [x] 4.3 Equip panel placement
 - [ ] 4.4 Forge mode switch
 - [ ] 5 Full checks, after screenshots, playtest, PR
 
@@ -52,5 +52,13 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/20
   header and count; empty rows are hidden. Starter weapons (tier 0) sit in the «Обычный» row and keep
   their «Стартовое» label. Used by the Экипировка owned list and the Магазин grid (pets tab
   unchanged).
+- Equipped item details: a filled paper-doll slot opens «Надетый предмет» (name with level, slot ·
+  tier · +level, all current stats incl. the upgrade, «Снять», «Улучшить в кузнице», «Закрыть»); an
+  empty slot still filters the owned list. «Улучшить в кузнице» calls `openForge(id, { page:
+'equipment', characterClass })`; the forge then shows «← К экипировке», which returns to the same
+  class (`campaignStore.forgeBack`). Presentation-only store state `forgeReturn`.
+- Equip panel placement: the details / «Надеть» + compare panel renders at the top of the item area
+  (above «Ваши предметы»), sticky at every size; on phones with a 60vh cap and its own scroll.
+  Checked at 1280×720, 844×390, 390×844: «Надеть» is in the viewport after selecting the last item.
 
 ## Verification log

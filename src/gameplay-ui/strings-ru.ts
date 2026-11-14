@@ -182,6 +182,8 @@ export const RU = Object.freeze({
       starter: 'Стартовое',
       unequipFailed: 'Не удалось снять предмет.',
       equipFailed: 'Не удалось надеть.',
+      upgradeInForge: 'Улучшить в кузнице',
+      close: 'Закрыть',
     }),
     talents: Object.freeze({
       available: (n: number) => `Свободно очков: ${n}`,
@@ -268,6 +270,7 @@ export const RU = Object.freeze({
       maxed: 'Максимальный уровень',
       equippedBy: (classes: string) => `Надето: ${classes}`,
       toForge: 'В кузницу',
+      backToEquipment: 'К экипировке',
       refusals: Object.freeze({
         gold: 'Не хватает золота.',
         ore: 'Не хватает руды.',

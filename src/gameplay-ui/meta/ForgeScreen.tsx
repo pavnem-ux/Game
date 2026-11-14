@@ -88,6 +88,12 @@ export function ForgePage() {
   return (
     <div className="forge-screen">
       <header className="meta-page-head">
+        {/* Task 22: opened from Экипировка → back returns there (same class). */}
+        {ui.forgeReturn && (
+          <Button variant="ghost" onClick={() => campaignStore.forgeBack()}>
+            ← {F.backToEquipment}
+          </Button>
+        )}
         <h2 className="meta-title">{F.title}</h2>
         <span className="forge-wallet">
           <CurrencyBadge amount={profile.gold} />
