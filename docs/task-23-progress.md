@@ -5,9 +5,9 @@ Spec: [task-23-english.md](task-23-english.md) (owner's file). Branch `task-23-e
 22 merged"). Rebase onto `main` once #20 is merged. Text only: no gameplay, balance, layout or
 save-semantics changes.
 
-Current: Phase 0
+Current: Phase 2
 
-Draft PR: (pending)
+Draft PR: https://github.com/pavnem-ux/Game/pull/21
 
 ## Inventory (before)
 
@@ -20,8 +20,8 @@ Comments with Cyrillic (e.g. talent handlers) are translated too.
 
 ## Checklist
 
-- [ ] 0 Branch, spec, progress file, draft PR, inventory
-- [ ] 1 Glossary `docs/glossary-en.md`
+- [x] 0 Branch, spec, progress file, draft PR, inventory
+- [x] 1 Glossary `docs/glossary-en.md`
 - [ ] 2.1 UI / locale (`strings-en.ts`, components, number format, `index.html`)
 - [ ] 2.2 Content catalogs (maps, bosses, enemies, items, talents, synergies, skills, pets, quests,
       chests / buffs)
