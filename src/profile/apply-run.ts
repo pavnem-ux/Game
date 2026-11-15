@@ -60,6 +60,13 @@ export function validateRunResult(result: RunResult): void {
   if (result.stats !== undefined) validateRunStatsSummary(result.stats);
   if (result.coins !== undefined && (!Number.isSafeInteger(result.coins) || result.coins < 0))
     throw new RangeError('coins must be a whole number ≥ 0.');
+  if (
+    result.activityOre !== undefined &&
+    (!Number.isSafeInteger(result.activityOre) ||
+      result.activityOre < 0 ||
+      result.activityOre > 1000)
+  )
+    throw new RangeError('activityOre must be a whole number 0–1000.');
   if (result.quest !== undefined) validateRunQuestSummary(result.quest);
 }
 
@@ -124,7 +131,10 @@ export function applyRunResult(
   const victory = result.outcome === 'victory';
   const finished = result.outcome !== 'abandoned';
   // Task 19: ore in the same snapshot as XP / Gold (×3 when the map had never been won).
-  const ore = runOre(result.outcome, result.mapId, !profile.completedMaps.includes(result.mapId));
+  // Task 24: Ore banked from map activities joins it only with a victory (no first-win ×3).
+  const ore =
+    runOre(result.outcome, result.mapId, !profile.completedMaps.includes(result.mapId)) +
+    (result.outcome === 'victory' ? (result.activityOre ?? 0) : 0);
 
   // Unlocks: only a victory unlocks the next map; unlocked maps stay unlocked.
   const next = victory ? nextMapAfter(result.mapId) : null;

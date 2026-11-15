@@ -30,7 +30,25 @@ export interface ArtilleryEnemyConfig extends EnemyConfigBase {
   readonly hysteresis: number;
   readonly telegraph: Readonly<{ radius: number; delay: number }>;
 }
-export type EnemyConfig = MeleeEnemyConfig | RangedEnemyConfig | ArtilleryEnemyConfig;
+/**
+ * Task 24 (additive): moves directly away from the player and steers away from the edges of
+ * `bounds` (a square arena) closer than `edgeMargin`; never attacks. Treasure Thief.
+ */
+export interface FleeEnemyConfig extends EnemyConfigBase {
+  readonly behavior: 'flee';
+  readonly bounds: Readonly<{ min: number; max: number }>;
+  readonly edgeMargin: number;
+}
+/** Task 24 (additive): never moves and never attacks (Blight Nest). */
+export interface StationaryEnemyConfig extends EnemyConfigBase {
+  readonly behavior: 'stationary';
+}
+export type EnemyConfig =
+  | MeleeEnemyConfig
+  | RangedEnemyConfig
+  | ArtilleryEnemyConfig
+  | FleeEnemyConfig
+  | StationaryEnemyConfig;
 export interface EnemyRegistration {
   readonly entityId: string;
   readonly position: Point;

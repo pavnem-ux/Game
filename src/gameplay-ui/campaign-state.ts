@@ -123,6 +123,8 @@ export function runResultFrom(
     coins: world.coins.collected,
     // Task 21: quest counters of this run (added once, with the result).
     quest: runQuestSummary(world),
+    // Task 24: Ore banked from map activities (credited only with a victory).
+    activityOre: world.activities?.ore ?? 0,
   });
 }
 

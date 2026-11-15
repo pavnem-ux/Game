@@ -1,42 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { GameplayWorld } from '../../src/gameplay';
+import type { GameplayWorld } from '../../src/gameplay';
 import type { WorldEvent } from '../../src/gameplay';
 import { ACTIVITY_RULES, RunActivities, activityTypesFor } from '../../src/gameplay/activities';
 import type { ActivityEvent, ActivityType } from '../../src/gameplay/activities';
 import { lcgStream } from '../../src/gameplay/rng';
-import { resolveOffers } from '../skills/helpers';
-
-export function campaignWorld(seed = 1, mapId = 1) {
-  const w = new GameplayWorld({
-    characterClass: 'mage',
-    seed,
-    initialEnemies: false,
-    spawning: { enabled: false },
-    onHit: [],
-    campaign: { mapId },
-  });
-  w.setTestProtection(true);
-  w.weapons.setAttackSpeed('player', 0.01);
-  return w;
-}
-/** Steps the world, collecting events incrementally (the world history is bounded). */
-export function step(w: GameplayWorld, seconds: number, dt = 0.25, sink: WorldEvent[] = []) {
-  let seq = w.getEvents().at(-1)?.sequence ?? 0;
-  const end = w.time + seconds;
-  while (w.time < end - 1e-9) {
-    resolveOffers(w);
-    if (w.paused) break;
-    w.update(Math.min(dt, end - w.time));
-    const fresh = w.getEvents(seq);
-    if (fresh.length) seq = fresh.at(-1)!.sequence;
-    sink.push(...fresh);
-  }
-  return sink;
-}
-export const activityEvents = <T extends ActivityEvent['type']>(events: WorldEvent[], type: T) =>
-  events
-    .filter((e) => e.channel === 'activities' && e.event.type === type)
-    .map((e) => ({ time: e.time, event: e.event as Extract<ActivityEvent, { type: T }> }));
+import { activityEvents, campaignWorld, step } from './activity-helpers';
 
 const placement = (mapId = 1, chests: { x: number; y: number }[] = []) => ({
   player: { x: 1800, y: 1800 },

@@ -26,6 +26,9 @@ export function actorSpeed(actor: EnemyActor): number {
 }
 export function desiredState(actor: EnemyActor, player: CombatBody): EnemyBehaviorState {
   if (actor.config.behavior === 'melee') return 'chase';
+  // Task 24: the thief always runs; the nest always holds its ground (velocity 0).
+  if (actor.config.behavior === 'flee') return 'retreat';
+  if (actor.config.behavior === 'stationary') return 'attack';
   const d = edgeDistance(actor, player),
     c = actor.config;
   if (d < c.retreatDistance - EPS) return 'retreat';
@@ -41,9 +44,39 @@ export function goalVelocity(actor: EnemyActor, player: CombatBody): Point {
     speed = actorSpeed(actor);
   if (actor.state === 'attack' || actor.state === 'idle' || actor.state === 'dead')
     return { x: 0, y: 0 };
+  if (actor.config.behavior === 'flee') return fleeVelocity(actor, player, speed);
   if (d <= EPS) return actor.state === 'retreat' ? { x: speed, y: 0 } : { x: 0, y: 0 };
   const sign = actor.state === 'retreat' ? -1 : 1;
   return { x: (dx / d) * speed * sign, y: (dy / d) * speed * sign };
+}
+/**
+ * Task 24 flee steering: away from the player, plus a push away from each arena edge closer than
+ * `edgeMargin` (stronger the closer it is), normalized to the actor's speed. Deterministic.
+ */
+export function fleeVelocity(actor: EnemyActor, player: CombatBody, speed: number): Point {
+  if (actor.config.behavior !== 'flee' || speed === 0) return { x: 0, y: 0 };
+  const { bounds, edgeMargin } = actor.config;
+  let dx = actor.x - player.x,
+    dy = actor.y - player.y;
+  const d = Math.hypot(dx, dy);
+  if (d <= EPS) {
+    dx = 1;
+    dy = 0;
+  } else {
+    dx /= d;
+    dy /= d;
+  }
+  const push = (distance: number) =>
+    edgeMargin > 0 && distance < edgeMargin ? (1 - Math.max(0, distance) / edgeMargin) * 2 : 0;
+  dx += push(actor.x - bounds.min) - push(bounds.max - actor.x);
+  dy += push(actor.y - bounds.min) - push(bounds.max - actor.y);
+  // Cornered (the pushes cancel the flight direction): slide along the wall, clockwise.
+  if (Math.hypot(dx, dy) <= EPS) {
+    dx = -(actor.y - player.y) || 1;
+    dy = actor.x - player.x;
+  }
+  const length = Math.hypot(dx, dy);
+  return { x: (dx / length) * speed, y: (dy / length) * speed };
 }
 export function separatedVelocity(
   actor: EnemyActor,

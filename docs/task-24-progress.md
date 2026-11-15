@@ -6,7 +6,7 @@ Task 22 / PR #20 are not merged yet). The PR targets `main`; until #20 and #21 m
 shows their commits. Before each phase the latest `origin/task-23-english` is merged in so review
 fixes from #20/#21 are included.
 
-Current: Phase 2
+Current: Phase 3
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/22
 
@@ -14,7 +14,7 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/22
 
 - [x] 0 Branch, spec, progress file, draft PR
 - [x] 1 Framework: scheduling, positions, expiry, off-screen arrows, toasts, run stats
-- [ ] 2 Shrine + Thief
+- [x] 2 Shrine + Thief
 - [ ] 3 Lantern + Nest
 - [ ] 4 Quests & save (8 quests, lifetime counters, schema bump)
 - [ ] 5 Visuals & audio
@@ -59,3 +59,10 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/22
   Extra activity spawns use the act mix with their own counters, so reinforcement-wave composition
   is unchanged (the Task 12 spawn-mix test still holds). Browser: marker, label, toast and the
   off-screen pointer checked on a DEV-spawned shrine.
+- Phase 2: `tests/gameplay/activities-shrine-thief.test.ts` — shrine: 9 s capture as an exact
+  boundary, half-speed decay outside and abandon at 0, one extra enemy every 1.5 s only while
+  inside and never above the active cap (ring 250–350), one enchanted chest at the shrine once;
+  thief: 350 from the player, `flee` profile at 95% of the base speed, 6× melee HP, never attacks,
+  deterministic path inside the arena, escape at 20 s with no reward / kill / counted damage,
+  kill reward = 6 coin piles worth 8% of the map's victory Gold once, seeded ~20% +1 Ore;
+  banked activity Ore paid only with a victory (`applyRunResult`).

@@ -120,6 +120,7 @@ export class RunStats {
     { startedAt: number; expiresAt: number }
   >();
   private readonly killed = new Map<EnemyType, number>();
+  private readonly vanished = new Map<string, true>();
   private readonly weaponByAttack = new Map<string, string>();
   private readonly types = new Map<string, EnemyType>();
   private readonly timeline: { level: number; time: number }[] = [{ level: 1, time: 0 }];
@@ -164,6 +165,12 @@ export class RunStats {
       }
       case 'periodic-damage': {
         const { sources, effectId } = event.periodic;
+        // Task 24: an escaping thief / crumbling nest is removed by its own hand — not damage
+        // dealt and not a kill.
+        if (effectId === 'activity-vanish') {
+          remember(this.vanished, event.targetId, true, RUN_STATS_LIMITS.knownEnemies);
+          return;
+        }
         const total = sources.reduce((sum, s) => sum + Math.max(0, s.rawDamage), 0);
         const share = (raw: number) =>
           total > 0 ? (event.appliedDamage * Math.max(0, raw)) / total : 0;
@@ -185,7 +192,7 @@ export class RunStats {
         if (event.entityId === this.resolve.playerId) {
           this.deaths.push(time);
           this.version++;
-        } else {
+        } else if (!this.vanished.has(event.entityId)) {
           const type = this.typeOf(event.entityId);
           if (type !== 'unknown') {
             this.killed.set(type, (this.killed.get(type) ?? 0) + 1);

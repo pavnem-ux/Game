@@ -28,6 +28,8 @@ export interface RunResult {
   readonly coins?: number;
   /** Task 21: quest counters of this run (kills by type, chests, synergies; absent = none). */
   readonly quest?: RunQuestSummary;
+  /** Task 24: Ore earned from map activities (paid only with a victory; absent = 0). */
+  readonly activityOre?: number;
 }
 /**
  * Task 08.5 §2: the only run statistics that are persisted (in `recentRuns`). Whole numbers for

@@ -78,8 +78,8 @@ import { BUFFS, CHEST_RULES, RunChests, buffModifiers, chestGold } from './chest
 const CHEST_HEAL_FRACTION = CHEST_RULES.healFraction;
 const CHEST_BLINK_FOR = CHEST_RULES.blinkFor;
 import type { BuffId, Chest, ChestContent, ChestType } from './chests';
-import { RunActivities } from './activities';
-import type { ActivityEvent, ActivityType } from './activities';
+import { ACTIVITY_RULES, RunActivities, activityGold, lanternOre } from './activities';
+import type { ActivityEvent, ActivitySnapshot, ActivityType } from './activities';
 import {
   ENEMY_KINDS,
   NEW_ENEMY_KINDS,
@@ -1726,7 +1726,7 @@ export class GameplayWorld {
    * Task 24: records activity events and applies their consequences (rewards of completed
    * activities; thief / nest enemies registered on spawn and removed on escape / crumble).
    */
-  private applyActivityEvents(events: readonly ActivityEvent[]): void {
+  private applyActivityEvents(events: readonly ActivityEvent[], at?: Point): void {
     for (const event of events) {
       this.record('activities', [event]);
       const kind =
@@ -1745,15 +1745,128 @@ export class GameplayWorld {
         });
       if (event.type === 'activity-spawned')
         this.onActivitySpawned(event.activity.id, event.activity.type);
-      else if (event.type === 'activity-completed') this.rewardActivity(event.activity);
-      else if (event.type === 'activity-failed' && event.activity.enemyId)
+      else if (event.type === 'activity-completed') {
+        // A debug completion of a living thief / nest removes it (the kill path is the normal one).
+        const id = event.activity.enemyId;
+        const position =
+          at ?? (id && this.enemyIds.has(id) ? this.enemies.getEnemy(id).position : event.activity);
+        if (id && this.enemyIds.has(id)) this.removeActivityEnemy(id);
+        this.rewardActivity(event.activity, position);
+      } else if (event.type === 'activity-failed' && event.activity.enemyId)
         this.removeActivityEnemy(event.activity.enemyId);
     }
   }
-  /** Phase hooks (thief / nest enemies, rewards) — filled in by the activity phases. */
-  private onActivitySpawned(_id: string, _type: ActivityType): void {}
-  private rewardActivity(_activity: import('./activities').ActivitySnapshot): void {}
-  private removeActivityEnemy(_enemyId: string): void {}
+  /** Task 24: thief / nest enemy ids leaving without a kill (escape, crumble, debug). */
+  private readonly vanishing = new Set<string>();
+  /** Task 24: an activity's thief / nest as an ordinary registered enemy (Core owns its HP). */
+  private onActivitySpawned(id: string, type: ActivityType): void {
+    if (type !== 'thief' && type !== 'nest') return;
+    const a = this.activities!.getActivity(id, this.clock)!;
+    const rules = type === 'thief' ? ACTIVITY_RULES.thief : ACTIVITY_RULES.nest;
+    const stats = Object.freeze({
+      ...this.enemyStats,
+      maxHp: this.enemyStats.maxHp * rules.hpMultiplier,
+    });
+    const enemyId = this.registerEnemy('melee', a, this.activityProfile(type), stats);
+    this.activities!.attachEnemy(id, enemyId);
+  }
+  /** Behaviour profiles: the thief flees at 95% of the player's base speed; the nest holds still. */
+  private activityProfile(type: 'thief' | 'nest'): EnemyConfig {
+    const melee = this.enemyProfile('melee');
+    if (type === 'nest')
+      return Object.freeze({
+        behavior: 'stationary',
+        movementSpeed: 0,
+        radius: ACTIVITY_RULES.nest.radius,
+        attackInterval: melee.attackInterval,
+        attackCoefficient: 0,
+        damageType: 'physical',
+      });
+    const r = ACTIVITY_RULES.thief;
+    return Object.freeze({
+      behavior: 'flee',
+      movementSpeed: ALPHA.baseMovementSpeed * r.speedShare,
+      radius: r.radius,
+      attackInterval: melee.attackInterval,
+      attackCoefficient: 0,
+      damageType: 'physical',
+      bounds: Object.freeze({ min: r.radius, max: ALPHA.arenaSize - r.radius }),
+      edgeMargin: r.edgeMargin,
+    });
+  }
+  /**
+   * Task 24 rewards (once per activity, from the completion event): shrine — an enchanted chest at
+   * the shrine; nest — a wooden chest at the nest; lantern — coins (6% of the map's victory Gold)
+   * + banked Ore; thief — a coin burst (8%) + a seeded 20% chance of banked Ore. Coins follow the
+   * normal pickup and coin rules; banked Ore is paid only with a victory.
+   */
+  private rewardActivity(a: ActivitySnapshot, at: Point): void {
+    const map = this.campaignMap!;
+    let coins = 0,
+      ore = 0,
+      chest: 'wooden' | 'enchanted' | null = null;
+    if (a.type === 'shrine' || a.type === 'nest') {
+      chest = a.type === 'shrine' ? 'enchanted' : 'wooden';
+      if (this.chests) this.record('chests', [this.chests.placeReward(this.clock, at, chest)]);
+    } else if (a.type === 'lantern') {
+      coins = activityGold('lantern', map.victoryGold);
+      ore = lanternOre(map.id);
+      this.dropActivityCoins(at, coins, 1);
+    } else {
+      coins = activityGold('thief', map.victoryGold);
+      ore = this.activities!.roll() < ACTIVITY_RULES.thief.oreChance ? ACTIVITY_RULES.thief.ore : 0;
+      this.dropActivityCoins(at, coins, ACTIVITY_RULES.thief.burstPiles);
+    }
+    this.activityOre += ore;
+    this.record('activities', [
+      Object.freeze({
+        type: 'activity-reward',
+        activityId: a.id,
+        activityType: a.type,
+        coins,
+        ore,
+        chest,
+      }),
+    ]);
+  }
+  /** Coin piles worth `total` around `at` (evenly spread; whole coins, the remainder on the first). */
+  private dropActivityCoins(at: Point, total: number, piles: number): void {
+    const n = Math.max(1, Math.min(piles, total));
+    const base = Math.floor(total / n);
+    const events = [];
+    for (let i = 0; i < n; i++) {
+      const value = base + (i === 0 ? total - base * n : 0);
+      const angle = (i * Math.PI * 2) / n;
+      const r = n > 1 ? ACTIVITY_RULES.thief.burstRadius : 0;
+      const p = {
+        x: this.clamp(at.x + Math.cos(angle) * r, 10),
+        y: this.clamp(at.y + Math.sin(angle) * r, 10),
+      };
+      const pile = this.coins.drop(p, value);
+      events.push(
+        Object.freeze({ type: 'coins-dropped' as const, pileId: pile.id, amount: value }),
+      );
+    }
+    this.record('progression', events);
+  }
+  /**
+   * Task 24: a thief / nest leaving without a kill (escape, crumble, debug). Core stays the only
+   * HP owner: it dies by its own hand, so no player reward, kill or death trigger applies.
+   */
+  private removeActivityEnemy(enemyId: string): void {
+    if (!this.enemyIds.has(enemyId) || !this.core.getEntity(enemyId).alive) return;
+    this.vanishing.add(enemyId);
+    const raw = Number.MAX_SAFE_INTEGER;
+    const result = this.core.applyPeriodicDamage({
+      operationId: `activity-vanish-${enemyId}`,
+      targetId: enemyId,
+      effectId: 'activity-vanish',
+      rawDamage: raw,
+      sources: [{ applicationId: 'activity-vanish', sourceId: enemyId, rawDamage: raw }],
+    });
+    this.forwardCombat(result.events);
+    this.vanishing.delete(enemyId);
+  }
   private expireChests() {
     const events = this.chests!.expireDue(this.clock);
     for (const e of events)
@@ -2111,7 +2224,14 @@ export class GameplayWorld {
           // Task 11: coins drop here too — inside the once-per-death reward (dedup by design).
           this.dropCoins(event.entityId, enemy.position);
         }
-        this.skills.noteDeath(event.entityId, enemy.position);
+        // Task 24: a killed thief / nest completes its activity (once; reward at the body).
+        const done = this.vanishing.has(event.entityId)
+          ? null
+          : (this.activities?.enemyDied(event.entityId, this.clock) ?? null);
+        if (done) this.applyActivityEvents([done], enemy.position);
+        // A thief / nest leaving without a kill triggers no death effects (synergies, talents).
+        if (!this.vanishing.has(event.entityId))
+          this.skills.noteDeath(event.entityId, enemy.position);
         if (event.entityId === this.bossEnemyId && !this.bossDefeated) {
           this.bossDefeated = true;
           this.record('campaign', [
