@@ -30,8 +30,8 @@ if (quality)
   }, quality);
 await page.goto(base + '/?debug');
 await page.waitForFunction(() => !!window.__alpha);
-await page.getByRole('button', { name: 'Воин Меч', exact: false }).click();
-await page.getByRole('button', { name: 'Начать забег' }).click();
+await page.getByRole('button', { name: 'Warrior Sword', exact: false }).click();
+await page.getByRole('button', { name: 'Start run' }).click();
 await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
 const command = (a) => page.evaluate((x) => window.__alpha.command(x), a);
 const advance = (s) => page.evaluate((x) => window.__alpha.advance(x), s);
@@ -55,7 +55,7 @@ const scene = async (mapId, characterClass, name, boss = false) => {
     });
   }
   // Hide the debug overlay so it does not cover the arena.
-  const hide = page.getByRole('button', { name: 'Скрыть' });
+  const hide = page.getByRole('button', { name: 'Hide' });
   if (await hide.count()) await hide.click();
   await page.waitForTimeout(500);
   await page.screenshot({ path: `${out}/${prefix}-${name}.png` });

@@ -41,12 +41,12 @@ for (const size of sizes) {
       options: { characterClass: 'archer', level: 10, campaign: { mapId: 3 } },
     }),
   );
-  // Portrait phones show «Поверните устройство» and pause the run (expected).
+  // Portrait phones show «Rotate your device» and pause the run (expected).
   await page.waitForFunction(() => window.__alpha.state().screen !== 'menu');
   await page.evaluate(() => window.__alpha.command({ type: 'protection', enabled: true }));
   await page.evaluate(() => window.__alpha.command({ type: 'group', count: 12, distance: 220 }));
   await page.evaluate(() => window.__alpha.advance(2));
-  const hide = page.getByRole('button', { name: 'Скрыть' });
+  const hide = page.getByRole('button', { name: 'Hide' });
   await hide.waitFor({ timeout: 3000 }).catch(() => undefined);
   if (await hide.count()) await hide.click().catch(() => undefined);
   await page.waitForTimeout(400);

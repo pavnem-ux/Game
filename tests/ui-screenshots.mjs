@@ -18,7 +18,7 @@ const sizes = (process.env.SHOT_SIZES || '1280x720')
   .map((s) => s.split('x').map(Number));
 const pages = (
   process.env.SHOT_PAGES ||
-  'hub:Играть,character:Персонаж,maps:Карты,shop:Магазин,progression:Прогресс,settings:Настройки'
+  'hub:Play,character:Hero,maps:Maps,shop:Shop,progression:Progress,settings:Settings'
 )
   .split(',')
   .map((p) => p.split(':'));
@@ -40,7 +40,7 @@ try {
       localStorage.setItem('skazki.profile', json);
     }, profile);
     await page.goto(base + '/');
-    const nav = page.getByRole('navigation', { name: 'Главное меню' });
+    const nav = page.getByRole('navigation', { name: 'Main menu' });
     await nav.waitFor();
     for (const [file, label] of pages) {
       await nav.getByRole('button', { name: label, exact: true }).click();

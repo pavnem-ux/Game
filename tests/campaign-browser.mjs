@@ -36,64 +36,67 @@ try {
   await page.goto(base + '/?debug');
   await page.waitForFunction(() => !!window.__alpha);
   const state = () => page.evaluate(() => window.__alpha.state());
-  const nav = page.getByRole('navigation', { name: 'Главное меню' });
+  const nav = page.getByRole('navigation', { name: 'Main menu' });
 
   // 5.1 Main menu: navigation and Gold.
   await nav.waitFor();
   // Task 13: hub + separate Equipment / Talents pages + the map path.
   for (const tab of [
-    'Главная',
-    'Персонаж',
-    'Экипировка',
-    'Таланты',
-    'Магазин',
-    'Кузница',
-    'Карта похода',
-    'Прогресс',
-    'Настройки',
+    'Home',
+    'Hero',
+    'Equipment',
+    'Talents',
+    'Shop',
+    'Forge',
+    'Campaign map',
+    'Progress',
+    'Settings',
   ])
     assert.equal(await nav.getByRole('button', { name: tab, exact: true }).count(), 1, tab);
-  assert.equal(await page.getByLabel('Золото: 0').count(), 1);
+  assert.equal(await page.getByLabel('Gold: 0').count(), 1);
   assert.equal(
-    await page.getByLabel(/^Версия сборки: v\d+\.\d+\.\d+ · ([0-9a-f]{7}|unknown)$/).count(),
+    await page.getByLabel(/^Build version: v\d+\.\d+\.\d+ · ([0-9a-f]{7}|unknown)$/).count(),
     1,
     'build label on the main menu',
   );
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.profile')));
   assert.equal(saved.highestUnlockedMap, 1, 'a new profile is persisted on first launch');
-  /** Task 13: open the map path, pick map `id` and press «В бой» in its side panel. */
+  /** Task 13: open the map path, pick map `id` and press «To battle» in its side panel. */
   const openMap = async (id) => {
-    await nav.getByRole('button', { name: 'Карта похода', exact: true }).click();
-    await page.getByRole('button', { name: new RegExp(`^Карта ${id}: `) }).click();
-    return page.getByRole('button', { name: `Играть: карта ${id}`, exact: true });
+    await nav.getByRole('button', { name: 'Campaign map', exact: true }).click();
+    await page.getByRole('button', { name: new RegExp(`^Map ${id}: `) }).click();
+    return page.getByRole('button', { name: `Play: map ${id}`, exact: true });
   };
   const mapPanel = () => page.locator('.map-panel');
 
-  // Task 13 hub: «В бой» opens the map path; Esc goes back to the hub.
-  await page.getByRole('button', { name: /В бой/ }).first().click();
+  // Task 13 hub: «To battle» opens the map path; Esc goes back to the hub.
+  await page
+    .getByRole('button', { name: /To battle/ })
+    .first()
+    .click();
   assert.equal(await page.locator('.map-node').count(), 40);
   assert.equal(
     await nav
-      .getByRole('button', { name: 'Карта похода', exact: true })
+      .getByRole('button', { name: 'Campaign map', exact: true })
       .getAttribute('aria-current'),
     'page',
   );
   await page.keyboard.press('Escape');
-  await page.getByRole('heading', { name: 'Последний свет', level: 1 }).waitFor();
+  await page.getByRole('heading', { name: 'The Last Light', level: 1 }).waitFor();
 
   // 5.2 Character page.
-  await nav.getByRole('button', { name: 'Персонаж', exact: true }).click();
+  await nav.getByRole('button', { name: 'Hero', exact: true }).click();
   // Task 13: a card's quick link opens Equipment for that class (without selecting it).
-  await page.getByRole('button', { name: 'Экипировка: Маг', exact: true }).click();
-  await page.getByRole('region', { name: 'Снаряжение: Маг' }).waitFor();
-  await nav.getByRole('button', { name: 'Персонаж', exact: true }).click();
+  await page.getByRole('button', { name: 'Equipment: Mage', exact: true }).click();
+  await page.getByRole('region', { name: 'Equipment: Mage' }).waitFor();
+  await nav.getByRole('button', { name: 'Hero', exact: true }).click();
   const cards = page.locator('.character-card');
   assert.equal(await cards.count(), 4);
-  assert.match(await cards.first().innerText(), /Уровень 1 \/ 50 · Опыт 0 \/ 100/);
-  assert.equal(await cards.first().getByLabel('Очки талантов: 0').count(), 1);
+  assert.match(await cards.first().innerText(), /Level 1 \/ 50 · XP 0 \/ 100/);
+  assert.equal(await cards.first().getByLabel('Talent points: 0').count(), 1);
   await page
-    .getByRole('article', { name: /Лучник/ })
-    .getByRole('button', { name: 'Выбрать' })
+    .getByRole('article', { name: /Archer/ })
+    .getByRole('button', { name: 'Choose' })
     .click();
   assert.equal(
     await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.profile')).selectedClass),
@@ -103,28 +106,25 @@ try {
 
   // 5.2 Map path (Task 13): 40 nodes in 4 act regions; the side panel shows the lock reason,
   // recommended level, modifiers and the boss (hidden while locked); locked maps cannot start.
-  await nav.getByRole('button', { name: 'Карта похода', exact: true }).click();
+  await nav.getByRole('button', { name: 'Campaign map', exact: true }).click();
   assert.equal(await page.locator('.map-node').count(), 40);
-  for (const act of ['Акт I · Забытые сказки', 'Акт II · Заколдованные земли'])
+  for (const act of ['Act I · Forgotten Tales', 'Act II · Enchanted Lands'])
     assert.equal(await page.getByRole('region', { name: act, exact: true }).count(), 1, act);
-  assert.equal(await page.getByRole('button', { name: /^Карта 1: .*, открыта$/ }).count(), 1);
-  assert.equal(await page.getByRole('button', { name: /^Карта 2: .*, закрыта$/ }).count(), 1);
-  assert.match(await mapPanel().innerText(), /Рекомендуемый уровень\s+1 ·/);
+  assert.equal(await page.getByRole('button', { name: /^Map 1: .*, open$/ }).count(), 1);
+  assert.equal(await page.getByRole('button', { name: /^Map 2: .*, locked$/ }).count(), 1);
+  assert.match(await mapPanel().innerText(), /Recommended level\s+1 ·/);
   const play2 = await openMap(2);
-  assert.match(
-    await mapPanel().innerText(),
-    /Победите на карте 1[\s\S]*Рекомендуемый уровень\s+2 ·/,
-  );
-  assert.match(await mapPanel().innerText(), /Босс\s+♚ \?\?\?/);
+  assert.match(await mapPanel().innerText(), /Win on map 1[\s\S]*Recommended level\s+2 ·/);
+  assert.match(await mapPanel().innerText(), /Boss\s+♚ \?\?\?/);
   assert.equal(await play2.isDisabled(), true);
   const play11 = await openMap(11);
-  assert.match(await mapPanel().innerText(), /Шепчущий бор[\s\S]*Победите на карте 10/);
+  assert.match(await mapPanel().innerText(), /Whispering Pines[\s\S]*Win on map 10/);
   assert.equal(await play11.isDisabled(), true);
   await openMap(12);
-  assert.match(await mapPanel().innerText(), /Быстрые враги/);
+  assert.match(await mapPanel().innerText(), /Swift enemies/);
   await page.screenshot({ path: 'artifacts/campaign-02b-maps-act2.png', fullPage: true });
   const play1 = await openMap(1);
-  assert.match(await mapPanel().innerText(), /Босс\s+♚ Терновый страж/);
+  assert.match(await mapPanel().innerText(), /Boss\s+♚ Thornwarden/);
   await page.screenshot({ path: 'artifacts/campaign-02-maps.png', fullPage: true });
   await play1.click();
   await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
@@ -148,34 +148,34 @@ try {
   };
   // 5.4 HUD (Task 22): coins + one countdown to the nearest scheduled event (no map name, stage,
   // time left or separate boss countdown any more); boss HP bar.
-  const hud = page.getByLabel('Кампания', { exact: true });
+  const hud = page.getByLabel('Campaign', { exact: true });
   await hud.waitFor();
-  assert.match(await hud.innerText(), /Элита через \d:\d\d/);
-  assert.doesNotMatch(await hud.innerText(), /Опушка забытых сказок|Этап:|Осталось|Босс через/);
-  assert.match(await page.locator('.run-level-label').innerText(), /Уровень забега \d+/);
+  assert.match(await hud.innerText(), /Elite in \d:\d\d/);
+  assert.doesNotMatch(await hud.innerText(), /Edge of Forgotten Tales|Stage:|left|Boss in/);
+  assert.match(await page.locator('.run-level-label').innerText(), /Run level \d+/);
   await fastForward(112);
   // Shortly before the first elite the countdown reads 0:0N.
   await page.waitForFunction(() =>
-    /Элита через 0:0\d/.test(document.querySelector('.campaign-hud-next')?.textContent ?? ''),
+    /Elite in 0:0\d/.test(document.querySelector('.campaign-hud-next')?.textContent ?? ''),
   );
   await page.screenshot({ path: 'artifacts/campaign-05-hud-elite.png' });
   // Task 08.5 §2.3 debug overlay: live DPS and damage per source (?debug only).
   const overlay = page.getByRole('complementary', { name: 'Debug Overlay' });
   await overlay.waitFor();
-  assert.match(await overlay.innerText(), /Урон по источникам[\s\S]*Лук/i);
+  assert.match(await overlay.innerText(), /Damage by source[\s\S]*Bow/i);
   const overlayTotal = await overlay.innerText();
-  assert.match(overlayTotal, /Всего урона\s+[1-9]/);
+  assert.match(overlayTotal, /Total damage\s+[1-9]/);
   // Task 08.5 §4.2: each run has its own seed, shown in the overlay.
   const runSeed = (await state()).world.seed;
   assert.ok(Number.isSafeInteger(runSeed) && runSeed >= 0 && runSeed <= 4294967295);
   assert.equal(await page.getByTestId('debug-seed').innerText(), String(runSeed));
   await fastForward(121);
   await page.waitForFunction(() =>
-    document.querySelector('.campaign-alert')?.textContent?.includes('Элита: Свирепый громила'),
+    document.querySelector('.campaign-alert')?.textContent?.includes('Elite: Savage Brute'),
   );
   await fastForward(600);
-  await page.getByRole('progressbar', { name: 'Здоровье босса' }).waitFor();
-  assert.match(await page.getByLabel('Босс: Терновый страж').innerText(), /Терновый страж/);
+  await page.getByRole('progressbar', { name: 'Boss health' }).waitFor();
+  assert.match(await page.getByLabel('Boss: Thornwarden').innerText(), /Thornwarden/);
   // Task 22: after the map duration nothing is scheduled — the countdown is hidden (coins stay).
   assert.equal(await page.locator('.campaign-hud-next').count(), 0);
   assert.match(await hud.innerText(), /◎ \d+/);
@@ -184,92 +184,92 @@ try {
   assert.equal(s.world.campaign.durationReached, true);
   assert.ok(s.world.campaign.boss?.alive, 'the boss spawned at 10:00 and is alive');
   await command({ type: 'clear-enemies' });
-  await page.getByRole('dialog', { name: 'Победа.' }).waitFor();
-  const results = page.getByRole('dialog', { name: 'Победа.' });
+  await page.getByRole('dialog', { name: 'Victory.' }).waitFor();
+  const results = page.getByRole('dialog', { name: 'Victory.' });
   await page.waitForFunction(() =>
-    document.querySelector('.results-save')?.textContent?.includes('Прогресс сохранён'),
+    document.querySelector('.results-save')?.textContent?.includes('Progress saved'),
   );
   const text = await results.innerText();
   assert.match(text, /\+150 XP/);
   // Task 11: Gold = coins collected in the run + victory bonus (30 on map 1).
-  assert.match(text, /Монеты\s+\d+/);
-  assert.match(text, /Бонус за победу\s+\+30/);
-  assert.match(text, /Руда\s+\+6 \(первая победа ×3\)/); // Task 19: Map 1, first victory
+  assert.match(text, /Coins\s+\d+/);
+  assert.match(text, /Victory bonus\s+\+30/);
+  assert.match(text, /Ore\s+\+6 \(first victory ×3\)/); // Task 19: Map 1, first victory
   assert.match(text, /1 → 2 \(\+1\)/);
-  assert.match(text, /Очки талантов\s+\+1/);
-  assert.match(text, /Открыта карта 2: Туманные болота/);
-  assert.match(text, /Терновый страж повержен/);
+  assert.match(text, /Talent points\s+\+1/);
+  assert.match(text, /Map unlocked 2: Misty Marshes/);
+  assert.match(text, /Thornwarden defeated/);
   // Task 08.5 §2.2: compact run statistics on the results screen.
-  const statsPanel = results.getByRole('region', { name: 'Статистика забега' });
+  const statsPanel = results.getByRole('region', { name: 'Run statistics' });
   const statsText = await statsPanel.innerText();
-  assert.equal(await results.getByLabel(`Сид забега: ${runSeed}`).count(), 1);
-  assert.match(statsText, /Главные источники урона[\s\S]*Лук[\s\S]*\d+%/i);
-  assert.match(statsText, /Получено урона/);
-  assert.match(statsText, /Гибель\s+не погибали/);
+  assert.equal(await results.getByLabel(`Run seed: ${runSeed}`).count(), 1);
+  assert.match(statsText, /Top damage sources[\s\S]*Bow[\s\S]*\d+%/i);
+  assert.match(statsText, /Damage taken/);
+  assert.match(statsText, /Death\s+never fell/);
   await page.screenshot({ path: 'artifacts/campaign-03-victory.png' });
   const afterWin = await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.profile')));
   const winGold = afterWin.gold;
   assert.ok(winGold >= 30, 'victory pays at least the bonus');
-  assert.match(text, new RegExp(`Золото\\s+\\+${winGold}`));
+  assert.match(text, new RegExp(`Gold\\s+\\+${winGold}`));
   assert.equal(afterWin.highestUnlockedMap, 2);
   assert.equal(afterWin.classes.archer.level, 2);
   assert.equal(afterWin.stats.wins, 1);
   assert.ok(afterWin.recentRuns[0].stats.damageDealt > 0, 'recent run keeps the stats summary');
   assert.ok(afterWin.recentRuns[0].stats.topSources.length >= 1);
-  await results.getByRole('button', { name: 'В меню' }).click();
+  await results.getByRole('button', { name: 'To menu' }).click();
   await nav.waitFor();
-  assert.equal(await page.getByLabel(`Золото: ${winGold}`).count(), 1);
+  assert.equal(await page.getByLabel(`Gold: ${winGold}`).count(), 1);
 
   // Restart browser (reload): progress intact; Map 2 with another class; shared Gold, separate XP.
   await page.reload();
   await page.waitForFunction(() => !!window.__alpha);
   await nav.waitFor();
-  assert.equal(await page.getByLabel(`Золото: ${winGold}`).count(), 1);
-  await nav.getByRole('button', { name: 'Прогресс', exact: true }).click();
-  assert.match(await page.locator('.progression-page').innerText(), /Пройдено карт: 1 \/ 40/);
-  assert.match(await page.locator('.recent-runs').innerText(), /Победа · карта 1/);
+  assert.equal(await page.getByLabel(`Gold: ${winGold}`).count(), 1);
+  await nav.getByRole('button', { name: 'Progress', exact: true }).click();
+  assert.match(await page.locator('.progression-page').innerText(), /Maps cleared: 1 \/ 40/);
+  assert.match(await page.locator('.recent-runs').innerText(), /Victory · map 1/);
   await page.screenshot({ path: 'artifacts/campaign-04-progression.png', fullPage: true });
   // Task 09 §1.5: talent screen (selected class = archer, level 2 → 1 point). Task 13: own page;
-  // a node opens its ranks in the detail panel, which holds the «Изучить» button.
-  await nav.getByRole('button', { name: 'Таланты', exact: true }).click();
-  const talents = page.getByRole('region', { name: 'Таланты', exact: true });
-  const detail = page.getByRole('region', { name: 'Описание таланта' });
+  // a node opens its ranks in the detail panel, which holds the «Learn» button.
+  await nav.getByRole('button', { name: 'Talents', exact: true }).click();
+  const talents = page.getByRole('region', { name: 'Talents', exact: true });
+  const detail = page.getByRole('region', { name: 'Talent details' });
   const pick = (item) => item.locator('.talent-orb').click();
-  assert.match(await talents.innerText(), /Свободно очков: 1 из 1/);
+  assert.match(await talents.innerText(), /Free points: 1 of 1/);
   // Task 09.1 G0: the catalog is approved; not-yet-implemented ranks are flagged instead.
-  assert.match(await talents.innerText(), /Часть рангов пока не действует в бою/);
-  const superBranch = talents.getByRole('region', { name: /^Ветка 3\./ });
-  assert.match(await superBranch.innerText(), /доступно с 30 уровня/);
+  assert.match(await talents.innerText(), /Some ranks do not work in combat yet/);
+  const superBranch = talents.getByRole('region', { name: /^Branch 3\./ });
+  assert.match(await superBranch.innerText(), /unlocks at level 30/);
   await pick(superBranch.getByRole('listitem').first());
-  assert.equal(await detail.getByRole('button', { name: /Изучить/ }).isDisabled(), true);
-  const eye = talents.getByRole('listitem', { name: /^Меткий глаз: Ранг 0$/ });
-  const next = talents.getByRole('listitem', { name: /^Слабая точка: Ранг 0$/ });
+  assert.equal(await detail.getByRole('button', { name: /Learn/ }).isDisabled(), true);
+  const eye = talents.getByRole('listitem', { name: /^Keen Eye: Rank 0$/ });
+  const next = talents.getByRole('listitem', { name: /^Weak Spot: Rank 0$/ });
   await pick(next);
-  assert.equal(await detail.getByRole('button', { name: 'Изучить ранг I' }).isDisabled(), true);
-  assert.match(await detail.innerText(), /Сначала изучите предыдущий талант до ранга II/);
+  assert.equal(await detail.getByRole('button', { name: 'Learn rank I' }).isDisabled(), true);
+  assert.match(await detail.innerText(), /Learn the previous talent to rank II first/);
   await pick(eye);
-  await detail.getByRole('button', { name: 'Изучить ранг I' }).click();
-  await talents.getByText(/Свободно очков: 0 из 1/).waitFor();
+  await detail.getByRole('button', { name: 'Learn rank I' }).click();
+  await talents.getByText(/Free points: 0 of 1/).waitFor();
   assert.deepEqual(
     await page.evaluate(
       () => JSON.parse(localStorage.getItem('skazki.profile')).classes.archer.talents,
     ),
     { 'archer.b1.n01': 1 },
   );
-  assert.equal(await talents.getByRole('listitem', { name: /^Меткий глаз: Ранг I$/ }).count(), 1);
+  assert.equal(await talents.getByRole('listitem', { name: /^Keen Eye: Rank I$/ }).count(), 1);
   assert.equal(
-    await detail.getByRole('button', { name: 'Изучить ранг II' }).isDisabled(),
+    await detail.getByRole('button', { name: 'Learn rank II' }).isDisabled(),
     true,
     'no points left',
   );
   await talents
-    .getByRole('group', { name: 'Класс дерева талантов' })
-    .getByRole('button', { name: 'Маг' })
+    .getByRole('group', { name: 'Talent tree class' })
+    .getByRole('button', { name: 'Mage' })
     .click();
-  assert.match(await talents.innerText(), /Свободно очков: 0 из 0/);
+  assert.match(await talents.innerText(), /Free points: 0 of 0/);
   await page.screenshot({ path: 'artifacts/campaign-12-talents.png', fullPage: true });
-  await nav.getByRole('button', { name: 'Персонаж', exact: true }).click();
-  await page.getByRole('article', { name: /Маг/ }).getByRole('button', { name: 'Выбрать' }).click();
+  await nav.getByRole('button', { name: 'Hero', exact: true }).click();
+  await page.getByRole('article', { name: /Mage/ }).getByRole('button', { name: 'Choose' }).click();
   await (await openMap(2)).click();
   await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
   s = await state();
@@ -278,13 +278,13 @@ try {
   assert.equal(s.world.character.permanentLevel, 1, 'mage XP is separate from archer XP');
 
   // Quit mid-run: abandoned, no rewards, recorded once.
-  await page.getByRole('button', { name: 'Пауза', exact: true }).click();
-  const buildLabel = /^Версия сборки: v\d+\.\d+\.\d+ · ([0-9a-f]{7}|unknown)$/;
+  await page.getByRole('button', { name: 'Pause', exact: true }).click();
+  const buildLabel = /^Build version: v\d+\.\d+\.\d+ · ([0-9a-f]{7}|unknown)$/;
   await page.getByRole('dialog').getByLabel(buildLabel).waitFor(); // 3.1 pause screen
-  // 3.3 «Сообщить о проблеме» from the pause screen: a JSON report with every field.
+  // 3.3 «Report a problem» from the pause screen: a JSON report with every field.
   const [reportDownload] = await Promise.all([
     page.waitForEvent('download'),
-    page.getByRole('button', { name: 'Сообщить о проблеме' }).click(),
+    page.getByRole('button', { name: 'Report a problem' }).click(),
   ]);
   assert.match(reportDownload.suggestedFilename(), /^skazki-report-\d{4}-\d\d-\d\d-\d{4}\.json$/);
   const reportPath = await reportDownload.path();
@@ -300,8 +300,8 @@ try {
   assert.equal(report.save.ok, true);
   assert.equal(report.save.profile.gold, winGold);
   assert.match(report.userAgent, /Chrome/);
-  await page.getByRole('status').filter({ hasText: 'Отчёт сохранён' }).waitFor();
-  await page.getByRole('button', { name: /Выйти в меню · забег не засчитается/ }).click();
+  await page.getByRole('status').filter({ hasText: 'Report saved' }).waitFor();
+  await page.getByRole('button', { name: /Exit to menu · the run will not count/ }).click();
   await nav.waitFor();
   const afterQuit = await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.profile')));
   assert.equal(afterQuit.gold, winGold);
@@ -310,7 +310,7 @@ try {
   assert.equal(afterQuit.stats.runs, 2);
 
   // Reload during a run abandons it as well (committed on pagehide).
-  await page.getByRole('button', { name: 'Начать забег' }).click();
+  await page.getByRole('button', { name: 'Start run' }).click();
   await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
   await page.reload();
   await page.waitForFunction(() => !!window.__alpha);
@@ -321,13 +321,13 @@ try {
 
   // 5.5 Save Management: status, warning, export download, import (invalid → unchanged; valid →
   // confirm → replace), visible warning on a write failure.
-  await nav.getByRole('button', { name: 'Настройки', exact: true }).click();
-  const mgmt = page.getByRole('region', { name: 'Управление сохранением' });
-  assert.match(await mgmt.innerText(), /Прогресс сохранён/);
-  assert.match(await mgmt.innerText(), /Очистка данных сайта или браузера удалит его/);
+  await nav.getByRole('button', { name: 'Settings', exact: true }).click();
+  const mgmt = page.getByRole('region', { name: 'Save management' });
+  assert.match(await mgmt.innerText(), /Progress saved/);
+  assert.match(await mgmt.innerText(), /Clearing site or browser data deletes it/);
   const [download] = await Promise.all([
     page.waitForEvent('download'),
-    mgmt.getByRole('button', { name: 'Экспорт сохранения' }).click(),
+    mgmt.getByRole('button', { name: 'Export save' }).click(),
   ]);
   assert.match(download.suggestedFilename(), /^skazki-save-\d{4}-\d{2}-\d{2}\.json$/);
   const exported = JSON.parse(
@@ -336,51 +336,48 @@ try {
   assert.equal(exported.gold, winGold);
   const stored = () => page.evaluate(() => localStorage.getItem('skazki.profile'));
   const before = await stored();
-  await page.getByLabel('Файл сохранения').setInputFiles({
+  await page.getByLabel('Save file').setInputFiles({
     name: 'broken.json',
     mimeType: 'application/json',
     buffer: Buffer.from('{"schemaVersion": 1, oops'),
   });
-  await page.getByText(/Файл не импортирован: Файл сохранения повреждён/).waitFor();
+  await page.getByText(/File not imported: The save file is damaged/).waitFor();
   assert.equal(await stored(), before, 'invalid import leaves the save unchanged');
-  await page.getByLabel('Файл сохранения').setInputFiles({
+  await page.getByLabel('Save file').setInputFiles({
     name: 'newer.json',
     mimeType: 'application/json',
     buffer: Buffer.from(JSON.stringify({ ...exported, schemaVersion: 9 })),
   });
-  await page.getByText(/более новой версией игры/).waitFor();
+  await page.getByText(/a newer version of the game/).waitFor();
   assert.equal(await stored(), before);
-  await page.getByLabel('Файл сохранения').setInputFiles({
+  await page.getByLabel('Save file').setInputFiles({
     name: 'rich.json',
     mimeType: 'application/json',
     buffer: Buffer.from(JSON.stringify({ ...exported, gold: 999 })),
   });
-  const confirm = page.getByRole('dialog', { name: 'Заменить сохранение?' });
+  const confirm = page.getByRole('dialog', { name: 'Replace your save?' });
   await confirm.waitFor();
-  assert.match(await confirm.innerText(), /золото 999/);
-  assert.equal(
-    await confirm.getByRole('button', { name: 'Сначала экспортировать текущее' }).count(),
-    1,
-  );
-  await confirm.getByRole('button', { name: 'Отмена' }).click();
+  assert.match(await confirm.innerText(), /Gold 999/);
+  assert.equal(await confirm.getByRole('button', { name: 'Export current first' }).count(), 1);
+  await confirm.getByRole('button', { name: 'Cancel' }).click();
   assert.equal(await stored(), before, 'cancel changes nothing');
-  await page.getByLabel('Файл сохранения').setInputFiles({
+  await page.getByLabel('Save file').setInputFiles({
     name: 'rich.json',
     mimeType: 'application/json',
     buffer: Buffer.from(JSON.stringify({ ...exported, gold: 999 })),
   });
-  await confirm.getByRole('button', { name: 'Заменить сохранение' }).click();
-  await page.getByText('Сохранение импортировано.').waitFor();
+  await confirm.getByRole('button', { name: 'Replace save' }).click();
+  await page.getByText('Save imported.').waitFor();
   assert.equal(JSON.parse(await stored()).gold, 999);
-  assert.equal(await page.getByLabel('Золото: 999').count(), 1);
+  assert.equal(await page.getByLabel('Gold: 999').count(), 1);
   // Import the original export back (round-trip).
-  await page.getByLabel('Файл сохранения').setInputFiles({
+  await page.getByLabel('Save file').setInputFiles({
     name: download.suggestedFilename(),
     mimeType: 'application/json',
     buffer: Buffer.from(JSON.stringify(exported)),
   });
-  await confirm.getByRole('button', { name: 'Заменить сохранение' }).click();
-  await page.getByText('Сохранение импортировано.').waitFor();
+  await confirm.getByRole('button', { name: 'Replace save' }).click();
+  await page.getByText('Save imported.').waitFor();
   assert.equal(JSON.parse(await stored()).gold, winGold);
   await page.screenshot({ path: 'artifacts/campaign-07-settings.png', fullPage: true });
   // Write failure: storage refuses writes → visible warning, nothing claimed as saved.
@@ -391,37 +388,37 @@ try {
       throw new DOMException('full', 'QuotaExceededError');
     };
   });
-  await nav.getByRole('button', { name: 'Персонаж', exact: true }).click();
+  await nav.getByRole('button', { name: 'Hero', exact: true }).click();
   await page
-    .getByRole('article', { name: /Воин/ })
-    .getByRole('button', { name: 'Выбрать' })
+    .getByRole('article', { name: /Warrior/ })
+    .getByRole('button', { name: 'Choose' })
     .click();
   const banner = page.locator('.save-banner');
   await banner.waitFor();
-  assert.match(await banner.innerText(), /НЕ сохранены[\s\S]*закончилось место/);
+  assert.match(await banner.innerText(), /NOT saved[\s\S]*storage is full/);
   await page.screenshot({ path: 'artifacts/campaign-08-save-warning.png' });
   await page.evaluate(() => window.__restoreStorage());
-  await nav.getByRole('button', { name: 'Настройки', exact: true }).click();
-  await page.getByRole('button', { name: 'Повторить сохранение' }).click();
-  await page.getByText('Прогресс сохранён.', { exact: true }).first().waitFor();
+  await nav.getByRole('button', { name: 'Settings', exact: true }).click();
+  await page.getByRole('button', { name: 'Retry save' }).click();
+  await page.getByText('Progress saved.', { exact: true }).first().waitFor();
   assert.equal(JSON.parse(await stored()).selectedClass, 'warrior');
   assert.equal(await banner.count(), 0);
 
   // 6.1 DEV campaign tools (normal pipelines): unlock maps, class level, Gold, boss, force win.
-  await page.getByRole('button', { name: /DEV · Тестирование/ }).click();
+  await page.getByRole('button', { name: /DEV · Testing/ }).click();
   const devProfile = page.getByRole('group', { name: 'Campaign Debug' });
-  await devProfile.getByRole('button', { name: 'Открыть все карты' }).click();
-  await page.getByLabel('Debug уровень класса').fill('12');
-  await devProfile.getByRole('button', { name: /Установить уровень/ }).click();
-  await page.getByLabel('Debug золото').fill('500');
-  await devProfile.getByRole('button', { name: 'Выдать золото' }).click();
+  await devProfile.getByRole('button', { name: 'Unlock all maps' }).click();
+  await page.getByLabel('Debug class level').fill('12');
+  await devProfile.getByRole('button', { name: /Set level/ }).click();
+  await page.getByLabel('Debug gold').fill('500');
+  await devProfile.getByRole('button', { name: 'Grant Gold' }).click();
   // Task 19: ore for the forge step below (Map 1 was won above: first victory ×3 = 6 ore).
   const oreBefore = JSON.parse(await stored()).ore;
   assert.equal(oreBefore, 6);
-  await page.getByLabel('Debug руда').fill('20');
+  await page.getByLabel('Debug ore').fill('20');
   await page
     .getByRole('group', { name: 'Gear Debug' })
-    .getByRole('button', { name: 'Выдать руду' })
+    .getByRole('button', { name: 'Grant Ore' })
     .click();
   const devSave = JSON.parse(await stored());
   assert.equal(devSave.ore, oreBefore + 20);
@@ -429,106 +426,106 @@ try {
   assert.equal(devSave.classes[devSave.selectedClass].level, 12);
   // Task 13: the DEV panel covers the right side of the redesigned pages; close it for the shop,
   // equipment and map steps and reopen it once the Map 10 run has started.
-  await page.getByRole('button', { name: /DEV · Закрыть/ }).click();
+  await page.getByRole('button', { name: /DEV · Close/ }).click();
   // Task 11: shop → buy (with confirmation, one atomic save) → equip on the Character screen.
-  await nav.getByRole('button', { name: 'Магазин', exact: true }).click();
-  const slots = page.getByRole('group', { name: 'Слоты магазина' });
-  assert.equal(await slots.getByRole('button').count(), 8); // Task 19: + Шлем, Перчатки, Штаны; Task 20: + Питомцы
+  await nav.getByRole('button', { name: 'Shop', exact: true }).click();
+  const slots = page.getByRole('group', { name: 'Shop slots' });
+  assert.equal(await slots.getByRole('button').count(), 8); // Task 19: + Helmet, Gloves, Legs; Task 20: + Pets
   assert.match(
-    await page.getByRole('listitem', { name: /^Добротный тяжёлый меч:/ }).innerText(),
-    /Откроется после карты 8/,
+    await page.getByRole('listitem', { name: /^Uncommon Heavy Sword:/ }).innerText(),
+    /Unlocks after map 8/,
   );
-  await slots.getByRole('button', { name: 'Броня' }).click();
-  const plate = page.getByRole('listitem', { name: /^Обычные латы:/ });
-  await plate.getByRole('button', { name: /Купить · ◎ 80/ }).click();
-  // Task 13 keyboard: the confirm dialog focuses «Подтвердить»; Enter confirms.
-  await page.getByRole('dialog', { name: /Купить «Обычные латы» за 80 золота\?/ }).waitFor();
-  assert.equal(await page.evaluate(() => document.activeElement?.textContent), 'Подтвердить');
+  await slots.getByRole('button', { name: 'Armor' }).click();
+  const plate = page.getByRole('listitem', { name: /^Common Plate Armor:/ });
+  await plate.getByRole('button', { name: /Buy · ◎ 80/ }).click();
+  // Task 13 keyboard: the confirm dialog focuses «Confirm»; Enter confirms.
+  await page.getByRole('dialog', { name: /Buy “Common Plate Armor” for 80 Gold\?/ }).waitFor();
+  assert.equal(await page.evaluate(() => document.activeElement?.textContent), 'Confirm');
   await page.keyboard.press('Enter');
-  await page.getByText('Куплено: Обычные латы.').waitFor();
+  await page.getByText('Bought: Common Plate Armor.').waitFor();
   const bought = JSON.parse(await stored());
   assert.equal(bought.gold, devSave.gold - 80);
   assert.deepEqual(bought.ownedItems, ['plate-t1']);
   // Esc cancels the dialog (no purchase) and stays in the shop (it does not go back to the hub).
-  await slots.getByRole('button', { name: 'Амулет' }).click();
+  await slots.getByRole('button', { name: 'Amulet' }).click();
   await page
-    .getByRole('listitem', { name: /^Обычный амулет силы:/ })
-    .getByRole('button', { name: /Купить/ })
+    .getByRole('listitem', { name: /^Common Amulet of Might:/ })
+    .getByRole('button', { name: /Buy/ })
     .click();
   await page.getByRole('dialog').waitFor();
   await page.keyboard.press('Escape');
   assert.equal(await page.getByRole('dialog').count(), 0);
   assert.equal(
-    await nav.getByRole('button', { name: 'Магазин', exact: true }).getAttribute('aria-current'),
+    await nav.getByRole('button', { name: 'Shop', exact: true }).getAttribute('aria-current'),
     'page',
   );
   assert.equal(JSON.parse(await stored()).gold, bought.gold);
-  await slots.getByRole('button', { name: 'Броня' }).click();
+  await slots.getByRole('button', { name: 'Armor' }).click();
   await page.screenshot({ path: 'artifacts/campaign-13-shop.png', fullPage: true });
-  await nav.getByRole('button', { name: 'Экипировка', exact: true }).click();
-  const gear = page.getByRole('region', { name: /^Снаряжение:/ });
-  await gear.getByRole('button', { name: /^Обычные латы/ }).click();
-  const preview = gear.getByRole('group', { name: 'Предпросмотр снаряжения' });
-  assert.match(await preview.innerText(), /Здоровье\s+\+\d+/);
-  // Task 22: «Надеть» appears next to the selection — in the viewport without scrolling.
-  await inViewport(preview.getByRole('button', { name: 'Надеть' }), 'desktop «Надеть»');
-  await preview.getByRole('button', { name: 'Надеть' }).click();
+  await nav.getByRole('button', { name: 'Equipment', exact: true }).click();
+  const gear = page.getByRole('region', { name: /^Equipment:/ });
+  await gear.getByRole('button', { name: /^Common Plate Armor/ }).click();
+  const preview = gear.getByRole('group', { name: 'Equipment preview' });
+  assert.match(await preview.innerText(), /Health\s+\+\d+/);
+  // Task 22: «Equip» appears next to the selection — in the viewport without scrolling.
+  await inViewport(preview.getByRole('button', { name: 'Equip' }), 'desktop «Equip»');
+  await preview.getByRole('button', { name: 'Equip' }).click();
   await page.waitForFunction(
     (c) =>
       JSON.parse(localStorage.getItem('skazki.profile')).classes[c].loadout.armor === 'plate-t1',
     bought.selectedClass,
   );
   await page.screenshot({ path: 'artifacts/campaign-14-equipment.png', fullPage: true });
-  // Task 19: forge from the item preview («В кузницу») → «Улучшить» (one save) → +1.
-  await gear.getByRole('button', { name: 'Снять: Броня' }).click();
-  await gear.getByRole('button', { name: /^Обычные латы/ }).click();
+  // Task 19: forge from the item preview («To the forge») → «Upgrade» (one save) → +1.
+  await gear.getByRole('button', { name: 'Unequip: Armor' }).click();
+  await gear.getByRole('button', { name: /^Common Plate Armor/ }).click();
   await gear
-    .getByRole('group', { name: 'Предпросмотр снаряжения' })
-    .getByRole('button', { name: /В кузницу/ })
+    .getByRole('group', { name: 'Equipment preview' })
+    .getByRole('button', { name: /To the forge/ })
     .click();
-  const forge = page.getByRole('group', { name: 'Улучшение предмета' });
-  await forge.getByText('Обычные латы', { exact: true }).waitFor();
+  const forge = page.getByRole('group', { name: 'Item upgrade' });
+  await forge.getByText('Common Plate Armor', { exact: true }).waitFor();
   const preForge = JSON.parse(await stored());
-  await forge.getByRole('button', { name: /Улучшить до \+1/ }).click();
-  await forge.getByRole('heading', { name: 'Обычные латы +1' }).waitFor();
+  await forge.getByRole('button', { name: /Upgrade to \+1/ }).click();
+  await forge.getByRole('heading', { name: 'Common Plate Armor +1' }).waitFor();
   const forged = JSON.parse(await stored());
   assert.deepEqual(forged.itemLevels, { 'plate-t1': 1 });
   assert.equal(forged.gold, preForge.gold - 8);
   assert.equal(forged.ore, preForge.ore - 1);
-  assert.match(await forge.innerText(), /Здоровье\s+\+5\.25%\s+\+5\.5%/);
+  assert.match(await forge.innerText(), /Health\s+\+5\.25%\s+\+5\.5%/);
   await page.screenshot({ path: 'artifacts/campaign-14b-forge.png', fullPage: true });
-  await nav.getByRole('button', { name: 'Экипировка', exact: true }).click();
-  await gear.getByRole('button', { name: /^Обычные латы \+1/ }).click();
+  await nav.getByRole('button', { name: 'Equipment', exact: true }).click();
+  await gear.getByRole('button', { name: /^Common Plate Armor \+1/ }).click();
   await gear
-    .getByRole('group', { name: 'Предпросмотр снаряжения' })
-    .getByRole('button', { name: 'Надеть' })
+    .getByRole('group', { name: 'Equipment preview' })
+    .getByRole('button', { name: 'Equip' })
     .click();
-  await gear.getByRole('button', { name: 'Броня: Обычные латы +1' }).waitFor();
-  // Task 22: the equipped item's details → «Улучшить в кузнице» opens the forge on that item;
-  // the forge mode switch toggles Предметы / Питомцы; «К экипировке» returns.
-  await gear.getByRole('button', { name: /^Броня: Обычные латы \+1, подробнее/ }).click();
-  const equippedPanel = gear.getByRole('group', { name: 'Надетый предмет' });
-  assert.match(await equippedPanel.innerText(), /Обычные латы \+1[\s\S]*Здоровье \+5\.3%/);
-  await equippedPanel.getByRole('button', { name: /Улучшить в кузнице/ }).click();
-  await forge.getByRole('heading', { name: 'Обычные латы +1' }).waitFor();
-  const modes = page.getByRole('group', { name: 'Разделы кузницы' });
-  await modes.getByRole('button', { name: /Питомцы/ }).click();
+  await gear.getByRole('button', { name: 'Armor: Common Plate Armor +1' }).waitFor();
+  // Task 22: the equipped item's details → «Upgrade in the forge» opens the forge on that item;
+  // the forge mode switch toggles Items / Pets; «Back to equipment» returns.
+  await gear.getByRole('button', { name: /^Armor: Common Plate Armor \+1, details/ }).click();
+  const equippedPanel = gear.getByRole('group', { name: 'Equipped item' });
+  assert.match(await equippedPanel.innerText(), /Common Plate Armor \+1[\s\S]*Health \+5\.3%/);
+  await equippedPanel.getByRole('button', { name: /Upgrade in the forge/ }).click();
+  await forge.getByRole('heading', { name: 'Common Plate Armor +1' }).waitFor();
+  const modes = page.getByRole('group', { name: 'Forge sections' });
+  await modes.getByRole('button', { name: /Pets/ }).click();
   assert.equal(
-    await modes.getByRole('button', { name: /Питомцы/ }).getAttribute('aria-pressed'),
+    await modes.getByRole('button', { name: /Pets/ }).getAttribute('aria-pressed'),
     'true',
   );
-  await modes.getByRole('button', { name: /Предметы/ }).click();
-  await page.getByRole('group', { name: 'Улучшение предмета' }).waitFor();
-  await page.getByRole('button', { name: /К экипировке/ }).click();
-  await gear.getByRole('button', { name: /^Броня: Обычные латы \+1/ }).waitFor();
+  await modes.getByRole('button', { name: /Items/ }).click();
+  await page.getByRole('group', { name: 'Item upgrade' }).waitFor();
+  await page.getByRole('button', { name: /Back to equipment/ }).click();
+  await gear.getByRole('button', { name: /^Armor: Common Plate Armor \+1/ }).waitFor();
   assert.equal(
-    await nav.getByRole('button', { name: 'Экипировка', exact: true }).getAttribute('aria-current'),
+    await nav.getByRole('button', { name: 'Equipment', exact: true }).getAttribute('aria-current'),
     'page',
   );
   const goldBefore = JSON.parse(await stored()).gold;
   await (await openMap(10)).click();
   await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
-  await page.getByRole('button', { name: /DEV · Тестирование/ }).click();
+  await page.getByRole('button', { name: /DEV · Testing/ }).click();
   assert.equal((await state()).world.character.permanentLevel, 12);
   const devRun = page.getByRole('group', { name: 'Campaign Run Debug' });
   const killsBefore = (await state()).world.kills;
@@ -538,37 +535,37 @@ try {
   await page.evaluate(() =>
     window.__alpha.command({ type: 'spawn', kind: 'melee', distance: 150 }),
   );
-  await devRun.getByRole('button', { name: 'Убить всех на экране' }).click();
+  await devRun.getByRole('button', { name: 'Kill everything on screen' }).click();
   await page.waitForFunction((k) => window.__alpha.state().world.kills > k, killsBefore);
-  await devRun.getByRole('button', { name: 'Призвать босса' }).click();
-  await page.getByRole('progressbar', { name: 'Здоровье босса' }).waitFor();
-  await devRun.getByRole('button', { name: 'HP босса → 10%' }).click();
-  const speed = page.getByRole('group', { name: 'Ускорение забега' });
+  await devRun.getByRole('button', { name: 'Summon boss' }).click();
+  await page.getByRole('progressbar', { name: 'Boss health' }).waitFor();
+  await devRun.getByRole('button', { name: 'Boss HP → 10%' }).click();
+  const speed = page.getByRole('group', { name: 'Run speed-up' });
   await speed.getByRole('button', { name: '×8' }).click();
   await page.waitForFunction(() => window.__alpha.state().timeScale === 8);
   assert.equal(
     await speed.getByRole('button', { name: '×8' }).getAttribute('aria-pressed'),
     'true',
   );
-  await devRun.getByRole('button', { name: 'Победа', exact: true }).click();
-  const devResults = page.getByRole('dialog', { name: 'Победа.' });
+  await devRun.getByRole('button', { name: 'Victory', exact: true }).click();
+  const devResults = page.getByRole('dialog', { name: 'Victory.' });
   await devResults.waitFor();
   await page.waitForFunction(() =>
-    document.querySelector('.results-save')?.textContent?.includes('Прогресс сохранён'),
+    document.querySelector('.results-save')?.textContent?.includes('Progress saved'),
   );
   const afterDev = JSON.parse(await stored());
   assert.ok(afterDev.completedMaps.includes(10), 'forced victory completes Map 10');
   assert.ok(afterDev.gold > goldBefore, 'forced victory pays through the normal results pipeline');
   await page.screenshot({ path: 'artifacts/campaign-10-dev-victory.png' });
-  await devResults.getByRole('button', { name: 'В меню' }).click();
+  await devResults.getByRole('button', { name: 'To menu' }).click();
   await nav.waitFor();
   page.once('dialog', (d) => d.accept());
-  await devProfile.getByRole('button', { name: 'Сбросить тестовый прогресс' }).click();
-  await page.getByLabel('Золото: 0').waitFor();
+  await devProfile.getByRole('button', { name: 'Reset test progress' }).click();
+  await page.getByLabel('Gold: 0').waitFor();
   assert.equal(JSON.parse(await stored()).highestUnlockedMap, 1);
   // Task 09 §1.6 (DEV): talent debug — superpower preset, set a rank, reset the tree.
   const talentDebug = page.getByRole('group', { name: 'Talent Debug' });
-  await talentDebug.getByRole('button', { name: 'Пресет сверхспособности вкл/выкл' }).click();
+  await talentDebug.getByRole('button', { name: 'Toggle superpower preset' }).click();
   await page.waitForFunction(
     () =>
       JSON.parse(localStorage.getItem('skazki.profile')).classes.warrior.talents[
@@ -576,9 +573,9 @@ try {
       ] === 1,
   );
   assert.equal(JSON.parse(await stored()).classes.warrior.level, 30);
-  await talentDebug.getByLabel('Debug талант').selectOption('warrior.b1.n03');
-  await talentDebug.getByLabel('Debug ранг таланта').selectOption('3');
-  await talentDebug.getByRole('button', { name: 'Установить ранг таланта' }).click();
+  await talentDebug.getByLabel('Debug talent', { exact: true }).selectOption('warrior.b1.n03');
+  await talentDebug.getByLabel('Debug talent rank').selectOption('3');
+  await talentDebug.getByRole('button', { name: 'Set talent rank' }).click();
   await page.waitForFunction(
     () =>
       JSON.parse(localStorage.getItem('skazki.profile')).classes.warrior.talents[
@@ -591,70 +588,70 @@ try {
     'warrior.b1.n02': 2,
     'warrior.b1.n03': 3,
   });
-  await talentDebug.getByRole('button', { name: 'Сбросить дерево талантов' }).click();
+  await talentDebug.getByRole('button', { name: 'Reset talent tree' }).click();
   await page.waitForFunction(
     () =>
       Object.keys(JSON.parse(localStorage.getItem('skazki.profile')).classes.warrior.talents)
         .length === 0,
   );
-  await page.getByRole('button', { name: /DEV · Закрыть/ }).click();
+  await page.getByRole('button', { name: /DEV · Close/ }).click();
 
   // Task 08.5 §3.2: a crash mid-run shows the friendly screen, logs the error in its own key,
-  // leaves the save byte-identical and «Вернуться в меню» recovers a working game.
+  // leaves the save byte-identical and «Back to the menu» recovers a working game.
   await page.evaluate(() => localStorage.removeItem('skazki.errors'));
-  await page.getByRole('button', { name: 'Начать забег' }).click();
+  await page.getByRole('button', { name: 'Start run' }).click();
   await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
   const saveBeforeCrash = await stored();
   page.once('pageerror', () => {}); // the simulated error is expected
   const expectedErrors = errors.length;
-  await page.getByRole('button', { name: /DEV · Тестирование/ }).click();
-  await page.getByRole('button', { name: 'Сымитировать сбой' }).click();
-  const crashDialog = page.getByRole('alertdialog', { name: 'Что-то пошло не так.' });
+  await page.getByRole('button', { name: /DEV · Testing/ }).click();
+  await page.getByRole('button', { name: 'Simulate a crash' }).click();
+  const crashDialog = page.getByRole('alertdialog', { name: 'Something went wrong.' });
   await crashDialog.waitFor();
-  assert.match(await crashDialog.innerText(), /сохранение не изменено/);
+  assert.match(await crashDialog.innerText(), /save is unchanged/);
   await page.screenshot({ path: 'artifacts/campaign-11-crash.png' });
   const errorLog = await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.errors')));
   assert.ok(errorLog.length >= 1 && errorLog.length <= 5);
   assert.match(errorLog.at(-1).message, /Debug crash/);
   assert.equal(await stored(), saveBeforeCrash, 'the crash never writes the save');
-  await crashDialog.getByRole('button', { name: 'Вернуться в меню' }).click();
+  await crashDialog.getByRole('button', { name: 'Back to the menu' }).click();
   await nav.waitFor();
   assert.equal(await stored(), saveBeforeCrash, 'recovery never writes the save');
   await page.waitForFunction(() => window.__alpha?.state().screen === 'menu');
-  await page.getByRole('button', { name: 'Начать забег' }).click();
+  await page.getByRole('button', { name: 'Start run' }).click();
   await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
-  await page.getByRole('button', { name: 'Пауза', exact: true }).click();
-  await page.getByRole('button', { name: /Выйти в меню · забег не засчитается/ }).click();
+  await page.getByRole('button', { name: 'Pause', exact: true }).click();
+  await page.getByRole('button', { name: /Exit to menu · the run will not count/ }).click();
   await nav.waitFor();
   errors.length = expectedErrors; // drop the simulated crash from the unexpected-error list
 
   // Task 08.5 §4.2 (DEV): start the selected map with a given seed.
-  await page.getByRole('button', { name: /DEV · Тестирование/ }).click();
-  await page.getByLabel('Debug сид').fill('424242');
-  await page.getByRole('button', { name: 'Начать выбранную карту с этим сидом' }).click();
+  await page.getByRole('button', { name: /DEV · Testing/ }).click();
+  await page.getByLabel('Debug seed').fill('424242');
+  await page.getByRole('button', { name: 'Start the selected map with this seed' }).click();
   await page.waitForFunction(() => window.__alpha.state().world?.seed === 424242);
-  await page.getByRole('button', { name: /DEV · Закрыть/ }).click();
-  await page.getByRole('button', { name: 'Пауза', exact: true }).click();
-  await page.getByRole('button', { name: /Выйти в меню · забег не засчитается/ }).click();
+  await page.getByRole('button', { name: /DEV · Close/ }).click();
+  await page.getByRole('button', { name: 'Pause', exact: true }).click();
+  await page.getByRole('button', { name: /Exit to menu · the run will not count/ }).click();
   await nav.waitFor();
 
   // Task 08.5 §3.4 (DEV): load the earlier report → its save goes through the normal import.
   const saveBeforeReport = await stored();
-  await page.getByRole('button', { name: /DEV · Тестирование/ }).click();
-  await page.getByLabel('Debug файл отчёта').setInputFiles(reportPath);
-  const replace = page.getByRole('button', { name: 'Заменить сохранение' });
+  await page.getByRole('button', { name: /DEV · Testing/ }).click();
+  await page.getByLabel('Debug report file').setInputFiles(reportPath);
+  const replace = page.getByRole('button', { name: 'Replace save' });
   await replace.waitFor();
   assert.equal(await stored(), saveBeforeReport, 'nothing changes before confirmation');
   await replace.click();
-  await page.getByText('Сохранение импортировано.').waitFor();
+  await page.getByText('Save imported.').waitFor();
   const imported = JSON.parse(await stored());
   assert.equal(imported.profileId, report.save.profile.profileId);
   assert.equal(imported.gold, winGold);
-  await page.getByRole('button', { name: /DEV · Закрыть/ }).click();
+  await page.getByRole('button', { name: /DEV · Close/ }).click();
 
-  // Task 08.5 §5.3: «Тряска экрана» (on by default) lives in its own settings key.
-  await nav.getByRole('button', { name: 'Настройки', exact: true }).click();
-  const shake = page.getByRole('checkbox', { name: 'Тряска экрана' });
+  // Task 08.5 §5.3: «Screen shake» (on by default) lives in its own settings key.
+  await nav.getByRole('button', { name: 'Settings', exact: true }).click();
+  const shake = page.getByRole('checkbox', { name: 'Screen shake' });
   assert.equal(await shake.isChecked(), true);
   const saveBeforeSetting = await stored();
   await shake.uncheck();
@@ -672,31 +669,31 @@ try {
   assert.equal(await stored(), saveBeforeSetting, 'settings never touch the save');
   await page.reload();
   await page.waitForFunction(() => !!window.__alpha);
-  await nav.getByRole('button', { name: 'Настройки', exact: true }).click();
-  assert.equal(await page.getByRole('checkbox', { name: 'Тряска экрана' }).isChecked(), false);
-  await page.getByRole('checkbox', { name: 'Тряска экрана' }).check();
-  // Task 14: sound sliders and «Без звука» persist in the settings key, never in the save.
-  await page.getByRole('slider', { name: 'Музыка' }).fill('20');
-  await page.getByRole('checkbox', { name: 'Без звука' }).check();
+  await nav.getByRole('button', { name: 'Settings', exact: true }).click();
+  assert.equal(await page.getByRole('checkbox', { name: 'Screen shake' }).isChecked(), false);
+  await page.getByRole('checkbox', { name: 'Screen shake' }).check();
+  // Task 14: sound sliders and «Mute» persist in the settings key, never in the save.
+  await page.getByRole('slider', { name: 'Music' }).fill('20');
+  await page.getByRole('checkbox', { name: 'Mute' }).check();
   assert.equal(await stored(), saveBeforeSetting, 'sound settings never touch the save');
   await page.reload();
   await page.waitForFunction(() => !!window.__alpha);
-  await nav.getByRole('button', { name: 'Настройки', exact: true }).click();
-  assert.equal(await page.getByRole('slider', { name: 'Музыка' }).inputValue(), '20');
-  assert.equal(await page.getByRole('checkbox', { name: 'Без звука' }).isChecked(), true);
-  assert.equal(await page.getByRole('slider', { name: 'Музыка' }).isDisabled(), true);
-  await page.getByRole('checkbox', { name: 'Без звука' }).uncheck();
+  await nav.getByRole('button', { name: 'Settings', exact: true }).click();
+  assert.equal(await page.getByRole('slider', { name: 'Music' }).inputValue(), '20');
+  assert.equal(await page.getByRole('checkbox', { name: 'Mute' }).isChecked(), true);
+  assert.equal(await page.getByRole('slider', { name: 'Music' }).isDisabled(), true);
+  await page.getByRole('checkbox', { name: 'Mute' }).uncheck();
 
   // Task 13 §3.1: desktop widths 1024 / 1280 / 1920 — no horizontal scrolling on any page.
   const pagesTabs = [
-    'Главная',
-    'Персонаж',
-    'Экипировка',
-    'Таланты',
-    'Магазин',
-    'Карта похода',
-    'Прогресс',
-    'Настройки',
+    'Home',
+    'Hero',
+    'Equipment',
+    'Talents',
+    'Shop',
+    'Campaign map',
+    'Progress',
+    'Settings',
   ];
   for (const [width, height] of [
     [1024, 720],
@@ -720,7 +717,7 @@ try {
   }
   // Reduced motion: motion tokens drop to 0 ms and the pulsing nodes stop.
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await nav.getByRole('button', { name: 'Карта похода', exact: true }).click();
+  await nav.getByRole('button', { name: 'Campaign map', exact: true }).click();
   assert.equal(
     await page.evaluate(() =>
       getComputedStyle(document.querySelector('.meta-ui')).getPropertyValue('--dur').trim(),
@@ -746,14 +743,14 @@ try {
   // Phone width: every menu page fits without horizontal scrolling.
   await page.setViewportSize({ width: 390, height: 844 });
   for (const tab of [
-    'Главная',
-    'Персонаж',
-    'Экипировка',
-    'Таланты',
-    'Магазин',
-    'Карта похода',
-    'Прогресс',
-    'Настройки',
+    'Home',
+    'Hero',
+    'Equipment',
+    'Talents',
+    'Shop',
+    'Campaign map',
+    'Progress',
+    'Settings',
   ]) {
     await nav.getByRole('button', { name: tab, exact: true }).click();
     assert.ok(
@@ -761,12 +758,12 @@ try {
       `${tab} fits a phone`,
     );
   }
-  await nav.getByRole('button', { name: 'Карта похода', exact: true }).click();
+  await nav.getByRole('button', { name: 'Campaign map', exact: true }).click();
   await page.screenshot({ path: 'artifacts/campaign-09-maps-mobile.png', fullPage: true });
 
   if (errors.length) throw new Error(errors.join('\n'));
   console.log(
-    'PASS campaign: menu/Gold, Character, Maps (lock/boss reveal), Map 1 win → results/rewards/unlock/save, reload keeps progress, Map 2 with another class (separate XP, shared Gold), quit/reload = abandoned without rewards, Save Management (export, invalid/newer import unchanged, confirm/cancel/replace, round-trip), write-failure warning + retry, DEV campaign tools (unlock/level/Gold, boss, forced Map 10 win, reset); 08.5: time scale, kill-all, stats panel, debug overlay, build label, report download, crash recovery (save untouched), report → save import; Task 13: hub «В бой»/Esc, quick links, map path panel, talent detail, paper doll, shop modal (Enter/Esc), widths 1024–1920, reduced motion.',
+    'PASS campaign: menu/Gold, Character, Maps (lock/boss reveal), Map 1 win → results/rewards/unlock/save, reload keeps progress, Map 2 with another class (separate XP, shared Gold), quit/reload = abandoned without rewards, Save Management (export, invalid/newer import unchanged, confirm/cancel/replace, round-trip), write-failure warning + retry, DEV campaign tools (unlock/level/Gold, boss, forced Map 10 win, reset); 08.5: time scale, kill-all, stats panel, debug overlay, build label, report download, crash recovery (save untouched), report → save import; Task 13: hub «To battle»/Esc, quick links, map path panel, talent detail, paper doll, shop modal (Enter/Esc), widths 1024–1920, reduced motion.',
   );
 } finally {
   await browser.close();

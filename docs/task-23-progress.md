@@ -5,7 +5,7 @@ Spec: [task-23-english.md](task-23-english.md) (owner's file). Branch `task-23-e
 22 merged"). Rebase onto `main` once #20 is merged. Text only: no gameplay, balance, layout or
 save-semantics changes.
 
-Current: Phase 2
+Current: Phase 3
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/21
 
@@ -22,13 +22,20 @@ Comments with Cyrillic (e.g. talent handlers) are translated too.
 
 - [x] 0 Branch, spec, progress file, draft PR, inventory
 - [x] 1 Glossary `docs/glossary-en.md`
-- [ ] 2.1 UI / locale (`strings-en.ts`, components, number format, `index.html`)
-- [ ] 2.2 Content catalogs (maps, bosses, enemies, items, talents, synergies, skills, pets, quests,
+- [x] 2.1 UI / locale (`strings-en.ts`, components, number format, `index.html`)
+- [x] 2.2 Content catalogs (maps, bosses, enemies, items, talents, synergies, skills, pets, quests,
       chests / buffs)
-- [ ] 2.3 Notifications, errors, debug / QA, prototype
+- [x] 2.3 Notifications, errors, debug / QA, prototype
 - [ ] 3 Checks: no-Cyrillic test, screen snapshots (1280×720 + 844×390), old save / export
 - [ ] 4 Full checks, AGENTS.md §5, README, PR
 
 ## Decisions
+
+- Item names are `<Rarity> <Template>` («Rare Plate Armor»); the Russian gender forms of the tier
+  adjective now all hold the same English word (keys kept for compatibility).
+- Units: Russian «п.п.» → «pp» (percentage points), «п.» → «pts».
+- The 12 Level III awakening names were missing from the glossary; added with † (owner review).
+- `tests/talents/catalog.test.ts` still parses the Russian `docs/talents.md`: structure must match,
+  names must equal the glossary mapping, and every English rank text keeps the same numbers.
 
 ## Verification log

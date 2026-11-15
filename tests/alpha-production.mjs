@@ -76,34 +76,34 @@ try {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('http://127.0.0.1:4179/?debug');
-  await page.getByRole('button', { name: 'Начать забег' }).waitFor();
+  await page.getByRole('button', { name: 'Start run' }).waitFor();
   assert.equal(await page.getByRole('button', { name: /DEV ·/ }).count(), 0);
   assert.equal(await page.evaluate(() => typeof window.__alpha), 'undefined');
   assert.equal(await page.evaluate(() => typeof window.__survivors), 'undefined');
-  assert.equal(await page.getByLabel('Стартовый уровень').count(), 0);
+  assert.equal(await page.getByLabel('Starting level').count(), 0);
   assert.equal(await page.getByRole('button', { name: /QA ·/ }).count(), 0);
   assert.equal(await page.getByText('QA PREVIEW', { exact: false }).count(), 0);
-  await page.getByRole('button', { name: 'Маг Посох', exact: false }).click();
-  await page.getByRole('button', { name: 'Начать забег' }).click();
-  await page.getByRole('progressbar', { name: 'Здоровье' }).waitFor();
-  await page.getByRole('progressbar', { name: 'Опыт забега' }).waitFor();
-  await page.getByRole('button', { name: 'Пауза', exact: true }).click();
-  await page.getByRole('button', { name: 'Продолжить' }).waitFor();
+  await page.getByRole('button', { name: 'Mage Staff', exact: false }).click();
+  await page.getByRole('button', { name: 'Start run' }).click();
+  await page.getByRole('progressbar', { name: 'Health' }).waitFor();
+  await page.getByRole('progressbar', { name: 'Run XP' }).waitFor();
+  await page.getByRole('button', { name: 'Pause', exact: true }).click();
+  await page.getByRole('button', { name: 'Continue' }).waitFor();
   const pauseTime = await page.getByTestId('alpha-timer').innerText();
   // Task 07.3: the Pause screen shows Skills and Synergies immediately (production UI).
-  await page.getByRole('region', { name: 'Обзор навыков', exact: true }).waitFor();
-  await page.getByRole('region', { name: 'Синергии', exact: true }).waitFor();
+  await page.getByRole('region', { name: 'Skills overview', exact: true }).waitFor();
+  await page.getByRole('region', { name: 'Synergies', exact: true }).waitFor();
   assert.equal(await page.locator('.synergy-entry').count(), 3);
   await page.waitForTimeout(100);
   assert.equal(await page.getByTestId('alpha-timer').innerText(), pauseTime);
   // Task 08.5 §3.1: production build label on the pause screen.
-  await page.getByLabel(/^Версия сборки: v\d+\.\d+\.\d+ · ([0-9a-f]{7}|unknown)$/).waitFor();
+  await page.getByLabel(/^Build version: v\d+\.\d+\.\d+ · ([0-9a-f]{7}|unknown)$/).waitFor();
   assert.equal(
-    await page.getByRole('button', { name: 'Сообщить о проблеме' }).count(),
+    await page.getByRole('button', { name: 'Report a problem' }).count(),
     1,
     'bug report is a player feature: present in production',
   );
-  await page.getByRole('button', { name: 'Продолжить' }).click();
+  await page.getByRole('button', { name: 'Continue' }).click();
   await page.screenshot({ path: 'artifacts/alpha-09-production.png' });
   for (const file of await readdir('dist/assets'))
     if (file.endsWith('.js')) {
@@ -131,26 +131,26 @@ try {
         'campaign-boss-now',
         'Time scale must be',
         'kill-in-view',
-        'Убить всех на экране',
+        'Kill everything on screen',
         'Debug Overlay',
         'Debug crash',
-        'Сымитировать сбой',
-        'Debug файл отчёта',
-        'Debug сид',
+        'Simulate a crash',
+        'Debug report file',
+        'Debug seed',
         'Talent Debug',
-        'Пресет сверхспособности',
-        'Перейти к карте',
-        'Debug карта',
+        'Toggle superpower preset',
+        'Jump to map',
+        'Debug map',
         'Gear Debug',
-        'Открыть все предметы',
-        'Монеты · в минуту',
+        'Unlock all items',
+        'Coins · per minute',
         'Chest Debug',
-        'Автосбор опыта и монет',
-        'Уровень забега · 5/10/15 мин',
-        'Сбросить дерево талантов',
-        'Начать выбранную карту с этим сидом',
-        'Это не файл отчёта',
-        'Урон в секунду (5 с)',
+        'Auto-collect XP and coins',
+        'Run level · 5/10/15 min',
+        'Reset talent tree',
+        'Start the selected map with this seed',
+        'This is not a report file',
+        'Damage per second (5 s)',
       ])
         assert.ok(
           !source.includes(marker),
@@ -165,15 +165,15 @@ try {
   // models that fallback locally.
   const nested = await page.goto('http://127.0.0.1:4179/alpha/routing-check?debug');
   assert.equal(nested.status(), 200);
-  await page.getByRole('button', { name: 'Начать забег' }).waitFor();
+  await page.getByRole('button', { name: 'Start run' }).waitFor();
   assert.equal(await page.getByRole('button', { name: /DEV ·/ }).count(), 0);
   assert.equal(await page.evaluate(() => typeof window.__alpha), 'undefined');
   assert.equal(await page.getByRole('checkbox', { name: 'God Mode', exact: true }).count(), 0);
   await page.goto('http://127.0.0.1:4179/?prototype&debug');
-  await page.getByRole('button', { name: 'Войти в руины' }).waitFor();
+  await page.getByRole('button', { name: 'Enter the ruins' }).waitFor();
   assert.equal(await page.evaluate(() => typeof window.__survivors), 'undefined');
   await page.goto('http://127.0.0.1:4179/?debug&qa=true&VITE_ENABLE_QA=true');
-  await page.getByRole('button', { name: 'Начать забег' }).waitFor();
+  await page.getByRole('button', { name: 'Start run' }).waitFor();
   assert.equal(await page.getByRole('button', { name: /(?:QA|DEV) ·/ }).count(), 0);
   assert.equal(await page.evaluate(() => typeof window.__alpha), 'undefined');
   assert.deepEqual(errors, []);

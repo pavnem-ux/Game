@@ -14,10 +14,10 @@ try {
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(base + '/?debug');
   await page.waitForFunction(() => !!window.__alpha);
-  await page.getByRole('heading', { name: 'Последний свет', level: 1 }).waitFor(); // Task 13 hub
+  await page.getByRole('heading', { name: 'The Last Light', level: 1 }).waitFor(); // Task 13 hub
   await page.screenshot({ path: 'artifacts/alpha-01-selection.png' });
-  await page.getByRole('button', { name: 'Воин Меч', exact: false }).click();
-  await page.getByRole('button', { name: 'Начать забег' }).click();
+  await page.getByRole('button', { name: 'Warrior Sword', exact: false }).click();
+  await page.getByRole('button', { name: 'Start run' }).click();
   await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
   const state = () => page.evaluate(() => window.__alpha.state());
   const command = (action) => page.evaluate((a) => window.__alpha.command(a), action);
@@ -30,7 +30,7 @@ try {
   await page.waitForTimeout(350);
   await page.keyboard.up('d');
   assert.ok((await state()).world.playerBody.x > before + 30, 'WASD moves integrated player');
-  await page.getByRole('button', { name: 'Пауза', exact: true }).click();
+  await page.getByRole('button', { name: 'Pause', exact: true }).click();
   const paused = await state();
   await page.waitForTimeout(200);
   assert.equal((await state()).world.time, paused.world.time);
@@ -80,11 +80,11 @@ try {
   );
   await page.screenshot({ path: 'artifacts/alpha-02-warrior.png' });
   // Test the interactive panel, not only the automation bridge.
-  await page.getByRole('button', { name: 'DEV · Тестирование' }).click();
+  await page.getByRole('button', { name: 'DEV · Testing' }).click();
   await page.getByRole('complementary', { name: 'Developer Testing Mode' }).waitFor();
-  await page.getByLabel('DEV класс').selectOption('mage');
-  await page.getByLabel('DEV уровень').fill('7');
-  await page.getByRole('button', { name: 'Начать / повторить конфигурацию' }).click();
+  await page.getByLabel('DEV class').selectOption('mage');
+  await page.getByLabel('DEV level').fill('7');
+  await page.getByRole('button', { name: 'Start / repeat configuration' }).click();
   await page.waitForFunction(
     () => window.__alpha.state().world.character.characterClass === 'mage',
   );
@@ -93,10 +93,10 @@ try {
   await page.waitForFunction(() => window.__alpha.state().world.playerProjectiles.length > 0);
   assert.equal((await state()).world.weapon.weapon.category, 'staff');
   await page.screenshot({ path: 'artifacts/alpha-03-developer.png' });
-  await page.getByRole('button', { name: 'DEV · Закрыть' }).click();
+  await page.getByRole('button', { name: 'DEV · Close' }).click();
   // Measured status cap/timers in the real loop; ordinary test protection disabled for effects.
   await command({ type: 'protection', enabled: false });
-  await page.getByRole('button', { name: 'Пауза', exact: true }).click();
+  await page.getByRole('button', { name: 'Pause', exact: true }).click();
   await command({
     type: 'effect',
     targetId: 'player',
@@ -111,13 +111,13 @@ try {
     positions = s.world.enemies.map((e) => ({ id: e.entityId, position: e.position })),
     projectiles = s.world.enemyProjectiles;
   await command({ type: 'death' });
-  await page.getByRole('button', { name: 'Воскреснуть · Revive' }).waitFor();
+  await page.getByRole('button', { name: 'Revive' }).waitFor();
   const dead = await state();
   await page.waitForTimeout(250);
   assert.equal((await state()).world.time, dead.world.time);
   assert.deepEqual((await state()).world.enemyProjectiles, projectiles);
   await page.screenshot({ path: 'artifacts/alpha-04-death-choice.png' });
-  await page.getByRole('button', { name: 'Воскреснуть · Revive' }).click();
+  await page.getByRole('button', { name: 'Revive' }).click();
   s = await state();
   assert.equal(s.runId, runId);
   assert.equal(s.world.survival.revivalUsed, true);
@@ -139,7 +139,7 @@ try {
   assert.ok(s.world.statuses.every((g) => g.targetId !== 'player'));
   await page.screenshot({ path: 'artifacts/alpha-05-revival.png' });
   await command({ type: 'death' });
-  await page.getByRole('heading', { name: 'Искра погасла.' }).waitFor();
+  await page.getByRole('heading', { name: 'The spark has faded.' }).waitFor();
   assert.equal((await state()).world.survival.runState, 'ended');
   await page.screenshot({ path: 'artifacts/alpha-06-ended.png' });
   for (const [characterClass, category] of [
@@ -174,9 +174,9 @@ try {
       spawning: { enabled: false },
     },
   });
-  await page.getByRole('button', { name: 'Пауза', exact: true }).click();
+  await page.getByRole('button', { name: 'Pause', exact: true }).click();
   await command({ type: 'group', count: 2, distance: 250 });
-  await page.getByRole('button', { name: 'Продолжить' }).click();
+  await page.getByRole('button', { name: 'Continue' }).click();
   await page.evaluate(() => window.__alpha.advance(1));
   s = await state();
   assert.ok(s.world.crystals.length > 0, 'real death crystals remain in the world');
@@ -206,17 +206,17 @@ try {
   assert.ok(s.world.progression.level >= 2, 'collectible XP raises only run level');
   assert.equal(s.world.character.permanentLevel, permanent);
   assert.equal(s.world.player.maxHp, maxHp);
-  await page.getByRole('progressbar', { name: 'Опыт забега' }).waitFor();
+  await page.getByRole('progressbar', { name: 'Run XP' }).waitFor();
   await page.screenshot({ path: 'artifacts/alpha-10-xp.png' });
-  await page.getByRole('button', { name: 'DEV · Тестирование' }).click();
+  await page.getByRole('button', { name: 'DEV · Testing' }).click();
   await page.getByLabel('DEV XP').fill('20');
   const totalBefore = (await state()).world.progression.totalXp;
-  await page.getByRole('button', { name: 'Выдать XP', exact: true }).click();
+  await page.getByRole('button', { name: 'Grant XP', exact: true }).click();
   assert.ok(
     (await state()).world.progression.totalXp >= totalBefore + 20,
     'interactive DEV XP control',
   );
-  await page.getByRole('button', { name: 'DEV · Закрыть' }).click();
+  await page.getByRole('button', { name: 'DEV · Close' }).click();
   await command({
     type: 'restart',
     options: {
@@ -249,7 +249,7 @@ try {
     });
     await command({ type: 'protection', enabled: true });
     await command({ type: 'grant-xp', amount: 20 });
-    await page.getByRole('dialog', { name: /Уровень забега 2/ }).waitFor();
+    await page.getByRole('dialog', { name: /Run level 2/ }).waitFor();
     if (characterClass === 'warrior')
       await page.screenshot({ path: 'artifacts/alpha-12-level-up.png' });
     s = await state();
@@ -260,7 +260,7 @@ try {
     const frozen = s.world.time;
     await page.evaluate(() => window.__alpha.advance(1));
     assert.equal((await state()).world.time, frozen, 'no simulation while choosing');
-    await page.getByRole('button', { name: /Перебросить · осталось 3/ }).click();
+    await page.getByRole('button', { name: /Reroll · 3 left/ }).click();
     assert.equal((await state()).world.skills.rerolls, 2);
     const first = (await state()).world.skills.offer.cards[0];
     await page.getByRole('listitem', { name: new RegExp(first.name) }).click();
@@ -268,7 +268,7 @@ try {
     assert.equal(s.screen, 'playing');
     assert.equal(s.world.skills.owned[0].skillId, first.skillId);
     assert.equal(s.world.skills.owned[0].rank, 1);
-    await page.getByLabel('Навыки забега').waitFor();
+    await page.getByLabel('Run skills').waitFor();
     if (characterClass === 'mage') {
       await command({ type: 'grant-skill', skillId: 'frost_nova', rank: 5 });
       await command({ type: 'group', count: 6, distance: 90 });
@@ -281,7 +281,7 @@ try {
       await page.screenshot({ path: 'artifacts/alpha-12-skills.png' });
     }
   }
-  // Task 14: «Изгнать» and «Пропустить» with counters; disabled with a reason.
+  // Task 14: «Banish» and «Skip» with counters; disabled with a reason.
   // Task 22: the R / B / S / 1–3 shortcuts were removed — pressing them changes nothing.
   await command({
     type: 'restart',
@@ -289,22 +289,25 @@ try {
   });
   await command({ type: 'protection', enabled: true });
   await command({ type: 'grant-xp', amount: 92 }); // three levels: 20 + 30 + 42
-  const offerDialog = page.getByRole('dialog', { name: /Уровень забега/ });
+  const offerDialog = page.getByRole('dialog', { name: /Run level/ });
   await offerDialog.waitFor();
-  const controls = page.getByRole('group', { name: 'Управление выбором' });
-  assert.ok(await controls.getByRole('button', { name: 'Изгнать · осталось 2' }).isEnabled());
+  const controls = page.getByRole('group', { name: 'Choice controls' });
+  assert.ok(await controls.getByRole('button', { name: 'Banish · 2 left' }).isEnabled());
   const untouched = (await state()).world.skills;
   for (const key of ['r', 'b', 's', '1', '2', '3', 'R', 'B', 'S']) await page.keyboard.press(key);
   await page.waitForTimeout(80);
   assert.deepEqual((await state()).world.skills, untouched, 'offer hotkeys do nothing');
   assert.equal((await state()).screen, 'level-up');
-  assert.equal(await offerDialog.getByText(/R — перебросить/).count(), 0, 'no hotkey hint');
-  assert.equal(await offerDialog.getByRole('button', { name: /Навыки|Обзор навыков/ }).count(), 0);
+  assert.equal(await offerDialog.getByText(/R — reroll/).count(), 0, 'no hotkey hint');
+  assert.equal(
+    await offerDialog.getByRole('button', { name: /Skills|Skills overview/ }).count(),
+    0,
+  );
   const offered = (await state()).world.skills.offer.cards.map((c) => c.skillId);
   const cardsOnOffer = page.locator('.upgrade-grid .skill-card');
-  await controls.getByRole('button', { name: 'Изгнать · осталось 2' }).click();
+  await controls.getByRole('button', { name: 'Banish · 2 left' }).click();
   assert.equal(
-    await controls.getByRole('button', { name: 'Отменить изгнание' }).getAttribute('aria-pressed'),
+    await controls.getByRole('button', { name: 'Cancel banish' }).getAttribute('aria-pressed'),
     'true',
   );
   await cardsOnOffer.nth(1).click();
@@ -313,15 +316,15 @@ try {
   assert.equal(s.world.skills.banishes, 1);
   assert.ok(!s.world.skills.offer.cards.some((c) => c.skillId === offered[1]));
   assert.equal(s.screen, 'level-up', 'banishing keeps the offer open');
-  await controls.getByRole('button', { name: /Пропустить/ }).click();
+  await controls.getByRole('button', { name: /Skip/ }).click();
   s = await state();
   assert.equal(s.world.skills.skips, 1);
   assert.equal(s.world.skills.pendingChoices, 2);
-  await controls.getByRole('button', { name: 'Изгнать · осталось 1' }).click();
+  await controls.getByRole('button', { name: 'Banish · 1 left' }).click();
   await cardsOnOffer.first().click();
-  const noBanish = controls.getByRole('button', { name: 'Изгнать · осталось 0' });
+  const noBanish = controls.getByRole('button', { name: 'Banish · 0 left' });
   assert.equal(await noBanish.isDisabled(), true);
-  assert.equal(await noBanish.getAttribute('title'), 'Изгнания закончились');
+  assert.equal(await noBanish.getAttribute('title'), 'No banishes left');
   assert.equal((await state()).world.runStats.choices.banishes, 2);
   await cardsOnOffer.first().click();
   await page.waitForFunction(() => window.__alpha.state().world.skills.pendingChoices < 2);
@@ -342,7 +345,7 @@ try {
   s = await state();
   assert.equal(s.world.dash.used, 1);
   assert.ok(s.world.playerBody.x - dashStart >= 139, 'dash moved the player ~140 units');
-  await page.getByLabel(/^Рывок: \d+\.\d с$/).waitFor();
+  await page.getByLabel(/^Dash: \d+\.\d s$/).waitFor();
   await page.keyboard.press('Shift');
   await page.evaluate(() => window.__alpha.advance(0.1));
   assert.equal((await state()).world.dash.used, 1, 'no dash on cooldown');
@@ -354,10 +357,10 @@ try {
   );
   // Task 14 §1.4 DEV tools: grant rerolls/banishes and the dash cooldown override.
   const choicesBefore = (await state()).world.skills;
-  await page.getByRole('button', { name: 'DEV · Тестирование' }).click();
-  await page.getByRole('button', { name: '+3 переброса, +2 изгнания' }).click();
-  await page.getByRole('button', { name: 'Рывок без перезарядки' }).click();
-  await page.getByRole('button', { name: 'DEV · Закрыть' }).click();
+  await page.getByRole('button', { name: 'DEV · Testing' }).click();
+  await page.getByRole('button', { name: '+3 rerolls, +2 banishes' }).click();
+  await page.getByRole('button', { name: 'Dash without cooldown' }).click();
+  await page.getByRole('button', { name: 'DEV · Close' }).click();
   await page.evaluate(() => window.__alpha.advance(0.05));
   s = await state();
   assert.equal(s.world.skills.rerolls, choicesBefore.rerolls + 3);
@@ -367,16 +370,16 @@ try {
   assert.equal((await state()).world.dash.used, 2, 'no cooldown with the DEV override');
   await command({ type: 'dash-cooldown', seconds: null });
 
-  // Task 15: synergy levels. Fireball + Кольцо льда is a Thermal Shock pair (catalog v3).
+  // Task 15: synergy levels. Fireball + Frost Nova is a Thermal Shock pair (catalog v3).
   await command({ type: 'restart', options: { characterClass: 'mage', initialEnemies: false } });
   await command({ type: 'protection', enabled: true });
   await command({ type: 'grant-skill', skillId: 'fireball', rank: 3 });
   await command({ type: 'grant-skill', skillId: 'frost_nova', rank: 2 });
-  await page.getByText('✦ Синергия открыта: Термошок · I').waitFor();
+  await page.getByText('✦ Synergy unlocked: Thermal Shock · I').waitFor();
   await command({ type: 'grant-choices', rerolls: 12, banishes: 0 });
   await command({ type: 'grant-xp', amount: 20 });
   await page.waitForFunction(() => window.__alpha.state().screen === 'level-up');
-  // Reroll until the offer holds the Кольцо льда upgrade (the only card that raises the level).
+  // Reroll until the offer holds the Frost Nova upgrade (the only card that raises the level).
   for (let i = 0; i < 12; i++) {
     const cards = (await state()).world.skills.offer.cards;
     if (cards.some((c) => c.kind === 'skill' && c.skillId === 'frost_nova')) break;
@@ -391,32 +394,29 @@ try {
   const hints = page.getByTestId('card-level-hint');
   await hints.first().waitFor();
   assert.equal(await hints.count(), 1, 'the ▲ hint appears only on the card that raises a level');
-  assert.equal(await hints.first().innerText(), '▲ Термошок II');
+  assert.equal(await hints.first().innerText(), '▲ Thermal Shock II');
   const raising = page.locator('.skill-card', { has: page.getByTestId('card-level-hint') });
-  assert.match(await raising.getAttribute('aria-label'), /^Кольцо льда, улучшение.*Термошок II/);
+  assert.match(await raising.getAttribute('aria-label'), /^Frost Nova, upgrade.*Thermal Shock II/);
   await raising.click();
-  await page.getByText('▲ Термошок · уровень II').waitFor();
+  await page.getByText('▲ Thermal Shock · level II').waitFor();
   await command({ type: 'grant-skill', skillId: 'fireball', rank: 5 });
   await command({ type: 'grant-skill', skillId: 'frost_nova', rank: 5 });
   const awakening = page.locator('.synergy-banner.level-3');
   await awakening.waitFor();
-  assert.match(await awakening.innerText(), /Пробуждение: Термошок · III[\s\S]*Паровой взрыв/);
+  assert.match(await awakening.innerText(), /Awakening: Thermal Shock · III[\s\S]*Steam Blast/);
   assert.equal((await state()).world.synergyLevels.find((l) => l.id === 'thermal_shock').level, 3);
   // Task 15 §3.3 DEV/QA: level and best pair per synergy; force a level for testing.
-  await page.getByRole('button', { name: 'DEV · Тестирование' }).click();
-  await page.getByLabel('Уровень синергии Лесной пожар').selectOption('2');
+  await page.getByRole('button', { name: 'DEV · Testing' }).click();
+  await page.getByLabel('Synergy level Wildfire').selectOption('2');
   await page.waitForFunction(
     () => window.__alpha.state().world.synergyLevels.find((l) => l.id === 'wildfire').forced,
   );
   assert.match(
     await page.getByTestId('synergy-level-thermal_shock').innerText(),
-    /III · лучшая пара: fireball \+ frost_nova/,
+    /III · best pair: fireball \+ frost_nova/,
   );
-  assert.match(
-    await page.getByTestId('synergy-level-wildfire').innerText(),
-    /II \(задан вручную\)/,
-  );
-  await page.getByRole('button', { name: 'DEV · Закрыть' }).click();
+  assert.match(await page.getByTestId('synergy-level-wildfire').innerText(), /II \(set manually\)/);
+  await page.getByRole('button', { name: 'DEV · Close' }).click();
   assert.deepEqual(
     (await state()).world.synergyLevels.find((l) => l.id === 'wildfire'),
     { id: 'wildfire', level: 2, pair: null, forced: true },
@@ -452,18 +452,18 @@ try {
   mobile.on('pageerror', (e) => errors.push(e.message));
   await mobile.goto(base + '/?debug');
   await mobile.waitForFunction(() => !!window.__alpha);
-  await mobile.getByRole('button', { name: 'Начать забег' }).click();
-  // Task 16: in portrait a phone shows «Поверните устройство» and the run pauses.
-  await mobile.getByText('Поверните устройство').first().waitFor();
+  await mobile.getByRole('button', { name: 'Start run' }).click();
+  // Task 16: in portrait a phone shows «Rotate your device» and the run pauses.
+  await mobile.getByText('Rotate your device').first().waitFor();
   await mobile.waitForFunction(() => window.__alpha.state().screen === 'paused');
   // Rotate to landscape (the play orientation), resume, collapse the debug overlay.
   await mobile.setViewportSize({ width: 844, height: 390 });
-  await mobile.getByText('Поверните устройство').first().waitFor({ state: 'detached' });
+  await mobile.getByText('Rotate your device').first().waitFor({ state: 'detached' });
   await mobile.evaluate(() =>
     window.__alpha.command({ type: 'restart', options: { characterClass: 'warrior' } }),
   );
   await mobile.waitForFunction(() => window.__alpha.state().screen === 'playing');
-  await mobile.getByRole('button', { name: 'Скрыть' }).click();
+  await mobile.getByRole('button', { name: 'Hide' }).click();
   const x0 = await mobile.evaluate(() => window.__alpha.state().world.playerBody.x);
   const canvas = await mobile.locator('canvas').boundingBox();
   const client = await mobile.context().newCDPSession(mobile);
