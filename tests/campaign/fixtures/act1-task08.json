@@ -3,7 +3,7 @@
     {
       "map": {
         "id": 1,
-        "name": "Опушка забытых сказок",
+        "name": "Edge of Forgotten Tales",
         "durationSeconds": 600,
         "difficulty": {
           "hp": 1,
@@ -13,7 +13,7 @@
         "victoryXp": 150,
         "victoryGold": 75,
         "bossId": "thornwarden",
-        "bossName": "Терновый страж"
+        "bossName": "Thornwarden"
       },
       "schedule": [
         {
@@ -65,7 +65,7 @@
     {
       "map": {
         "id": 2,
-        "name": "Туманные болота",
+        "name": "Misty Marshes",
         "durationSeconds": 600,
         "difficulty": {
           "hp": 1.12,
@@ -75,7 +75,7 @@
         "victoryXp": 200,
         "victoryGold": 100,
         "bossId": "marsh_witch",
-        "bossName": "Болотная ведьма"
+        "bossName": "Marsh Witch"
       },
       "schedule": [
         {
@@ -127,7 +127,7 @@
     {
       "map": {
         "id": 3,
-        "name": "Каменный перевал",
+        "name": "Stone Pass",
         "durationSeconds": 660,
         "difficulty": {
           "hp": 1.24,
@@ -137,7 +137,7 @@
         "victoryXp": 250,
         "victoryGold": 125,
         "bossId": "stone_colossus",
-        "bossName": "Каменный колосс"
+        "bossName": "Stone Colossus"
       },
       "schedule": [
         {
@@ -189,7 +189,7 @@
     {
       "map": {
         "id": 4,
-        "name": "Пепельная роща",
+        "name": "Ashen Grove",
         "durationSeconds": 660,
         "difficulty": {
           "hp": 1.3599999999999999,
@@ -199,7 +199,7 @@
         "victoryXp": 300,
         "victoryGold": 150,
         "bossId": "ash_wolf",
-        "bossName": "Пепельный волк"
+        "bossName": "Ash Wolf"
       },
       "schedule": [
         {
@@ -251,7 +251,7 @@
     {
       "map": {
         "id": 5,
-        "name": "Ледяные курганы",
+        "name": "Frozen Barrows",
         "durationSeconds": 720,
         "difficulty": {
           "hp": 1.48,
@@ -261,7 +261,7 @@
         "victoryXp": 350,
         "victoryGold": 175,
         "bossId": "barrow_king",
-        "bossName": "Курганный король"
+        "bossName": "Barrow King"
       },
       "schedule": [
         {
@@ -313,7 +313,7 @@
     {
       "map": {
         "id": 6,
-        "name": "Гиблые топи",
+        "name": "Drowning Mires",
         "durationSeconds": 720,
         "difficulty": {
           "hp": 1.6,
@@ -323,7 +323,7 @@
         "victoryXp": 400,
         "victoryGold": 200,
         "bossId": "mire_serpent",
-        "bossName": "Топяной змей"
+        "bossName": "Mire Serpent"
       },
       "schedule": [
         {
@@ -375,7 +375,7 @@
     {
       "map": {
         "id": 7,
-        "name": "Руины часовни",
+        "name": "Chapel Ruins",
         "durationSeconds": 780,
         "difficulty": {
           "hp": 1.72,
@@ -385,7 +385,7 @@
         "victoryXp": 450,
         "victoryGold": 225,
         "bossId": "fallen_bellringer",
-        "bossName": "Падший звонарь"
+        "bossName": "Fallen Bellringer"
       },
       "schedule": [
         {
@@ -444,7 +444,7 @@
     {
       "map": {
         "id": 8,
-        "name": "Багровые пустоши",
+        "name": "Crimson Wastes",
         "durationSeconds": 780,
         "difficulty": {
           "hp": 1.8399999999999999,
@@ -454,7 +454,7 @@
         "victoryXp": 500,
         "victoryGold": 250,
         "bossId": "crimson_reaper",
-        "bossName": "Багровый жнец"
+        "bossName": "Crimson Reaper"
       },
       "schedule": [
         {
@@ -513,7 +513,7 @@
     {
       "map": {
         "id": 9,
-        "name": "Сумрачная цитадель",
+        "name": "Dusk Citadel",
         "durationSeconds": 840,
         "difficulty": {
           "hp": 1.96,
@@ -523,7 +523,7 @@
         "victoryXp": 550,
         "victoryGold": 275,
         "bossId": "dusk_knight",
-        "bossName": "Сумрачный рыцарь"
+        "bossName": "Dusk Knight"
       },
       "schedule": [
         {
@@ -582,7 +582,7 @@
     {
       "map": {
         "id": 10,
-        "name": "Сердце тьмы",
+        "name": "Heart of Darkness",
         "durationSeconds": 900,
         "difficulty": {
           "hp": 2.08,
@@ -592,7 +592,7 @@
         "victoryXp": 600,
         "victoryGold": 300,
         "bossId": "last_dark",
-        "bossName": "Владыка последней тьмы"
+        "bossName": "Lord of the Last Dark"
       },
       "schedule": [
         {

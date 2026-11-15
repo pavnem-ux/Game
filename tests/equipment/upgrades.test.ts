@@ -83,10 +83,10 @@ describe('Task 19 §1.3 — upgrade rules', () => {
     expect(() => upgradeItem(poorOre, 'plate-t3')).toThrow(/ore/);
     expect(poorOre).toEqual(state({ gold: 70, ore: 1 }));
   });
-  it('item names show the level («Кольцо точности +3»)', () => {
+  it('item names show the level («Ring of Precision +3»)', () => {
     const ring = getItem('ring_precision-t1');
-    expect(itemDisplayName(ring, 0)).toBe('Обычное кольцо точности');
-    expect(itemDisplayName(ring, 3)).toBe('Обычное кольцо точности +3');
+    expect(itemDisplayName(ring, 0)).toBe('Common Ring of Precision');
+    expect(itemDisplayName(ring, 3)).toBe('Common Ring of Precision +3');
   });
 });
 

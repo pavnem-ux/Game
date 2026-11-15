@@ -251,7 +251,7 @@ describe('Stun presentation follows authoritative control expiry', () => {
     w.skills.slow(id, 0.5, 5);
     expect(stunIndicator(w.enemies.getEnemy(id))).toBeNull();
     w.skills.stun(id, 0.6);
-    expect(stunIndicator(w.enemies.getEnemy(id))?.text).toBe('СТАН');
+    expect(stunIndicator(w.enemies.getEnemy(id))?.text).toBe('STUN');
     w.update(0.59);
     expect(stunIndicator(w.enemies.getEnemy(id))).not.toBeNull();
     w.setPaused(true);
