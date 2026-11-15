@@ -79,6 +79,14 @@ export function cuesForEvent(entry: WorldEvent, ctx: CueContext): readonly Sound
       return ['chest-spawn'];
     case 'chest-opened':
       return ['chest-open'];
+    // Task 24: map activities.
+    case 'activity-spawned':
+      return ['activity-spawn'];
+    case 'activity-completed':
+      return ['activity-complete'];
+    case 'activity-failed':
+    case 'activity-faded':
+      return ['activity-fail'];
     case 'buff-started':
       return ['buff-gain'];
     case 'buff-ended':

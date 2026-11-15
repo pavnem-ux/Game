@@ -36,6 +36,9 @@ export type SoundCue =
   | 'telegraph'
   | 'chest-spawn'
   | 'chest-open'
+  | 'activity-spawn'
+  | 'activity-complete'
+  | 'activity-fail'
   | 'buff-gain'
   | 'buff-expire'
   | 'dash'
@@ -114,6 +117,10 @@ export const CUES: Readonly<Record<SoundCue, CueSpec>> = Object.freeze({
   telegraph: S('event', 0.24, 3, 0.5),
   'chest-spawn': S('event', 0.24, 2, 0.4),
   'chest-open': S('event', 0.36, 3, 0.45),
+  // Task 24: map activities appear / succeed / fail.
+  'activity-spawn': S('event', 0.3, 3, 0.6),
+  'activity-complete': S('event', 0.4, 4, 0.8),
+  'activity-fail': S('event', 0.3, 3, 0.6),
   'buff-gain': S('event', 0.32, 3, 0.35),
   'buff-expire': S('event', 0.24, 2, 0.35),
   dash: S('event', 0.3, 3, 0.18),

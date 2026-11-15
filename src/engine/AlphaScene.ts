@@ -32,6 +32,7 @@ import { DEPTH, UnitRenderer } from './visuals/UnitRenderer';
 import {
   ART_SCALE,
   chestTextureKey,
+  activityTextureKey,
   enemyTextureKey,
   petTextureKey,
   playerProjectileKey,
@@ -402,6 +403,22 @@ export class AlphaScene extends Phaser.Scene {
       L.add(boss.position.x, boss.position.y, 200, 0.85);
       this.units.glow(boss.position.x, boss.position.y, 170, 0xff3b5c, 0.28);
     }
+    // Task 24: the shrine glows; a lantern's light grows with its Light; defended lanterns stay lit.
+    for (const a of s.activities?.items ?? []) {
+      if (a.type === 'shrine') {
+        L.add(a.x, a.y, 150 + 60 * a.progress, 0.9);
+        if (this.accentGlow) this.units.glow(a.x, a.y, 90, ACTIVITY_COLORS.shrine, 0.28);
+      } else if (a.type === 'lantern') {
+        const k = a.light === null ? 0.35 : a.light / 100;
+        L.add(a.x, a.y, 80 + 200 * k, 0.95);
+        if (this.accentGlow) this.units.glow(a.x, a.y, 50 + 70 * k, ACTIVITY_COLORS.lantern, 0.3);
+      } else if (a.type === 'nest' && this.accentGlow)
+        this.units.glow(a.x, a.y, 70, ACTIVITY_COLORS.nest, 0.22);
+    }
+    for (const lit of s.activities?.litLanterns ?? []) {
+      L.add(lit.x, lit.y, 280, 1);
+      if (this.accentGlow) this.units.glow(lit.x, lit.y, 120, 0xffe9a0, 0.3);
+    }
     for (const chest of s.chests?.items ?? []) {
       L.add(chest.x, chest.y, 110, 0.9);
       if (this.accentGlow)
@@ -525,6 +542,8 @@ export class AlphaScene extends Phaser.Scene {
       // Thief / nest follow their enemy (the thief moves); others stay where they spawned.
       const at = (a.enemyId && enemyPos.get(a.enemyId)) || a;
       const color = ACTIVITY_COLORS[a.type];
+      if (a.type === 'shrine' || a.type === 'lantern')
+        this.units.item(activityTextureKey(a.type), at.x, at.y, 1.2 / ART_SCALE);
       if (a.type === 'shrine') {
         const r = ACTIVITY_RULES.shrine.radius;
         g.fillStyle(color, a.playerInside ? 0.16 : 0.08).fillCircle(at.x, at.y, r);
@@ -590,6 +609,8 @@ export class AlphaScene extends Phaser.Scene {
     }
     for (let i = label; i < this.activityLabels.length; i++)
       this.activityLabels[i].setVisible(false);
+    for (const lit of s.activities?.litLanterns ?? [])
+      this.units.item(activityTextureKey('lantern', true), lit.x, lit.y, 1.2 / ART_SCALE);
     // Screen-edge pointers (canvas pixels: view units × DPR).
     const cam = this.cameras.main;
     const layer = this.activityArrows.clear();
@@ -841,13 +862,27 @@ export class AlphaScene extends Phaser.Scene {
           0.55,
         ).strokeCircle(x, y, enemy.config.radius + 7);
       const flash = this.flashes.strength(enemy.entityId, s.time);
-      const glowColor = isBoss ? 0xff3b5c : eliteName ? (ranged ? 0xb68cff : 0xff8a3d) : undefined;
+      // Task 24: the thief and the nest have their own looks (they are ordinary enemies otherwise).
+      const activity = activityTypeOf(s, enemy.entityId);
+      const glowColor = isBoss
+        ? 0xff3b5c
+        : eliteName
+          ? ranged
+            ? 0xb68cff
+            : 0xff8a3d
+          : activity
+            ? ACTIVITY_COLORS[activity]
+            : undefined;
       this.units.unit(
         enemy.entityId,
-        enemyTextureKey(kind, role, ranged),
+        activity ? activityTextureKey(activity) : enemyTextureKey(kind, role, ranged),
         x,
         y,
-        role === 'normal' ? k / ART_SCALE : unitScale(role, enemy.config.radius, ranged),
+        activity
+          ? enemy.config.radius / (activity === 'nest' ? 24 : 12) / ART_SCALE
+          : role === 'normal'
+            ? k / ART_SCALE
+            : unitScale(role, enemy.config.radius, ranged),
         s.time,
         flash,
         {
@@ -1312,6 +1347,11 @@ const ACTIVITY_ICONS: Readonly<Record<ActivityType, string>> = Object.freeze({
   thief: '◆',
   nest: '✺',
 });
+/** Task 24: the activity a thief / nest enemy belongs to (null for ordinary enemies). */
+function activityTypeOf(s: GameplaySnapshot, enemyId: string): ActivityType | null {
+  for (const a of s.activities?.items ?? []) if (a.enemyId === enemyId) return a.type;
+  return null;
+}
 /** A progress ring (0–1) drawn clockwise from the top. */
 function progressArc(
   g: Phaser.GameObjects.Graphics,

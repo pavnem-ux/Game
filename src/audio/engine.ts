@@ -144,6 +144,12 @@ export const RECIPES: Readonly<Record<SoundCue, Recipe>> = {
     tones: arp('triangle', [523, 784, 1046], 0.06, 0.35, 0.4),
     noise: [N(4000, 0.2, 0.2)],
   },
+  'activity-spawn': { tones: arp('sine', [523, 659, 880], 0.09, 0.4, 0.35) },
+  'activity-complete': {
+    tones: arp('triangle', [659, 784, 988, 1319], 0.08, 0.5, 0.4),
+    noise: [N(5000, 0.3, 0.15)],
+  },
+  'activity-fail': { tones: [T('triangle', 523, 0.5, 0.4, { to: 262, lowpass: 2200 })] },
   'buff-gain': { tones: [T('triangle', 440, 0.3, 0.5, { to: 880 })] },
   'buff-expire': { tones: [T('triangle', 660, 0.3, 0.4, { to: 330 })] },
   dash: { noise: [N(1200, 0.16, 0.8, { to: 4000, q: 0.8 })] },

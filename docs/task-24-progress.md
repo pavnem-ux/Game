@@ -6,7 +6,7 @@ Task 22 / PR #20 are not merged yet). The PR targets `main`; until #20 and #21 m
 shows their commits. Before each phase the latest `origin/task-23-english` is merged in so review
 fixes from #20/#21 are included.
 
-Current: Phase 5
+Current: Phase 6
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/22
 
@@ -17,7 +17,7 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/22
 - [x] 2 Shrine + Thief
 - [x] 3 Lantern + Nest
 - [x] 4 Quests & save (8 quests, lifetime counters, schema bump)
-- [ ] 5 Visuals & audio
+- [x] 5 Visuals & audio
 - [ ] 6 Delivery: full checks + e2e, `docs/ACTIVITIES.md`, README, `docs/playtest.md`, income table, PR
 
 ## Decisions
@@ -83,3 +83,10 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/22
   nothing else changes) and invalid stored counters rejected. Updated pins: schema v8 (Task 11/19/
   21 save tests, transfer "newer version" now v9), 58 quests in 9 groups, and the Task 23 old-save
   test now expects exactly the v7 → v8 migration.
+- Phase 5: procedural textures `activity-shrine` (stone altar with an ember bowl),
+  `activity-lantern` / `activity-lantern-lit`, `activity-thief` (hooded runner with a sack),
+  `activity-nest` (thorny pod); light sources (shrine glow growing with capture, lantern light
+  radius 80 + 200 × Light/100, lit lanterns 280 for the rest of the run); progress rings, Light
+  bar, labels; sounds `activity-spawn` / `activity-complete` / `activity-fail` (synthesized).
+  `tests/engine/activity-visuals.test.ts`; screenshot check on map 25 (lantern defence, nest,
+  thief pointer, shrine toast).

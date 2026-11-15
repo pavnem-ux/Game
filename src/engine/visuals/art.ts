@@ -298,6 +298,62 @@ export const ART: Readonly<Record<TextureKey, Draw>> = Object.freeze({
     p.fillStyle(0xfff1c4).fillCircle(s(-2), s(-2), 2 * ART_SCALE);
     p.lineStyle(1 * ART_SCALE, 0xb48a2c, 0.9).strokeCircle(s(0), s(0), 4 * ART_SCALE);
   },
+  // Task 24 map activities (original shapes).
+  'activity-shrine': (p, c) => {
+    // A low stone altar with an ember bowl.
+    const s = u(c);
+    p.fillStyle(0xff9b4a, 0.18).fillCircle(s(0), s(0), 28 * ART_SCALE);
+    poly(p, c, 0x6c6a72, [
+      [-16, 12],
+      [16, 12],
+      [12, 2],
+      [-12, 2],
+    ]);
+    poly(p, c, 0x8a8792, [
+      [-10, 2],
+      [10, 2],
+      [8, -6],
+      [-8, -6],
+    ]);
+    p.fillStyle(0x3a2216).fillEllipse(s(0), s(-7), 18 * ART_SCALE, 6 * ART_SCALE);
+    p.fillStyle(0xff7a2e)
+      .fillTriangle(s(-6), s(-7), s(0), s(-20), s(6), s(-7))
+      .fillTriangle(s(-3), s(-7), s(3), s(-16), s(7), s(-7));
+    p.fillStyle(0xffe08a).fillTriangle(s(-2), s(-7), s(1), s(-14), s(3), s(-7));
+  },
+  'activity-lantern': (p, c) => lantern(p, c, false),
+  'activity-lantern-lit': (p, c) => lantern(p, c, true),
+  'activity-thief': (p, c) => {
+    // A hooded runner with a loot sack.
+    const s = u(c);
+    blob(p, c, 0x2f5a52, 22, 24, 2);
+    p.fillStyle(0x1d3833).fillTriangle(s(-11), s(-2), s(0), s(-17), s(11), s(-2));
+    eyes(p, c, 0x7fe0c4, -2, 14);
+    blob(p, c, 0xb88a3e, 12, 12, 9, 1.5);
+    p.fillStyle(0xf0c862).fillCircle(s(4), s(7), 2 * ART_SCALE);
+  },
+  'activity-nest': (p, c) => {
+    // A thorny, pulsing pod.
+    const s = u(c);
+    p.fillStyle(0xb07fe0, 0.16).fillCircle(s(0), s(0), 28 * ART_SCALE);
+    for (let i = 0; i < 8; i++) {
+      const a = (i * Math.PI) / 4;
+      p.fillStyle(0x3a2147).fillTriangle(
+        s(Math.cos(a) * 12 - Math.sin(a) * 3),
+        s(Math.sin(a) * 12 + Math.cos(a) * 3),
+        s(Math.cos(a) * 24),
+        s(Math.sin(a) * 24),
+        s(Math.cos(a) * 12 + Math.sin(a) * 3),
+        s(Math.sin(a) * 12 - Math.cos(a) * 3),
+      );
+    }
+    blob(p, c, 0x5b2f73, 30, 26, 0);
+    p.fillStyle(0x8c4fb0).fillEllipse(s(-4), s(-4), 12 * ART_SCALE, 8 * ART_SCALE);
+    p.fillStyle(0xd6a6ff)
+      .fillCircle(s(-6), s(2), 2.5 * ART_SCALE)
+      .fillCircle(s(5), s(-1), 2 * ART_SCALE)
+      .fillCircle(s(2), s(6), 1.6 * ART_SCALE);
+  },
   'chest-wooden': (p, c) => chest(p, c, false),
   'chest-enchanted': (p, c) => chest(p, c, true),
   // Shared helpers: soft ground shadow and a white radial glow (tinted at runtime).
@@ -520,6 +576,30 @@ export const ART: Readonly<Record<TextureKey, Draw>> = Object.freeze({
     p.fillStyle(0x2b4660).fillCircle(s(0), s(9), 1.8 * ART_SCALE);
   },
 });
+function lantern(p: Pen, c: number, lit: boolean) {
+  // An iron post with a glass lamp; dim amber before, bright gold once defended.
+  const s = u(c);
+  p.fillStyle(lit ? 0xffe9a0 : 0xffd66b, lit ? 0.3 : 0.12).fillCircle(s(0), s(-8), 22 * ART_SCALE);
+  p.lineStyle(4 * ART_SCALE, OUTLINE, 0.9).lineBetween(s(0), s(16), s(0), s(-2));
+  p.lineStyle(2 * ART_SCALE, 0x4a4f56, 1).lineBetween(s(0), s(16), s(0), s(-2));
+  p.fillStyle(0x3b3f45).fillRect(s(-6), s(14), 12 * ART_SCALE, 3 * ART_SCALE);
+  p.lineStyle(3 * ART_SCALE, OUTLINE, 0.9).strokeRoundedRect(
+    s(-7),
+    s(-17),
+    14 * ART_SCALE,
+    15 * ART_SCALE,
+    3 * ART_SCALE,
+  );
+  p.fillStyle(lit ? 0xffe28a : 0x8a6a2c).fillRoundedRect(
+    s(-7),
+    s(-17),
+    14 * ART_SCALE,
+    15 * ART_SCALE,
+    3 * ART_SCALE,
+  );
+  p.fillStyle(lit ? 0xfffbe8 : 0xffb84a, lit ? 1 : 0.8).fillCircle(s(0), s(-10), 3.5 * ART_SCALE);
+  p.fillStyle(0x2d3136).fillTriangle(s(-9), s(-17), s(0), s(-24), s(9), s(-17));
+}
 function chest(p: Pen, c: number, enchanted: boolean) {
   const s = u(c);
   p.fillStyle(enchanted ? 0xb68cff : 0xf0c862, 0.16).fillCircle(s(0), s(0), 26 * ART_SCALE);
