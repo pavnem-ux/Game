@@ -8,7 +8,7 @@ fixes from #20/#21 are included.
 
 Current: Phase 1
 
-Draft PR: (pending)
+Draft PR: https://github.com/pavnem-ux/Game/pull/22
 
 ## Checklist
 
