@@ -16,8 +16,9 @@ import { QUESTS } from '../quests';
 import type { EnemyKind } from '../gameplay';
 import { BUFFS, BUFF_IDS, CHEST_NAMES } from '../gameplay/chests';
 import type { ChestContent, ChestType } from '../gameplay/chests';
+import { ACTIVITY_NAMES, ACTIVITY_RULES, ACTIVITY_TYPES } from '../gameplay/activities';
 
-/** Task 12 debug labels (Russian). */
+/** Task 12 debug labels (English since Task 23). */
 const ENEMY_KIND_LABELS: Record<EnemyKind, string> = {
   melee: 'Melee',
   ranged: 'Ranged',
@@ -716,6 +717,41 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
               </label>
             )}
           </fieldset>
+          {w.activities && (
+            <fieldset aria-label="Activity Debug">
+              <legend>Map activities</legend>
+              <p>
+                Next activity at {w.activities.nextSpawnAt.toFixed(1)} s · active{' '}
+                {w.activities.items.length} / {ACTIVITY_RULES.maxActive} · banked Ore{' '}
+                {w.activities.ore}
+              </p>
+              {ACTIVITY_TYPES.map((t) => (
+                <button key={t} onClick={() => send({ type: 'activity', activityType: t })}>
+                  Spawn {ACTIVITY_NAMES[t]}
+                </button>
+              ))}
+              <ul aria-label="Active activities">
+                {w.activities.items.map((a) => (
+                  <li key={a.id}>
+                    {a.name} · {a.phase} · {Math.round(a.progress * 100)}%
+                    {a.light !== null ? ` · Light ${Math.round(a.light)}` : ''}{' '}
+                    <button
+                      onClick={() =>
+                        send({ type: 'activity-resolve', id: a.id, outcome: 'complete' })
+                      }
+                    >
+                      Complete
+                    </button>
+                    <button
+                      onClick={() => send({ type: 'activity-resolve', id: a.id, outcome: 'fail' })}
+                    >
+                      Fail
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </fieldset>
+          )}
           <fieldset>
             <legend>Skills</legend>
             <p>

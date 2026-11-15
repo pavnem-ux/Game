@@ -1470,6 +1470,51 @@ p.damage-note {
     top: 188px;
   }
 }
+/* Task 24: activity toast (spawn / success / failure), below the chest popup. */
+.activity-toast {
+  position: absolute;
+  top: 160px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 32px);
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-weight: 700;
+  text-align: center;
+  z-index: 6;
+  pointer-events: none;
+  background: #1b2232e6;
+  border: 1px solid #8fb3ff;
+  color: #dfe8ff;
+  animation: activity-toast-in 0.25s ease-out;
+}
+.activity-toast-completed {
+  background: #1e2c1ce6;
+  border-color: #9ad27a;
+  color: #e4ffd6;
+}
+.activity-toast-failed {
+  background: #2a1b1be6;
+  border-color: #b97a7a;
+  color: #f2d4d4;
+}
+@keyframes activity-toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -6px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .activity-toast {
+    animation: none;
+  }
+}
+@media (max-height: 460px) {
+  .activity-toast {
+    top: 132px;
+    font-size: 13px;
+  }
+}
 /* Task 14: level-up offer controls (kit buttons) and banish mode. */
 .offer-controls {
   display: flex;

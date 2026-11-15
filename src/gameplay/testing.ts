@@ -3,6 +3,7 @@ import { QaGameplayWorld } from './qa';
 import type { QaSnapshot } from './qa';
 import type { EnemyKind } from './enemy-types';
 import type { BuffId, ChestContent, ChestType } from './chests';
+import type { ActivityType } from './activities';
 import type { SynergyId, SynergyLevel } from '../skills';
 import type { PetId } from '../pets';
 export const createTestingWorld = (options: GameplayOptions): GameplayWorld =>
@@ -45,6 +46,15 @@ export function createTestingController(
       case 'chest':
         if (!w.debugSpawnChest(a.chestType as ChestType, a.content as ChestContent | undefined))
           throw new Error('No chest: campaign run only, at most 3 on the map.');
+        break;
+      // Task 24 §1.7: spawn any activity next to the player; complete / fail one.
+      case 'activity':
+        if (!w.debugSpawnActivity(a.activityType as ActivityType))
+          throw new Error('No activity: campaign run only (thief/nest need a free enemy slot).');
+        break;
+      case 'activity-resolve':
+        if (!w.debugResolveActivity(a.id as string, a.outcome as 'complete' | 'fail'))
+          throw new Error('Unknown activity.');
         break;
       case 'buff':
         if (!w.debugGrantBuff(a.buff as BuffId)) throw new Error('Buffs: campaign run only.');

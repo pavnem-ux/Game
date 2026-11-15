@@ -99,6 +99,34 @@ export const EN = Object.freeze({
     lowHp: 'On the brink (< 20% HP)',
     noDamage: 'No damage dealt yet.',
   }),
+  /** Task 24: map activity toasts and labels. */
+  activities: Object.freeze({
+    spawned: Object.freeze({
+      shrine: 'A shrine has appeared',
+      lantern: 'A dying lantern flickers nearby',
+      thief: 'A treasure thief is fleeing!',
+      nest: 'A blight nest has sprouted',
+    }),
+    completed: Object.freeze({
+      shrine: 'Shrine cleansed!',
+      lantern: 'Lantern defended!',
+      thief: 'Thief caught!',
+      nest: 'Nest destroyed!',
+    }),
+    failed: Object.freeze({
+      shrine: 'The shrine has faded',
+      lantern: 'The lantern went dark',
+      thief: 'The thief escaped',
+      nest: 'The nest crumbled away',
+    }),
+    hints: Object.freeze({
+      shrine: 'Stand inside to cleanse',
+      lantern: 'Stand close to light it',
+      thief: 'Catch the thief',
+      nest: 'Destroy the nest',
+    }),
+    defend: 'Defend the lantern',
+  }),
   /** Task 13: meta screens (hub, characters, equipment, talents, shop, map path) and the UI kit. */
   meta: Object.freeze({
     title: 'The Last Light',

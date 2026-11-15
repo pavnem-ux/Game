@@ -1,4 +1,5 @@
 import type { WorldEvent } from './types';
+import type { ActivityType } from './activities';
 
 /**
  * Task 08.5 §2.1 run statistics. Framework-free and read-only: it consumes the world's own
@@ -70,6 +71,15 @@ export interface RunStatsSnapshot {
     contents: Readonly<Record<string, number>>;
     buffUptime: Readonly<Record<'fury' | 'haste' | 'lightStep', number>>;
   }>;
+  /**
+   * Task 24: map activities by type — spawned, completed and failed (failed includes faded out,
+   * escaped, crumbled, Light out and abandoned). Unfinished activities at run end count in none.
+   */
+  readonly activities: Readonly<{
+    spawned: Readonly<Record<ActivityType, number>>;
+    completed: Readonly<Record<ActivityType, number>>;
+    failed: Readonly<Record<ActivityType, number>>;
+  }>;
 }
 export const RUN_STATS_LIMITS = Object.freeze({
   lowHpThreshold: 0.2,
@@ -99,6 +109,9 @@ export class RunStats {
   private skipsUsed = 0;
   private readonly banishedIds: string[] = [];
   private readonly chestOpened = { wooden: 0, enchanted: 0 };
+  private readonly activitySpawned = { shrine: 0, lantern: 0, thief: 0, nest: 0 };
+  private readonly activityCompleted = { shrine: 0, lantern: 0, thief: 0, nest: 0 };
+  private readonly activityFailed = { shrine: 0, lantern: 0, thief: 0, nest: 0 };
   private chestExpired = 0;
   private readonly chestContents: Record<string, number> = {};
   private readonly buffUptime = { fury: 0, haste: 0, lightStep: 0 };
@@ -221,6 +234,20 @@ export class RunStats {
         this.skipsUsed++;
         this.version++;
         return;
+      // Task 24: map activities.
+      case 'activity-spawned':
+        this.activitySpawned[event.activity.type]++;
+        this.version++;
+        return;
+      case 'activity-completed':
+        this.activityCompleted[event.activity.type]++;
+        this.version++;
+        return;
+      case 'activity-failed':
+      case 'activity-faded':
+        this.activityFailed[event.activity.type]++;
+        this.version++;
+        return;
       // Task 12: chests and buffs.
       case 'chest-spawned':
         this.chestSpawned[event.chest.type]++;
@@ -294,6 +321,11 @@ export class RunStats {
         banishes: this.banishedIds.length,
         skips: this.skipsUsed,
         banished: Object.freeze([...this.banishedIds]),
+      }),
+      activities: Object.freeze({
+        spawned: Object.freeze({ ...this.activitySpawned }),
+        completed: Object.freeze({ ...this.activityCompleted }),
+        failed: Object.freeze({ ...this.activityFailed }),
       }),
       chests: Object.freeze({
         spawned: Object.freeze({ ...this.chestSpawned }),

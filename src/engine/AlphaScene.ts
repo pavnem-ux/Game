@@ -17,7 +17,11 @@ import { cardKey } from '../skills';
 import { soundFrame } from '../gameplay-ui/sound';
 import { hapticFrame } from '../gameplay-ui/touch';
 import { JOYSTICK, inJoystickZone, keyboardVector, movementInput } from './touch-input';
-import { pinToScreen } from './screen-space';
+import { pinToScreen, screenToZoomed } from './screen-space';
+import { arrowDistanceLabel, edgeArrow } from './activity-arrows';
+import { ACTIVITY_RULES } from '../gameplay/activities';
+import type { ActivityType } from '../gameplay/activities';
+import { EN } from '../gameplay-ui/strings-en';
 import { buildUnitTextures } from './visuals/texture-factory';
 import { BiomeRenderer } from './visuals/BiomeRenderer';
 import { BOSS_DARK, LightRenderer, WARM_DARK } from './visuals/LightRenderer';
@@ -81,6 +85,10 @@ export class AlphaScene extends Phaser.Scene {
   private floatLabels: Phaser.GameObjects.Text[] = [];
   private readonly flashes = new HitFlashes();
   private vignette!: Phaser.GameObjects.Graphics;
+  /** Task 24: screen-edge pointers to off-screen activities (screen space) and their labels. */
+  private activityArrows!: Phaser.GameObjects.Graphics;
+  private readonly arrowLabels: Phaser.GameObjects.Text[] = [];
+  private readonly activityLabels: Phaser.GameObjects.Text[] = [];
   private playerHitAt = Number.NEGATIVE_INFINITY;
   private fx: { event: WorldEvent; until: number; x: number; y: number; text?: string }[] = [];
   private labels: Phaser.GameObjects.Text[] = [];
@@ -109,6 +117,7 @@ export class AlphaScene extends Phaser.Scene {
     this.overlay = this.add.graphics().setDepth(DEPTH.overlay);
     this.joystick = this.add.graphics().setDepth(100).setScrollFactor(0);
     this.vignette = this.add.graphics().setDepth(90).setScrollFactor(0);
+    this.activityArrows = this.add.graphics().setDepth(89).setScrollFactor(0);
     this.cameras.main.setBounds(0, 0, ALPHA.arenaSize, ALPHA.arenaSize).centerOn(1800, 1800);
     this.keys = this.input.keyboard!.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT') as typeof this.keys;
     // DOM controls retain their own key input. Phaser must not capture arrows/space in forms.
@@ -501,6 +510,135 @@ export class AlphaScene extends Phaser.Scene {
    * Task 20: the pet sprite — smooth follow (exponential, rendering only), idle bob, and a short
    * action animation (fox dash streak, owlet shot spark, heal/barrier ring on the player).
    */
+  /**
+   * Task 24: activities — a ground marker with a progress ring and a name label in the world, and
+   * a pointer (icon + distance) at the screen edge for each activity outside the view.
+   * Presentation only; everything comes from the snapshot.
+   */
+  private drawActivities(s: GameplaySnapshot) {
+    const items = s.activities?.items ?? [];
+    const g = this.graphics;
+    const enemyPos = new Map<string, { x: number; y: number }>();
+    for (const e of s.enemies) if (e.alive) enemyPos.set(e.entityId, e.position);
+    let label = 0;
+    for (const a of items) {
+      // Thief / nest follow their enemy (the thief moves); others stay where they spawned.
+      const at = (a.enemyId && enemyPos.get(a.enemyId)) || a;
+      const color = ACTIVITY_COLORS[a.type];
+      if (a.type === 'shrine') {
+        const r = ACTIVITY_RULES.shrine.radius;
+        g.fillStyle(color, a.playerInside ? 0.16 : 0.08).fillCircle(at.x, at.y, r);
+        g.lineStyle(2, color, 0.75).strokeCircle(at.x, at.y, r);
+        progressArc(g, at.x, at.y, r + 7, a.progress, color);
+      } else if (a.type === 'lantern') {
+        const r =
+          a.phase === 'waiting'
+            ? ACTIVITY_RULES.lantern.activateRadius
+            : ACTIVITY_RULES.lantern.drainRadius;
+        g.fillStyle(color, a.phase === 'waiting' ? 0.06 : 0.1).fillCircle(at.x, at.y, r);
+        g.lineStyle(2, color, 0.6).strokeCircle(at.x, at.y, r);
+        progressArc(g, at.x, at.y, r + 7, a.progress, color);
+        if (a.light !== null) {
+          // Light bar under the lantern (red when low).
+          const w = 64,
+            k = a.light / ACTIVITY_RULES.lantern.light;
+          g.fillStyle(0x10131c, 0.85).fillRect(at.x - w / 2, at.y + r + 14, w, 6);
+          g.fillStyle(k > 0.3 ? 0xffd66b : 0xff5a4a, 0.95).fillRect(
+            at.x - w / 2,
+            at.y + r + 14,
+            w * k,
+            6,
+          );
+        }
+      } else {
+        // Thief / nest: a ring under the enemy that shrinks as its time runs out.
+        const r =
+          a.type === 'nest' ? ACTIVITY_RULES.nest.radius + 10 : ACTIVITY_RULES.thief.radius + 9;
+        progressArc(g, at.x, at.y, r, 1 - a.progress, color);
+      }
+      const t =
+        this.activityLabels[label] ??
+        (this.activityLabels[label] = this.add
+          .text(0, 0, '', {
+            fontFamily: 'sans-serif',
+            fontSize: '12px',
+            fontStyle: 'bold',
+            color: '#ffffff',
+            stroke: '#10131c',
+            strokeThickness: 3,
+            align: 'center',
+          })
+          .setOrigin(0.5, 1)
+          .setDepth(13));
+      label++;
+      const hint =
+        a.type === 'lantern' && a.phase === 'active'
+          ? `${EN.activities.defend} · ${Math.ceil(Math.max(0, (a.endsAt ?? s.time) - s.time))} s`
+          : EN.activities.hints[a.type];
+      const top =
+        a.type === 'shrine'
+          ? ACTIVITY_RULES.shrine.radius
+          : a.type === 'lantern'
+            ? ACTIVITY_RULES.lantern.drainRadius
+            : a.type === 'nest'
+              ? ACTIVITY_RULES.nest.radius + 26
+              : 34;
+      t.setText(`${a.name}\n${hint}`)
+        .setColor(`#${color.toString(16).padStart(6, '0')}`)
+        .setPosition(at.x, at.y - top - 6)
+        .setVisible(true);
+    }
+    for (let i = label; i < this.activityLabels.length; i++)
+      this.activityLabels[i].setVisible(false);
+    // Screen-edge pointers (canvas pixels: view units × DPR).
+    const cam = this.cameras.main;
+    const layer = this.activityArrows.clear();
+    pinToScreen(layer, cam);
+    const k = this.dpr;
+    let arrows = 0;
+    for (const a of items) {
+      const at = (a.enemyId && enemyPos.get(a.enemyId)) || a;
+      const arrow = edgeArrow(cam.worldView, at, s.playerBody);
+      if (!arrow) continue;
+      const color = ACTIVITY_COLORS[a.type];
+      const x = arrow.x * k,
+        y = arrow.y * k,
+        size = 11 * k;
+      const c = Math.cos(arrow.angle),
+        sn = Math.sin(arrow.angle);
+      const tip = { x: x + c * size * 1.5, y: y + sn * size * 1.5 };
+      const left = { x: x - sn * size * 0.8, y: y + c * size * 0.8 };
+      const right = { x: x + sn * size * 0.8, y: y - c * size * 0.8 };
+      layer.fillStyle(0x10131c, 0.75).fillCircle(x, y, size * 1.25);
+      layer.lineStyle(2 * k, color, 0.95).strokeCircle(x, y, size * 1.25);
+      layer.fillStyle(color, 0.95).fillTriangle(tip.x, tip.y, left.x, left.y, right.x, right.y);
+      const t =
+        this.arrowLabels[arrows] ??
+        (this.arrowLabels[arrows] = this.add
+          .text(0, 0, '', {
+            fontFamily: 'sans-serif',
+            fontSize: '11px',
+            fontStyle: 'bold',
+            color: '#ffffff',
+            stroke: '#10131c',
+            strokeThickness: 3,
+            align: 'center',
+          })
+          .setOrigin(0.5)
+          .setScrollFactor(0)
+          .setDepth(89));
+      arrows++;
+      // Icon + distance just inside the pointer (towards the screen centre).
+      const lx = arrow.x - c * 30,
+        ly = arrow.y - sn * 22;
+      const p = screenToZoomed(cam, lx * k, ly * k);
+      t.setText(`${ACTIVITY_ICONS[a.type]} ${arrowDistanceLabel(arrow.distance)}`)
+        .setColor(`#${color.toString(16).padStart(6, '0')}`)
+        .setPosition(p.x, p.y)
+        .setVisible(true);
+    }
+    for (let i = arrows; i < this.arrowLabels.length; i++) this.arrowLabels[i].setVisible(false);
+  }
   private drawPet(s: GameplaySnapshot) {
     const pet = s.pet;
     if (!pet) {
@@ -642,6 +780,7 @@ export class AlphaScene extends Phaser.Scene {
       }
     }
     this.drawPet(s);
+    this.drawActivities(s);
     // Task 18: pickups and chests are pooled sprites (textures baked once).
     for (const crystal of s.crystals)
       this.units.item(
@@ -1159,4 +1298,35 @@ declare global {
       };
     };
   }
+}
+/** Task 24: activity colours and pointer icons (original glyphs). */
+const ACTIVITY_COLORS: Readonly<Record<ActivityType, number>> = Object.freeze({
+  shrine: 0xff9b4a,
+  lantern: 0xffd66b,
+  thief: 0x7fe0c4,
+  nest: 0xb07fe0,
+});
+const ACTIVITY_ICONS: Readonly<Record<ActivityType, string>> = Object.freeze({
+  shrine: '✦',
+  lantern: '☼',
+  thief: '◆',
+  nest: '✺',
+});
+/** A progress ring (0–1) drawn clockwise from the top. */
+function progressArc(
+  g: Phaser.GameObjects.Graphics,
+  x: number,
+  y: number,
+  r: number,
+  progress: number,
+  color: number,
+) {
+  const p = Math.min(1, Math.max(0, progress));
+  g.lineStyle(5, 0x10131c, 0.55).strokeCircle(x, y, r);
+  if (p <= 0) return;
+  const start = -Math.PI / 2;
+  g.lineStyle(5, color, 0.95);
+  g.beginPath();
+  g.arc(x, y, r, start, start + p * Math.PI * 2, false);
+  g.strokePath();
 }
