@@ -6,7 +6,7 @@ Task 22 / PR #20 are not merged yet). The PR targets `main`; until #20 and #21 m
 shows their commits. Before each phase the latest `origin/task-23-english` is merged in so review
 fixes from #20/#21 are included.
 
-Current: Phase 6
+Current: done — PR ready for review (not merged)
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/22
 
@@ -18,7 +18,7 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/22
 - [x] 3 Lantern + Nest
 - [x] 4 Quests & save (8 quests, lifetime counters, schema bump)
 - [x] 5 Visuals & audio
-- [ ] 6 Delivery: full checks + e2e, `docs/ACTIVITIES.md`, README, `docs/playtest.md`, income table, PR
+- [x] 6 Delivery: full checks + e2e, `docs/ACTIVITIES.md`, README, `docs/playtest.md`, income table, PR
 
 ## Decisions
 
@@ -90,3 +90,15 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/22
   bar, labels; sounds `activity-spawn` / `activity-complete` / `activity-fail` (synthesized).
   `tests/engine/activity-visuals.test.ts`; screenshot check on map 25 (lantern defence, nest,
   thief pointer, shrine toast).
+- Phase 6: `npm run typecheck` ✓, `npm test` ✓ (137 files, 1,451 tests), `npm run format:check`
+  ✓, `npm run build` ✓, `npm run test:production` ✓ (new markers «Activity Debug»),
+  `GAME_LOCAL_QA=1 npm run build:qa` + `npm run test:qa` ✓, `test:build-policy` ✓,
+  `npm run test:e2e` ✓ (prototype, alpha, campaign, mobile, English screens, and the new
+  `tests/activities-browser.mjs` on desktop 1280×720 and a touch phone 844×390). Docs:
+  `docs/ACTIVITIES.md`, README (English guide line + Task 24 section), `docs/playtest.md` §5.13,
+  glossary («Activities» group and the four activity names), `docs/ENEMY_AI.md` (`flee` /
+  `stationary`), tie slots in `docs/PLAYABLE_COMBAT_ALPHA.md`.
+- Income (bot, mage at the recommended level, seeds 1–3; table in `docs/ACTIVITIES.md` §6):
+  map 1: 6.0 of 7.7 completed, 18 coins, 0.7 Ore; map 15: 11.3 / 12, 202 coins, 5.0 Ore; map 30:
+  10.3 / 11, 248 coins, 4.3 Ore; map 40: 12 / 12, 290 coins, 4.3 Ore; plus 3–7 reward chests.
+- Not verified: human play feel and difficulty, real phones, the Cloudflare Preview.
