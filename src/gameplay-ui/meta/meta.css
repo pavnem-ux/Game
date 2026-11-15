@@ -1089,8 +1089,10 @@
   white-space: nowrap;
 }
 .map-node-label b {
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* Task 23: longer English names wrap onto a second line instead of being cut off. */
+  white-space: normal;
+  text-wrap: balance;
+  line-height: 1.15;
   color: var(--parchment-100);
   font-weight: 600;
 }

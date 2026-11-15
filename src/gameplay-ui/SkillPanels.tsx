@@ -239,7 +239,7 @@ export function EnhancedSkillDialog({ world }: { world: GameplaySnapshot }) {
         </h2>
         <p className="modal-description">
           The fifth active slot is open. Choose one of your five active skills to become enhanced
-          (the «Archmage» branch talents). The choice is final; by default the most recently
+          (the “Archmage” branch talents). The choice is final; by default the most recently
           acquired skill is enhanced.
         </p>
         <div className="upgrade-grid" role="list">
@@ -538,7 +538,7 @@ function SynergySection({ world }: { world: GameplaySnapshot }) {
       <h3>Synergies</h3>
       <p className="synergy-overview-note">
         Synergies take no slots and are not chosen. Each unlocks with any of its pairs of two
-        acquired skills (rank I or higher); «Available» does not mean «triggered» — the effect
+        acquired skills (rank I or higher); “Available” does not mean “triggered” — the effect
         appears in battle when its condition is met.
       </p>
       <ul>
@@ -588,7 +588,7 @@ function SynergySection({ world }: { world: GameplaySnapshot }) {
             </div>
             <p className="synergy-levels">
               <b>II</b> (both skills of a pair at rank III+): {SYNERGY_LEVEL_TEXT[s.id].levelTwo}.{' '}
-              <b>III «{SYNERGY_LEVEL_TEXT[s.id].awakened}»</b> (both at rank V):{' '}
+              <b>III “{SYNERGY_LEVEL_TEXT[s.id].awakened}”</b> (both at rank V):{' '}
               {SYNERGY_LEVEL_TEXT[s.id].awakenedEffect}.
             </p>
             <p className="synergy-explanation">

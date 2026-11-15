@@ -5,7 +5,7 @@ Spec: [task-23-english.md](task-23-english.md) (owner's file). Branch `task-23-e
 22 merged"). Rebase onto `main` once #20 is merged. Text only: no gameplay, balance, layout or
 save-semantics changes.
 
-Current: Phase 3
+Current: Phase 4
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/21
 
@@ -26,7 +26,7 @@ Comments with Cyrillic (e.g. talent handlers) are translated too.
 - [x] 2.2 Content catalogs (maps, bosses, enemies, items, talents, synergies, skills, pets, quests,
       chests / buffs)
 - [x] 2.3 Notifications, errors, debug / QA, prototype
-- [ ] 3 Checks: no-Cyrillic test, screen snapshots (1280×720 + 844×390), old save / export
+- [x] 3 Checks: no-Cyrillic test, screen snapshots (1280×720 + 844×390), old save / export
 - [ ] 4 Full checks, AGENTS.md §5, README, PR
 
 ## Decisions
@@ -39,3 +39,12 @@ Comments with Cyrillic (e.g. talent handlers) are translated too.
   names must equal the glossary mapping, and every English rank text keeps the same numbers.
 
 ## Verification log
+
+- Phase 3: `tests/engine/no-cyrillic.test.ts` (fails on any Cyrillic in `src/` / `index.html`;
+  verified to fail with a probe file); `tests/persistence/old-save-task23.test.ts` loads a v7 save
+  and an export written by the pre-Task-23 code (commit f3116ee) unchanged and round-trips export →
+  import; `tests/english-screens.mjs` (now part of `npm run test:e2e`): 19 screens × 1280×720 and
+  844×390 — no Cyrillic, no horizontal scroll, no clipped text. It found the map-path names cut
+  off with an ellipsis; fixed by layout (the name wraps onto two lines).
+- Before/after screenshots: `docs/english/{before,after}-{desktop,mobile}-*.jpg` (home,
+  equipment, talents, shop, map, quests, run, level-up, pause, results).

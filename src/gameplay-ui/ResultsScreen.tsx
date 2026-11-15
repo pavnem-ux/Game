@@ -81,7 +81,7 @@ export function ResultsScreen({ world }: { world: GameplaySnapshot }) {
         </dl>
         {summary?.newlyUnlockedMap && (
           <p className="results-unlock">
-            ✦ Map unlocked {summary.newlyUnlockedMap}:{' '}
+            ✦ Map {summary.newlyUnlockedMap} unlocked:{' '}
             {getCampaignMap(summary.newlyUnlockedMap).name}
           </p>
         )}
@@ -95,7 +95,7 @@ export function ResultsScreen({ world }: { world: GameplaySnapshot }) {
                 <li key={id}>{QUEST_BY_ID.get(id)?.title ?? id}</li>
               ))}
             </ul>
-            <small>Claim the reward under «Quests» on the home screen.</small>
+            <small>Claim the reward under “Quests” on the home screen.</small>
           </div>
         )}
         <RunStatsPanel stats={world.runStats} />
@@ -108,7 +108,7 @@ export function ResultsScreen({ world }: { world: GameplaySnapshot }) {
             : saveState === 'not-persisted'
               ? 'Browser storage is unavailable: progress is kept only until the page is closed.'
               : last
-                ? 'Could not save progress. It stays in this session — try saving in «Settings».'
+                ? 'Could not save progress. It stays in this session — try saving in “Settings”.'
                 : 'Saving…'}
         </p>
         <SaveWarning />

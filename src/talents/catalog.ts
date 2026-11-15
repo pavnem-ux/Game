@@ -1034,7 +1034,7 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
           refs: [],
         },
         {
-          text: "+20%; applies Poison at 25% of the «Toxic Volley» skill's Poison, if you have it (G10, no synergies).",
+          text: "+20%; applies Poison at 25% of the “Toxic Volley” skill's Poison, if you have it (G10, no synergies).",
           status: 'pending',
           refs: ['G10'],
         },

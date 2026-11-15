@@ -1,0 +1,60 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { describe, expect, it } from 'vitest';
+import {
+  SAVE_KEY,
+  createSaveStore,
+  exportProfile,
+  parseProfileJson,
+  prepareImport,
+} from '../../src/persistence';
+import type { StorageLike } from '../../src/persistence';
+
+/**
+ * Task 23: saves store ids, never display names, so switching the UI to English must not change
+ * how an existing save loads. Both fixtures were written by the pre-Task-23 (Russian) code at
+ * commit f3116ee: a schema-v7 save (gear levels, ore, a pet, quest counters) and its export file.
+ */
+const FIXTURES = join(__dirname, '..', 'fixtures');
+const SAVE = readFileSync(join(FIXTURES, 'pre-task23-save-v7.json'), 'utf8');
+const EXPORT = readFileSync(join(FIXTURES, 'pre-task23-export-v7.json'), 'utf8');
+
+class FakeStorage implements StorageLike {
+  readonly data = new Map<string, string>();
+  getItem(k: string) {
+    return this.data.get(k) ?? null;
+  }
+  setItem(k: string, v: string) {
+    this.data.set(k, v);
+  }
+  removeItem(k: string) {
+    this.data.delete(k);
+  }
+}
+
+describe('Task 23 — an old (Russian-era) save loads unchanged', () => {
+  it('the fixtures hold ids only (no display text in any language)', () => {
+    expect(SAVE).not.toMatch(/[Ѐ-ӿ]/);
+    expect(JSON.parse(SAVE).schemaVersion).toBe(7);
+  });
+  it('the save store loads it as-is: same profile, nothing migrated or renamed', () => {
+    const storage = new FakeStorage();
+    storage.setItem(SAVE_KEY, SAVE);
+    const loaded = createSaveStore({ storage, now: () => 'x', newProfileId: () => 'y' }).load();
+    expect(loaded.status).toBe('loaded');
+    expect(loaded.profile).toEqual(JSON.parse(SAVE));
+    expect(storage.getItem(SAVE_KEY)).toBe(SAVE); // loading never rewrites the stored text
+  });
+  it('the old export file imports, and a fresh export round-trips to the same profile', () => {
+    const imported = prepareImport(EXPORT);
+    expect(imported.ok).toBe(true);
+    if (!imported.ok) return;
+    expect(imported.profile).toEqual(JSON.parse(SAVE));
+    const again = exportProfile(imported.profile, '2026-11-15T10:00:00.000Z');
+    expect(again.ok).toBe(true);
+    if (!again.ok) return;
+    expect(again.json).toBe(EXPORT);
+    const back = parseProfileJson(again.json);
+    expect(back.ok && back.profile).toEqual(imported.profile);
+  });
+});

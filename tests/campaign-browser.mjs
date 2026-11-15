@@ -197,7 +197,7 @@ try {
   assert.match(text, /Ore\s+\+6 \(first victory ×3\)/); // Task 19: Map 1, first victory
   assert.match(text, /1 → 2 \(\+1\)/);
   assert.match(text, /Talent points\s+\+1/);
-  assert.match(text, /Map unlocked 2: Misty Marshes/);
+  assert.match(text, /Map 2 unlocked: Misty Marshes/);
   assert.match(text, /Thornwarden defeated/);
   // Task 08.5 §2.2: compact run statistics on the results screen.
   const statsPanel = results.getByRole('region', { name: 'Run statistics' });
