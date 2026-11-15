@@ -333,6 +333,8 @@ export class GameplayWorld {
         recordStatus: (events) => world.record('status', events),
         recordSkill: (events) => world.record('skill', events),
         statsChanged: (stats) => world.applyStats(stats),
+        // Task 24: the Blight Nest ignores Slow and Stun (DoTs and damage still apply).
+        controlImmune: (targetId) => world.activities?.isNest(targetId) ?? false,
         controlLimits: (targetId) =>
           targetId === world.bossEnemyId && world.bossDefinition
             ? world.bossDefinition.control

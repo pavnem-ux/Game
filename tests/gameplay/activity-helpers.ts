@@ -31,7 +31,10 @@ export function step(w: GameplayWorld, seconds: number, dt = 0.25, sink: WorldEv
   }
   return sink;
 }
-export const activityEvents = <T extends ActivityEvent['type']>(events: WorldEvent[], type: T) =>
+export const activityEvents = <T extends ActivityEvent['type']>(
+  events: readonly WorldEvent[],
+  type: T,
+) =>
   events
     .filter((e) => e.channel === 'activities' && e.event.type === type)
     .map((e) => ({ time: e.time, event: e.event as Extract<ActivityEvent, { type: T }> }));

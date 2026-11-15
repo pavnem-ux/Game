@@ -235,6 +235,12 @@ export class RunActivities {
       if (a.enemyId === enemyId) return this.snapshot(a, a.valueAt);
     return null;
   }
+  /** True if the enemy is an activity's Blight Nest (immune to Slow / Stun). */
+  isNest(enemyId: string): boolean {
+    for (const a of this.activities.values())
+      if (a.type === 'nest' && a.enemyId === enemyId) return true;
+    return false;
+  }
   /** Enemy ids of living thieves / nests (excluded from lantern drain and from normal targeting rules). */
   activityEnemyIds(): ReadonlySet<string> {
     const ids = new Set<string>();

@@ -6,7 +6,7 @@ Task 22 / PR #20 are not merged yet). The PR targets `main`; until #20 and #21 m
 shows their commits. Before each phase the latest `origin/task-23-english` is merged in so review
 fixes from #20/#21 are included.
 
-Current: Phase 3
+Current: Phase 4
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/22
 
@@ -15,7 +15,7 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/22
 - [x] 0 Branch, spec, progress file, draft PR
 - [x] 1 Framework: scheduling, positions, expiry, off-screen arrows, toasts, run stats
 - [x] 2 Shrine + Thief
-- [ ] 3 Lantern + Nest
+- [x] 3 Lantern + Nest
 - [ ] 4 Quests & save (8 quests, lifetime counters, schema bump)
 - [ ] 5 Visuals & audio
 - [ ] 6 Delivery: full checks + e2e, `docs/ACTIVITIES.md`, README, `docs/playtest.md`, income table, PR
@@ -66,3 +66,11 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/22
   deterministic path inside the arena, escape at 20 s with no reward / kill / counted damage,
   kill reward = 6 coin piles worth 8% of the map's victory Gold once, seeded ~20% +1 Ore;
   banked activity Ore paid only with a victory (`applyRunResult`).
+- Phase 3: `tests/gameplay/activities-lantern-nest.test.ts` — lantern: 1 s activation within 60
+  (leaving resets), 100 Light, −2 Light/s per enemy within 70, 0 Light fails, 30 s defence
+  succeeds (Light at 0 on that very instant still counts), fade only before activation, reward
+  6% of victory Gold + Ore 1 (maps 11–20) / 2 (21–40), lantern stays lit, 14 extra spawns at
+  +2…+28 s on a 300–400 ring within the cap; nest: 25× melee HP, never moves or attacks, one
+  spawn within 120 every 3 s (skipped at the cap), immune to Slow / Stun via the new optional
+  `SkillEngine` host hook `controlImmune` (DoTs still apply), crumbles at 90 s without reward,
+  destroyed → one wooden chest at the nest; enemy-ai validation of `flee` / `stationary`.
