@@ -6,7 +6,7 @@ Task 22 / PR #20 are not merged yet). The PR targets `main`; until #20 and #21 m
 shows their commits. Before each phase the latest `origin/task-23-english` is merged in so review
 fixes from #20/#21 are included.
 
-Current: Phase 4
+Current: Phase 5
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/22
 
@@ -16,7 +16,7 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/22
 - [x] 1 Framework: scheduling, positions, expiry, off-screen arrows, toasts, run stats
 - [x] 2 Shrine + Thief
 - [x] 3 Lantern + Nest
-- [ ] 4 Quests & save (8 quests, lifetime counters, schema bump)
+- [x] 4 Quests & save (8 quests, lifetime counters, schema bump)
 - [ ] 5 Visuals & audio
 - [ ] 6 Delivery: full checks + e2e, `docs/ACTIVITIES.md`, README, `docs/playtest.md`, income table, PR
 
@@ -43,6 +43,9 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/22
 - **Lantern activation** needs 1 s inside 60 units without leaving; leaving resets it.
 - **Reward chests** (shrine: enchanted, nest: wooden) are placed at the activity even when the
   3-chest limit is reached (a reward is never lost); they use the normal chest lifetime and table.
+- **Quests.** A new group «Activities» (9th tab) with 8 quests; the catalogue is now 58 quests
+  (`QUEST_COUNT`). Counters count completed activities per type, added once per finalized run
+  (victory or defeat; abandoned adds nothing), like the Task 21 counters. DEV "Complete" counts.
 - **Ore** from activities is banked in the run (`activityOre`) and paid only with a victory,
   added to the normal map ore (first-victory ×3 does not apply to it).
 - **Thief** spawns 350 units from the player at a seeded free angle; its coin burst is 6 coin piles
@@ -74,3 +77,9 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/22
   spawn within 120 every 3 s (skipped at the cap), immune to Slow / Stun via the new optional
   `SkillEngine` host hook `controlImmune` (DoTs still apply), crumbles at 90 s without reward,
   destroyed → one wooden chest at the nest; enemy-ai validation of `flee` / `stationary`.
+- Phase 4: `tests/quests/activities.test.ts` — the 8 quests and rewards, counters once per
+  finalized run (duplicate run id ignored, abandoned adds nothing), claim once (+500 Gold +15 Ore),
+  older summaries without activities, invalid counts rejected, save v7 → v8 migration (all 0,
+  nothing else changes) and invalid stored counters rejected. Updated pins: schema v8 (Task 11/19/
+  21 save tests, transfer "newer version" now v9), 58 quests in 9 groups, and the Task 23 old-save
+  test now expects exactly the v7 → v8 migration.

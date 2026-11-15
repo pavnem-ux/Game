@@ -17,7 +17,8 @@ import type { QuestCounters } from '../quests/counters';
 /** v5 (Task 19): `ore`, `itemLevels`, loadout slots helmet/gloves/pants (see migrateV4toV5). */
 /** v6 (Task 20): `ownedPets`, `petLevels`, `activePet` (see migrateV5toV6). */
 /** v7 (Task 21): `questCounters`, `questsClaimed` (see migrateV6toV7). */
-export const PROFILE_SCHEMA_VERSION = 7;
+/** v8 (Task 24): `questCounters.activities` — map activities completed by type (migrateV7toV8). */
+export const PROFILE_SCHEMA_VERSION = 8;
 export const MAX_RECENT_RUNS = 20;
 export const MAX_PROCESSED_RUN_IDS = 50;
 

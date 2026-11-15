@@ -52,11 +52,11 @@ const run = (over: Partial<RunResult>): RunResult => ({
 });
 
 describe('Task 21 §1.2 — catalogue', () => {
-  it('50 quests in 8 groups (8/5/4/4/20/3/3/3); valid config', () => {
-    expect(QUESTS).toHaveLength(50);
+  it('58 quests in 9 groups (8/5/4/4/20/3/3/3 + Task 24 activities 8); valid config', () => {
+    expect(QUESTS).toHaveLength(58);
     const per = QUEST_GROUPS.map((g) => QUESTS.filter((q) => q.group === g).length);
-    expect(per).toEqual([8, 5, 4, 4, 20, 3, 3, 3]);
-    expect(new Set(QUESTS.map((q) => q.id)).size).toBe(50);
+    expect(per).toEqual([8, 5, 4, 4, 20, 3, 3, 3, 8]);
+    expect(new Set(QUESTS.map((q) => q.id)).size).toBe(58);
     expect(() => validateQuestConfig()).not.toThrow();
     expect(() => validateQuestConfig(QUESTS.slice(1))).toThrow();
   });
@@ -355,7 +355,7 @@ describe('Task 21 — store claim and debug tools', () => {
   });
   it('debug completes every quest through valid saves; counters; reset', () => {
     for (const q of QUESTS) expect(debug.campaignDebug.completeQuest(q.id), q.id).toBe(true);
-    expect(claimableQuests(profile()).length + profile().questsClaimed.length).toBe(50);
+    expect(claimableQuests(profile()).length + profile().questsClaimed.length).toBe(58);
     expect(debug.campaignDebug.addQuestCounter('swift', 7)).toBe(true);
     expect(debug.campaignDebug.addQuestCounter('swift', -1)).toBe(false);
     expect(debug.campaignDebug.resetQuests()).toBe(true);

@@ -499,5 +499,12 @@ export function runQuestSummary(world: GameplaySnapshot): RunQuestSummary {
       (world.runStats?.chests?.opened.enchanted ?? 0),
     synergiesOpened: Object.freeze(real.filter((s) => s.level >= 1).map((s) => s.id)),
     synergiesAwakened: Object.freeze(real.filter((s) => s.level >= 3).map((s) => s.id)),
+    // Task 24: map activities completed this run, by type.
+    activities: Object.freeze({
+      shrine: world.runStats?.activities?.completed.shrine ?? 0,
+      lantern: world.runStats?.activities?.completed.lantern ?? 0,
+      thief: world.runStats?.activities?.completed.thief ?? 0,
+      nest: world.runStats?.activities?.completed.nest ?? 0,
+    }),
   });
 }

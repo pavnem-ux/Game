@@ -5,7 +5,7 @@ import type { Loadout } from '../equipment/logic';
 import { PET_CONFIG } from '../pets/config';
 import { QUESTS, QUEST_BY_ID, QUEST_PET_FALLBACK_GOLD } from './config';
 import type { QuestDefinition, QuestGoal } from './config';
-import { MAP_COUNT, NO_QUEST_COUNTERS } from './counters';
+import { MAP_COUNT, NO_ACTIVITY_COUNTS, NO_QUEST_COUNTERS } from './counters';
 import type { QuestCounters } from './counters';
 
 /**
@@ -78,6 +78,8 @@ function measure(p: QuestProfileView, goal: QuestGoal): { current: number; targe
         current: Math.max(c.bestTierLoadout, bestTierLoadoutNow(p)),
         target: goal.items,
       };
+    case 'activities':
+      return { current: (c.activities ?? NO_ACTIVITY_COUNTS)[goal.activity], target: goal.count };
   }
 }
 export function questProgress(p: QuestProfileView, quest: QuestDefinition): QuestProgress {
@@ -165,9 +167,12 @@ export function withLoadoutCounter<P extends QuestProfileView>(p: P): P {
     : p;
 }
 
-/** Startup validation of the catalogue: 50 unique quests, valid goals and rewards. */
+/** Number of quests: Task 21's 50 + Task 24's 8 activity quests. */
+export const QUEST_COUNT = 58;
+/** Startup validation of the catalogue: 58 unique quests, valid goals and rewards. */
 export function validateQuestConfig(list: readonly QuestDefinition[] = QUESTS): void {
-  if (list.length !== 50) throw new Error(`Quest catalogue must have 50 quests (${list.length}).`);
+  if (list.length !== QUEST_COUNT)
+    throw new Error(`Quest catalogue must have ${QUEST_COUNT} quests (${list.length}).`);
   const ids = new Set<string>();
   for (const quest of list) {
     if (ids.has(quest.id)) throw new Error(`Duplicate quest ${quest.id}.`);

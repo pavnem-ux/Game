@@ -23,13 +23,15 @@ import {
 import type { Loadout } from '../equipment';
 import { PET_LEVEL_RULES, isPetId } from '../pets';
 import {
+  ACTIVITY_COUNTER_TYPES,
+  NO_ACTIVITY_COUNTS,
   NO_QUEST_COUNTERS,
   QUEST_BY_ID,
   SYNERGY_IDS,
   questProgress,
   tierItemsWorn,
 } from '../quests';
-import type { QuestCounters } from '../quests';
+import type { ActivityCounts, QuestCounters } from '../quests';
 
 /**
  * Task 08 `saveSchema`: validation, defaults and migrations for the persisted profile.
@@ -129,6 +131,15 @@ export function migrateV6toV7(data: Json): Json {
     questsClaimed: [],
   };
 }
+/**
+ * v7 → v8 (Task 24): lifetime map-activity counters `questCounters.activities` start at 0 for every
+ * type (no retroactive credit). Nothing else changes.
+ */
+export function migrateV7toV8(data: Json): Json {
+  return isObject(data.questCounters)
+    ? { ...data, questCounters: { ...data.questCounters, activities: { ...NO_ACTIVITY_COUNTS } } }
+    : data; // a missing / invalid counters object is left for validation
+}
 export const migrations: Readonly<Record<number, Migration>> = Object.freeze({
   1: migrateV1toV2,
   2: migrateV2toV3,
@@ -136,6 +147,7 @@ export const migrations: Readonly<Record<number, Migration>> = Object.freeze({
   4: migrateV4toV5,
   5: migrateV5toV6,
   6: migrateV6toV7,
+  7: migrateV7toV8,
 });
 
 export type SaveErrorCode =
@@ -487,5 +499,19 @@ function questCountersOf(raw: unknown): QuestCounters {
     synergiesOpened: Object.freeze(opened),
     synergiesAwakened: Object.freeze(awakened),
     bestTierLoadout: int(or(v.bestTierLoadout, 0), 'questCounters.bestTierLoadout', 0, 7),
+    activities: activityCountsOf(or(v.activities, NO_ACTIVITY_COUNTS)),
   });
+}
+/** Task 24: completed activities per type — whole numbers ≥ 0 for exactly the known types. */
+function activityCountsOf(raw: unknown): ActivityCounts {
+  if (!isObject(raw)) invalid('questCounters.activities');
+  const v = raw as Json;
+  for (const key of Object.keys(v))
+    if (!(ACTIVITY_COUNTER_TYPES as readonly string[]).includes(key))
+      invalid(`questCounters.activities.${key}`);
+  return Object.freeze(
+    Object.fromEntries(
+      ACTIVITY_COUNTER_TYPES.map((t) => [t, int(or(v[t], 0), `questCounters.activities.${t}`)]),
+    ),
+  ) as ActivityCounts;
 }
