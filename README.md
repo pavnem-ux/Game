@@ -2,6 +2,31 @@
 
 Браузерный 2D action roguelite. **Combat Alpha — Task 07:** навыки забега (37 навыков, 12 синергий, выбор на каждом уровне). Ранее, **Task 06:** четыре класса, своё оружие у каждого, melee/ranged враги, Poison/Burn/Bleed, защита после попадания, одно ручное воскрешение, XP-кристаллы, уровни забега, непрерывные подкрепления и DEV-панель для проверки механик. Игра использует все самостоятельные боевые модули на общей хронологии.
 
+## The Last Light — player guide (English)
+
+**The Last Light** is a browser-based 2D top-down action roguelite set in a dark fairy tale. The
+whole game is in English (since Task 23).
+
+- **Start:** on **Home**, pick your hero — **Warrior** (Sword), **Mage** (Staff), **Archer** (Bow) or
+  **Rogue** (Twin Daggers) — and press **To battle** (or **Start run · map N**).
+- **Move:** WASD / arrow keys; on a phone, drag on the left half of the screen. Attacks are
+  automatic. **Dash:** Space / Shift, or the dash button on touch screens. **Pause:** P / Esc.
+- **Level up:** collect XP crystals; each run level offers up to three skill cards (new skill or
+  next rank). **Reroll**, **Banish** and **Skip** are on the offer screen. Two skills of a pair
+  unlock a **synergy**; raising both to rank III and V levels it up to II and III (**Awakening**).
+- **Campaign:** 40 maps in four acts (_Forgotten Tales_, _Enchanted Lands_, _Kingdom of the Dead_,
+  _The Last Tale_); every map ends with its boss, and elites appear along the way (the HUD shows
+  _Elite in 1:20_ / _Boss in 0:45_). A victory unlocks the next map.
+- **Between runs:** spend **Gold** in the **Shop**, upgrade gear with Gold and **Ore** in the
+  **Forge**, learn **Talents** (12 branches, superpowers at level 30), raise **Pets** and claim
+  **Quests**. Item rarities: Common, Uncommon, Rare, Epic, Legendary.
+- **Death:** the first death offers **Revive** (half health, 3 s of protection, same run) or
+  **End run**; a second death ends the run.
+- **Saves** stay in this browser; **Settings → Save management** exports and imports a save file.
+  Saves store ids only, so saves from the Russian version load unchanged.
+
+All terms and names: [docs/glossary-en.md](docs/glossary-en.md).
+
 ## Запуск
 
 Нужен Node.js **24+** и npm. Из каталога проекта:
@@ -309,3 +334,15 @@ Firefox и Edge; сборка под последние версии брауз�
 переходом в кузницу; панель «Надеть» всегда на виду; в кузнице — крупный переключатель «Предметы /
 Питомцы». Только интерфейс: игра, баланс и экономика не менялись. [Журнал](docs/task-22-progress.md),
 [до/после](docs/hud/).
+
+## Task 23 — английский язык
+
+Весь интерфейс и весь игровой текст — на английском: меню, HUD, подсказки, итоги, ошибки,
+настройки, магазин, кузница, задания, таланты, синергии, навыки, враги, боссы, карты, предметы,
+питомцы, отладочные панели и прототип; `lang="en"`, заголовок «The Last Light». Остался один
+файл локали `src/gameplay-ui/strings-en.ts` (те же типизированные ключи — можно добавить другой
+язык); сохранения хранят только id, поэтому старые сохранения загружаются без изменений. Все
+названия — в [глоссарии](docs/glossary-en.md) (предложения отмечены †, ждут решения владельца).
+Тест `no-cyrillic` запрещает кириллицу в `src/`; `tests/english-screens.mjs` проверяет все экраны
+на 1280×720 и 844×390. Геймплей и баланс не менялись. [Журнал](docs/task-23-progress.md),
+[до/после](docs/english/).

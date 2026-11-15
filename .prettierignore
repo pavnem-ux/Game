@@ -3,3 +3,6 @@
 docs/talents.md
 # Task 15: the owner's synergy catalog v3 is kept byte-identical (source of truth).
 docs/synergies-v3.md
+
+# Task 23: verbatim save files written by the pre-Task-23 code (byte-exact round-trip test)
+tests/fixtures/pre-task23-*.json

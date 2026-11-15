@@ -111,8 +111,10 @@ task explicitly requires it, and call out every such change in the PR descriptio
 - Validate public inputs and reject invalid configuration before mutating state (see `validation.ts`
   files). Prefer pure functions for formulas.
 - No new runtime dependencies, dependency upgrades or lockfile churn without owner approval.
-- UI text is Russian (existing labels may mix in English terms); code, identifiers and commit
-  messages are English.
+- UI text is English (owner decision, Task 23): player-facing strings live in the locale file
+  `src/gameplay-ui/strings-en.ts` or the English content catalogs and use the names in
+  `docs/glossary-en.md`; `src/` contains no Cyrillic (enforced by `tests/engine/no-cyrillic.test.ts`).
+  Design docs in `docs/` may stay Russian. Code, identifiers and commit messages are English.
 - Never commit secrets, tokens, `.env*`, `dist/`, `node_modules/` or `artifacts/`.
 
 ## 6. Tests and verification

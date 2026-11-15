@@ -5,7 +5,7 @@ Spec: [task-23-english.md](task-23-english.md) (owner's file). Branch `task-23-e
 22 merged"). Rebase onto `main` once #20 is merged. Text only: no gameplay, balance, layout or
 save-semantics changes.
 
-Current: Phase 4
+Current: done — PR ready for review (not merged)
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/21
 
@@ -27,7 +27,7 @@ Comments with Cyrillic (e.g. talent handlers) are translated too.
       chests / buffs)
 - [x] 2.3 Notifications, errors, debug / QA, prototype
 - [x] 3 Checks: no-Cyrillic test, screen snapshots (1280×720 + 844×390), old save / export
-- [ ] 4 Full checks, AGENTS.md §5, README, PR
+- [x] 4 Full checks, AGENTS.md §5, README, PR
 
 ## Decisions
 
@@ -48,3 +48,11 @@ Comments with Cyrillic (e.g. talent handlers) are translated too.
   off with an ellipsis; fixed by layout (the name wraps onto two lines).
 - Before/after screenshots: `docs/english/{before,after}-{desktop,mobile}-*.jpg` (home,
   equipment, talents, shop, map, quests, run, level-up, pause, results).
+- Phase 4 (final): `npm run typecheck` ✓, `npm test` ✓ (131 files, 1,409 tests), `npm run
+format:check` ✓, `npm run build` ✓, `npm run test:production` ✓, `npm run test:e2e` ✓
+  (prototype, alpha, campaign, mobile, English screens), `GAME_LOCAL_QA=1 npm run build:qa` +
+  `npm run test:qa` ✓, `test:build-policy` ✓. AGENTS.md §5 now says «UI text is English»; README
+  has an English player guide and a Task 23 section.
+- Not verified: the Cloudflare Preview (the sandbox cannot open `*.workers.dev`) and real phones
+  (Chromium emulation only). Tone and wording of the translation need the owner's read-through;
+  glossary entries marked † are proposals.
