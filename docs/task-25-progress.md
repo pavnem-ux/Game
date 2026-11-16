@@ -6,16 +6,16 @@ Spec: [task-25-art-pack-1.md](task-25-art-pack-1.md) (owner's file, kept verbati
 `public/assets/…` and `docs/ART_PROVENANCE.md`. Rendering only: hitboxes, simulation and balance
 are unchanged.
 
-Current: Phase 1 (pipeline) — step 1.1 files + provenance + AGENTS.md done
+Current: Phase 1 done — next: Phase 2 (in-run sprites)
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/23
 
 ## Checklist
 
 - [x] 0 Setup: branch, spec, progress file, draft PR, "before" screenshots
-- [ ] 1 Pipeline
+- [x] 1 Pipeline
   - [x] 1.1 Files under `public/assets/`, `docs/ART_PROVENANCE.md`, AGENTS.md §4.12 (owner decision)
-  - [ ] 1.2 Manifest loader and asset registry with procedural fallback; tests
+  - [x] 1.2 Manifest loader and asset registry with procedural fallback; tests
 - [ ] 2 In-run sprites: players, enemies, elites, thief, nest; size/anchor/flip; effects kept; tests
 - [ ] 3 Portraits: character select + hub
 - [ ] 4 Delivery: full checks, e2e desktop/mobile, `test:production`, FPS at 120 enemies, "after"
@@ -49,3 +49,23 @@ budget.
   The same script produces the "after" set in Phase 4.
 - **Missing reference.** `ART_PROVENANCE.md` points to `docs/art-assets-list.md` and a future
   `docs/art-prompts.txt`; neither is in the pack or the repo. They are the owner's to add.
+- **Pipeline (Phase 1).** Three small modules in `src/engine/visuals/`:
+  - `art-manifest.ts` (pure): parses and validates the manifest — key = file name without
+    extension, `assets/…/<key>.webp|png` only (no URLs, no `..`), size 1–2048 px, anchor
+    `bottom-center` | `center`, no duplicate keys (checked on the raw text, since `JSON.parse` keeps
+    the last duplicate silently) and no file used twice. Every problem is listed at once.
+  - `art-registry.ts` (pure): look → art key table (`UNIT_ART`, one place to edit), portrait keys,
+    and `ArtRegistry.texture(look)`, which returns `art:<key>` only once that image has loaded and
+    otherwise the Task 18 procedural texture. Lookups allocate nothing (safe in the render loop).
+    Bosses, items, projectiles, pets and chests have no art entry and keep their procedural look.
+  - `art-pack.ts` fetches the manifest once per page (shared with the portraits in Phase 3);
+    `art-loader.ts` queues the 13 unit images in Phaser's loader.
+- **Loading without blocking.** The Phaser game is created with the menu, so the art loads in the
+  background as soon as the scene is created, with a thin progress bar at the bottom of the canvas.
+  The scene does not wait in `preload()`: its command bridge subscribes in `create()`, and a
+  "Start run" sent during a blocking preload would be lost. A run started before the images arrive
+  shows the procedural looks and switches when they land (from the HTTP cache this is a few
+  frames). A missing / invalid manifest or a failed image logs one warning and keeps the
+  procedural look. Portraits (433 KB) are not loaded by the scene; the menus load them as images.
+  Measured in Chromium: the manifest and all 13 unit images load with 200; the only 404 on the page
+  is the browser's automatic `/favicon.ico`, which existed before this task.

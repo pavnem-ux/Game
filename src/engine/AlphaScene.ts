@@ -23,6 +23,8 @@ import { ACTIVITY_RULES } from '../gameplay/activities';
 import type { ActivityType } from '../gameplay/activities';
 import { EN } from '../gameplay-ui/strings-en';
 import { buildUnitTextures } from './visuals/texture-factory';
+import { startArtLoad } from './visuals/art-loader';
+import { ArtRegistry } from './visuals/art-registry';
 import { BiomeRenderer } from './visuals/BiomeRenderer';
 import { BOSS_DARK, LightRenderer, WARM_DARK } from './visuals/LightRenderer';
 import { QUALITY_PRESETS } from './visuals/quality';
@@ -60,6 +62,11 @@ export class AlphaScene extends Phaser.Scene {
   /** Task 18: HP bars, marks and control rings above the unit sprites. */
   private overlay!: Phaser.GameObjects.Graphics;
   private units!: UnitRenderer;
+  /**
+   * Task 25: owner art per look (procedural fallback until / unless an image loads). Starts empty;
+   * the background loader swaps in the manifest-backed registry.
+   */
+  private art = new ArtRegistry(new Map());
   /** Task 18: the map's biome (ground, decor, particles), rebuilt when the map changes. */
   private biome!: BiomeRenderer;
   private mapId: number | null = null;
@@ -110,6 +117,7 @@ export class AlphaScene extends Phaser.Scene {
     this.graphics = this.add.graphics().setDepth(5);
     buildUnitTextures(this);
     this.units = new UnitRenderer(this);
+    startArtLoad(this, (registry) => (this.art = registry));
     this.lighting = new LightRenderer(this);
     // Task 18: quality applies to every visual layer now and whenever the setting changes.
     this.applyQuality();
