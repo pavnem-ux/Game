@@ -1029,13 +1029,15 @@ p.damage-note {
   pointer-events: none;
   max-width: 92vw;
 }
-.campaign-hud-map {
-  color: #f1eddb;
+/* Task 22: one countdown to the nearest scheduled event. */
+.campaign-hud-next {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
 }
-.campaign-hud-time {
-  color: #c3e3b6;
+.campaign-hud-next.next-elite {
+  color: #f6dc9c;
 }
-.campaign-hud-boss-countdown {
+.campaign-hud-next.next-boss {
   color: #ff9db0;
 }
 .campaign-alert {
@@ -1509,6 +1511,83 @@ p.damage-note {
 .skill-dash.cooling {
   border-color: rgba(255, 255, 255, 0.15);
   color: #8f978f;
+}
+
+/* Task 22: active skills bottom-left (above the weapon card; corner on phones). */
+.active-skills {
+  position: absolute;
+  left: max(30px, env(safe-area-inset-left));
+  bottom: calc(max(24px, env(safe-area-inset-bottom)) + 84px);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 260px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  pointer-events: none;
+  z-index: 4;
+}
+.active-skill {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid #9db68777;
+  background: #14201ae6;
+  color: #e5e6cf;
+  overflow: hidden;
+}
+.active-skill.enhanced {
+  border-color: #f0c862;
+}
+.active-skill i {
+  font-style: normal;
+  font-size: 18px;
+}
+.active-skill b {
+  position: absolute;
+  right: 3px;
+  bottom: 1px;
+  font-size: 9px;
+  color: #c9ddb1;
+}
+.active-skill.cooling::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 9, 8, 0.62);
+}
+.active-skill-cd {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #f0c58a;
+  font-variant-numeric: tabular-nums;
+}
+.pause-run-info {
+  color: #c9d6c4;
+  font-size: 13px;
+}
+@media (max-height: 560px) {
+  .active-skills {
+    left: max(10px, env(safe-area-inset-left));
+    bottom: max(10px, env(safe-area-inset-bottom));
+  }
+  /* Left-handed: the 84 px dash button sits 16 px from the left edge — start right of it. */
+  .active-skills.left-handed {
+    left: calc(max(16px, env(safe-area-inset-left)) + 84px + 12px);
+  }
+  .active-skill {
+    width: 34px;
+    height: 34px;
+  }
 }
 
 /* Task 21: quests completed with a run (results screen). */

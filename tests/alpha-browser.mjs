@@ -281,40 +281,51 @@ try {
       await page.screenshot({ path: 'artifacts/alpha-12-skills.png' });
     }
   }
-  // Task 14: «Изгнать» (B, then 1–3) and «Пропустить» (S) with counters; disabled with a reason.
+  // Task 14: «Изгнать» and «Пропустить» with counters; disabled with a reason.
+  // Task 22: the R / B / S / 1–3 shortcuts were removed — pressing them changes nothing.
   await command({
     type: 'restart',
     options: { characterClass: 'mage', initialEnemies: false, spawning: { enabled: false } },
   });
   await command({ type: 'protection', enabled: true });
   await command({ type: 'grant-xp', amount: 92 }); // three levels: 20 + 30 + 42
-  await page.getByRole('dialog', { name: /Уровень забега/ }).waitFor();
+  const offerDialog = page.getByRole('dialog', { name: /Уровень забега/ });
+  await offerDialog.waitFor();
   const controls = page.getByRole('group', { name: 'Управление выбором' });
   assert.ok(await controls.getByRole('button', { name: 'Изгнать · осталось 2' }).isEnabled());
+  const untouched = (await state()).world.skills;
+  for (const key of ['r', 'b', 's', '1', '2', '3', 'R', 'B', 'S']) await page.keyboard.press(key);
+  await page.waitForTimeout(80);
+  assert.deepEqual((await state()).world.skills, untouched, 'offer hotkeys do nothing');
+  assert.equal((await state()).screen, 'level-up');
+  assert.equal(await offerDialog.getByText(/R — перебросить/).count(), 0, 'no hotkey hint');
+  assert.equal(await offerDialog.getByRole('button', { name: /Навыки|Обзор навыков/ }).count(), 0);
   const offered = (await state()).world.skills.offer.cards.map((c) => c.skillId);
-  await page.keyboard.press('b');
+  const cardsOnOffer = page.locator('.upgrade-grid .skill-card');
+  await controls.getByRole('button', { name: 'Изгнать · осталось 2' }).click();
   assert.equal(
     await controls.getByRole('button', { name: 'Отменить изгнание' }).getAttribute('aria-pressed'),
     'true',
   );
-  await page.keyboard.press('2');
+  await cardsOnOffer.nth(1).click();
   s = await state();
   assert.deepEqual(s.world.skills.banished, [offered[1]]);
   assert.equal(s.world.skills.banishes, 1);
   assert.ok(!s.world.skills.offer.cards.some((c) => c.skillId === offered[1]));
   assert.equal(s.screen, 'level-up', 'banishing keeps the offer open');
-  await page.keyboard.press('s');
+  await controls.getByRole('button', { name: /Пропустить/ }).click();
   s = await state();
   assert.equal(s.world.skills.skips, 1);
   assert.equal(s.world.skills.pendingChoices, 2);
   await controls.getByRole('button', { name: 'Изгнать · осталось 1' }).click();
-  await page.keyboard.press('1');
+  await cardsOnOffer.first().click();
   const noBanish = controls.getByRole('button', { name: 'Изгнать · осталось 0' });
   assert.equal(await noBanish.isDisabled(), true);
   assert.equal(await noBanish.getAttribute('title'), 'Изгнания закончились');
   assert.equal((await state()).world.runStats.choices.banishes, 2);
-  await page.keyboard.press('1');
-  await page.keyboard.press('1');
+  await cardsOnOffer.first().click();
+  await page.waitForFunction(() => window.__alpha.state().world.skills.pendingChoices < 2);
+  if ((await state()).screen === 'level-up') await cardsOnOffer.first().click();
   assert.equal((await state()).screen, 'playing');
   // Two picks (the second may upgrade the first skill): ranks sum to 2, nothing pending.
   s = await state();

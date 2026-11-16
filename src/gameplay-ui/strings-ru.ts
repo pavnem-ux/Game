@@ -182,6 +182,8 @@ export const RU = Object.freeze({
       starter: 'Стартовое',
       unequipFailed: 'Не удалось снять предмет.',
       equipFailed: 'Не удалось надеть.',
+      upgradeInForge: 'Улучшить в кузнице',
+      close: 'Закрыть',
     }),
     talents: Object.freeze({
       available: (n: number) => `Свободно очков: ${n}`,
@@ -268,6 +270,7 @@ export const RU = Object.freeze({
       maxed: 'Максимальный уровень',
       equippedBy: (classes: string) => `Надето: ${classes}`,
       toForge: 'В кузницу',
+      backToEquipment: 'К экипировке',
       refusals: Object.freeze({
         gold: 'Не хватает золота.',
         ore: 'Не хватает руды.',
@@ -313,10 +316,9 @@ export const RU = Object.freeze({
       reroll: (n: number) => `Перебросить · осталось ${n}`,
       banish: (n: number) => `Изгнать · осталось ${n}`,
       banishCancel: 'Отменить изгнание',
-      banishHint: 'Выберите карту, которую нужно изгнать до конца забега (или нажмите 1–3).',
+      banishHint: 'Выберите карту, которую нужно изгнать до конца забега.',
       banishCard: (name: string) => `Изгнать: ${name}`,
       skip: (coins: number) => (coins > 0 ? `Пропустить · +${coins} монет` : 'Пропустить'),
-      hotkeys: 'R — перебросить · B — изгнать · S — пропустить · 1–3 — выбрать',
       noRerolls: 'Перебросы закончились или переброс ничего не изменит',
       reasons: Object.freeze({
         'none-left': 'Изгнания закончились',

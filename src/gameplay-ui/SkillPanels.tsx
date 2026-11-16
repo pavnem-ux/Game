@@ -22,8 +22,10 @@ import {
   skillDamageReadout,
   synergyOverview,
 } from '../skills';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { uiSettings } from './ui-settings';
 import { uiSound } from './sound';
+import { clock } from './campaign-format';
 import { alphaBridge } from './store';
 import { BuildLabel } from './BuildLabel';
 import { ReportButton } from './ReportButton';
@@ -38,15 +40,12 @@ const textGlyph = (icon: string) => `${icon}\uFE0E`;
 const cardKey = (c: OfferCard) => (c.kind === 'skill' ? c.skillId : `bonus:${c.bonusId}`);
 
 /** Level-up choice: up to three cards, exactly one pick, three rerolls per run. */
-export function LevelUpDialog({
-  world,
-  onOpenSkills,
-  hiddenBehindSkills = false,
-}: {
-  world: GameplaySnapshot;
-  onOpenSkills: () => void;
-  hiddenBehindSkills?: boolean;
-}) {
+/**
+ * Task 22: no keyboard shortcuts on this screen (R/B/S/1–3 were removed — S also moves the player,
+ * so a held key could skip an offer) and no «Навыки» button; mouse / touch and Tab / Enter focus
+ * navigation remain.
+ */
+export function LevelUpDialog({ world }: { world: GameplaySnapshot }) {
   const skills = world.skills;
   const offer = skills.offer!;
   const bonus = offer.mode === 'bonus';
@@ -80,40 +79,6 @@ export function LevelUpDialog({
       alphaBridge.send({ type: 'banish-skill', card: key });
     } else alphaBridge.send({ type: 'choose-skill', card: key });
   };
-  // Hotkeys: R reroll, B banish mode, S skip, 1–3 pick (or banish in banish mode).
-  useEffect(() => {
-    if (hiddenBehindSkills) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
-      const live = alphaBridge.getSnapshot().world?.skills;
-      const current = live?.offer;
-      if (!live || !current) return;
-      const k = e.key.toLowerCase();
-      const n = Number(e.key);
-      if (k === 'r' || k === 'к') {
-        if (current.rerollAvailable) alphaBridge.send({ type: 'reroll' });
-        else uiSound('ui-error');
-      } else if (k === 'b' || k === 'и') {
-        const can =
-          current.mode === 'skills' &&
-          live.banishes > 0 &&
-          current.cards.some((c) => live.banishBlocked[cardKey(c)] === null);
-        if (can || banishRef.current) {
-          setBanishMode(!banishRef.current);
-          uiSound('ui-click');
-        } else uiSound('ui-error');
-      } else if (k === 's' || k === 'ы') {
-        alphaBridge.send({ type: 'skip-offer' });
-      } else if (n >= 1 && n <= 3) {
-        // Resolved by the scene against the world's current offer (no stale card keys).
-        alphaBridge.send({ type: 'offer-key', index: n - 1, banish: banishRef.current });
-        if (banishRef.current) setBanishMode(false);
-      } else return;
-      e.preventDefault();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [hiddenBehindSkills]);
   return (
     <section
       className="overlay modal-overlay"
@@ -121,8 +86,6 @@ export function LevelUpDialog({
       aria-modal="true"
       data-sound="none" /* card pick / reroll / banish / skip sound from the world events */
       aria-labelledby="skill-title"
-      inert={hiddenBehindSkills}
-      aria-hidden={hiddenBehindSkills || undefined}
     >
       <div className="upgrade-panel skill-panel">
         <div className="modal-sigil">✧</div>
@@ -139,13 +102,6 @@ export function LevelUpDialog({
             : `Активные ${skills.slots.auto.used}/${skills.slots.auto.max} · пассивные ${skills.slots.passive.used}/${skills.slots.passive.max} · выбор навсегда до конца забега`}
           {skills.pendingChoices > 1 && ` · ещё выборов: ${skills.pendingChoices - 1}`}
         </p>
-        <button
-          className="button skills-modal-open"
-          aria-label="Обзор навыков"
-          onClick={onOpenSkills}
-        >
-          Навыки
-        </button>
         <div className="upgrade-grid" role="list">
           {offer.cards.map((card, i) => {
             const hints =
@@ -252,7 +208,6 @@ export function LevelUpDialog({
           <Button size="s" variant="ghost" onClick={() => alphaBridge.send({ type: 'skip-offer' })}>
             {O.skip(coins)}
           </Button>
-          <small className="offer-hotkeys">{O.hotkeys}</small>
           {skills.banished.length > 0 && (
             <small className="offer-hotkeys">{O.banished(skills.banished.length)}</small>
           )}
@@ -329,51 +284,14 @@ export function EnhancedSkillDialog({ world }: { world: GameplaySnapshot }) {
 }
 
 /** Equipped skills with ranks and remaining cooldowns, plus gold and barrier. */
-export function SkillBar({
-  world,
-  open,
-  onOpen,
-  onClose,
-  context,
-}: {
-  world: GameplaySnapshot;
-  open: boolean;
-  onOpen: () => void;
-  onClose: () => void;
-  context: string;
-}) {
-  const { owned, slots, gold } = world.skills;
-  const { cooldowns, barrier, buffs } = world.skillCombat;
+export function SkillBar({ world }: { world: GameplaySnapshot }) {
+  const { gold } = world.skills;
+  const { barrier, buffs } = world.skillCombat;
   return (
     <>
       <div className="skill-bar" aria-label="Навыки забега">
-        <button
-          className="skill-overview-toggle"
-          aria-label="Обзор навыков"
-          aria-expanded={open}
-          aria-controls="skill-overview"
-          hidden={context !== 'playing'}
-          onClick={open ? onClose : onOpen}
-        >
-          Навыки
-        </button>
-        {owned.map((s) => (
-          <span
-            key={s.skillId}
-            className={`skill-chip kind-${s.kind}${s.skillId === world.skills.enhancedSkillId ? ' enhanced' : ''}`}
-            title={`${s.name} ${ROMAN[s.rank]}${s.skillId === world.skills.enhancedSkillId ? ' · усиленный' : ''}`}
-          >
-            <i>{textGlyph(s.icon)}</i>
-            <b>{ROMAN[s.rank]}</b>
-            {s.kind === 'auto' && (cooldowns[s.skillId] ?? 0) > 0.05 && (
-              <small>{cooldowns[s.skillId].toFixed(1)}</small>
-            )}
-          </span>
-        ))}
-        <span className="skill-slots">
-          Автоматические {slots.auto.used}/{slots.auto.max} · Пассивные {slots.passive.used}/
-          {slots.passive.max}
-        </span>
+        {/* Task 22: the «Навыки» button, slot counts and passive icons were removed (the full
+            list is in the pause menu); active skills are drawn by <ActiveSkills /> bottom-left. */}
         {gold > 0 && <span className="skill-gold">◎ {gold}</span>}
         {barrier > 0 && <span className="skill-barrier">◈ {Math.ceil(barrier)}</span>}
         {/* Task 14: dash readiness (Space / Shift). */}
@@ -399,7 +317,6 @@ export function SkillBar({
           </span>
         ))}
       </div>
-      {open && <SkillOverview world={world} onClose={onClose} context={context} />}
     </>
   );
 }
@@ -703,6 +620,17 @@ export function PauseDialog({ world }: { world: GameplaySnapshot }) {
           <div className="eyebrow centered">МИГ ТИШИНЫ</div>
           <h2 id="alpha-dialog-title">Перевести дух.</h2>
           <p>Всё игровое время остановлено. P / Esc — продолжить.</p>
+          {/* Task 22: the run details removed from the in-run HUD. */}
+          <p className="pause-run-info" aria-label="Забег">
+            {world.campaign
+              ? `${world.campaign.mapId}. ${world.campaign.mapName} · Этап: ${world.campaign.stage.name} · ${
+                  world.campaign.durationReached
+                    ? 'время вышло'
+                    : `осталось ${clock(world.campaign.remaining)}`
+                } · `
+              : 'Забытая роща · '}
+            Волна {world.spawning.waves + 1}
+          </p>
           <div className="pause-actions">
             <button
               className="button primary"
@@ -741,70 +669,6 @@ export function PauseDialog({ world }: { world: GameplaySnapshot }) {
   );
 }
 
-/** Read-only, non-modal overview. Opening/closing never changes simulation pause state. */
-function SkillOverview({
-  world,
-  onClose,
-  context,
-}: {
-  world: GameplaySnapshot;
-  onClose: () => void;
-  context: string;
-}) {
-  const closeButton = useRef<HTMLButtonElement>(null);
-  const blocking = context !== 'playing';
-  useEffect(() => {
-    closeButton.current?.focus();
-    const keyboard = (event: KeyboardEvent) => {
-      const pauseKey = event.code === 'KeyP' || event.key.toLowerCase() === 'p';
-      if (event.key === 'Escape' || (blocking && pauseKey)) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        if (event.key === 'Escape' && !event.repeat) onClose();
-      }
-      if (event.key === 'Tab' && blocking) {
-        // The overview contains only this one control; keep focus above the inert underlying modal.
-        event.preventDefault();
-        closeButton.current?.focus();
-      }
-    };
-    document.addEventListener('keydown', keyboard, true);
-    return () => document.removeEventListener('keydown', keyboard, true);
-  }, [onClose, blocking]);
-  return (
-    <>
-      {blocking && <div className="skill-overview-backdrop" aria-hidden="true" />}
-      <aside
-        id="skill-overview"
-        className={`skill-overview ${blocking ? 'is-blocking' : ''}`}
-        aria-label="Обзор навыков"
-        role={blocking ? 'dialog' : undefined}
-        aria-modal={blocking || undefined}
-      >
-        <div className="skill-overview-heading">
-          <h2>Навыки забега</h2>
-          <span
-            className="skill-rerolls"
-            aria-label={`Перебросов осталось: ${world.skills.rerolls}`}
-            title="Оставшиеся перебросы"
-          >
-            ↻ {world.skills.rerolls}
-          </span>
-          <button ref={closeButton} onClick={onClose} aria-label="Закрыть обзор навыков">
-            {blocking ? (context === 'level-up' ? 'К выбору' : 'Назад') : '×'}
-          </button>
-        </div>
-        <p className="skill-overview-note">
-          {blocking
-            ? 'Игра остаётся на паузе. Esc — назад.'
-            : 'Обзор не останавливает игру. Esc — закрыть.'}
-        </p>
-        <SkillsOverviewBody world={world} />
-      </aside>
-    </>
-  );
-}
-
 /** Task 20 HUD: pet portrait; timed pets show a conic cooldown ring until their next action. */
 function PetHudIcon({ pet, time }: { pet: PetSnapshot; time: number }) {
   const name = PET_CONFIG[pet.id].name;
@@ -824,5 +688,46 @@ function PetHudIcon({ pet, time }: { pet: PetSnapshot; time: number }) {
     >
       <PetPortrait id={pet.id} size={22} />
     </span>
+  );
+}
+
+/**
+ * Task 22 §1.2: active (automatic) skills only, bottom-left — compact icons with a small rank and
+ * a dimmed cooldown overlay with the seconds left. Passives, slot counts and the full list live in
+ * the pause menu.
+ */
+export function ActiveSkills({ world }: { world: GameplaySnapshot }) {
+  // Left-handed touch layout: the dash button takes the bottom-left corner (CSS moves the row).
+  const leftHanded = useSyncExternalStore(uiSettings.subscribe, uiSettings.get).leftHanded;
+  const autos = world.skills.owned.filter((s) => s.kind === 'auto');
+  if (autos.length === 0) return null;
+  const { cooldowns } = world.skillCombat;
+  return (
+    <ul className={`active-skills${leftHanded ? ' left-handed' : ''}`} aria-label="Активные навыки">
+      {autos.map((s) => {
+        const left = cooldowns[s.skillId] ?? 0;
+        const cooling = left > 0.05;
+        return (
+          <li
+            key={s.skillId}
+            className={`active-skill${cooling ? ' cooling' : ''}${
+              s.skillId === world.skills.enhancedSkillId ? ' enhanced' : ''
+            }`}
+            title={`${s.name} ${ROMAN[s.rank]}`}
+            aria-label={`${s.name} ${ROMAN[s.rank]}: ${
+              cooling ? `перезарядка ${left.toFixed(1)} с` : 'готов'
+            }`}
+          >
+            <i aria-hidden="true">{textGlyph(s.icon)}</i>
+            <b aria-hidden="true">{ROMAN[s.rank]}</b>
+            {cooling && (
+              <small className="active-skill-cd" aria-hidden="true">
+                {left < 10 ? left.toFixed(1) : Math.ceil(left)}
+              </small>
+            )}
+          </li>
+        );
+      })}
+    </ul>
   );
 }

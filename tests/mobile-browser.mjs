@@ -107,6 +107,45 @@ async function open(viewport) {
   await context.close();
 }
 
+// ── Task 22 review fix: left-handed — the active skill row stays clear of the dash button ──
+for (const viewport of [
+  { width: 844, height: 390 },
+  { width: 768, height: 1024 },
+]) {
+  const { context, page, command } = await open(viewport);
+  await page.evaluate(() =>
+    localStorage.setItem('skazki.settings', JSON.stringify({ leftHanded: true })),
+  );
+  await page.reload();
+  await page.waitForFunction(() => !!window.__alpha);
+  await command({
+    type: 'restart',
+    options: {
+      characterClass: 'warrior',
+      level: 10,
+      initialEnemies: false,
+      spawning: { enabled: false },
+    },
+  });
+  await command({ type: 'protection', enabled: true });
+  await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
+  for (const skillId of ['shield_bash', 'cleave', 'whirlwind', 'ground_slam'])
+    await command({ type: 'grant-skill', skillId, rank: 1 });
+  const skills = page.locator('.active-skills');
+  await skills.waitFor();
+  const dash = page.locator('.touch-dash');
+  await dash.waitFor();
+  const a = await skills.boundingBox(),
+    b = await dash.boundingBox();
+  const overlap =
+    a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+  assert.ok(
+    !overlap,
+    `${viewport.width}×${viewport.height} left-handed: skill row ${JSON.stringify(a)} overlaps the dash button ${JSON.stringify(b)}`,
+  );
+  await context.close();
+}
+
 // ── Phase 2: a whole run and every menu screen, landscape phone and tablet ──
 const MENU_PAGES = [
   'Главная',
@@ -227,6 +266,47 @@ for (const viewport of [
   assert.equal(after.ore, before.ore - 1, `${tag}: forge ore`);
   await page.getByRole('heading', { name: 'Обычный шлем стража +1' }).waitFor();
   await noHorizontalScroll(page, `${tag} forge`);
+  // Task 22: select an owned item → «Надеть» visible without scrolling; the equipped item's
+  // details → «Улучшить в кузнице» opens the forge on it; mode switch; back to Экипировка.
+  const navTo = (name) => page.locator('.meta-nav').getByRole('button', { name, exact: true });
+  await navTo('Экипировка').scrollIntoViewIfNeeded();
+  await navTo('Экипировка').tap();
+  const helmCard = page.locator('.owned-cell .item-card', { hasText: 'Обычный шлем стража +1' });
+  await helmCard.scrollIntoViewIfNeeded();
+  await helmCard.tap();
+  const equipBtn = page
+    .getByRole('group', { name: 'Предпросмотр снаряжения' })
+    .getByRole('button', { name: 'Надеть' });
+  await page.waitForTimeout(150);
+  const eb = await equipBtn.boundingBox();
+  const vp = page.viewportSize();
+  assert.ok(
+    eb && eb.y >= 0 && eb.y + eb.height <= vp.height,
+    `${tag}: «Надеть» visible without scrolling`,
+  );
+  await tapTarget(equipBtn, `${tag} «Надеть»`);
+  await equipBtn.tap();
+  const helmSlot = page.getByRole('button', { name: /^Шлем: Обычный шлем стража \+1, подробнее/ });
+  await helmSlot.scrollIntoViewIfNeeded();
+  await helmSlot.tap();
+  const toForge = page
+    .getByRole('group', { name: 'Надетый предмет' })
+    .getByRole('button', { name: /Улучшить в кузнице/ });
+  await tapTarget(toForge, `${tag} «Улучшить в кузнице»`);
+  await toForge.tap();
+  await page
+    .getByRole('group', { name: 'Улучшение предмета' })
+    .getByRole('heading', { name: 'Обычный шлем стража +1' })
+    .waitFor();
+  const modeSwitch = page.getByRole('group', { name: 'Разделы кузницы' });
+  const petsMode = modeSwitch.getByRole('button', { name: /Питомцы/ });
+  await tapTarget(petsMode, `${tag} forge mode switch`);
+  await petsMode.tap();
+  assert.equal(await petsMode.getAttribute('aria-pressed'), 'true');
+  await modeSwitch.getByRole('button', { name: /Предметы/ }).tap();
+  await page.getByRole('button', { name: /К экипировке/ }).tap();
+  await page.getByRole('region', { name: /^Снаряжение:/ }).waitFor();
+  await noHorizontalScroll(page, `${tag} equipment details`);
   // Task 20: pets by touch — shop tab (buy with confirmation), «Питомцы» page (activate), forge pet
   // tab (upgrade), then a run starts with the pet.
   await page.evaluate(() => {

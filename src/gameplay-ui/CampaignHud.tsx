@@ -1,7 +1,7 @@
 import type { GameplaySnapshot } from '../gameplay';
 import { BUFFS } from '../gameplay/chests';
 import type { BuffId, ChestContent } from '../gameplay/chests';
-import { clock } from './campaign-format';
+import { nextEventCountdown } from './next-event';
 
 /** Task 12: seconds a chest pickup popup stays on screen. */
 const PICKUP_POPUP = 2.5;
@@ -14,7 +14,6 @@ export function chestPopupText(content: ChestContent, amount: number): string {
   return `${BUFFS[content].name}: ${BUFFS[content].description}`;
 }
 
-const ELITE_WARNING = 10;
 const ELITE_FRESH = 5;
 
 /** Task 08 campaign HUD (reads the throttled snapshot only; no logic beyond formatting). */
@@ -27,10 +26,7 @@ export function CampaignHud({ world }: { world: GameplaySnapshot }) {
     lastElite && world.time - lastElite.time < ELITE_FRESH
       ? c.elites.find((_, i) => `elite-${i + 1}` === lastElite.id)
       : null;
-  const eliteSoon =
-    next?.kind === 'elite' && next.time - world.time <= ELITE_WARNING
-      ? next.time - world.time
-      : null;
+  const countdown = nextEventCountdown(next, world.time);
   const boss = c.boss;
   const chests = world.chests;
   const popup =
@@ -60,14 +56,9 @@ export function CampaignHud({ world }: { world: GameplaySnapshot }) {
           {chestPopupText(popup.content, popup.amount)}
         </div>
       )}
+      {/* Task 22: coins + one countdown to the nearest scheduled event (map name, stage,
+          remaining time and the separate boss countdown were removed). */}
       <div className="campaign-hud" aria-label="Кампания">
-        <strong className="campaign-hud-map">
-          {c.mapId}. {c.mapName}
-        </strong>
-        <span className="campaign-hud-stage">Этап: {c.stage.name}</span>
-        <span className="campaign-hud-time" aria-label="Осталось времени">
-          {c.durationReached ? 'Время вышло — добейте босса' : `Осталось ${clock(c.remaining)}`}
-        </span>
         {/* Task 11: Gold coins picked up in this run (paid out with the result). */}
         <span
           className="campaign-hud-coins"
@@ -75,17 +66,15 @@ export function CampaignHud({ world }: { world: GameplaySnapshot }) {
         >
           ◎ {world.coins.collected}
         </span>
-        {!boss && world.time < c.bossTime && (
-          <span className="campaign-hud-boss-countdown">
-            Босс через {clock(c.bossTime - world.time)}
+        {countdown && (
+          <span className={`campaign-hud-next next-${countdown.kind}`} aria-live="off">
+            {countdown.label}
           </span>
         )}
       </div>
-      {(freshElite || eliteSoon !== null) && (
+      {freshElite && (
         <div className="campaign-alert" role="status">
-          {freshElite
-            ? `⚠ Элита: ${freshElite.name}!`
-            : `⚠ Элита через ${Math.ceil(eliteSoon!)} с`}
+          ⚠ Элита: {freshElite.name}!
         </div>
       )}
       {boss && boss.alive && (

@@ -13,8 +13,9 @@ import {
   itemLevel,
   permanentStats,
   starterWeapon,
+  TIER_CONFIG,
 } from '../../equipment';
-import type { GearItem, GearSlot, Loadout } from '../../equipment';
+import type { GearItem, GearSlot, Loadout, Tier } from '../../equipment';
 import { campaignStore } from '../campaign-state';
 import {
   Button,
@@ -30,6 +31,7 @@ import {
 } from '../kit';
 import { RU } from '../strings-ru';
 import { ItemStats, REFUSALS, tierLabel } from '../ShopPages';
+import { TierRows } from './TierRows';
 import { PET_CONFIG, isPetId, petLevel } from '../../pets';
 import { PetPortrait } from '../pets/PetPortrait';
 import { petLevelLabel } from '../pets/pet-text';
@@ -49,6 +51,8 @@ export function EquipmentPage() {
   const [shown, setShown] = useState<CharacterClass | null>(null);
   const [filter, setFilter] = useState<SlotFilter>('all');
   const [selected, setSelected] = useState<string | null>(null);
+  // Task 22: details of the item equipped in a paper-doll slot.
+  const [slotDetail, setSlotDetail] = useState<GearSlot | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   if (!profile) return <p className="campaign-empty">Профиль недоступен.</p>;
@@ -73,6 +77,9 @@ export function EquipmentPage() {
     return { item, deltas: compareStats(withGear, stats({ ...loadout, [item.slot]: item.id })) };
   };
   const chosen = preview(selected);
+  const equippedDetail = slotDetail && loadout[slotDetail] ? findItem(loadout[slotDetail]!) : null;
+  const tierColor = (item: GearItem) =>
+    item.tier === 0 ? undefined : TIER_CONFIG[item.tier as Tier].color;
   const hover = hovered !== selected ? preview(hovered) : null;
   const equip = (id: string) => {
     const refused = campaignStore.equipItem(cls, id);
@@ -95,6 +102,7 @@ export function EquipmentPage() {
           onChange={(c) => {
             setShown(c);
             setSelected(null);
+            setSlotDetail(null);
           }}
         />
         <Button variant="ghost" className="meta-push" onClick={() => campaignStore.setPage('shop')}>
@@ -117,9 +125,15 @@ export function EquipmentPage() {
               >
                 <button
                   className="doll-slot-button"
-                  aria-label={`${SLOT_LABELS[slot]}: ${item ? nameOf(item) : E.empty}`}
-                  aria-pressed={filter === slot}
-                  onClick={() => setFilter(filter === slot ? 'all' : slot)}
+                  aria-label={`${SLOT_LABELS[slot]}: ${item ? `${nameOf(item)}, подробнее` : E.empty}`}
+                  aria-pressed={item ? slotDetail === slot : filter === slot}
+                  onClick={() => {
+                    // Task 22: a filled slot opens the item details; an empty one filters the list.
+                    if (item) {
+                      setSlotDetail(slotDetail === slot ? null : slot);
+                      setSelected(null);
+                    } else setFilter(filter === slot ? 'all' : slot);
+                  }}
                 >
                   <small>{SLOT_LABELS[slot]}</small>
                   <strong>{item ? nameOf(item) : E.empty}</strong>
@@ -141,6 +155,90 @@ export function EquipmentPage() {
           <PetSlot />
         </div>
         <div className="equipment-side">
+          {/* Task 22: the details / «Надеть» panel sits at the top of the item area (sticky on
+              phones), never at the bottom of the page. */}
+          {(chosen || equippedDetail || message) && (
+            <div className="equipment-detail">
+              {equippedDetail && slotDetail && (
+                <Panel
+                  className="equipment-preview equipped-detail"
+                  role="group"
+                  aria-label="Надетый предмет"
+                  title={nameOf(equippedDetail)}
+                >
+                  <p className="equipped-detail-meta">
+                    {SLOT_LABELS[slotDetail]} ·{' '}
+                    <span style={{ color: tierColor(equippedDetail) }}>
+                      {tierLabel(equippedDetail)}
+                    </span>
+                    {levelOf(equippedDetail) > 0 && ` · +${levelOf(equippedDetail)}`}
+                  </p>
+                  <ItemStats item={equippedDetail} level={levelOf(equippedDetail)} />
+                  <div className="preview-actions">
+                    {!equippedDetail.starter && (
+                      <Button
+                        onClick={() => {
+                          unequip(slotDetail);
+                          setSlotDetail(null);
+                        }}
+                      >
+                        {E.unequip}
+                      </Button>
+                    )}
+                    {isUpgradeable(equippedDetail) && (
+                      <Button
+                        variant="primary"
+                        onClick={() =>
+                          campaignStore.openForge(equippedDetail.id, {
+                            page: 'equipment',
+                            characterClass: cls,
+                          })
+                        }
+                      >
+                        ⚒ {E.upgradeInForge}
+                      </Button>
+                    )}
+                    <Button variant="ghost" onClick={() => setSlotDetail(null)}>
+                      {E.close}
+                    </Button>
+                  </div>
+                </Panel>
+              )}
+              {chosen && (
+                <Panel
+                  className="equipment-preview"
+                  role="group"
+                  aria-label="Предпросмотр снаряжения"
+                  title={E.compare(nameOf(chosen.item))}
+                >
+                  <CompareList deltas={chosen.deltas} empty={E.noChange} />
+                  <div className="preview-actions">
+                    <Button variant="primary" onClick={() => equip(chosen.item.id)}>
+                      {E.equip}
+                    </Button>
+                    {isUpgradeable(chosen.item) && (
+                      <Button
+                        onClick={() =>
+                          campaignStore.openForge(chosen.item.id, {
+                            page: 'equipment',
+                            characterClass: cls,
+                          })
+                        }
+                      >
+                        ⚒ {RU.meta.forge.toForge}
+                      </Button>
+                    )}
+                    <Button onClick={() => setSelected(null)}>{RU.meta.modal.cancel}</Button>
+                  </div>
+                </Panel>
+              )}
+              {message && (
+                <p className="shop-message" role="status">
+                  {message}
+                </p>
+              )}
+            </div>
+          )}
           <Panel
             title={E.owned}
             className="owned-panel"
@@ -159,15 +257,21 @@ export function EquipmentPage() {
             {owned.length === 0 ? (
               <p className="meta-empty">{E.noItems}</p>
             ) : (
-              <ul className="owned-grid">
-                {owned.map((item) => (
+              <TierRows
+                items={owned}
+                label={E.owned}
+                className="owned-rows"
+                render={(item) => (
                   <li key={item.id} className="owned-cell">
                     <TierFrame tier={item.tier}>
                       <button
                         className={`item-card ${selected === item.id ? 'selected' : ''}`}
                         aria-pressed={selected === item.id}
                         aria-label={`${nameOf(item)}${isEquipped(item) ? `, ${E.equipped.toLowerCase()}` : ''}`}
-                        onClick={() => setSelected(selected === item.id ? null : item.id)}
+                        onClick={() => {
+                          setSelected(selected === item.id ? null : item.id);
+                          setSlotDetail(null);
+                        }}
                         // Task 16: pointer events (mouse only: a touch tap must not leave a stuck
                         // hover preview; a tap selects the item instead).
                         onPointerEnter={(e) => e.pointerType === 'mouse' && setHovered(item.id)}
@@ -190,36 +294,10 @@ export function EquipmentPage() {
                       </Tooltip>
                     )}
                   </li>
-                ))}
-              </ul>
+                )}
+              />
             )}
           </Panel>
-          {chosen && (
-            <Panel
-              className="equipment-preview"
-              role="group"
-              aria-label="Предпросмотр снаряжения"
-              title={E.compare(nameOf(chosen.item))}
-            >
-              <CompareList deltas={chosen.deltas} empty={E.noChange} />
-              <div className="preview-actions">
-                <Button variant="primary" onClick={() => equip(chosen.item.id)}>
-                  {E.equip}
-                </Button>
-                {isUpgradeable(chosen.item) && (
-                  <Button onClick={() => campaignStore.openForge(chosen.item.id)}>
-                    ⚒ {RU.meta.forge.toForge}
-                  </Button>
-                )}
-                <Button onClick={() => setSelected(null)}>{RU.meta.modal.cancel}</Button>
-              </div>
-            </Panel>
-          )}
-          {message && (
-            <p className="shop-message" role="status">
-              {message}
-            </p>
-          )}
         </div>
         <Panel title={E.finalStats} className="final-stats">
           <table className="equipment-stats">
