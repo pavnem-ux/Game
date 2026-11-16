@@ -412,6 +412,14 @@ function completeCounter(c: QuestCounters, g: QuestGoal): QuestCounters {
     }
     case 'tier-loadout':
       return { ...c, bestTierLoadout: Math.max(c.bestTierLoadout, g.items) };
+    case 'activities':
+      return {
+        ...c,
+        activities: {
+          ...c.activities,
+          [g.activity]: Math.max(c.activities[g.activity], g.count),
+        },
+      };
     default:
       return c;
   }

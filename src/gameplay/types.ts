@@ -24,6 +24,7 @@ import type {
 } from '../enemy-ai';
 import type { EnemyKind } from './enemy-types';
 import type { BuffId, Chest, ChestContent, ChestEvent, ChestType } from './chests';
+import type { ActivityEvent, ActivitySnapshot, ActivityType } from './activities';
 import type { PlayerSurvivalState, SurvivalEvent } from '../player-survival';
 import type { StatusEvent, StatusGroupSnapshot, EffectDefinition } from '../status-effects';
 import type {
@@ -70,6 +71,7 @@ export interface WorldEvent {
     | 'skill'
     | 'campaign'
     | 'chests'
+    | 'activities'
     | 'movement'
     | 'pets';
   readonly event:
@@ -86,6 +88,7 @@ export interface WorldEvent {
     | CampaignEvent
     | CoinEvent
     | ChestEvent
+    | ActivityEvent
     | DashEvent
     | PetEvent;
 }
@@ -153,6 +156,23 @@ export interface GameplaySnapshot {
       chestType: ChestType;
       content: ChestContent;
       amount: number;
+      time: number;
+    }> | null;
+  }> | null;
+  /**
+   * Task 24: map activities (shrine, lantern, thief, nest) with their progress, lanterns kept lit
+   * after a successful defence, the next spawn attempt and the Ore banked from activities (paid
+   * only with a victory). Null outside campaign runs.
+   */
+  readonly activities: Readonly<{
+    items: readonly ActivitySnapshot[];
+    litLanterns: readonly Point[];
+    nextSpawnAt: number;
+    ore: number;
+    /** The latest spawn / success / failure (HUD toast), with its simulation time. */
+    notice: Readonly<{
+      kind: 'spawned' | 'completed' | 'failed';
+      activityType: ActivityType;
       time: number;
     }> | null;
   }> | null;

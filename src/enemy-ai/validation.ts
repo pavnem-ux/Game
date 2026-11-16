@@ -44,15 +44,35 @@ export function projectile(value: ProjectileConfig): ProjectileConfig {
 }
 export function enemyConfig(value: EnemyConfig): EnemyConfig {
   if (!value || typeof value !== 'object') throw new TypeError('Enemy config is required.');
-  if (value.behavior !== 'melee' && value.behavior !== 'ranged' && value.behavior !== 'artillery')
-    throw new TypeError('behavior must be melee, ranged or artillery.');
+  if (
+    value.behavior !== 'melee' &&
+    value.behavior !== 'ranged' &&
+    value.behavior !== 'artillery' &&
+    value.behavior !== 'flee' &&
+    value.behavior !== 'stationary'
+  )
+    throw new TypeError('behavior must be melee, ranged, artillery, flee or stationary.');
   nonNegative(value.movementSpeed, 'movementSpeed');
   nonNegative(value.radius, 'radius');
   positive(value.attackInterval, 'attackInterval');
   nonNegative(value.attackCoefficient, 'attackCoefficient');
   if (value.damageType !== 'physical' && value.damageType !== 'magical')
     throw new TypeError('damageType must be physical or magical.');
-  if (value.behavior === 'melee') return Object.freeze({ ...value });
+  if (value.behavior === 'melee' || value.behavior === 'stationary')
+    return Object.freeze({ ...value });
+  if (value.behavior === 'flee') {
+    if (!value.bounds || typeof value.bounds !== 'object')
+      throw new TypeError('flee bounds are required.');
+    finite(value.bounds.min, 'bounds.min');
+    finite(value.bounds.max, 'bounds.max');
+    nonNegative(value.edgeMargin, 'edgeMargin');
+    if (value.bounds.max - value.bounds.min <= 2 * value.edgeMargin)
+      throw new RangeError('flee bounds must be wider than twice the edge margin.');
+    return Object.freeze({
+      ...value,
+      bounds: Object.freeze({ min: value.bounds.min, max: value.bounds.max }),
+    });
+  }
   positive(value.attackRange, 'attackRange');
   nonNegative(value.retreatDistance, 'retreatDistance');
   nonNegative(value.hysteresis, 'hysteresis');

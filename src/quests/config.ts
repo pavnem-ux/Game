@@ -1,6 +1,7 @@
 import { CHARACTER_CLASSES } from '../character-stats';
 import type { CharacterClass } from '../character-stats';
 import type { PetId } from '../pets/config';
+import type { ActivityType } from '../gameplay/activities';
 
 /**
  * Task 21 quest catalogue — data only. Every number is PROVISIONAL (owner-controlled).
@@ -16,7 +17,8 @@ export type QuestGroup =
   | 'mastery'
   | 'synergy'
   | 'chests'
-  | 'forge';
+  | 'forge'
+  | 'activities';
 export const QUEST_GROUPS: readonly QuestGroup[] = Object.freeze([
   'campaign',
   'hunt',
@@ -26,6 +28,7 @@ export const QUEST_GROUPS: readonly QuestGroup[] = Object.freeze([
   'synergy',
   'chests',
   'forge',
+  'activities',
 ]);
 export const QUEST_GROUP_LABELS: Readonly<Record<QuestGroup, string>> = Object.freeze({
   campaign: 'Campaign',
@@ -36,6 +39,7 @@ export const QUEST_GROUP_LABELS: Readonly<Record<QuestGroup, string>> = Object.f
   synergy: 'Synergies',
   chests: 'Chests',
   forge: 'Forge',
+  activities: 'Activities',
 });
 export type TypeCounter = 'swift' | 'brute' | 'bombard' | 'elite';
 export type QuestGoal =
@@ -48,7 +52,9 @@ export type QuestGoal =
   | Readonly<{ kind: 'synergies-awakened'; count: number }>
   | Readonly<{ kind: 'chests'; count: number }>
   | Readonly<{ kind: 'item-level'; level: number }>
-  | Readonly<{ kind: 'tier-loadout'; tier: number; items: number }>;
+  | Readonly<{ kind: 'tier-loadout'; tier: number; items: number }>
+  /** Task 24: map activities of one type completed (lifetime). */
+  | Readonly<{ kind: 'activities'; activity: ActivityType; count: number }>;
 export interface QuestReward {
   readonly gold?: number;
   readonly ore?: number;
@@ -219,7 +225,29 @@ const FORGE = [
   ),
 ];
 
-/** All 50 quests in catalogue order (group, then goal). */
+/**
+ * Task 24: two tiers per activity type — Gold 500 + Ore 15, then Gold 1500 + Ore 40. PROVISIONAL.
+ */
+const ACTIVITY_QUESTS = (
+  [
+    ['shrine', 'Cleanse', 'shrines', [10, 50]],
+    ['lantern', 'Defend', 'lanterns', [10, 40]],
+    ['thief', 'Catch', 'thieves', [10, 50]],
+    ['nest', 'Destroy', 'nests', [10, 50]],
+  ] as const
+).flatMap(([activity, verb, noun, counts]) =>
+  counts.map((count, i) =>
+    q(
+      `activities.${activity}.${count}`,
+      'activities',
+      `${verb} ${count} ${noun}`,
+      { kind: 'activities', activity, count },
+      { gold: [500, 1500][i], ore: [15, 40][i] },
+    ),
+  ),
+);
+
+/** All 58 quests in catalogue order (group, then goal): Task 21's 50 + Task 24's 8. */
 export const QUESTS: readonly QuestDefinition[] = Object.freeze([
   ...CAMPAIGN,
   ...HUNT,
@@ -229,6 +257,7 @@ export const QUESTS: readonly QuestDefinition[] = Object.freeze([
   ...SYNERGY,
   ...CHESTS,
   ...FORGE,
+  ...ACTIVITY_QUESTS,
 ]);
 export const QUEST_BY_ID: ReadonlyMap<string, QuestDefinition> = new Map(
   QUESTS.map((quest) => [quest.id, quest]),

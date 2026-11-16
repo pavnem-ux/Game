@@ -230,3 +230,16 @@ ranged (`attackRange` 420, `retreatDistance` 150, `hysteresis` 18). Атака (
 ≤ 0,64, проверено симуляцией на 3000 спавнов). Лимит 120 врагов и резерв слотов элит/босса не
 изменились. Статистика забега (убийства, полученный урон по типам) и отчёт об ошибке включают новые
 типы. Тесты: `tests/gameplay/enemy-kinds.test.ts`.
+
+## Task 24 — `flee` и `stationary`
+
+Две аддитивные конфигурации (старые поведения и их тесты не изменены):
+
+- `FleeEnemyConfig` (`behavior: 'flee'`, «Treasure Thief»): состояние `retreat`; скорость
+  направлена прямо от игрока, плюс отталкивание от краёв квадрата `bounds`, если до края меньше
+  `edgeMargin` (чем ближе, тем сильнее); в углу — скольжение вдоль стены. Никогда не атакует
+  (нет attempt-событий). Steering, как у остальных, — на каждом `movementStep`; Slow/Stun работают.
+  Валидация: `bounds.min/max` конечны, `edgeMargin ≥ 0`, `bounds.max − bounds.min > 2·edgeMargin`.
+- `StationaryEnemyConfig` (`behavior: 'stationary'`, «Blight Nest»): скорость 0 (состояние
+  `attack` даёт нулевую цель), никогда не атакует. Иммунитет к Slow/Stun задаёт не EnemyAI, а
+  мир через `SkillEngine` host `controlImmune` (подробно: [ACTIVITIES.md](ACTIVITIES.md)).

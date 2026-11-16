@@ -1,4 +1,5 @@
 import type { WorldEvent } from './types';
+import type { ActivityType } from './activities';
 
 /**
  * Task 08.5 §2.1 run statistics. Framework-free and read-only: it consumes the world's own
@@ -70,6 +71,15 @@ export interface RunStatsSnapshot {
     contents: Readonly<Record<string, number>>;
     buffUptime: Readonly<Record<'fury' | 'haste' | 'lightStep', number>>;
   }>;
+  /**
+   * Task 24: map activities by type — spawned, completed and failed (failed includes faded out,
+   * escaped, crumbled, Light out and abandoned). Unfinished activities at run end count in none.
+   */
+  readonly activities: Readonly<{
+    spawned: Readonly<Record<ActivityType, number>>;
+    completed: Readonly<Record<ActivityType, number>>;
+    failed: Readonly<Record<ActivityType, number>>;
+  }>;
 }
 export const RUN_STATS_LIMITS = Object.freeze({
   lowHpThreshold: 0.2,
@@ -99,6 +109,9 @@ export class RunStats {
   private skipsUsed = 0;
   private readonly banishedIds: string[] = [];
   private readonly chestOpened = { wooden: 0, enchanted: 0 };
+  private readonly activitySpawned = { shrine: 0, lantern: 0, thief: 0, nest: 0 };
+  private readonly activityCompleted = { shrine: 0, lantern: 0, thief: 0, nest: 0 };
+  private readonly activityFailed = { shrine: 0, lantern: 0, thief: 0, nest: 0 };
   private chestExpired = 0;
   private readonly chestContents: Record<string, number> = {};
   private readonly buffUptime = { fury: 0, haste: 0, lightStep: 0 };
@@ -107,6 +120,7 @@ export class RunStats {
     { startedAt: number; expiresAt: number }
   >();
   private readonly killed = new Map<EnemyType, number>();
+  private readonly vanished = new Map<string, true>();
   private readonly weaponByAttack = new Map<string, string>();
   private readonly types = new Map<string, EnemyType>();
   private readonly timeline: { level: number; time: number }[] = [{ level: 1, time: 0 }];
@@ -151,6 +165,12 @@ export class RunStats {
       }
       case 'periodic-damage': {
         const { sources, effectId } = event.periodic;
+        // Task 24: an escaping thief / crumbling nest is removed by its own hand — not damage
+        // dealt and not a kill.
+        if (effectId === 'activity-vanish') {
+          remember(this.vanished, event.targetId, true, RUN_STATS_LIMITS.knownEnemies);
+          return;
+        }
         const total = sources.reduce((sum, s) => sum + Math.max(0, s.rawDamage), 0);
         const share = (raw: number) =>
           total > 0 ? (event.appliedDamage * Math.max(0, raw)) / total : 0;
@@ -172,7 +192,7 @@ export class RunStats {
         if (event.entityId === this.resolve.playerId) {
           this.deaths.push(time);
           this.version++;
-        } else {
+        } else if (!this.vanished.has(event.entityId)) {
           const type = this.typeOf(event.entityId);
           if (type !== 'unknown') {
             this.killed.set(type, (this.killed.get(type) ?? 0) + 1);
@@ -219,6 +239,20 @@ export class RunStats {
         return;
       case 'skill-offer-skipped':
         this.skipsUsed++;
+        this.version++;
+        return;
+      // Task 24: map activities.
+      case 'activity-spawned':
+        this.activitySpawned[event.activity.type]++;
+        this.version++;
+        return;
+      case 'activity-completed':
+        this.activityCompleted[event.activity.type]++;
+        this.version++;
+        return;
+      case 'activity-failed':
+      case 'activity-faded':
+        this.activityFailed[event.activity.type]++;
         this.version++;
         return;
       // Task 12: chests and buffs.
@@ -294,6 +328,11 @@ export class RunStats {
         banishes: this.banishedIds.length,
         skips: this.skipsUsed,
         banished: Object.freeze([...this.banishedIds]),
+      }),
+      activities: Object.freeze({
+        spawned: Object.freeze({ ...this.activitySpawned }),
+        completed: Object.freeze({ ...this.activityCompleted }),
+        failed: Object.freeze({ ...this.activityFailed }),
       }),
       chests: Object.freeze({
         spawned: Object.freeze({ ...this.chestSpawned }),

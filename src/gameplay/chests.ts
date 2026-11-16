@@ -186,6 +186,26 @@ export class RunChests {
     this.chests.set(chest.id, chest);
     return Object.freeze({ type: 'chest-spawned', chest });
   }
+  /**
+   * Task 24 (additive): a reward chest of `type` exactly at `position` (an activity reward). It is
+   * placed even at the 3-chest limit — a reward is never lost — and uses the normal lifetime,
+   * opening and content table. Draws nothing from the chest stream.
+   */
+  placeReward(now: number, position: Point, type: ChestType): ChestEvent {
+    if (type !== 'wooden' && type !== 'enchanted') throw new TypeError('Invalid chest type.');
+    if (!Number.isFinite(position.x) || !Number.isFinite(position.y))
+      throw new RangeError('Invalid chest position.');
+    const chest = Object.freeze({
+      id: `chest-${++this.sequence}`,
+      type,
+      x: position.x,
+      y: position.y,
+      spawnedAt: now,
+      expiresAt: now + CHEST_RULES.lifetime,
+    });
+    this.chests.set(chest.id, chest);
+    return Object.freeze({ type: 'chest-spawned', chest });
+  }
   private place(player: Point): Point | null {
     const r = CHEST_RULES,
       lo = r.arenaMargin,

@@ -466,6 +466,17 @@ Item names: rarity + template, e.g. «Редкие латы» → «Rare Plate A
 | Синергии    | Synergies   |
 | Сундуки     | Chests      |
 | Кузница     | Forge       |
+| Активности  | Activities  |
+
+## Map activities (Task 24)
+
+| RU               | EN               |
+| ---------------- | ---------------- |
+| Святилище углей  | Shrine of Embers |
+| Угасающий фонарь | Dying Lantern    |
+| Вор сокровищ     | Treasure Thief   |
+| Гнездо порчи     | Blight Nest      |
+| Свет (фонаря)    | Light            |
 
 ## Formats
 

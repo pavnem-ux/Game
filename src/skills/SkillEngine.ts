@@ -94,6 +94,11 @@ export interface SkillHost {
     stunScale: number;
     stunImmunity: number;
   }> | null;
+  /**
+   * Task 24 (optional, additive): targets fully immune to Slow and Stun (Blight Nest). Damage and
+   * damage-over-time effects still apply; absent = nobody is immune.
+   */
+  controlImmune?(targetId: string): boolean;
   /** Task 20 (optional): the run's active pet (validated by the world). */
   readonly pet?: Readonly<{ id: PetId; level: number }> | null;
   /** Task 20 (optional): pet actions for run statistics and rendering. */
@@ -1177,6 +1182,7 @@ export class SkillEngine {
   }
   slow(targetId: string, strength: number, duration: number): void {
     if (!this.host.core.getEntity(targetId).alive || duration <= 0 || strength <= 0) return;
+    if (this.host.controlImmune?.(targetId)) return;
     const tags = this.sourceSkillTags();
     const bonus =
       (this.rank('elemental_mastery') > 0 ? this.params('elemental_mastery').slowBonus : 0) +
@@ -1196,6 +1202,7 @@ export class SkillEngine {
   /** Returns true only if a new stun started. Stunned or recently stunned enemies are immune. */
   stun(targetId: string, duration: number): boolean {
     if (!this.host.core.getEntity(targetId).alive || duration <= 0) return false;
+    if (this.host.controlImmune?.(targetId)) return false;
     const c = this.control(targetId);
     if (c.stunUntil > this.clock || c.stunImmuneUntil > this.clock) return false;
     const limits = this.host.controlLimits?.(targetId) ?? null;

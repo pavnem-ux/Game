@@ -105,6 +105,11 @@ Enemy projectile и weapon projectile движутся по snapshot direction. 
 7. Enemy contact/fire attempts.
 8. Status expirations; тик на точной границе duration выполняется до удаления.
 
+Позже утверждённые владельцем слоты (дробные ранги между существующими): skill actions 5.5,
+boss abilities 6.5, skill expirations 8.5, chest/buff expiry 8.6 ([CHESTS.md](CHESTS.md)),
+**activity completion/failure/fade 8.7**, reinforcement spawning 9, **extra activity spawns 9.1**,
+chest spawn 9.25, **activity spawn 9.3** ([ACTIVITIES.md](ACTIVITIES.md)), campaign events 9.5.
+
 Внутри модулей сохраняются их старые tie rules: projectile launch sequence, enemy/source ID; status target ID, затем poison/burn/bleed. После каждого события выбор повторяется. Поэтому новый projectile с нулевой дистанцией может тут же дать impact до следующего более низкоприоритетного события. Мёртвый враг не начинает новую атаку, уже запущенный snapshot не отменяется.
 
 При player death все часы уже находятся на T. World завершает **только уже допустимые события на T**, включая outgoing projectile/periodic смерть последнего врага, и останавливается до любого времени > T. Eligibility по чужим целям не подавляется смертью игрока. Новые атаки мёртвого источника запрещены. Результат двух допустимых смертей сохраняется; victory/wave outcome здесь нет. Неизрасходованный frame delta отбрасывается. Пока ожидается решение/ended/manual pause, update ничего не двигает и не копит «долг».

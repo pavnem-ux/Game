@@ -145,6 +145,8 @@ try {
         'Unlock all items',
         'Coins · per minute',
         'Chest Debug',
+        'Activity Debug',
+        'No activity: campaign run only',
         'Auto-collect XP and coins',
         'Run level · 5/10/15 min',
         'Reset talent tree',

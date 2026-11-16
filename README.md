@@ -20,6 +20,9 @@ whole game is in English (since Task 23).
 - **Between runs:** spend **Gold** in the **Shop**, upgrade gear with Gold and **Ore** in the
   **Forge**, learn **Talents** (12 branches, superpowers at level 30), raise **Pets** and claim
   **Quests**. Item rarities: Common, Uncommon, Rare, Epic, Legendary.
+- **Map activities:** shrines, lanterns, thieves and nests appear during a run (pointer at the
+  screen edge). Stand in a shrine to cleanse it, defend a lantern for 30 s, catch the thief
+  before it escapes, destroy a nest — for chests, coins and Ore.
 - **Death:** the first death offers **Revive** (half health, 3 s of protection, same run) or
   **End run**; a second death ends the run.
 - **Saves** stay in this browser; **Settings → Save management** exports and imports a save file.
@@ -346,3 +349,13 @@ Firefox и Edge; сборка под последние версии брауз�
 Тест `no-cyrillic` запрещает кириллицу в `src/`; `tests/english-screens.mjs` проверяет все экраны
 на 1280×720 и 844×390. Геймплей и баланс не менялись. [Журнал](docs/task-23-progress.md),
 [до/после](docs/english/).
+
+## Task 24 — активности на карте
+
+Во время забега на карте появляются активности (первая в 0:50, затем каждые 75 ± 15 с, не больше
+двух сразу): «Shrine of Embers» (постоять внутри 9 с → зачарованный сундук), «Treasure Thief»
+(убегает 20 с; поймать → монеты и шанс руды), с акта II «Dying Lantern» (зажечь и защищать 30 с →
+монеты и руда, фонарь светит до конца забега), с акта III «Blight Nest» (неподвижное гнездо,
+призывает врагов; уничтожить → деревянный сундук). Стрелки у края экрана, всплывающие сообщения,
+звуки, 8 новых заданий, сохранение v8. Руда из активностей выдаётся только при победе. Все числа
+предварительные. [Подробно](docs/ACTIVITIES.md), [журнал](docs/task-24-progress.md).

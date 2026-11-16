@@ -23,7 +23,10 @@ export function ResultsScreen({ world }: { world: GameplaySnapshot }) {
   // Task 11: coins collected, victory bonus and the Gold actually credited (same formula).
   const gold = runGold(victory ? 'victory' : 'defeat', c.mapId, world.coins.collected);
   // Task 19: first victory on the map pays ×3 ore (the summary amount is what was credited).
-  const firstWin = !!summary && victory && summary.oreGained > runOre('victory', c.mapId, false);
+  // Task 24: Ore from activities is credited with a victory on top of the map's Ore.
+  const activityOre = victory ? (world.activities?.ore ?? 0) : 0;
+  const firstWin =
+    !!summary && victory && summary.oreGained - activityOre > runOre('victory', c.mapId, false);
   return (
     <section
       className="overlay modal-overlay results-overlay"
@@ -62,7 +65,9 @@ export function ResultsScreen({ world }: { world: GameplaySnapshot }) {
           <dd>
             {summary
               ? summary.oreGained > 0
-                ? `+${summary.oreGained}${firstWin ? ' (first victory ×3)' : ''}`
+                ? `+${summary.oreGained}${firstWin ? ' (first victory ×3)' : ''}${
+                    activityOre > 0 ? ` (activities +${activityOre})` : ''
+                  }`
                 : victory
                   ? '+0'
                   : 'none'

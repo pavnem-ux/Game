@@ -26,6 +26,16 @@ export interface BugReportRun {
   readonly stats: RunStatsSnapshot;
   /** Task 12: chest buffs active when the report was made (remaining seconds). */
   readonly activeBuffs: readonly Readonly<{ id: string; name: string; remaining: number }>[];
+  /** Task 24: map activities active when the report was made (absent in older reports). */
+  readonly activeActivities?: readonly Readonly<{
+    id: string;
+    type: string;
+    phase: string;
+    x: number;
+    y: number;
+    progress: number;
+    light: number | null;
+  }>[];
 }
 export interface BugReport {
   readonly format: typeof REPORT_FORMAT;
@@ -77,6 +87,19 @@ export function buildBugReport(input: ReportInput): BugReport {
           activeBuffs: Object.freeze(
             (w.chests?.buffs ?? []).map((b) =>
               Object.freeze({ id: b.id, name: b.name, remaining: b.remaining }),
+            ),
+          ),
+          activeActivities: Object.freeze(
+            (w.activities?.items ?? []).map((a) =>
+              Object.freeze({
+                id: a.id,
+                type: a.type,
+                phase: a.phase,
+                x: Math.round(a.x),
+                y: Math.round(a.y),
+                progress: Math.round(a.progress * 1000) / 1000,
+                light: a.light === null ? null : Math.round(a.light * 10) / 10,
+              }),
             ),
           ),
         })

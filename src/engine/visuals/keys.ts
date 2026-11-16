@@ -44,6 +44,12 @@ export const TEXTURE_KEYS = Object.freeze([
   'pet-hedgehog',
   'pet-kitten',
   'pet-wolf',
+  // Task 24 map activities.
+  'activity-shrine',
+  'activity-lantern',
+  'activity-lantern-lit',
+  'activity-thief',
+  'activity-nest',
 ] as const);
 export type TextureKey = (typeof TEXTURE_KEYS)[number];
 
@@ -59,6 +65,11 @@ export function playerProjectileKey(weaponId: string, characterClass: CharacterC
   return characterClass === 'archer' && !weaponId.startsWith('skill:') ? 'proj-arrow' : 'proj-bolt';
 }
 export const chestTextureKey = (type: 'wooden' | 'enchanted'): TextureKey => `chest-${type}`;
+/** Task 24: activity looks (the lantern has a lit variant after a successful defence). */
+export const activityTextureKey = (
+  type: 'shrine' | 'lantern' | 'thief' | 'nest',
+  lit = false,
+): TextureKey => (type === 'lantern' && lit ? 'activity-lantern-lit' : `activity-${type}`);
 /** Task 20: one texture per pet. */
 export const petTextureKey = (id: PetId): TextureKey => `pet-${id}`;
 

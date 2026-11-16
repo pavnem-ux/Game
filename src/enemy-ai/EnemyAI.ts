@@ -501,6 +501,8 @@ export class EnemyAI {
     const horizon = Math.max(this.clock, Math.min(end, steeringAt));
     for (const actor of living) {
       if (actor.stunned) continue;
+      // Task 24: thief (flee) and nest (stationary) never attack; the thief re-steers each step.
+      if (actor.config.behavior === 'flee' || actor.config.behavior === 'stationary') continue;
       const ready = Math.max(this.clock, actor.nextAttackAt);
       if (ready <= horizon || sameTime(ready, horizon)) {
         const start = {
@@ -571,6 +573,7 @@ export class EnemyAI {
   private attempt(actor: EnemyActor, output: EnemyEvent[]) {
     const player = this.core.getEntity(this.options.playerId);
     if (!player.alive || !this.core.getEntity(actor.id).alive || actor.stunned) return;
+    if (actor.config.behavior === 'flee' || actor.config.behavior === 'stationary') return;
     const overlap =
       actor.config.behavior === 'melee'
         ? Math.hypot(actor.x - this.player!.x, actor.y - this.player!.y) <=

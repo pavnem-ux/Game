@@ -2,7 +2,7 @@ import type { GameplaySnapshot } from '../gameplay';
 import { BUFFS } from '../gameplay/chests';
 import type { BuffId, ChestContent } from '../gameplay/chests';
 import { nextEventCountdown } from './next-event';
-import { formatNumber } from './strings-en';
+import { EN, formatNumber } from './strings-en';
 
 /** Task 12: seconds a chest pickup popup stays on screen. */
 const PICKUP_POPUP = 2.5;
@@ -16,6 +16,14 @@ export function chestPopupText(content: ChestContent, amount: number): string {
 }
 
 const ELITE_FRESH = 5;
+/** Task 24: seconds an activity toast stays on screen. */
+export const ACTIVITY_TOAST = 3;
+/** Task 24 toast text for the latest activity notice. */
+export function activityToastText(
+  notice: NonNullable<NonNullable<GameplaySnapshot['activities']>['notice']>,
+): string {
+  return EN.activities[notice.kind][notice.activityType];
+}
 
 /** Task 08 campaign HUD (reads the throttled snapshot only; no logic beyond formatting). */
 export function CampaignHud({ world }: { world: GameplaySnapshot }) {
@@ -34,8 +42,19 @@ export function CampaignHud({ world }: { world: GameplaySnapshot }) {
     chests?.lastOpened && world.time - chests.lastOpened.time < PICKUP_POPUP
       ? chests.lastOpened
       : null;
+  const notice = world.activities?.notice;
+  const toast = notice && world.time - notice.time < ACTIVITY_TOAST ? notice : null;
   return (
     <>
+      {toast && (
+        <div
+          key={`${toast.kind}-${toast.time}`}
+          className={`activity-toast activity-toast-${toast.kind} activity-toast-${toast.activityType}`}
+          role="status"
+        >
+          {activityToastText(toast)}
+        </div>
+      )}
       {/* Task 12: active chest buffs with remaining time; pickup popup. */}
       {chests && chests.buffs.length > 0 && (
         <ul className="buff-bar" aria-label="Buffs">

@@ -78,6 +78,8 @@ import { BUFFS, CHEST_RULES, RunChests, buffModifiers, chestGold } from './chest
 const CHEST_HEAL_FRACTION = CHEST_RULES.healFraction;
 const CHEST_BLINK_FOR = CHEST_RULES.blinkFor;
 import type { BuffId, Chest, ChestContent, ChestType } from './chests';
+import { ACTIVITY_RULES, RunActivities, activityGold, lanternOre } from './activities';
+import type { ActivityEvent, ActivitySnapshot, ActivityType } from './activities';
 import {
   ENEMY_KINDS,
   NEW_ENEMY_KINDS,
@@ -114,6 +116,24 @@ export class GameplayWorld {
   private readonly coins = new RunCoins();
   /** Task 12: chests and their buffs (campaign runs only; own seeded stream). */
   private readonly chests: RunChests | null;
+  /** Task 24: map activities (campaign runs only; own seeded stream). */
+  private readonly activities: RunActivities | null;
+  /** Task 24: Ore earned from activities this run (paid only with a victory). */
+  private activityOre = 0;
+  /** Task 24: extra activity spawns follow the act mix with their own counters. */
+  private activitySpawnSequence = 0;
+  private readonly activitySpawnedByKind: Record<EnemyKind, number> = {
+    melee: 0,
+    ranged: 0,
+    swift: 0,
+    brute: 0,
+    bombard: 0,
+  };
+  private activityNotice: Readonly<{
+    kind: 'spawned' | 'completed' | 'failed';
+    activityType: ActivityType;
+    time: number;
+  }> | null = null;
   private readonly coinRandom: () => number;
   private spawnSettings: SpawnSettings;
   private nextSpawnAt: number;
@@ -183,6 +203,7 @@ export class GameplayWorld {
     this.campaignMap = options.campaign ? getCampaignMap(options.campaign.mapId) : null;
     this.director = this.campaignMap ? new CampaignDirector(this.campaignMap) : null;
     this.chests = this.campaignMap ? new RunChests(rng.chests, ALPHA.arenaSize) : null;
+    this.activities = this.campaignMap ? new RunActivities(rng.activities, ALPHA.arenaSize) : null;
     this.kindShares = this.campaignMap
       ? enemyMix(this.campaignMap.id)
       : Object.freeze({ swift: 0, brute: 0, bombard: 0 });
@@ -312,6 +333,8 @@ export class GameplayWorld {
         recordStatus: (events) => world.record('status', events),
         recordSkill: (events) => world.record('skill', events),
         statsChanged: (stats) => world.applyStats(stats),
+        // Task 24: the Blight Nest ignores Slow and Stun (DoTs and damage still apply).
+        controlImmune: (targetId) => world.activities?.isNest(targetId) ?? false,
         controlLimits: (targetId) =>
           targetId === world.bossEnemyId && world.bossDefinition
             ? world.bossDefinition.control
@@ -612,6 +635,15 @@ export class GameplayWorld {
             lastOpened: this.lastChestOpened,
           })
         : null,
+      activities: this.activities
+        ? Object.freeze({
+            items: this.activities.getActivities(this.clock),
+            litLanterns: this.activities.litLanterns(),
+            nextSpawnAt: this.activities.nextSpawnAt,
+            ore: this.activityOre,
+            notice: this.activityNotice,
+          })
+        : null,
       statuses: this.statuses.getGroups(),
       weapon: this.weapons.getWeaponState(this.playerId),
       movement: this.input,
@@ -705,6 +737,10 @@ export class GameplayWorld {
       else if (next.kind === 'chest-spawn')
         this.record('chests', [this.chests!.spawnDue(this.clock, this.body)]);
       else if (next.kind === 'chest-expire') this.expireChests();
+      else if (next.kind === 'activity-spawn') this.spawnActivity();
+      else if (next.kind === 'activity-resolve')
+        this.applyActivityEvents(this.activities!.resolveDue(this.clock));
+      else if (next.kind === 'activity-enemies') this.spawnActivityEnemies();
       // Task 09.1: status applications of this boundary (Rogue Deadly Synthesis check).
       if (this.statusTargets.size) {
         const targets = [...this.statusTargets];
@@ -1071,14 +1107,17 @@ export class GameplayWorld {
    * 3. otherwise melee.
    * Every kind stays within ±1 of n·share over any prefix of spawns (≤ 0.64 for the new kinds).
    */
-  private nextSpawnKind(): EnemyKind {
-    const next = this.autoSpawnSequence + 1;
+  private nextSpawnKind(
+    sequence = this.autoSpawnSequence,
+    counts: Readonly<Record<EnemyKind, number>> = this.autoSpawnedByKind,
+  ): EnemyKind {
+    const next = sequence + 1;
     const share = this.spawnSettings.rangedShare; // the exact Task 06 expression
     if (Math.floor(next * share) > Math.floor((next - 1) * share)) return 'ranged';
     let best: EnemyKind = 'melee',
       lead = -1e-9;
     for (const kind of NEW_ENEMY_KINDS) {
-      const d = next * this.kindShares[kind] - this.autoSpawnedByKind[kind] - 0.5;
+      const d = next * this.kindShares[kind] - counts[kind] - 0.5;
       if (d > lead) {
         best = kind;
         lead = d;
@@ -1267,6 +1306,10 @@ export class GameplayWorld {
     const { state, resolved } = reduceRun(this.campaignRun, input);
     this.campaignRun = state;
     if (resolved) {
+      // AGENTS §4.6 / Task 24 review: activity results already due at T (e.g. a shrine completing
+      // at the instant of a terminal lethal hit) finish and are rewarded before the run ends;
+      // `endRun()` below then discards only future activity work.
+      if (this.activities) this.applyActivityEvents(this.activities.resolveDue(this.clock));
       this.input = Object.freeze({ x: 0, y: 0 });
       this.record('campaign', [
         Object.freeze({
@@ -1276,6 +1319,8 @@ export class GameplayWorld {
           elapsed: Math.min(this.clock, this.campaignMap.durationSeconds),
         }),
       ]);
+      // Task 24: unfinished activities stop with the run (no reward, no failure).
+      this.activities?.endRun();
       // Task 12: buffs end with the run.
       if (this.chests) {
         const ended = this.chests.endRun(this.clock);
@@ -1352,6 +1397,30 @@ export class GameplayWorld {
     if (content) this.forcedChestContent.set(event.chest.id, content);
     this.prepare();
     return event.chest.id;
+  }
+  /**
+   * Task 24 debug (DEV/QA controller only): spawns an activity of `type` next to the player (the
+   * thief at its normal distance), ignoring the 2-activity limit. Returns its id (null = skipped:
+   * no space / enemy cap / not an active campaign run).
+   */
+  debugSpawnActivity(type: ActivityType): string | null {
+    if (!this.activities || this.campaignRun.status !== 'active') return null;
+    if (!['shrine', 'lantern', 'thief', 'nest'].includes(type))
+      throw new TypeError('Invalid activity type.');
+    const event = this.activities.spawnNear(this.clock, this.activityPlacement(), type);
+    this.applyActivityEvents([event]);
+    this.prepare();
+    return event.type === 'activity-spawned' ? event.activity.id : null;
+  }
+  /** Task 24 debug: completes (with its normal reward) or fails an active activity now. */
+  debugResolveActivity(id: string, outcome: 'complete' | 'fail'): boolean {
+    if (!this.activities || this.campaignRun.status !== 'active') return false;
+    if (outcome !== 'complete' && outcome !== 'fail') throw new TypeError('Invalid outcome.');
+    const event = this.activities.force(id, this.clock, outcome);
+    if (!event) return false;
+    this.applyActivityEvents([event]);
+    this.prepare();
+    return true;
   }
   /** Grants (or refreshes) a chest buff now, like opening an enchanted chest. */
   debugGrantBuff(id: BuffId): boolean {
@@ -1594,6 +1663,215 @@ export class GameplayWorld {
     // Task 12: chests open by touch (player radius + chest radius), as a pickup of this step.
     if (this.chests && this.campaignRun.status === 'active')
       for (const chest of this.chests.touched(this.body)) this.openChest(chest);
+    // Task 24: the player just moved — who stands in a shrine / at a lantern, enemies near lanterns.
+    if (this.activities && this.activities.activeCount && this.campaignRun.status === 'active')
+      this.applyActivityEvents(
+        this.activities.sample(this.clock, {
+          player: this.body,
+          enemiesNear: (center, radius) => this.enemiesNear(center, radius),
+        }),
+      );
+  }
+  /** Task 24: living normal enemies within `radius` of `center` (activity enemies excluded). */
+  private enemiesNear(center: Point, radius: number): number {
+    const own = this.activities!.activityEnemyIds();
+    let n = 0;
+    for (const id of this.enemyIds) {
+      if (own.has(id) || !this.core.getEntity(id).alive) continue;
+      const p = this.enemies.getEnemy(id).position;
+      if (Math.hypot(p.x - center.x, p.y - center.y) <= radius) n++;
+    }
+    return n;
+  }
+  /** Task 24 scheduled activity spawn (placement keeps away from chests; thief/nest need a slot). */
+  private spawnActivity(): void {
+    const event = this.activities!.spawnDue(this.clock, this.activityPlacement());
+    this.applyActivityEvents([event]);
+  }
+  private activityPlacement() {
+    return Object.freeze({
+      player: this.body,
+      mapId: this.campaignMap!.id,
+      chests: this.chests?.getChests() ?? [],
+      enemySlotFree: this.enemyIds.size < this.spawnSettings.maxActive,
+    });
+  }
+  /** Task 24 extra enemies of shrines / lanterns / nests (act mix, within the cap; else skipped). */
+  private spawnActivityEnemies(): void {
+    const out: ActivityEvent[] = [];
+    for (const request of this.activities!.enemySpawnsDue(this.clock)) {
+      let enemyId: string | null = null,
+        position: Point | null = null;
+      if (this.enemyIds.size < this.spawnSettings.maxActive) {
+        // Same act mix as the waves, with its own counters (wave composition is unchanged).
+        const kind = this.nextSpawnKind(this.activitySpawnSequence, this.activitySpawnedByKind);
+        position = this.activities!.ringPoint(
+          request.center,
+          request.ringMin,
+          request.ringMax,
+          this.enemyProfile(kind).radius,
+        );
+        if (position) {
+          this.activitySpawnSequence++;
+          this.activitySpawnedByKind[kind]++;
+          enemyId = this.registerEnemy(kind, position);
+        }
+      }
+      out.push(
+        Object.freeze({
+          type: 'activity-enemy-spawned',
+          activityId: request.activityId,
+          enemyId,
+          position,
+        }),
+      );
+    }
+    this.record('activities', out);
+  }
+  /**
+   * Task 24: records activity events and applies their consequences (rewards of completed
+   * activities; thief / nest enemies registered on spawn and removed on escape / crumble).
+   */
+  private applyActivityEvents(events: readonly ActivityEvent[], at?: Point): void {
+    for (const event of events) {
+      this.record('activities', [event]);
+      const kind =
+        event.type === 'activity-spawned'
+          ? 'spawned'
+          : event.type === 'activity-completed'
+            ? 'completed'
+            : event.type === 'activity-failed' || event.type === 'activity-faded'
+              ? 'failed'
+              : null;
+      if (kind && 'activity' in event)
+        this.activityNotice = Object.freeze({
+          kind,
+          activityType: event.activity.type,
+          time: this.clock,
+        });
+      if (event.type === 'activity-spawned')
+        this.onActivitySpawned(event.activity.id, event.activity.type);
+      else if (event.type === 'activity-completed') {
+        // A debug completion of a living thief / nest removes it (the kill path is the normal one).
+        const id = event.activity.enemyId;
+        const position =
+          at ?? (id && this.enemyIds.has(id) ? this.enemies.getEnemy(id).position : event.activity);
+        if (id && this.enemyIds.has(id)) this.removeActivityEnemy(id);
+        this.rewardActivity(event.activity, position);
+      } else if (event.type === 'activity-failed' && event.activity.enemyId)
+        this.removeActivityEnemy(event.activity.enemyId);
+    }
+  }
+  /** Task 24: thief / nest enemy ids leaving without a kill (escape, crumble, debug). */
+  private readonly vanishing = new Set<string>();
+  /** Task 24: an activity's thief / nest as an ordinary registered enemy (Core owns its HP). */
+  private onActivitySpawned(id: string, type: ActivityType): void {
+    if (type !== 'thief' && type !== 'nest') return;
+    const a = this.activities!.getActivity(id, this.clock)!;
+    const rules = type === 'thief' ? ACTIVITY_RULES.thief : ACTIVITY_RULES.nest;
+    const stats = Object.freeze({
+      ...this.enemyStats,
+      maxHp: this.enemyStats.maxHp * rules.hpMultiplier,
+    });
+    const enemyId = this.registerEnemy('melee', a, this.activityProfile(type), stats);
+    this.activities!.attachEnemy(id, enemyId);
+  }
+  /** Behaviour profiles: the thief flees at 95% of the player's base speed; the nest holds still. */
+  private activityProfile(type: 'thief' | 'nest'): EnemyConfig {
+    const melee = this.enemyProfile('melee');
+    if (type === 'nest')
+      return Object.freeze({
+        behavior: 'stationary',
+        movementSpeed: 0,
+        radius: ACTIVITY_RULES.nest.radius,
+        attackInterval: melee.attackInterval,
+        attackCoefficient: 0,
+        damageType: 'physical',
+      });
+    const r = ACTIVITY_RULES.thief;
+    return Object.freeze({
+      behavior: 'flee',
+      movementSpeed: ALPHA.baseMovementSpeed * r.speedShare,
+      radius: r.radius,
+      attackInterval: melee.attackInterval,
+      attackCoefficient: 0,
+      damageType: 'physical',
+      bounds: Object.freeze({ min: r.radius, max: ALPHA.arenaSize - r.radius }),
+      edgeMargin: r.edgeMargin,
+    });
+  }
+  /**
+   * Task 24 rewards (once per activity, from the completion event): shrine — an enchanted chest at
+   * the shrine; nest — a wooden chest at the nest; lantern — coins (6% of the map's victory Gold)
+   * + banked Ore; thief — a coin burst (8%) + a seeded 20% chance of banked Ore. Coins follow the
+   * normal pickup and coin rules; banked Ore is paid only with a victory.
+   */
+  private rewardActivity(a: ActivitySnapshot, at: Point): void {
+    const map = this.campaignMap!;
+    let coins = 0,
+      ore = 0,
+      chest: 'wooden' | 'enchanted' | null = null;
+    if (a.type === 'shrine' || a.type === 'nest') {
+      chest = a.type === 'shrine' ? 'enchanted' : 'wooden';
+      if (this.chests) this.record('chests', [this.chests.placeReward(this.clock, at, chest)]);
+    } else if (a.type === 'lantern') {
+      coins = activityGold('lantern', map.victoryGold);
+      ore = lanternOre(map.id);
+      this.dropActivityCoins(at, coins, 1);
+    } else {
+      coins = activityGold('thief', map.victoryGold);
+      ore = this.activities!.roll() < ACTIVITY_RULES.thief.oreChance ? ACTIVITY_RULES.thief.ore : 0;
+      this.dropActivityCoins(at, coins, ACTIVITY_RULES.thief.burstPiles);
+    }
+    this.activityOre += ore;
+    this.record('activities', [
+      Object.freeze({
+        type: 'activity-reward',
+        activityId: a.id,
+        activityType: a.type,
+        coins,
+        ore,
+        chest,
+      }),
+    ]);
+  }
+  /** Coin piles worth `total` around `at` (evenly spread; whole coins, the remainder on the first). */
+  private dropActivityCoins(at: Point, total: number, piles: number): void {
+    const n = Math.max(1, Math.min(piles, total));
+    const base = Math.floor(total / n);
+    const events = [];
+    for (let i = 0; i < n; i++) {
+      const value = base + (i === 0 ? total - base * n : 0);
+      const angle = (i * Math.PI * 2) / n;
+      const r = n > 1 ? ACTIVITY_RULES.thief.burstRadius : 0;
+      const p = {
+        x: this.clamp(at.x + Math.cos(angle) * r, 10),
+        y: this.clamp(at.y + Math.sin(angle) * r, 10),
+      };
+      const pile = this.coins.drop(p, value);
+      events.push(
+        Object.freeze({ type: 'coins-dropped' as const, pileId: pile.id, amount: value }),
+      );
+    }
+    this.record('progression', events);
+  }
+  /**
+   * Task 24: a thief / nest leaving without a kill (escape, crumble, debug). Core stays the only
+   * HP owner: it dies by its own hand, so no player reward, kill or death trigger applies.
+   */
+  private removeActivityEnemy(enemyId: string): void {
+    if (!this.enemyIds.has(enemyId) || !this.core.getEntity(enemyId).alive) return;
+    this.vanishing.add(enemyId);
+    const raw = Number.MAX_SAFE_INTEGER;
+    const result = this.core.applyPeriodicDamage({
+      operationId: `activity-vanish-${enemyId}`,
+      targetId: enemyId,
+      effectId: 'activity-vanish',
+      rawDamage: raw,
+      sources: [{ applicationId: 'activity-vanish', sourceId: enemyId, rawDamage: raw }],
+    });
+    this.forwardCombat(result.events);
+    this.vanishing.delete(enemyId);
   }
   private expireChests() {
     const events = this.chests!.expireDue(this.clock);
@@ -1699,6 +1977,9 @@ export class GameplayWorld {
           | 'campaign'
           | 'chest-spawn'
           | 'chest-expire'
+          | 'activity-spawn'
+          | 'activity-resolve'
+          | 'activity-enemies'
           | 'dash-end'
           | 'dash-ready'
           | 'advance';
@@ -1744,6 +2025,24 @@ export class GameplayWorld {
         const expiry = this.chests.nextExpiryAt();
         if (expiry !== null) add(expiry, 8.6, 'chest-expire');
         add(this.chests.nextSpawnAt, 9.25, 'chest-spawn');
+      }
+      // Task 24 (owner-approved slots, spec §1.6): activity completion / failure / fade / escape /
+      // crumble right after the chest expiry (8.6); extra activity spawns right after the
+      // reinforcement spawning (9); the activity spawn right after the chest spawn (9.25). No new
+      // activities at or after the map duration.
+      if (this.activities && this.campaignRun.status === 'active') {
+        const canAct = this.survival.getState().canPlayerAct;
+        const due = this.activities.nextResolveAt();
+        // AGENTS §4.6: after a lethal hit at T, activity results already due at T still finish;
+        // everything later (new spawns, extra enemies, future deadlines) stays frozen.
+        if (due !== null && (canAct || due <= this.clock || sameInstant(due, this.clock)))
+          add(due, 8.7, 'activity-resolve');
+        if (canAct) {
+          const spawns = this.activities.nextEnemySpawnAt();
+          if (spawns !== null) add(spawns, 9.1, 'activity-enemies');
+          if (this.activities.nextSpawnAt < this.campaignMap!.durationSeconds)
+            add(this.activities.nextSpawnAt, 9.3, 'activity-spawn');
+        }
       }
       // Task 08: scheduled elite/boss/end events resolve last at equal time (after reinforcements).
       const scheduled = this.director?.peek();
@@ -1933,7 +2232,14 @@ export class GameplayWorld {
           // Task 11: coins drop here too — inside the once-per-death reward (dedup by design).
           this.dropCoins(event.entityId, enemy.position);
         }
-        this.skills.noteDeath(event.entityId, enemy.position);
+        // Task 24: a killed thief / nest completes its activity (once; reward at the body).
+        const done = this.vanishing.has(event.entityId)
+          ? null
+          : (this.activities?.enemyDied(event.entityId, this.clock) ?? null);
+        if (done) this.applyActivityEvents([done], enemy.position);
+        // A thief / nest leaving without a kill triggers no death effects (synergies, talents).
+        if (!this.vanishing.has(event.entityId))
+          this.skills.noteDeath(event.entityId, enemy.position);
         if (event.entityId === this.bossEnemyId && !this.bossDefeated) {
           this.bossDefeated = true;
           this.record('campaign', [
@@ -1983,6 +2289,7 @@ export class GameplayWorld {
         channel === 'weapon' ||
         channel === 'progression' ||
         channel === 'chests' ||
+        channel === 'activities' ||
         channel === 'skill' ||
         channel === 'movement' ||
         channel === 'pets'
