@@ -8,7 +8,7 @@ are unchanged.
 
 Current: Phase 0 done — next: Phase 1 (pipeline)
 
-Draft PR: _(opened in Phase 0)_
+Draft PR: https://github.com/pavnem-ux/Game/pull/23
 
 ## Checklist
 
