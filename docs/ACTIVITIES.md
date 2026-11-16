@@ -74,7 +74,8 @@ step, so "inside the shrine / lantern" and "enemies near the lantern" are sample
 step and stay constant until the next one; completion and failure times are exact boundaries.
 Nothing accumulates per rendered frame, so the frame rate cannot change outcomes. A failure that
 is already due survives a resample at its deadline (shrine progress or lantern Light at exactly 0
-with a zero rate), and after a lethal hit at time T the activity results already due at T still
+with a zero rate), and so does a result already reached (a shrine capture or lantern activation
+completing on the step the player leaves), and after a lethal hit at time T the activity results already due at T still
 resolve (AGENTS.md §4.6), including when that hit ends the run (revival already used): due results
 are drained before the run's cleanup; new spawns, extra enemies and later deadlines stay frozen. Extra spawns use
 the act's enemy mix with their own counters (reinforcement-wave composition is unchanged). All

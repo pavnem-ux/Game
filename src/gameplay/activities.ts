@@ -201,6 +201,8 @@ export interface ActivityPlacement {
 }
 
 const tieTime = (a: number, b: number) => a < b || sameInstant(a, b);
+/** Progress `value` has reached `target` (shrine capture, lantern activation). */
+const reached = (value: number, target: number) => value >= target || sameInstant(value, target);
 
 export class RunActivities {
   private readonly activities = new Map<string, ActivityState>();
@@ -394,7 +396,8 @@ export class RunActivities {
         a.rate = inside ? 1 : a.value > 0 ? -r.shrine.decayRate : 0;
       } else if (a.phase === 'waiting') {
         const inside = d <= r.lantern.activateRadius;
-        if (!inside) a.value = 0; // leaving resets the activation
+        // Leaving resets the activation, unless it completed on this very step (resolves next).
+        if (!inside && !reached(a.value, r.lantern.activateTime)) a.value = 0;
         a.inside = inside;
         a.rate = inside ? 1 : 0;
       } else {
@@ -419,6 +422,8 @@ export class RunActivities {
     if (a.type === 'thief' || a.type === 'nest') return a.endsAt;
     if (a.type === 'shrine') {
       if (!a.started) return a.spawnedAt + r.startWindow;
+      // Capture already complete (the player may have left on that very control step): due now.
+      if (reached(a.value, r.shrine.captureTime)) return a.valueAt;
       if (a.rate > 0) return a.valueAt + (r.shrine.captureTime - a.value) / a.rate;
       // Decayed to 0 (possibly resampled exactly at that instant, which zeroes the rate): the
       // abandon failure is due now — it must not be lost.
@@ -428,6 +433,7 @@ export class RunActivities {
     }
     if (a.phase === 'waiting') {
       const fade = a.spawnedAt + r.startWindow;
+      if (reached(a.value, r.lantern.activateTime)) return Math.min(fade, a.valueAt);
       if (a.rate > 0)
         return Math.min(fade, a.valueAt + (r.lantern.activateTime - a.value) / a.rate);
       return fade;
@@ -448,17 +454,27 @@ export class RunActivities {
     for (const a of [...this.activities.values()]) {
       const due = this.dueAt(a);
       if (due === null || !tieTime(due, now)) continue;
+      // Read before settling: a capture / activation already reached stays reached.
+      const done =
+        a.type === 'shrine'
+          ? reached(a.value, r.shrine.captureTime)
+          : a.type === 'lantern' &&
+            a.phase === 'waiting' &&
+            reached(a.value, r.lantern.activateTime);
       this.settle(a, now);
       if (a.type === 'thief') out.push(this.finish(a, now, 'escaped'));
       else if (a.type === 'nest') out.push(this.finish(a, now, 'expired'));
       else if (a.type === 'shrine') {
         if (!a.started) out.push(this.fade(a, now));
-        else if (a.rate > 0) {
+        else if (done || a.rate > 0) {
           a.value = r.shrine.captureTime;
           out.push(this.finish(a, now, null));
         } else out.push(this.finish(a, now, 'abandoned'));
       } else if (a.phase === 'waiting') {
-        if (a.rate > 0 && tieTime(a.valueAt + (r.lantern.activateTime - a.value) / a.rate, now)) {
+        if (
+          done ||
+          (a.rate > 0 && tieTime(a.valueAt + (r.lantern.activateTime - a.value) / a.rate, now))
+        ) {
           // Activation completes first when both fall on the same instant.
           a.phase = 'active';
           a.started = true;

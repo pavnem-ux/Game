@@ -166,3 +166,29 @@ describe('Task 24 review — a terminal death at a completion instant keeps the 
     expect(w.getSnapshot().activities!.items).toHaveLength(0);
   });
 });
+
+describe('Task 24 review — a completion already reached survives leaving at its deadline', () => {
+  it('a shrine captured for exactly 9 s completes even if the player steps out on that step', () => {
+    const a = new RunActivities(lcgStream(1), 3600);
+    const s = spawned(a, 'shrine');
+    const inside = { player: { x: s.x, y: s.y }, enemiesNear: () => 0 };
+    const outside = { player: { x: s.x + 500, y: s.y }, enemiesNear: () => 0 };
+    a.sample(10, inside);
+    a.sample(19, outside); // the control step lands exactly on the capture deadline
+    expect(a.nextResolveAt()).toBe(19);
+    const out = a.resolveDue(19);
+    expect(out).toHaveLength(1);
+    expect(out[0].type).toBe('activity-completed');
+    expect(a.activeCount).toBe(0);
+  });
+  it('a lantern whose activation completes on the step the player leaves still activates', () => {
+    const a = new RunActivities(lcgStream(2), 3600);
+    const l = spawned(a, 'lantern');
+    a.sample(0, { player: { x: l.x, y: l.y }, enemiesNear: () => 0 });
+    a.sample(1, { player: { x: l.x + 500, y: l.y }, enemiesNear: () => 0 });
+    expect(a.nextResolveAt()).toBe(1);
+    const out = a.resolveDue(1);
+    expect(out.map((e) => e.type)).toEqual(['activity-started']);
+    expect(a.activeCount).toBe(1);
+  });
+});
