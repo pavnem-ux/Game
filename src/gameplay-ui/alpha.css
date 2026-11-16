@@ -1625,6 +1625,10 @@ p.damage-note {
     left: max(10px, env(safe-area-inset-left));
     bottom: max(10px, env(safe-area-inset-bottom));
   }
+  /* Left-handed: the 84 px dash button sits 16 px from the left edge — start right of it. */
+  .active-skills.left-handed {
+    left: calc(max(16px, env(safe-area-inset-left)) + 84px + 12px);
+  }
   .active-skill {
     width: 34px;
     height: 34px;

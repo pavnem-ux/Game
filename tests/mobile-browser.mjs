@@ -107,6 +107,45 @@ async function open(viewport) {
   await context.close();
 }
 
+// ── Task 22 review fix: left-handed — the active skill row stays clear of the dash button ──
+for (const viewport of [
+  { width: 844, height: 390 },
+  { width: 768, height: 1024 },
+]) {
+  const { context, page, command } = await open(viewport);
+  await page.evaluate(() =>
+    localStorage.setItem('skazki.settings', JSON.stringify({ leftHanded: true })),
+  );
+  await page.reload();
+  await page.waitForFunction(() => !!window.__alpha);
+  await command({
+    type: 'restart',
+    options: {
+      characterClass: 'warrior',
+      level: 10,
+      initialEnemies: false,
+      spawning: { enabled: false },
+    },
+  });
+  await command({ type: 'protection', enabled: true });
+  await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
+  for (const skillId of ['shield_bash', 'cleave', 'whirlwind', 'ground_slam'])
+    await command({ type: 'grant-skill', skillId, rank: 1 });
+  const skills = page.locator('.active-skills');
+  await skills.waitFor();
+  const dash = page.locator('.touch-dash');
+  await dash.waitFor();
+  const a = await skills.boundingBox(),
+    b = await dash.boundingBox();
+  const overlap =
+    a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+  assert.ok(
+    !overlap,
+    `${viewport.width}×${viewport.height} left-handed: skill row ${JSON.stringify(a)} overlaps the dash button ${JSON.stringify(b)}`,
+  );
+  await context.close();
+}
+
 // ── Phase 2: a whole run and every menu screen, landscape phone and tablet ──
 const MENU_PAGES = [
   'Home',
