@@ -170,7 +170,7 @@ describe('Task 12 Phase 3 — opening and contents', () => {
     step(w, 0.2);
     expect(w.getSnapshot().coins.collected).toBe(chestGold(750));
   });
-  it('«Магнит» collects every crystal and coin on the map once (level-ups resolve normally)', () => {
+  it('«Magnet» collects every crystal and coin on the map once (level-ups resolve normally)', () => {
     const w = world();
     for (let i = 0; i < 5; i++) w.dropTestCrystal(30, 900 + i * 70);
     w.debugGrantBuff('fury'); // unrelated buff keeps running
@@ -201,7 +201,7 @@ describe('Task 12 Phase 3 — buffs', () => {
     step(w, 10);
     w.debugGrantBuff('fury'); // refresh: 20 s from now, no second +20%
     expect(w.getSnapshot().chests!.buffs).toEqual([
-      { id: 'fury', name: 'Ярость', remaining: 20, expiresAt: 30 },
+      { id: 'fury', name: 'Fury', remaining: 20, expiresAt: 30 },
     ]);
     expect(w.skills.effectiveStats).toEqual(expected(['fury']));
     w.debugGrantBuff('haste');
@@ -224,7 +224,7 @@ describe('Task 12 Phase 3 — buffs', () => {
     expect(w.skills.effectiveStats).toEqual(base);
     const uptime = w.getSnapshot().runStats.chests.buffUptime;
     expect(uptime).toEqual({ fury: 30, haste: 20, lightStep: 20 });
-    expect(BUFFS.fury.name).toBe('Ярость');
+    expect(BUFFS.fury.name).toBe('Fury');
   });
   it('buffs are kept on revive and removed at run end', () => {
     const w = world();

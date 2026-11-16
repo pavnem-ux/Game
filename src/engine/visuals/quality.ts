@@ -1,5 +1,5 @@
 /**
- * Task 18 «Качество графики» (presentation only). PROVISIONAL numbers.
+ * Task 18 «Graphics quality» (presentation only). PROVISIONAL numbers.
  */
 export type GraphicsQuality = 'high' | 'medium' | 'low';
 export const GRAPHICS_QUALITIES: readonly GraphicsQuality[] = Object.freeze([
@@ -16,7 +16,7 @@ export interface QualityPreset {
   readonly decorDensity: number;
   /** Glow sprites (elite rims, boss aura, light halos). */
   readonly glow: boolean;
-  /** Additive glows on every projectile and light source (costly on Canvas: Высокое only). */
+  /** Additive glows on every projectile and light source (costly on Canvas: High only). */
   readonly accentGlow: boolean;
   /** Task 16: canvas device-pixel-ratio cap (sharpness vs. pixels to fill). */
   readonly dprCap: number;
@@ -52,7 +52,7 @@ export const QUALITY_PRESETS: Readonly<Record<GraphicsQuality, QualityPreset>> =
     damageNumbers: 12,
   }),
 });
-/** Default: Высокое on desktop, Среднее on touch devices. */
+/** Default: High on desktop, Medium on touch devices. */
 export function defaultQuality(touch: boolean): GraphicsQuality {
   return touch ? 'medium' : 'high';
 }

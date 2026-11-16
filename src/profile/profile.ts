@@ -65,7 +65,7 @@ export interface PlayerProfile {
   readonly selectedClass: CharacterClass;
   readonly classes: Readonly<Record<CharacterClass, ClassProgress>>;
   readonly gold: number;
-  /** Task 19: second currency «Руда» (victory rewards; spent in the forge). */
+  /** Task 19: second currency «Ore» (victory rewards; spent in the forge). */
   readonly ore: number;
   /** Highest playable map id (Map 1 is always unlocked). */
   readonly highestUnlockedMap: number;

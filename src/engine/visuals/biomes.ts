@@ -70,7 +70,7 @@ export type SignatureKind =
 
 export const BIOMES: Readonly<Record<ActId, BiomeSpec>> = Object.freeze({
   1: Object.freeze({
-    name: 'Лес',
+    name: 'Forest',
     ground: Object.freeze({ base: 0x1b2a1f, patchA: 0x24402a, patchB: 0x15211a, path: 0x3b3526 }),
     decor: DECOR_KEYS.slice(0, 8),
     particles: 'fireflies',
@@ -78,7 +78,7 @@ export const BIOMES: Readonly<Record<ActId, BiomeSpec>> = Object.freeze({
     signatures: Object.freeze(['clearing', 'flower-ring'] as const),
   }),
   2: Object.freeze({
-    name: 'Топь',
+    name: 'Marsh',
     ground: Object.freeze({ base: 0x14262a, patchA: 0x1b3a3a, patchB: 0x0d1a1d, path: 0x2a3330 }),
     decor: DECOR_KEYS.slice(8, 16),
     particles: 'fog',
@@ -86,7 +86,7 @@ export const BIOMES: Readonly<Record<ActId, BiomeSpec>> = Object.freeze({
     signatures: Object.freeze(['bog-lake', 'barrow-circle'] as const),
   }),
   3: Object.freeze({
-    name: 'Пепелище',
+    name: 'Ashlands',
     ground: Object.freeze({ base: 0x232224, patchA: 0x302e2f, patchB: 0x18171a, path: 0x3a3532 }),
     decor: DECOR_KEYS.slice(16, 24),
     particles: 'ash',
@@ -94,7 +94,7 @@ export const BIOMES: Readonly<Record<ActId, BiomeSpec>> = Object.freeze({
     signatures: Object.freeze(['ruin-circle', 'ember-rift'] as const),
   }),
   4: Object.freeze({
-    name: 'Стужа',
+    name: 'Frost',
     ground: Object.freeze({ base: 0x16222f, patchA: 0x223447, patchB: 0x0f1822, path: 0x2b3b4c }),
     decor: DECOR_KEYS.slice(24, 32),
     particles: 'snow',

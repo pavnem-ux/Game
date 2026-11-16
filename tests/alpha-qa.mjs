@@ -50,36 +50,36 @@ try {
   await page.goto('http://127.0.0.1:4189/?debug');
   await page.waitForFunction(() => !!window.__alpha);
   await page.getByText('QA PREVIEW', { exact: false }).waitFor();
-  await page.getByRole('button', { name: 'Маг Посох', exact: false }).click();
-  await page.getByRole('button', { name: 'Начать забег' }).click();
+  await page.getByRole('button', { name: 'Mage Staff', exact: false }).click();
+  await page.getByRole('button', { name: 'Start run' }).click();
   const state = () => page.evaluate(() => window.__alpha.state());
   const command = (action) => page.evaluate((a) => window.__alpha.command(a), action);
   await command({ type: 'clear-enemies' });
   await command({ type: 'spawning', settings: { enabled: false } });
   await command({ type: 'protection', enabled: true });
-  await page.getByRole('button', { name: 'QA · Тестирование' }).click();
-  await page.getByLabel('DEV навык').selectOption('fireball');
-  await page.getByRole('button', { name: 'Выдать навык', exact: true }).click();
+  await page.getByRole('button', { name: 'QA · Testing' }).click();
+  await page.getByLabel('DEV skill').selectOption('fireball');
+  await page.getByRole('button', { name: 'Grant skill', exact: true }).click();
   assert.equal((await state()).world.skills.owned.find((s) => s.skillId === 'fireball').rank, 1);
-  await page.getByRole('button', { name: /^Улучшить / }).click();
+  await page.getByRole('button', { name: /^Upgrade / }).click();
   assert.equal((await state()).world.skills.owned.find((s) => s.skillId === 'fireball').rank, 2);
-  await page.getByLabel('Тестовое HP').fill('40');
-  await page.getByRole('button', { name: 'Установить HP' }).click();
+  await page.getByLabel('Test HP').fill('40');
+  await page.getByRole('button', { name: 'Set HP' }).click();
   const max = (await state()).world.player.maxHp;
-  await page.getByRole('button', { name: 'Следующий уровень забега' }).click();
+  await page.getByRole('button', { name: 'Next run level' }).click();
   assert.equal((await state()).world.player.currentHp, Math.min(max, 40 + max * 0.15));
   assert.equal((await state()).world.progression.level, 2);
-  await page.getByRole('button', { name: 'QA · Закрыть' }).click();
+  await page.getByRole('button', { name: 'QA · Close' }).click();
   await page
     .getByRole('dialog')
-    .getByRole('button', { name: /Перебросить · осталось 3/ })
+    .getByRole('button', { name: /Reroll · 3 left/ })
     .waitFor();
   await page.locator('.skill-card').first().click();
   await command({ type: 'grant-skill', skillId: 'elemental_mastery', rank: 1 });
   // Presentation rounds HP without changing the Core value.
   await command({ type: 'hp', value: (await state()).world.player.maxHp });
-  // Task 22: no in-run «Навыки» quick-look any more — the full list is in the pause menu.
-  assert.equal(await page.getByRole('button', { name: 'Обзор навыков', exact: true }).count(), 0);
+  // Task 22: no in-run «Skills» quick-look any more — the full list is in the pause menu.
+  assert.equal(await page.getByRole('button', { name: 'Skills overview', exact: true }).count(), 0);
   const before = (await state()).world.time;
   await command({ type: 'spawn', kind: 'melee', distance: 300 });
   await page.evaluate(() => window.__alpha.advance(0.2));
@@ -89,7 +89,7 @@ try {
     'automatic skill starts its cooldown',
   );
   // The active skill icon (bottom-left) shows the cooldown.
-  assert.match(await page.getByRole('list', { name: 'Активные навыки' }).innerText(), /\d+(\.\d)?/);
+  assert.match(await page.getByRole('list', { name: 'Active skills' }).innerText(), /\d+(\.\d)?/);
   await command({ type: 'clear-enemies' });
   await command({ type: 'hp', value: (await state()).world.player.maxHp - 1 });
   await command({ type: 'grant-xp', amount: 30 });
@@ -99,18 +99,18 @@ try {
   assert.match(label, /^\d+ \/ \d+ HP$/, 'HUD uses whole HP');
   const [current, maximum] = label.match(/\d+/g).map(Number);
   assert.ok(current <= maximum);
-  await page.getByRole('button', { name: 'Пауза', exact: true }).click();
+  await page.getByRole('button', { name: 'Pause', exact: true }).click();
   const paused = (await state()).world.time;
   await page.waitForTimeout(150);
   assert.equal((await state()).world.time, paused, 'pause holds');
-  const overview = page.getByRole('region', { name: 'Обзор навыков', exact: true });
+  const overview = page.getByRole('region', { name: 'Skills overview', exact: true });
   await overview.waitFor();
-  await overview.getByRole('region', { name: 'Автоматические навыки' }).waitFor();
-  await overview.getByRole('region', { name: 'Пассивные навыки' }).waitFor();
-  assert.ok((await overview.innerText()).includes('Свободных слотов:'));
+  await overview.getByRole('region', { name: 'Automatic skills' }).waitFor();
+  await overview.getByRole('region', { name: 'Passive skills' }).waitFor();
+  assert.ok((await overview.innerText()).includes('Free slots:'));
   assert.match(
-    await overview.getByLabel('Перезарядка: Огненный шар', { exact: true }).innerText(),
-    /Перезарядка: \d+\.\d с|Готов/,
+    await overview.getByLabel('Cooldown: Fireball', { exact: true }).innerText(),
+    /Cooldown: \d+\.\d s|Ready/,
   );
   assert.equal((await state()).screen, 'paused');
   await page.setViewportSize({ width: 390, height: 844 });
@@ -118,11 +118,11 @@ try {
   const box = await overview.boundingBox();
   assert.ok(box.x >= 0 && box.x + box.width <= 390, 'skill overview fits mobile viewport');
   await page.screenshot({ path: 'artifacts/alpha-13-qa-skills-mobile.png' });
-  await page.getByRole('button', { name: 'Продолжить', exact: false }).click();
+  await page.getByRole('button', { name: 'Continue', exact: false }).click();
   await checkSkillsAccess(page);
   await checkQaTools(page);
   await page.goto('http://127.0.0.1:4189/?prototype&debug');
-  await page.getByRole('button', { name: 'Войти в руины' }).waitFor();
+  await page.getByRole('button', { name: 'Enter the ruins' }).waitFor();
   assert.equal(
     await page.evaluate(() => typeof window.__survivors),
     'undefined',

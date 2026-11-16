@@ -18,7 +18,7 @@ import {
 import type { GearItem, GearSlot, GearStat } from '../../equipment';
 import { campaignStore } from '../campaign-state';
 import { Button, CurrencyBadge, OreBadge, Panel, Tabs, TierFrame } from '../kit';
-import { RU } from '../strings-ru';
+import { EN } from '../strings-en';
 import { tierLabel } from '../ShopPages';
 import {
   PET_CONFIG,
@@ -31,20 +31,20 @@ import {
 import { PetPortrait } from '../pets/PetPortrait';
 import { petEffectLines, petLevelLabel } from '../pets/pet-text';
 
-const F = RU.meta.forge;
+const F = EN.meta.forge;
 type SlotFilter = GearSlot | 'all';
 const fmt = (stat: GearStat, v: number) =>
   `+${Math.round(v * 100) / 100}${GEAR_STAT_LABELS[stat].unit}`;
 
 /**
- * Task 19 «Кузница»: owned items (filter by slot), the selected item's current vs next stats, the
- * Gold + ore cost and «Улучшить». An upgrade always succeeds; it goes through the campaign store
+ * Task 19 «Forge»: owned items (filter by slot), the selected item's current vs next stats, the
+ * Gold + ore cost and «Upgrade». An upgrade always succeeds; it goes through the campaign store
  * (Gold, ore and the level in one validated save). Reads state; store actions only.
  */
 export function ForgePage() {
   const ui = useSyncExternalStore(campaignStore.subscribe, campaignStore.getSnapshot);
   const profile = ui.progression.profile;
-  // Task 20: «Предметы» / «Питомцы» tabs (a `pet:<id>` preselection opens the pets tab).
+  // Task 20: «Items» / «Pets» tabs (a `pet:<id>` preselection opens the pets tab).
   const [tab, setTab] = useState<'items' | 'pets'>(
     ui.forgeItem?.startsWith('pet:') ? 'pets' : 'items',
   );
@@ -59,7 +59,7 @@ export function ForgePage() {
     if (!picked || !window.matchMedia?.('(max-width: 760px)').matches) return;
     detailRef.current?.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
   }, [picked]);
-  if (!profile) return <p className="campaign-empty">Профиль недоступен.</p>;
+  if (!profile) return <p className="campaign-empty">Profile unavailable.</p>;
   const levels = profile.itemLevels;
   const equippedBy = (id: string) =>
     CHARACTER_CLASSES.filter((c) => Object.values(profile.classes[c].loadout).includes(id));
@@ -88,7 +88,7 @@ export function ForgePage() {
   return (
     <div className="forge-screen">
       <header className="meta-page-head">
-        {/* Task 22: opened from Экипировка → back returns there (same class). */}
+        {/* Task 22: opened from Equipment → back returns there (same class). */}
         {ui.forgeReturn && (
           <Button variant="ghost" onClick={() => campaignStore.forgeBack()}>
             ← {F.backToEquipment}
@@ -100,9 +100,9 @@ export function ForgePage() {
           <OreBadge amount={profile.ore} />
         </span>
       </header>
-      {/* Task 22: a prominent centred mode switch (Предметы / Питомцы). */}
+      {/* Task 22: a prominent centred mode switch (Items / Pets). */}
       <Tabs
-        label="Разделы кузницы"
+        label="Forge sections"
         className="forge-mode"
         items={[
           {
@@ -117,7 +117,7 @@ export function ForgePage() {
             id: 'pets' as const,
             label: (
               <>
-                <span aria-hidden="true">❦</span> {RU.meta.pets.title}
+                <span aria-hidden="true">❦</span> {EN.meta.pets.title}
               </>
             ),
           },
@@ -139,9 +139,9 @@ export function ForgePage() {
               className="forge-items"
               actions={
                 <Tabs
-                  label="Фильтр кузницы по слоту"
+                  label="Forge slot filter"
                   items={[
-                    { id: 'all' as SlotFilter, label: RU.meta.equipment.all },
+                    { id: 'all' as SlotFilter, label: EN.meta.equipment.all },
                     ...GEAR_SLOTS.map((s) => ({ id: s as SlotFilter, label: SLOT_LABELS[s] })),
                   ]}
                   value={filter}
@@ -188,7 +188,7 @@ export function ForgePage() {
             <Panel
               className="forge-detail"
               role="group"
-              aria-label="Улучшение предмета"
+              aria-label="Item upgrade"
               title={selected ? itemDisplayName(selected, itemLevel(levels, selected.id)) : F.title}
             >
               <div ref={detailRef} className="forge-detail-anchor" aria-hidden="true" />
@@ -256,7 +256,7 @@ function ForgeDetail({
       <table className="forge-stats">
         <thead>
           <tr>
-            <th>Характеристика</th>
+            <th>Stat</th>
             <th>{F.now}</th>
             <th>{maxed ? '' : F.next(level + 1)}</th>
           </tr>
@@ -285,27 +285,27 @@ function ForgeDetail({
         <p className="forge-maxed">{F.maxed}</p>
       )}
       <Button variant="primary" disabledReason={reason} onClick={onUpgrade}>
-        ⚒ {maxed ? F.maxed : `${F.upgrade} до +${level + 1}`}
+        ⚒ {maxed ? F.maxed : `${F.upgrade} to +${level + 1}`}
       </Button>
     </div>
   );
 }
 
 /**
- * Task 20 forge tab «Питомцы»: owned pets, the selected pet's effect now and at the next level,
- * the Gold + ore cost and «Улучшить до уровня N» (one validated save; always succeeds).
+ * Task 20 forge tab «Pets»: owned pets, the selected pet's effect now and at the next level,
+ * the Gold + ore cost and «Upgrade to level N» (one validated save; always succeeds).
  */
 function PetForge({ initial }: { initial: string | null }) {
   const ui = useSyncExternalStore(campaignStore.subscribe, campaignStore.getSnapshot);
   const profile = ui.progression.profile!;
-  const P = RU.meta.pets;
+  const P = EN.meta.pets;
   const owned = profile.ownedPets.filter(isPetId);
   const [picked, setPicked] = useState<string | null>(initial);
   const [message, setMessage] = useState<Readonly<{ tone: 'ok' | 'error'; text: string }> | null>(
     null,
   );
   const selected = owned.find((id) => id === picked) ?? owned[0] ?? null;
-  if (!selected) return <p className="meta-empty">{P.locked}: купите питомца в магазине.</p>;
+  if (!selected) return <p className="meta-empty">{P.locked}: buy a pet in the shop.</p>;
   const level = petLevel(profile.petLevels, selected);
   const maxed = level >= PET_LEVEL_RULES.maxLevel;
   const cost = maxed ? null : petUpgradeCost(level + 1);
@@ -356,7 +356,7 @@ function PetForge({ initial }: { initial: string | null }) {
       <Panel
         className="forge-detail"
         role="group"
-        aria-label="Улучшение питомца"
+        aria-label="Pet upgrade"
         title={`${PET_CONFIG[selected].name} · ${petLevelLabel(level)}`}
       >
         <div className="forge-detail-body">

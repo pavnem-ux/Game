@@ -90,11 +90,11 @@ describe('Task 12 §1.5 — debug tools (DEV/QA controller)', () => {
 describe('Task 12 — popups and bug report', () => {
   it('pickup popup texts (Russian)', () => {
     expect(chestPopupText('heal', 12)).toBe('+15% HP');
-    expect(chestPopupText('gold', 9)).toBe('+9 золота');
-    expect(chestPopupText('magnet', 40)).toBe('Магнит: всё собрано');
-    expect(chestPopupText('fury', 0)).toBe('Ярость: Урон +20%');
-    expect(chestPopupText('haste', 0)).toBe('Быстрые руки: Скорость атаки +25%');
-    expect(chestPopupText('lightStep', 0)).toBe('Лёгкий шаг: Скорость движения +20%');
+    expect(chestPopupText('gold', 9)).toBe('+9 Gold');
+    expect(chestPopupText('magnet', 40)).toBe('Magnet: everything collected');
+    expect(chestPopupText('fury', 0)).toBe('Fury: Damage +20%');
+    expect(chestPopupText('haste', 0)).toBe('Quick Hands: Attack speed +25%');
+    expect(chestPopupText('lightStep', 0)).toBe('Light Step: Movement speed +20%');
   });
   it('bug reports include the active buffs', () => {
     const { control, world } = controller();
@@ -109,6 +109,6 @@ describe('Task 12 — popups and bug report', () => {
       profile: null,
       errors: [],
     });
-    expect(report.run!.activeBuffs).toEqual([{ id: 'haste', name: 'Быстрые руки', remaining: 18 }]);
+    expect(report.run!.activeBuffs).toEqual([{ id: 'haste', name: 'Quick Hands', remaining: 18 }]);
   });
 });

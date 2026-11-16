@@ -9,19 +9,19 @@ describe('Task 15 synergy banners', () => {
   it('unlock → I; level-up II; level-up III is the gold awakening banner', () => {
     expect(bannerFor(ev({ type: 'synergy-unlocked', synergyId: 'wildfire' }))).toMatchObject({
       level: 1,
-      title: '✦ Синергия открыта: Лесной пожар · I',
+      title: '✦ Synergy unlocked: Wildfire · I',
     });
     expect(
       bannerFor(ev({ type: 'synergy-level-up', synergyId: 'wildfire', level: 2 })),
     ).toMatchObject({
       level: 2,
-      title: '▲ Лесной пожар · уровень II',
-      detail: 'Урон Burn 4.5 за тик.',
+      title: '▲ Wildfire · level II',
+      detail: 'Burn damage 4.5 per tick.',
     });
     const three = bannerFor(ev({ type: 'synergy-level-up', synergyId: 'wildfire', level: 3 }))!;
     expect(three.level).toBe(3);
-    expect(three.title).toBe('✦ Пробуждение: Лесной пожар · III');
-    expect(three.detail).toContain('«Огненная буря»');
+    expect(three.title).toBe('✦ Awakening: Wildfire · III');
+    expect(three.detail).toContain('“Firestorm”');
     expect(bannerFor(ev({ type: 'synergy-triggered', synergyId: 'wildfire' }))).toBeNull();
     expect(bannerFor(ev({ type: 'synergy-unlocked', synergyId: 'wildfire' }, 'combat'))).toBeNull();
   });

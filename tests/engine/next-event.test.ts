@@ -16,17 +16,17 @@ function nextAt(mapId: number, now: number) {
 }
 
 describe('Task 22 §1.1 — next-event countdown (pure)', () => {
-  it('elite first: «Элита через 1:20»; seconds rounded up', () => {
+  it('elite first: «Elite in 1:20»; seconds rounded up', () => {
     expect(nextEventCountdown({ kind: 'elite', time: 100 }, 20)).toEqual({
       kind: 'elite',
       seconds: 80,
-      label: 'Элита через 1:20',
+      label: 'Elite in 1:20',
     });
-    expect(nextEventCountdown({ kind: 'elite', time: 100 }, 99.2)?.label).toBe('Элита через 0:01');
-    expect(nextEventCountdown({ kind: 'elite', time: 100 }, 100)?.label).toBe('Элита через 0:00');
+    expect(nextEventCountdown({ kind: 'elite', time: 100 }, 99.2)?.label).toBe('Elite in 0:01');
+    expect(nextEventCountdown({ kind: 'elite', time: 100 }, 100)?.label).toBe('Elite in 0:00');
   });
-  it('boss first: «Босс через 0:45»', () => {
-    expect(nextEventCountdown({ kind: 'boss', time: 600 }, 555)?.label).toBe('Босс через 0:45');
+  it('boss first: «Boss in 0:45»', () => {
+    expect(nextEventCountdown({ kind: 'boss', time: 600 }, 555)?.label).toBe('Boss in 0:45');
   });
   it('hidden for the end marker and when nothing is scheduled', () => {
     expect(nextEventCountdown({ kind: 'end', time: 600 }, 590)).toBeNull();

@@ -72,18 +72,20 @@ describe('Skills overview synergy model is derived from the pair table', () => {
     const mage = synergyOverview('mage', ['fireball']);
     const thermal = mage.find((s) => s.id === 'thermal_shock')!;
     expect(thermal.status).toBe('locked');
-    expect(thermal.pairs[0].missing).toEqual(['Кольцо льда']);
-    expect(thermal.explanation).toBe('Не хватает одного навыка: Кольцо льда или Ледяные осколки.');
+    expect(thermal.pairs[0].missing).toEqual(['Frost Nova']);
+    expect(thermal.explanation).toBe('One skill missing: Frost Nova or Ice Shards.');
     const open = synergyOverview('mage', ['fireball', 'frost_nova']);
     const t = open.find((s) => s.id === 'thermal_shock')!;
     expect(t.status).toBe('available');
-    expect(t.completedPairs).toEqual(['Огненный шар + Кольцо льда']);
+    expect(t.completedPairs).toEqual(['Fireball + Frost Nova']);
     expect(t.pairs[0].complete).toBe(true);
-    expect(t.explanation).toMatch(/^Открыто парой: Огненный шар \+ Кольцо льда\. Сработает в бою/);
+    expect(t.explanation).toMatch(
+      /^Unlocked by pair: Fireball \+ Frost Nova\. It triggers in battle/,
+    );
     const warrior = synergyOverview('warrior', ['ground_slam']);
     const seismic = warrior.find((s) => s.id === 'seismic_impact')!;
     expect(seismic.status).toBe('locked');
-    expect(seismic.explanation).toBe('Не хватает одного навыка: Землетрясение или Удар щитом.');
+    expect(seismic.explanation).toBe('One skill missing: Earthquake or Shield Bash.');
   });
 });
 
@@ -94,7 +96,7 @@ describe('level-up card hints', () => {
         u.synergy.name,
         u.withSkills,
       ]),
-    ).toEqual([['Термошок', ['Огненный шар']]]);
+    ).toEqual([['Thermal Shock', ['Fireball']]]);
     // Toxic Volley + Split Shot is a pair of two rules: both unlock.
     expect(
       cardSynergyHints('archer', ['toxic_volley'], 'split_shot').unlocks.map((u) => u.synergy.id),
@@ -104,8 +106,8 @@ describe('level-up card hints', () => {
     const h = cardSynergyHints('mage', [], 'frost_nova');
     expect(h.unlocks).toEqual([]);
     expect(h.halfPairs.map((x) => [x.synergy.name, x.partners])).toEqual([
-      ['Термошок', ['Огненный шар', 'Инферно']],
-      ['Расколотый лёд', ['Ледяные осколки', 'Буран']],
+      ['Thermal Shock', ['Fireball', 'Inferno']],
+      ['Shattered Ice', ['Ice Shards', 'Blizzard']],
     ]);
   });
   it('an already unlocked synergy gets no further hint: one more pair never stacks', () => {

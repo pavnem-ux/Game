@@ -52,8 +52,8 @@ describe('elite profiles (Task 08 §2.1)', () => {
     until(w, 241);
     const c = w.getSnapshot().campaign!;
     expect(c.elites.map((e) => [e.profile, e.name])).toEqual([
-      ['melee', 'Свирепый громила'],
-      ['ranged', 'Тёмный ворожей'],
+      ['melee', 'Savage Brute'],
+      ['ranged', 'Dark Conjurer'],
     ]);
     for (const elite of c.elites) {
       const snap = w.getSnapshot().enemies.find((e) => e.entityId === elite.enemyId)!;

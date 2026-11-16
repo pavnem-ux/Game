@@ -983,14 +983,14 @@ export class GameplayWorld {
   setTestSynergyLevel(id: SynergyId, level: SynergyLevel | null): void {
     this.skills.synergies.setLevelOverride(id, level);
   }
-  /** Task 14 «Изгнать»: remove an offered skill from the run pool; only that card is replaced. */
+  /** Task 14 «Banish»: remove an offered skill from the run pool; only that card is replaced. */
   banishSkillCard(cardKey: string): void {
     if (typeof cardKey !== 'string') throw new TypeError('Card key must be a string.');
     if (this.survival.getState().runState === 'ended') throw new Error('The run has ended.');
     this.record('skill', this.run.banish(cardKey));
   }
   /**
-   * Task 14 «Пропустить»: close the offer without a card. Campaign runs add skip coins
+   * Task 14 «Skip»: close the offer without a card. Campaign runs add skip coins
    * (`skipCoins`, 2% of the map's victory Gold, at least 3) to the collected coins, so the normal
    * payout applies (victory: all, defeat: 50%, abandon: nothing).
    */
@@ -1608,7 +1608,7 @@ export class GameplayWorld {
   }
   /**
    * Task 12 §1.4: opens a touched chest. Wooden: heal 15% Max HP through Combat Core (never
-   * revives) or a coin pile at the chest; enchanted: «Магнит» (all crystals and coins through the
+   * revives) or a coin pile at the chest; enchanted: «Magnet» (all crystals and coins through the
    * normal collection path) or a 20 s buff. `forced` is the debug path.
    */
   private openChest(chest: Chest, forced?: ChestContent) {
@@ -1855,7 +1855,7 @@ export class GameplayWorld {
               .map((e) => e.group.effectType),
           );
           effects.add(event.group.effectType);
-          // Task 15: stack counts just before death (Plague Chain III «Мор»).
+          // Task 15: stack counts just before death (Plague Chain III «Pestilence»).
           const stacks = new Map<EffectType, number>(
             events
               .filter(

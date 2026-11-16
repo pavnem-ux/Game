@@ -19,7 +19,7 @@ export const TALENT_HANDLERS: Readonly<Record<CharacterClass, TalentClassHandler
 
 /**
  * Task 09.1: the basic weapon's talent range factor, needed before the weapon is equipped (e.g.
- * Archer «дальность базового лука +4/7%»). Reads the same active ranks as the runtime.
+ * Archer «basic bow range +4/7%»). Reads the same active ranks as the runtime.
  */
 export function talentWeaponRangeFactor(
   characterClass: CharacterClass,

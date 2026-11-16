@@ -19,10 +19,10 @@ export function nextEventCountdown(
 ): NextEventCountdown | null {
   if (!next || next.kind === 'end' || !Number.isFinite(now)) return null;
   const seconds = Math.max(0, Math.ceil(next.time - now - 1e-9));
-  const what = next.kind === 'elite' ? 'Элита' : 'Босс';
+  const what = next.kind === 'elite' ? 'Elite' : 'Boss';
   return Object.freeze({
     kind: next.kind,
     seconds,
-    label: `${what} через ${countdownClock(seconds)}`,
+    label: `${what} in ${countdownClock(seconds)}`,
   });
 }

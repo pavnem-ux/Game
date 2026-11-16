@@ -11,29 +11,29 @@ function direct(ctx: DirectHitContext) {
   let percent = 0;
   let critDamage = 0;
   const bleed = dotStacks(ctx.statuses, ctx.targetId, 'bleed');
-  // 1.1 Кровавый клинок: dagger direct hits on bleeding targets.
+  // 1.1 Bloodied Blade: dagger direct hits on bleeding targets.
   const n01 = ctx.params('rogue.b1.n01');
   if (n01 && ctx.dagger && bleed > 0) {
     percent += n01.bonus;
     if (n01.stacks && bleed >= n01.stacks) percent += n01.extra;
   }
-  // 1.3 Жестокий порез (II/III): direct damage at 5+/10 Bleed stacks.
+  // 1.3 Cruel Cut (II/III): direct damage at 5+/10 Bleed stacks.
   const n03 = ctx.params('rogue.b1.n03');
   if (n03?.stacks && bleed >= n03.stacks) percent += n03.direct;
-  // 1.4 Охота на слабых: direct damage below 30% HP (+ Bleed at rank II).
+  // 1.4 Prey on the Weak: direct damage below 30% HP (+ Bleed at rank II).
   const n04 = ctx.params('rogue.b1.n04');
   if (n04 && hpBelow(ctx.target, n04.hpBelow)) {
     percent += n04.bonus;
     if (n04.bleedExtra && bleed > 0) percent += n04.bleedExtra;
   }
-  // 3.2 Алхимическая реакция: direct hits on targets with 2 / 3 distinct DoT types.
+  // 3.2 Alchemical Reaction: direct hits on targets with 2 / 3 distinct DoT types.
   const n32 = ctx.params('rogue.b3.n02');
   if (n32) {
     const types = distinctDotTypes(ctx.statuses, ctx.targetId);
     if (types >= 3 && n32.three) percent += n32.three;
     else if (types >= 2) percent += n32.two;
   }
-  // 1.5 Последний удар: dagger crit damage (+ bleeding / below 30% HP).
+  // 1.5 Final Blow: dagger crit damage (+ bleeding / below 30% HP).
   const n05 = ctx.params('rogue.b1.n05');
   if (n05 && ctx.dagger) {
     critDamage += n05.critDamage;
@@ -86,7 +86,7 @@ function superpowerProcs(engine: TalentEngine, targetId: string) {
         'talent:rogue.b3.n01',
       );
 }
-/** 3.4 Смертельный синтез (G5): 10 Poison + 10 Burn + 10 Bleed → one explosion per target CD. */
+/** 3.4 Lethal Synthesis (G5): 10 Poison + 10 Burn + 10 Bleed → one explosion per target CD. */
 function synthesis(engine: TalentEngine, targetIds: readonly string[]) {
   const n = engine.talents.params('rogue.b3.n04');
   if (!n) return;
@@ -109,16 +109,16 @@ function synthesis(engine: TalentEngine, targetIds: readonly string[]) {
 export const ROGUE_HANDLERS: TalentClassHandlers = {
   onBasicHit: superpowerProcs,
   onStatusesApplied: synthesis,
-  // 3.3 Токсическая перегрузка rank I: +10% DoT damage taken with 3 DoT types (II/III blocked E2).
+  // 3.3 Toxic Overload rank I: +10% DoT damage taken with 3 DoT types (II/III blocked E2).
   dotTakenMultiplier(engine, targetId) {
     const n = engine.talents.params('rogue.b3.n03');
     return n && distinctDotTypes(engine.statuses, targetId) >= 3 ? 1 + n.dotTaken / 100 : 1;
   },
   direct,
-  // 1.2 Скрытая точность rank I: dagger crit chance (ranks II/III are blocked, see gaps G-R1).
+  // 1.2 Hidden Precision rank I: dagger crit chance (ranks II/III are blocked, see gaps G-R1).
   critChance: (tags, params) =>
     tags.has('dagger') ? (params('rogue.b1.n02')?.critChance ?? 0) : 0,
-  // 1.3 Жестокий порез: Bleed applied by daggers deals more per tick.
+  // 1.3 Cruel Cut: Bleed applied by daggers deals more per tick.
   dotFactor(effectType, origin, params) {
     const n03 = params('rogue.b1.n03');
     return effectType === 'bleed' && origin.dagger && n03 ? 1 + n03.bleedDamage / 100 : 1;
@@ -130,7 +130,7 @@ export const ROGUE_HANDLERS: TalentClassHandlers = {
   },
   onPlayerDodged(engine, attackerId) {
     const rt = engine.talents;
-    // 2.2 Ответный выпад (+ 2.5 rank III ×1.15, C8): counter on the dodged attacker.
+    // 2.2 Riposte (+ 2.5 rank III ×1.15, C8): counter on the dodged attacker.
     const n02 = rt.params('rogue.b2.n02');
     if (n02 && engine.entity(attackerId).alive && rt.tryCooldown('rogue.b2.n02', n02.cooldown)) {
       const c8 = rt.params('rogue.b2.n05')?.counterMultiplier ?? 1;
@@ -140,7 +140,7 @@ export const ROGUE_HANDLERS: TalentClassHandlers = {
         ]),
       );
     }
-    // 2.3 Теневой двойник: chance to create the (single) shadow copy.
+    // 2.3 Shadow Double: chance to create the (single) shadow copy.
     const n03 = rt.params('rogue.b2.n03');
     if (n03 && rt.list(COPY).length === 0 && rt.ready('rogue.b2.n03') && rt.roll(n03.chance)) {
       rt.startCooldown('rogue.b2.n03', n03.cooldown);
@@ -162,7 +162,7 @@ export const ROGUE_HANDLERS: TalentClassHandlers = {
         copyInterval(engine),
       );
     }
-    // 2.5 Неуловимый: movement speed after a dodge (refresh, don't stack).
+    // 2.5 Elusive: movement speed after a dodge (refresh, don't stack).
     const n05 = rt.params('rogue.b2.n05');
     if (n05) rt.setBuff('rogue.b2.n05', n05.speedPercent, n05.duration, 'movementSpeedPercent');
   },

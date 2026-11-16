@@ -4,7 +4,7 @@ import { LEVEL_ROMAN, SYNERGY_LEVEL_TEXT, SYNERGY_RULES } from '../skills';
 import type { SynergyId } from '../skills';
 
 /**
- * Task 15 feedback: banners for a synergy unlock (I) and level-ups (II, III «Пробуждение» in gold).
+ * Task 15 feedback: banners for a synergy unlock (I) and level-ups (II, III «Awakening» in gold).
  * Presentation only: reads the bridge's event history; a UI timer (not simulation time) hides them.
  */
 interface Banner {
@@ -24,8 +24,8 @@ export function bannerFor(entry: WorldEvent): Banner | null {
     return {
       key: entry.sequence,
       level: 1,
-      title: `✦ Синергия открыта: ${nameOf(e.synergyId)} · I`,
-      detail: 'Сработает в бою, когда выполнится условие.',
+      title: `✦ Synergy unlocked: ${nameOf(e.synergyId)} · I`,
+      detail: 'Triggers in combat when its condition is met.',
     };
   if (e.type === 'synergy-level-up') {
     const text = SYNERGY_LEVEL_TEXT[e.synergyId as SynergyId];
@@ -33,13 +33,13 @@ export function bannerFor(entry: WorldEvent): Banner | null {
       ? {
           key: entry.sequence,
           level: 3,
-          title: `✦ Пробуждение: ${nameOf(e.synergyId)} · III`,
-          detail: `«${text.awakened}»: ${text.awakenedEffect}.`,
+          title: `✦ Awakening: ${nameOf(e.synergyId)} · III`,
+          detail: `“${text.awakened}”: ${text.awakenedEffect}.`,
         }
       : {
           key: entry.sequence,
           level: 2,
-          title: `▲ ${nameOf(e.synergyId)} · уровень ${LEVEL_ROMAN[e.level]}`,
+          title: `▲ ${nameOf(e.synergyId)} · level ${LEVEL_ROMAN[e.level]}`,
           detail: `${text.levelTwo[0].toUpperCase()}${text.levelTwo.slice(1)}.`,
         };
   }

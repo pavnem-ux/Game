@@ -58,7 +58,7 @@ export function validateItemLevels(levels: unknown): ItemLevels {
 }
 /**
  * Final permanent stats of a class (Character screen): class level + talents + gear, composed once.
- * Pass `loadout: null` for the «без снаряжения» comparison.
+ * Pass `loadout: null` for the «no equipment» comparison.
  */
 export function permanentStats(
   characterClass: CharacterClass,

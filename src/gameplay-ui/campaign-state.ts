@@ -176,7 +176,7 @@ function ensure(): CampaignUiState {
       saveMessage: null,
     });
     // A replaced/reset profile can lock the selected map: fall back to the highest unlocked one,
-    // otherwise «Начать забег» would silently refuse to start (Task 08.5 fix).
+    // otherwise «Start run» would silently refuse to start (Task 08.5 fix).
     service.subscribe((progression) => {
       const profile = progression.profile;
       const selected = state!.selectedMapId;
@@ -352,7 +352,7 @@ export const campaignStore = {
     if (runId) committed.add(runId);
   },
   /**
-   * Task 08.5 §3.3 «Сообщить о проблеме»: downloads a report (build, seed, run, stats, recent
+   * Task 08.5 §3.3 «Report a problem»: downloads a report (build, seed, run, stats, recent
    * errors, validated save, user agent). Read-only: nothing in the save changes.
    */
   downloadReport(): string | null {
@@ -380,10 +380,10 @@ export const campaignStore = {
       return false;
     }
     if (!downloadJson(out.filename, out.json)) {
-      update({ saveMessage: { tone: 'error', text: 'Не удалось скачать файл.' } });
+      update({ saveMessage: { tone: 'error', text: 'Could not download the file.' } });
       return false;
     }
-    update({ saveMessage: { tone: 'ok', text: `Сохранение экспортировано: ${out.filename}` } });
+    update({ saveMessage: { tone: 'ok', text: `Save exported: ${out.filename}` } });
     return true;
   },
   /** Import step 1: parse → validate → migrate. Nothing is replaced until confirmImport(). */
@@ -394,7 +394,7 @@ export const campaignStore = {
         pendingImport: null,
         saveMessage: {
           tone: 'error',
-          text: `Файл не импортирован: ${LOAD_ERROR_TEXT[parsed.error.code]} Текущее сохранение не изменено.`,
+          text: `File not imported: ${LOAD_ERROR_TEXT[parsed.error.code]} Your current save is unchanged.`,
         },
       });
     else update({ pendingImport: { profile: parsed.profile, fileName }, saveMessage: null });
@@ -411,10 +411,10 @@ export const campaignStore = {
       pendingImport: null,
       selectedMapId: r.ok ? pending.profile.highestUnlockedMap : ensure().selectedMapId,
       saveMessage: r.ok
-        ? { tone: 'ok', text: 'Сохранение импортировано.' }
+        ? { tone: 'ok', text: 'Save imported.' }
         : {
             tone: 'error',
-            text: `Импорт не выполнен: ${r.failure ? SAVE_FAILURE_TEXT[r.failure] : ''} Текущее сохранение не изменено.`,
+            text: `Import failed: ${r.failure ? SAVE_FAILURE_TEXT[r.failure] : ''} Your current save is unchanged.`,
           },
     });
   },
@@ -425,7 +425,7 @@ export const campaignStore = {
       update({
         saveMessage: {
           tone: 'error',
-          text: 'Талант изучен, но прогресс не сохранён. Повторите сохранение в «Настройках».',
+          text: 'Talent learned, but progress was not saved. Retry saving in Settings.',
         },
       });
     return result;
@@ -434,8 +434,8 @@ export const campaignStore = {
     const ok = campaignStore.service().retrySave();
     update({
       saveMessage: ok
-        ? { tone: 'ok', text: 'Прогресс сохранён.' }
-        : { tone: 'error', text: 'Сохранить всё ещё не удаётся.' },
+        ? { tone: 'ok', text: 'Progress saved.' }
+        : { tone: 'error', text: 'Saving still fails.' },
     });
   },
   /**

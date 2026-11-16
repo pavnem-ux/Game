@@ -58,7 +58,7 @@ export class AlphaScene extends Phaser.Scene {
   /** Task 18: the map's biome (ground, decor, particles), rebuilt when the map changes. */
   private biome!: BiomeRenderer;
   private mapId: number | null = null;
-  /** Task 18: darkness overlay and light sources («Последний свет»). */
+  /** Task 18: darkness overlay and light sources («The Last Light»). */
   private lighting!: LightRenderer;
   private revivedAt = Number.NEGATIVE_INFINITY;
   /**
@@ -67,7 +67,7 @@ export class AlphaScene extends Phaser.Scene {
    */
   private petDraw: { x: number; y: number; id: string } | null = null;
   private frameSeconds = 1 / 60;
-  /** Task 18: additive glows on projectiles / light sources (Высокое only). */
+  /** Task 18: additive glows on projectiles / light sources (High only). */
   private accentGlow = true;
   /** Task 18: last drawn position of each enemy (death puffs); entries are updated in place. */
   private readonly lastEnemyPos = new Map<string, { x: number; y: number; color: number }>();
@@ -136,7 +136,7 @@ export class AlphaScene extends Phaser.Scene {
     };
     this.input.keyboard!.on('keydown-SPACE', dash).on('keydown-SHIFT', dash);
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
-      // Task 16: a floating joystick where the thumb lands (left half; right half for «Левша»).
+      // Task 16: a floating joystick where the thumb lands (left half; right half for «Left-handed»).
       if (
         this.world &&
         !this.world.paused &&
@@ -342,7 +342,7 @@ export class AlphaScene extends Phaser.Scene {
           break;
       }
     } catch (e) {
-      this.error = e instanceof Error ? e.message : 'Команда отклонена';
+      this.error = e instanceof Error ? e.message : 'Command rejected';
     }
     this.publish();
   }
@@ -353,7 +353,7 @@ export class AlphaScene extends Phaser.Scene {
     this.input.keyboard?.resetKeys();
   }
   /**
-   * Task 18 «Последний свет»: act darkness with a flickering warm light around the player; light
+   * Task 18 «The Last Light»: act darkness with a flickering warm light around the player; light
    * sources cut holes in order of importance (telegraphs and enemy shots first, so they are always
    * visible), coloured glows add warmth. Boss phase: deeper, redder darkness and a boss aura.
    */
@@ -437,7 +437,7 @@ export class AlphaScene extends Phaser.Scene {
         );
     }
   }
-  /** Task 18 «Качество графики» (UI settings; presentation only). */
+  /** Task 18 «Graphics quality» (UI settings; presentation only). */
   private graphicsQuality(): GraphicsQuality {
     return uiSettings.get().graphicsQuality;
   }
@@ -582,7 +582,7 @@ export class AlphaScene extends Phaser.Scene {
           until: event.time + 3,
           x: s.playerBody.x,
           y: s.playerBody.y - 70,
-          text: e.type === 'boss-spawned' ? `⚠ Босс: ${e.bossName}` : `✦ ${e.bossName} повержен`,
+          text: e.type === 'boss-spawned' ? `⚠ Boss: ${e.bossName}` : `✦ ${e.bossName} defeated`,
         });
       if (event.channel === 'skill' && e.type === 'synergy-unlocked')
         this.fx.push({
@@ -590,7 +590,7 @@ export class AlphaScene extends Phaser.Scene {
           until: event.time + 2.4,
           x: s.playerBody.x,
           y: s.playerBody.y - 46,
-          text: `✦ Синергия открыта: ${SYNERGY_LABELS[e.synergyId] ?? e.synergyId}`,
+          text: `✦ Synergy unlocked: ${SYNERGY_LABELS[e.synergyId] ?? e.synergyId}`,
         });
       if (
         event.channel === 'combat' &&
@@ -1135,18 +1135,18 @@ const SYNERGY_COLORS: Record<string, number> = {
   final_cut: 0xff5470,
 };
 const SYNERGY_LABELS: Record<string, string> = {
-  thermal_shock: 'ТЕРМОШОК',
-  wildfire: 'ЛЕСНОЙ ПОЖАР',
-  shattered_ice: 'РАСКОЛ',
-  skull_crusher: 'СОКРУШЕНИЕ',
-  battle_momentum: 'НАПОР',
-  seismic_impact: 'СЕЙСМИКА',
-  toxic_barrage: 'ТОКСИН',
-  plague_chain: 'ЧУМА',
-  deadly_precision: 'ТОЧНОСТЬ',
-  blood_frenzy: 'БЕЗУМИЕ',
-  deep_wounds: 'ГЛУБОКИЕ РАНЫ',
-  final_cut: 'РАЗРЕЗ',
+  thermal_shock: 'THERMAL SHOCK',
+  wildfire: 'WILDFIRE',
+  shattered_ice: 'SHATTERED ICE',
+  skull_crusher: 'SKULL CRUSHER',
+  battle_momentum: 'MOMENTUM',
+  seismic_impact: 'SEISMIC',
+  toxic_barrage: 'TOXIC',
+  plague_chain: 'PLAGUE',
+  deadly_precision: 'PRECISION',
+  blood_frenzy: 'FRENZY',
+  deep_wounds: 'DEEP WOUNDS',
+  final_cut: 'FINAL CUT',
 };
 declare global {
   interface Window {

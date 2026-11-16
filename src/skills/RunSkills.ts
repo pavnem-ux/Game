@@ -148,7 +148,7 @@ export class RunSkills {
     return null;
   }
   /**
-   * Task 14 «Изгнать»: removes the card's skill from the pool for the rest of the run and replaces
+   * Task 14 «Banish»: removes the card's skill from the pool for the rest of the run and replaces
    * only that card (seeded, reroll preference for its slot). The offer id stays the same.
    */
   banish(key: string): SkillEvent[] {
@@ -198,7 +198,7 @@ export class RunSkills {
       }),
     ];
   }
-  /** Task 14 «Пропустить»: closes the current offer without a card (unlimited). */
+  /** Task 14 «Skip»: closes the current offer without a card (unlimited). */
   skip(): SkillEvent[] {
     const offer = this.offer;
     if (!offer) throw new Error('No level-up offer to skip.');

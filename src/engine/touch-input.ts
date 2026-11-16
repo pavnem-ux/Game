@@ -40,7 +40,7 @@ export function movementInput(keys: Vector, stick: { active: boolean; dx: number
   const v = joystickVector(stick.dx, stick.dy);
   return v.x === 0 && v.y === 0 ? keys : v;
 }
-/** «Левша»: the joystick zone is the right half and the dash button sits on the left. */
+/** «Left-handed»: the joystick zone is the right half and the dash button sits on the left. */
 export function inJoystickZone(
   x: number,
   y: number,

@@ -40,7 +40,7 @@ export interface NewEnemyType {
 }
 export const NEW_ENEMY_TYPES: Readonly<Record<NewEnemyKind, NewEnemyType>> = Object.freeze({
   swift: Object.freeze({
-    name: 'Стремительный бес',
+    name: 'Swift Imp',
     hp: 0.4,
     damage: 0.6,
     speed: 1.8,
@@ -49,7 +49,7 @@ export const NEW_ENEMY_TYPES: Readonly<Record<NewEnemyKind, NewEnemyType>> = Obj
     attackIntervalScale: 1,
   }),
   brute: Object.freeze({
-    name: 'Каменный тролль',
+    name: 'Stone Troll',
     hp: 3.5,
     damage: 1.8,
     speed: 0.55,
@@ -58,7 +58,7 @@ export const NEW_ENEMY_TYPES: Readonly<Record<NewEnemyKind, NewEnemyType>> = Obj
     attackIntervalScale: 1.4,
   }),
   bombard: Object.freeze({
-    name: 'Колдун-бомбардир',
+    name: 'Bombard Warlock',
     hp: 0.8,
     damage: 1.2,
     speed: 0.7,

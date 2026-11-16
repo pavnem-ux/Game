@@ -1,5 +1,5 @@
 /*
- * Task 13 — «Последний свет» design tokens (meta screens only; the in-run HUD keeps its styles).
+ * Task 13 — «The Last Light» design tokens (meta screens only; the in-run HUD keeps its styles).
  * Every redesigned screen sits inside `.meta-ui` and reads these variables.
  */
 .meta-ui {
@@ -29,8 +29,8 @@
   --up: #7fd29a;
   --down: #ef7d6f;
   --focus: #ffe7a3;
-  /* Tier colours (equipment): Обычный grey, Добротный green, Редкий blue, Эпический purple,
-     Легендарный orange (same hues as TIER_CONFIG). */
+  /* Tier colours (equipment): Common grey, Uncommon green, Rare blue, Epic purple,
+     Legendary orange (same hues as TIER_CONFIG). */
   --tier-0: #8d96a6;
   --tier-1: #c9c9c0;
   --tier-2: #7fc77a;

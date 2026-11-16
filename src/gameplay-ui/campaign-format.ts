@@ -7,7 +7,7 @@ export const CLASS_SYMBOLS: Record<CharacterClass, string> = {
   archer: '➶',
   rogue: '⟐',
 };
-export const minutes = (seconds: number) => `${Math.round(seconds / 60)} мин`;
+export const minutes = (seconds: number) => `${Math.round(seconds / 60)} min`;
 export const clock = (seconds: number) =>
   `${Math.floor(seconds / 60)}:${Math.floor(seconds % 60)
     .toString()

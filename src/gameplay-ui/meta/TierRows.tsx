@@ -3,9 +3,9 @@ import { TIERS, TIER_CONFIG } from '../../equipment';
 import type { GearItem, Tier } from '../../equipment';
 
 /**
- * Task 22 §1.4: items grouped into rows by rarity — Обычный → Добротный → Редкий → Эпический →
- * Легендарный — each with a tier-coloured header; empty rows are hidden. Starter weapons (tier 0)
- * sit in the «Обычный» row. Filters are applied by the caller before grouping.
+ * Task 22 §1.4: items grouped into rows by rarity — Common → Uncommon → Rare → Epic →
+ * Legendary — each with a tier-coloured header; empty rows are hidden. Starter weapons (tier 0)
+ * sit in the «Common» row. Filters are applied by the caller before grouping.
  */
 export function TierRows({
   items,

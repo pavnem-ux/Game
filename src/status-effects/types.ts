@@ -74,7 +74,7 @@ export interface StatusEffectsOptions {
     result: PeriodicDamageResult,
   ) => void;
   /**
-   * Task 09.1 (additive): multiplier on a group's tick damage (e.g. «получаемый DoT-урон +X%»).
+   * Task 09.1 (additive): multiplier on a group's tick damage (e.g. «DoT damage taken +X%»).
    * Pure, ≥ 0; default 1. Tick interval, stacks, timers and refresh rules are unchanged.
    */
   readonly damageMultiplier?: (group: StatusGroupSnapshot) => number;

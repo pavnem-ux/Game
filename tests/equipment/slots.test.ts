@@ -23,7 +23,7 @@ const MULT = [1, 2, 3.5, 5, 7];
 describe('Task 19 §1.1 — helmet, gloves, pants', () => {
   it('7 slots; 9 new templates (3 per slot) × 5 tiers; 130 unique items', () => {
     expect(GEAR_SLOTS).toEqual(['weapon', 'helmet', 'armor', 'gloves', 'pants', 'amulet', 'ring']);
-    expect(NEW_SLOTS.map((s) => SLOT_LABELS[s])).toEqual(['Шлем', 'Перчатки', 'Штаны']);
+    expect(NEW_SLOTS.map((s) => SLOT_LABELS[s])).toEqual(['Helmet', 'Gloves', 'Legs']);
     for (const slot of NEW_SLOTS)
       expect(GEAR_TEMPLATES.filter((t) => t.slot === slot)).toHaveLength(3);
     expect(SHOP_ITEMS).toHaveLength(130);
@@ -56,8 +56,8 @@ describe('Task 19 §1.1 — helmet, gloves, pants', () => {
     }
     // Task 11 armor keeps both stats at ×1.0 (unchanged).
     expect(getItem('plate-t1').stats).toEqual({ maxHpPercent: 5, resistance: 2 });
-    expect(getItem('guard_helm-t1').name).toBe('Обычный шлем стража');
-    expect(getItem('plate_gauntlets-t5').name).toBe('Легендарные латные рукавицы');
+    expect(getItem('guard_helm-t1').name).toBe("Common Guard's Helm");
+    expect(getItem('plate_gauntlets-t5').name).toBe('Legendary Plate Gauntlets');
   });
   it('new-slot items are eligible for every class, only in their own slot', () => {
     for (const item of SHOP_ITEMS.filter((i) => NEW_SLOTS.includes(i.slot)))

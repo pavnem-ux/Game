@@ -4,22 +4,22 @@ import { PET_CONFIG, PET_IDS, PET_LEVEL_RULES, petLevel } from '../../pets';
 import type { PetId } from '../../pets';
 import { campaignStore } from '../campaign-state';
 import { Button, Panel } from '../kit';
-import { RU } from '../strings-ru';
+import { EN } from '../strings-en';
 import { PetPortrait } from '../pets/PetPortrait';
 import { petEffectLines, petLevelLabel, petSourceLabel } from '../pets/pet-text';
 
-const P = RU.meta.pets;
+const P = EN.meta.pets;
 
 /**
- * Task 20 «Питомцы»: every pet as a card (portrait, level, effect now and at the next level).
+ * Task 20 «Pets»: every pet as a card (portrait, level, effect now and at the next level).
  * Owned pets can be made the profile's one active pet (shared by every class) or left at home;
- * pets not owned show where they come from (shop price or «Награда за задание»).
+ * pets not owned show where they come from (shop price or «Quest reward»).
  */
 export function PetsPage() {
   const ui = useSyncExternalStore(campaignStore.subscribe, campaignStore.getSnapshot);
   const profile = ui.progression.profile;
   const [message, setMessage] = useState('');
-  if (!profile) return <p className="campaign-empty">Профиль недоступен.</p>;
+  if (!profile) return <p className="campaign-empty">Profile unavailable.</p>;
   const activate = (id: PetId | null) => {
     const refused = campaignStore.setActivePet(id);
     if (refused) uiSound('ui-error');

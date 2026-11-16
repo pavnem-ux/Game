@@ -17,23 +17,21 @@ export async function checkQaTools(page) {
       },
     });
   await restart();
-  await page.getByRole('button', { name: 'QA · Тестирование' }).click();
+  await page.getByRole('button', { name: 'QA · Testing' }).click();
   const god = page.getByRole('checkbox', { name: 'God Mode', exact: true });
   assert.equal(await god.isChecked(), false);
   const diagnostics = page.getByRole('group', { name: 'Synergy Diagnostics', exact: true });
   await diagnostics.waitFor();
   for (const id of ['battle_momentum', 'skull_crusher', 'seismic_impact']) {
     assert.ok(
-      (await diagnostics.locator(`[data-synergy-id="${id}"]`).innerText()).includes(
-        'Заблокирована',
-      ),
+      (await diagnostics.locator(`[data-synergy-id="${id}"]`).innerText()).includes('Locked'),
     );
   }
   await god.check();
   assert.equal((await state()).qa.godMode, true);
   const grant = async (skillId) => {
-    await page.getByLabel('DEV навык').selectOption(skillId);
-    await page.getByRole('button', { name: 'Выдать навык', exact: true }).click();
+    await page.getByLabel('DEV skill').selectOption(skillId);
+    await page.getByRole('button', { name: 'Grant skill', exact: true }).click();
   };
   // Task 07.2 v2: one skill of a pair unlocks nothing; each completed workbook pair unlocks its rule.
   await grant('ground_slam');
@@ -43,13 +41,13 @@ export async function checkQaTools(page) {
     (await state()).qa.synergies.filter((s) => s.unlocked).map((s) => s.id),
     ['battle_momentum'],
   );
-  await page.getByRole('button', { name: 'QA · Закрыть' }).click();
+  await page.getByRole('button', { name: 'QA · Close' }).click();
   await command({ type: 'spawn', kind: 'melee', distance: 50 });
   await page.waitForFunction(() => window.__alpha.presentation().stunIndicators.length > 0);
   await page.keyboard.press('p');
   assert.equal((await state()).screen, 'paused');
   const stunned = await page.evaluate(() => window.__alpha.presentation().stunIndicators);
-  assert.ok(stunned.every((s) => s.text === 'СТАН'));
+  assert.ok(stunned.every((s) => s.text === 'STUN'));
   await page.screenshot({
     path: 'artifacts/alpha-15-stun.png',
     style: '.modal-overlay { visibility: hidden !important; }',
@@ -59,16 +57,16 @@ export async function checkQaTools(page) {
     await page.evaluate(() => window.__alpha.presentation().stunIndicators),
     stunned,
   );
-  await page.getByRole('button', { name: 'Продолжить', exact: false }).click();
+  await page.getByRole('button', { name: 'Continue', exact: false }).click();
   await page.evaluate(() => window.__alpha.advance(0.65));
-  await page.getByRole('button', { name: 'QA · Тестирование' }).click();
+  await page.getByRole('button', { name: 'QA · Testing' }).click();
   for (const skillId of ['cleave', 'shield_bash']) await grant(skillId);
   assert.ok((await state()).qa.synergies.every((s) => s.unlocked && s.completedPairs.length > 0));
   assert.match(
     await diagnostics.locator('[data-synergy-id="seismic_impact"]').innerText(),
-    /Разблокирована парой: ground_slam \+ shield_bash/,
+    /Unlocked by pair: ground_slam \+ shield_bash/,
   );
-  await page.getByRole('button', { name: 'QA · Закрыть' }).click();
+  await page.getByRole('button', { name: 'QA · Close' }).click();
   assert.equal((await page.evaluate(() => window.__alpha.presentation().stunIndicators)).length, 0);
   const hp = (await state()).world.player.currentHp;
   await command({
@@ -96,9 +94,9 @@ export async function checkQaTools(page) {
     );
   }
   assert.ok(protectedState.qa.synergies.find((s) => s.id === 'battle_momentum').count > 0);
-  await page.getByRole('button', { name: 'QA · Тестирование' }).click();
+  await page.getByRole('button', { name: 'QA · Testing' }).click();
   const skills = (await state()).world.skills;
-  await page.getByRole('button', { name: 'Сбросить счётчики синергий' }).click();
+  await page.getByRole('button', { name: 'Reset synergy counters' }).click();
   assert.deepEqual((await state()).world.skills, skills);
   assert.ok((await state()).qa.synergies.every((s) => s.count === 0 && s.lastTime === null));
   await god.uncheck();
@@ -112,5 +110,5 @@ export async function checkQaTools(page) {
   await god.check();
   assert.equal((await state()).qa.godMode, true);
   await page.screenshot({ path: 'artifacts/alpha-16-qa-diagnostics-mobile.png' });
-  await page.getByRole('button', { name: 'QA · Закрыть' }).click();
+  await page.getByRole('button', { name: 'QA · Close' }).click();
 }

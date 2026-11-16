@@ -174,7 +174,7 @@ describe('scheduled events in the world fire exactly once at their time', () => 
     expect(boss.maxHp).toBeCloseTo(base.maxHp * getBossDefinition('ash_wolf').hpMultiplier, 6);
     const bosses = events.filter((e) => e.event.type === 'boss-spawned');
     expect(bosses).toHaveLength(1);
-    expect(bosses[0].event).toMatchObject({ bossId: 'ash_wolf', bossName: 'Пепельный волк' });
+    expect(bosses[0].event).toMatchObject({ bossId: 'ash_wolf', bossName: 'Ash Wolf' });
     expect(
       events
         .filter((e) => e.event.type === 'elite-spawned')

@@ -12,7 +12,7 @@ import type { CombatTag } from '../../skills/types';
  * Task 09.1 Phase 8 — Archer branches 1–2 (catalog v1.2 + G11). Numbers come from
  * `effect-data.ts`; ranks are totals (a rank's text is its complete effect).
  */
-/** «Стрелы»: the player's physical projectile hits (bow, arrow skills, Multishot arrows). */
+/** «Arrows»: the player's physical projectile hits (bow, arrow skills, Multishot arrows). */
 const arrow = (tags: ReadonlySet<CombatTag>) => tags.has('projectile') && tags.has('physical');
 const FOCUS = 'archer.b1.n04';
 const CROSSFIRE = 'archer.b2.n05';
@@ -24,30 +24,30 @@ function direct(ctx: DirectHitContext) {
   if (arrow(tags)) {
     // 1.1 II/III: crit damage of arrows.
     critDamage += ctx.params('archer.b1.n01')?.critDamage ?? 0;
-    // 1.2 Слабая точка: arrows on marked targets (+ poisoned and marked at II/III).
+    // 1.2 Weak Spot: arrows on marked targets (+ poisoned and marked at II/III).
     const n12 = ctx.params('archer.b1.n02');
     if (n12 && ctx.marked) {
       percent += n12.bonus;
       if (n12.poisoned && (ctx.statuses.getGroup(ctx.targetId, 'poison')?.stacks.length ?? 0) > 0)
         percent += n12.poisoned;
     }
-    // 1.4 Хладнокровие: the shot after 3 direct shots on this target within the window.
+    // 1.4 Cold Blood: the shot after 3 direct shots on this target within the window.
     const n14 = ctx.params(FOCUS);
     if (n14 && ctx.talents.stampedAt(`${FOCUS}:primed:${ctx.targetId}`) !== null)
       percent += n14.bonus;
-    // 2.4 Манёвренная стрельба: physical arrows while the player moves.
+    // 2.4 Mobile Shooting: physical arrows while the player moves.
     const n24 = ctx.params('archer.b2.n04');
     if (n24 && ctx.moving) percent += n24.bonus;
-    // 2.5 Перекрёстный огонь: the next arrow after an arrow kill.
+    // 2.5 Crossfire: the next arrow after an arrow kill.
     percent += ctx.talents.buffValue(CROSSFIRE);
   }
-  // 1.5 Идеальный выстрел rank I: crit damage against targets below 30% HP (II/III blocked E3).
+  // 1.5 Perfect Shot rank I: crit damage against targets below 30% HP (II/III blocked E3).
   const n15 = ctx.params('archer.b1.n05');
   if (n15 && hpBelow(ctx.target, n15.hpBelow)) critDamage += n15.critDamage;
   return { percent, critDamage };
 }
 
-// ── Branch 3 · Осадный инженер (G8, G9, G10, C7) ──
+// ── Branch 3 · Siege Engineer (G8, G9, G10, C7) ──
 const BALLISTA = 'ballista';
 const SUMMON = 'archer.b3.n01:summon';
 /** G8/G9 ballista numbers for the current ranks (null without the superpower). */
@@ -145,13 +145,13 @@ export const ARCHER_HANDLERS: TalentClassHandlers = {
       },
     ];
   },
-  // 3.4 Осадный огонь: the ballista's own hits +10/20/30%.
+  // 3.4 Siege Fire: the ballista's own hits +10/20/30%.
   talentWeaponDirect(ctx) {
     return ctx.tags.has(BALLISTA) ? (ctx.params('archer.b3.n04')?.bonus ?? 0) : 0;
   },
-  // 1.1 Меткий глаз: crit chance of direct arrows.
+  // 1.1 Keen Eye: crit chance of direct arrows.
   critChance: (tags, params) => (arrow(tags) ? (params('archer.b1.n01')?.critChance ?? 0) : 0),
-  // 1.3 Сквозной выстрел (G11): Piercing Arrow +1/2/3 targets; 2.2: Multishot arrows +5/10/15 p.p.
+  // 1.3 Piercing Shot (G11): Piercing Arrow +1/2/3 targets; 2.2: Multishot arrows +5/10/15 p.p.
   skillParamBonus(skillId, param, params) {
     if (skillId === 'piercing_arrow' && param === 'pierce')
       return params('archer.b1.n03')?.pierce ?? 0;
@@ -165,7 +165,7 @@ export const ARCHER_HANDLERS: TalentClassHandlers = {
   },
   // 2.1 II/III: range of the basic bow.
   weaponRangeFactor: (params) => 1 + (params('archer.b2.n01')?.range ?? 0) / 100,
-  // 2.3 Широкая зона: AoE radius of the Archer's active skills; II/III zone duration.
+  // 2.3 Wide Zone: AoE radius of the Archer's active skills; II/III zone duration.
   skillAreaFactor(tags, params) {
     const n = params('archer.b2.n03');
     return n && tags.has('skill') ? 1 + n.area / 100 : 1;

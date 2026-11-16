@@ -24,7 +24,7 @@ import type { PetId } from '../pets';
 import { PetCard } from './meta/PetsScreen';
 import { TierRows } from './meta/TierRows';
 import { Button, ConfirmModal, Tabs, TierFrame, disabledReason } from './kit';
-import { RU } from './strings-ru';
+import { EN, formatNumber } from './strings-en';
 
 /**
  * Task 11 §1.5 shop and equipment screens. They only read the profile and call the campaign
@@ -32,11 +32,11 @@ import { RU } from './strings-ru';
  */
 const useCampaign = () => useSyncExternalStore(campaignStore.subscribe, campaignStore.getSnapshot);
 export const REFUSALS: Record<string, string> = {
-  gold: 'Не хватает золота.',
-  owned: 'Уже куплено.',
-  locked: 'Этот уровень предметов ещё закрыт.',
-  'not-owned': 'Предмет не куплен.',
-  'not-eligible': 'Этот класс не может надеть предмет.',
+  gold: 'Not enough Gold.',
+  owned: 'Already bought.',
+  locked: 'This item tier is still locked.',
+  'not-owned': 'Item not bought.',
+  'not-eligible': 'This class cannot equip the item.',
 };
 const statText = (stat: GearStat, value: number) => {
   const { label, unit } = GEAR_STAT_LABELS[stat];
@@ -45,7 +45,7 @@ const statText = (stat: GearStat, value: number) => {
 /** Item stat lines; Task 19: at the item's forge `level` (default +0). */
 export function ItemStats({ item, level = 0 }: { item: GearItem; level?: number }) {
   const entries = Object.entries(upgradedStats(item, level)) as [GearStat, number][];
-  if (!entries.length) return <p className="gear-stats">Без бонусов</p>;
+  if (!entries.length) return <p className="gear-stats">No bonuses</p>;
   return (
     <ul className="gear-stats">
       {entries.map(([stat, v]) => (
@@ -57,25 +57,25 @@ export function ItemStats({ item, level = 0 }: { item: GearItem; level?: number 
 const tierStyle = (item: GearItem) =>
   item.tier === 0 ? undefined : { borderColor: TIER_CONFIG[item.tier as Tier].color };
 export const tierLabel = (item: GearItem) =>
-  item.tier === 0 ? 'Стартовое' : TIER_CONFIG[item.tier as Tier].name;
+  item.tier === 0 ? 'Starter' : TIER_CONFIG[item.tier as Tier].name;
 
 /**
- * «Магазин» (Task 13 restyle): slot tabs, weapons filtered by a class switcher (the selected class
- * first), item cards in tier frames with price badges, «Куплено» / «Надето» stamps and a locked
- * overlay «откроется после карты N». Buying asks for confirmation (kit modal) and goes through the
+ * «Shop» (Task 13 restyle): slot tabs, weapons filtered by a class switcher (the selected class
+ * first), item cards in tier frames with price badges, «Bought» / «Equipped» stamps and a locked
+ * overlay «unlocks after map N». Buying asks for confirmation (kit modal) and goes through the
  * campaign store (one atomic save).
  */
 export function ShopPage() {
   const ui = useCampaign();
   const profile = ui.progression.profile;
-  // Task 20: the «Питомцы» tab sits after the gear slots.
+  // Task 20: the «Pets» tab sits after the gear slots.
   const [slot, setSlot] = useState<GearSlot | 'pets'>(ui.shopTab === 'pets' ? 'pets' : 'weapon');
   const [weaponClass, setWeaponClass] = useState<CharacterClass>(
     profile?.selectedClass ?? 'warrior',
   );
   const [confirming, setConfirming] = useState<string | null>(null);
   const [message, setMessage] = useState('');
-  if (!profile) return <p className="campaign-empty">Профиль недоступен.</p>;
+  if (!profile) return <p className="campaign-empty">Profile unavailable.</p>;
   const cleared = highestClearedMap(profile.completedMaps);
   const state = { ownedItems: profile.ownedItems };
   const items = SHOP_ITEMS.filter(
@@ -87,12 +87,12 @@ export function ShopPage() {
   return (
     <div className="campaign-page shop-page">
       <header className="meta-page-head">
-        <h2 className="meta-title">Магазин</h2>
+        <h2 className="meta-title">Shop</h2>
         <Tabs
-          label="Слоты магазина"
+          label="Shop slots"
           items={[
             ...GEAR_SLOTS.map((s) => ({ id: s as GearSlot | 'pets', label: SLOT_LABELS[s] })),
-            { id: 'pets' as const, label: RU.meta.pets.title },
+            { id: 'pets' as const, label: EN.meta.pets.title },
           ]}
           value={slot}
           onChange={(s) => {
@@ -102,9 +102,9 @@ export function ShopPage() {
         />
         {slot === 'weapon' && (
           <label className="shop-class">
-            Оружие класса{' '}
+            Weapons for{' '}
             <select
-              aria-label="Класс оружия"
+              aria-label="Weapon class"
               value={weaponClass}
               onChange={(e) => setWeaponClass(e.target.value as CharacterClass)}
             >
@@ -122,8 +122,8 @@ export function ShopPage() {
       ) : (
         <>
           <p className="meta-note">
-            Покупка открывает предмет навсегда для всех подходящих классов. Изменения снаряжения
-            действуют со следующего забега.
+            Buying unlocks an item forever for every eligible class. Equipment changes take effect
+            from the next run.
           </p>
           {message && (
             <p className="shop-message" role="status">
@@ -132,7 +132,7 @@ export function ShopPage() {
           )}
           <TierRows
             items={items}
-            label="Товары"
+            label="Goods"
             className="shop-rows"
             render={(item) => {
               const owned = isOwned(state, item);
@@ -143,12 +143,12 @@ export function ShopPage() {
               const short = profile.gold < item.price;
               const unlockAt = TIER_CONFIG[item.tier as Tier].unlockAfterMap;
               const stateText = wearing.length
-                ? `Надето: ${wearing.map((c) => CLASS_LABELS[c]).join(', ')}`
+                ? `Equipped: ${wearing.map((c) => CLASS_LABELS[c]).join(', ')}`
                 : owned
-                  ? 'Куплено'
+                  ? 'Bought'
                   : !open
-                    ? `Откроется после карты ${unlockAt}`
-                    : `${item.price} золота`;
+                    ? `Unlocks after map ${unlockAt}`
+                    : `${formatNumber(item.price)} Gold`;
               return (
                 <li
                   key={item.id}
@@ -165,24 +165,24 @@ export function ShopPage() {
                     <ItemStats item={item} level={level} />
                     <p className="shop-state">{stateText}</p>
                     {wearing.length > 0 ? (
-                      <span className="item-stamp">{RU.meta.shop.equippedStamp}</span>
+                      <span className="item-stamp">{EN.meta.shop.equippedStamp}</span>
                     ) : owned ? (
-                      <span className="item-stamp owned">{RU.meta.shop.owned}</span>
+                      <span className="item-stamp owned">{EN.meta.shop.owned}</span>
                     ) : open ? (
                       <Button
                         variant="primary"
                         size="s"
-                        disabledReason={disabledReason([[short, 'Не хватает золота']])}
+                        disabledReason={disabledReason([[short, 'Not enough Gold']])}
                         onClick={() => {
                           setConfirming(item.id);
                           setMessage('');
                         }}
                       >
-                        Купить · <span className="price-badge">◎ {item.price}</span>
+                        Buy · <span className="price-badge">◎ {formatNumber(item.price)}</span>
                       </Button>
                     ) : (
                       <div className="shop-locked-overlay" aria-hidden="true">
-                        🔒 {RU.meta.shop.lockedOverlay(unlockAt)}
+                        🔒 {EN.meta.shop.lockedOverlay(unlockAt)}
                       </div>
                     )}
                   </TierFrame>
@@ -194,20 +194,20 @@ export function ShopPage() {
       )}
       {buying && (
         <ConfirmModal
-          title={`Купить «${buying.name}» за ${buying.price} золота?`}
+          title={`Buy “${buying.name}” for ${formatNumber(buying.price)} Gold?`}
           onConfirm={() => {
             const refused = campaignStore.buyItem(buying.id);
             uiSound(refused ? 'ui-error' : 'ui-buy');
             setConfirming(null);
             setMessage(
-              refused ? (REFUSALS[refused] ?? 'Покупка не удалась.') : `Куплено: ${buying.name}.`,
+              refused ? (REFUSALS[refused] ?? 'Purchase failed.') : `Bought: ${buying.name}.`,
             );
           }}
           onCancel={() => setConfirming(null)}
         >
           <p>
-            Останется {profile.gold - buying.price} золота. Предмет откроется навсегда для всех
-            подходящих классов.
+            {formatNumber(profile.gold - buying.price)} Gold will remain. The item unlocks forever
+            for every eligible class.
           </p>
         </ConfirmModal>
       )}
@@ -216,13 +216,13 @@ export function ShopPage() {
 }
 
 /**
- * Task 20 shop tab «Питомцы»: the three shop pets with price and «Купить» (confirmation, one
- * atomic save); quest pets are shown as «Награда за задание» and cannot be bought.
+ * Task 20 shop tab «Pets»: the three shop pets with price and «Buy» (confirmation, one
+ * atomic save); quest pets are shown as «Quest reward» and cannot be bought.
  */
 function PetShop() {
   const ui = useCampaign();
   const profile = ui.progression.profile!;
-  const P = RU.meta.pets;
+  const P = EN.meta.pets;
   const [confirming, setConfirming] = useState<PetId | null>(null);
   const [message, setMessage] = useState('');
   const pet = confirming ? PET_CONFIG[confirming] : null;
@@ -235,7 +235,7 @@ function PetShop() {
           {message}
         </p>
       )}
-      <ul className="pet-grid" aria-label="Питомцы в магазине">
+      <ul className="pet-grid" aria-label="Pets in the shop">
         {PET_IDS.map((id) => {
           const def = PET_CONFIG[id];
           const owned = profile.ownedPets.includes(id);
@@ -258,7 +258,7 @@ function PetShop() {
                 active={profile.activePet === id}
                 actions={
                   owned ? (
-                    <span className="item-stamp owned">{RU.meta.shop.owned}</span>
+                    <span className="item-stamp owned">{EN.meta.shop.owned}</span>
                   ) : def.source.kind === 'shop' ? (
                     <Button
                       variant="primary"
@@ -290,7 +290,8 @@ function PetShop() {
           onCancel={() => setConfirming(null)}
         >
           <p>
-            Останется {profile.gold - price} золота. Питомец открывается навсегда для всего профиля.
+            {formatNumber(profile.gold - price)} Gold will remain. The pet unlocks forever for the
+            whole profile.
           </p>
         </ConfirmModal>
       )}

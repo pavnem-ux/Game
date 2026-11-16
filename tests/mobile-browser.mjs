@@ -51,7 +51,7 @@ async function open(viewport) {
   await command({ type: 'protection', enabled: true });
   await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
   // The debug overlay (debug builds only) covers the joystick zone: collapse it.
-  await page.getByRole('button', { name: 'Скрыть' }).click(); // lazy-loaded: wait for it
+  await page.getByRole('button', { name: 'Hide' }).click(); // lazy-loaded: wait for it
   const canvas = await page.locator('.game-canvas canvas').boundingBox();
   // Joystick: touch the left half, drag 80 px right (full speed), hold.
   const visibleBottom = Math.min(canvas.y + canvas.height, page.viewportSize().height);
@@ -148,15 +148,15 @@ for (const viewport of [
 
 // ── Phase 2: a whole run and every menu screen, landscape phone and tablet ──
 const MENU_PAGES = [
-  'Главная',
-  'Персонаж',
-  'Экипировка',
-  'Таланты',
-  'Магазин',
-  'Кузница',
-  'Карта похода',
-  'Прогресс',
-  'Настройки',
+  'Home',
+  'Hero',
+  'Equipment',
+  'Talents',
+  'Shop',
+  'Forge',
+  'Campaign map',
+  'Progress',
+  'Settings',
 ];
 async function noHorizontalScroll(page, where) {
   const over = await page.evaluate(
@@ -175,13 +175,13 @@ for (const viewport of [
 ]) {
   const tag = `${viewport.width}×${viewport.height}`;
   const { context, page, state, command, advance, touch } = await open(viewport);
-  // Start a map from the hub (touch tap on «Начать забег · карта N»).
-  const start = page.getByRole('button', { name: /^Начать забег · карта/ });
+  // Start a map from the hub (touch tap on «Start run · map N»).
+  const start = page.getByRole('button', { name: /^Start run · map/ });
   await tapTarget(start, `${tag} hub start`);
   await start.tap();
   await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
   await command({ type: 'protection', enabled: true });
-  await page.getByRole('button', { name: 'Скрыть' }).click();
+  await page.getByRole('button', { name: 'Hide' }).click();
   await noHorizontalScroll(page, `${tag} run`);
   // The arena fills the viewport (no outer header/footer on phones).
   const canvas = await page.locator('.game-canvas canvas').boundingBox();
@@ -208,7 +208,7 @@ for (const viewport of [
   // Pick a level-up card by tapping it; the controls are tap targets.
   await command({ type: 'grant-xp', amount: 20 });
   await page.waitForFunction(() => window.__alpha.state().screen === 'level-up');
-  await tapTarget(page.getByRole('button', { name: /^Перебросить/ }), `${tag} reroll`);
+  await tapTarget(page.getByRole('button', { name: /^Reroll/ }), `${tag} reroll`);
   const card = page.locator('.upgrade-grid .skill-card').first();
   await card.scrollIntoViewIfNeeded();
   await tapTarget(card, `${tag} card`);
@@ -216,17 +216,17 @@ for (const viewport of [
   await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
   assert.equal((await state()).world.skills.pendingChoices, 0, `${tag}: card picked`);
   // Pause button is a tap target.
-  await tapTarget(page.getByRole('button', { name: 'Пауза', exact: true }), `${tag} pause`);
+  await tapTarget(page.getByRole('button', { name: 'Pause', exact: true }), `${tag} pause`);
   // Finish via debug → results → back to the menu.
   await command({ type: 'campaign-force', outcome: 'victory' });
   await page.waitForFunction(() => window.__alpha.state().screen === 'results');
   await noHorizontalScroll(page, `${tag} results`);
-  for (const name of ['Ещё раз →', 'В меню']) {
+  for (const name of ['Again →', 'To menu']) {
     const button = page.locator('.results-actions').getByRole('button', { name, exact: true });
     await button.scrollIntoViewIfNeeded();
     await tapTarget(button, `${tag} results «${name}»`);
   }
-  await page.locator('.results-actions').getByRole('button', { name: 'В меню' }).tap();
+  await page.locator('.results-actions').getByRole('button', { name: 'To menu' }).tap();
   await page.waitForFunction(() => window.__alpha.state().screen === 'menu');
   // Menus: every screen opens without horizontal scroll; nav items are tap targets.
   for (const name of MENU_PAGES) {
@@ -237,7 +237,7 @@ for (const viewport of [
     await page.waitForTimeout(150);
     await noHorizontalScroll(page, `${tag} ${name}`);
   }
-  // Task 19: forge by touch — own an item with Gold + ore, tap it, tap «Улучшить» (one save).
+  // Task 19: forge by touch — own an item with Gold + ore, tap it, tap «Upgrade» (one save).
   await page.evaluate(() => {
     const p = JSON.parse(localStorage.getItem('skazki.profile'));
     p.gold += 200;
@@ -247,15 +247,15 @@ for (const viewport of [
   });
   await page.reload();
   await page.waitForFunction(() => !!window.__alpha);
-  const forgeNav = page.locator('.meta-nav').getByRole('button', { name: 'Кузница', exact: true });
+  const forgeNav = page.locator('.meta-nav').getByRole('button', { name: 'Forge', exact: true });
   await forgeNav.scrollIntoViewIfNeeded();
   await forgeNav.tap();
-  const helm = page.locator('.forge-card', { hasText: 'Обычный шлем стража' });
+  const helm = page.locator('.forge-card', { hasText: "Common Guard's Helm" });
   await tapTarget(helm, `${tag} forge item`);
   await helm.tap();
-  const up = page.getByRole('button', { name: /Улучшить до \+1/ });
+  const up = page.getByRole('button', { name: /Upgrade to \+1/ });
   await up.scrollIntoViewIfNeeded();
-  await tapTarget(up, `${tag} forge «Улучшить»`);
+  await tapTarget(up, `${tag} forge «Upgrade»`);
   const before = await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.profile')));
   await up.tap();
   await page.waitForFunction(
@@ -264,50 +264,50 @@ for (const viewport of [
   const after = await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.profile')));
   assert.equal(after.gold, before.gold - 8, `${tag}: forge Gold`);
   assert.equal(after.ore, before.ore - 1, `${tag}: forge ore`);
-  await page.getByRole('heading', { name: 'Обычный шлем стража +1' }).waitFor();
+  await page.getByRole('heading', { name: "Common Guard's Helm +1" }).waitFor();
   await noHorizontalScroll(page, `${tag} forge`);
-  // Task 22: select an owned item → «Надеть» visible without scrolling; the equipped item's
-  // details → «Улучшить в кузнице» opens the forge on it; mode switch; back to Экипировка.
+  // Task 22: select an owned item → «Equip» visible without scrolling; the equipped item's
+  // details → «Upgrade in the forge» opens the forge on it; mode switch; back to Equipment.
   const navTo = (name) => page.locator('.meta-nav').getByRole('button', { name, exact: true });
-  await navTo('Экипировка').scrollIntoViewIfNeeded();
-  await navTo('Экипировка').tap();
-  const helmCard = page.locator('.owned-cell .item-card', { hasText: 'Обычный шлем стража +1' });
+  await navTo('Equipment').scrollIntoViewIfNeeded();
+  await navTo('Equipment').tap();
+  const helmCard = page.locator('.owned-cell .item-card', { hasText: "Common Guard's Helm +1" });
   await helmCard.scrollIntoViewIfNeeded();
   await helmCard.tap();
   const equipBtn = page
-    .getByRole('group', { name: 'Предпросмотр снаряжения' })
-    .getByRole('button', { name: 'Надеть' });
+    .getByRole('group', { name: 'Equipment preview' })
+    .getByRole('button', { name: 'Equip' });
   await page.waitForTimeout(150);
   const eb = await equipBtn.boundingBox();
   const vp = page.viewportSize();
   assert.ok(
     eb && eb.y >= 0 && eb.y + eb.height <= vp.height,
-    `${tag}: «Надеть» visible without scrolling`,
+    `${tag}: «Equip» visible without scrolling`,
   );
-  await tapTarget(equipBtn, `${tag} «Надеть»`);
+  await tapTarget(equipBtn, `${tag} «Equip»`);
   await equipBtn.tap();
-  const helmSlot = page.getByRole('button', { name: /^Шлем: Обычный шлем стража \+1, подробнее/ });
+  const helmSlot = page.getByRole('button', { name: /^Helmet: Common Guard's Helm \+1, details/ });
   await helmSlot.scrollIntoViewIfNeeded();
   await helmSlot.tap();
   const toForge = page
-    .getByRole('group', { name: 'Надетый предмет' })
-    .getByRole('button', { name: /Улучшить в кузнице/ });
-  await tapTarget(toForge, `${tag} «Улучшить в кузнице»`);
+    .getByRole('group', { name: 'Equipped item' })
+    .getByRole('button', { name: /Upgrade in the forge/ });
+  await tapTarget(toForge, `${tag} «Upgrade in the forge»`);
   await toForge.tap();
   await page
-    .getByRole('group', { name: 'Улучшение предмета' })
-    .getByRole('heading', { name: 'Обычный шлем стража +1' })
+    .getByRole('group', { name: 'Item upgrade' })
+    .getByRole('heading', { name: "Common Guard's Helm +1" })
     .waitFor();
-  const modeSwitch = page.getByRole('group', { name: 'Разделы кузницы' });
-  const petsMode = modeSwitch.getByRole('button', { name: /Питомцы/ });
+  const modeSwitch = page.getByRole('group', { name: 'Forge sections' });
+  const petsMode = modeSwitch.getByRole('button', { name: /Pets/ });
   await tapTarget(petsMode, `${tag} forge mode switch`);
   await petsMode.tap();
   assert.equal(await petsMode.getAttribute('aria-pressed'), 'true');
-  await modeSwitch.getByRole('button', { name: /Предметы/ }).tap();
-  await page.getByRole('button', { name: /К экипировке/ }).tap();
-  await page.getByRole('region', { name: /^Снаряжение:/ }).waitFor();
+  await modeSwitch.getByRole('button', { name: /Items/ }).tap();
+  await page.getByRole('button', { name: /Back to equipment/ }).tap();
+  await page.getByRole('region', { name: /^Equipment:/ }).waitFor();
   await noHorizontalScroll(page, `${tag} equipment details`);
-  // Task 20: pets by touch — shop tab (buy with confirmation), «Питомцы» page (activate), forge pet
+  // Task 20: pets by touch — shop tab (buy with confirmation), «Pets» page (activate), forge pet
   // tab (upgrade), then a run starts with the pet.
   await page.evaluate(() => {
     const p = JSON.parse(localStorage.getItem('skazki.profile'));
@@ -321,42 +321,42 @@ for (const viewport of [
   await page.reload();
   await page.waitForFunction(() => !!window.__alpha);
   const nav = (name) => page.locator('.meta-nav').getByRole('button', { name, exact: true });
-  await nav('Магазин').scrollIntoViewIfNeeded();
-  await nav('Магазин').tap();
-  const petsTab = page.getByRole('group', { name: 'Слоты магазина' }).getByRole('button', {
-    name: 'Питомцы',
+  await nav('Shop').scrollIntoViewIfNeeded();
+  await nav('Shop').tap();
+  const petsTab = page.getByRole('group', { name: 'Shop slots' }).getByRole('button', {
+    name: 'Pets',
   });
   await petsTab.scrollIntoViewIfNeeded();
   await tapTarget(petsTab, `${tag} shop pets tab`);
   // The DEV toggle (debug builds only) overlaps this tab at 844×390: press it through the DOM.
   await petsTab.evaluate((el) => el.click());
-  const owletCard = page.getByRole('group', { name: 'Совёнок Угу' });
-  const buy = owletCard.getByRole('button', { name: /Купить/ });
+  const owletCard = page.getByRole('group', { name: 'Hoot the Owlet' });
+  const buy = owletCard.getByRole('button', { name: /Buy/ });
   await buy.scrollIntoViewIfNeeded();
   await tapTarget(buy, `${tag} buy pet`);
   // Quest pets cannot be bought.
   assert.equal(
     await page
-      .getByRole('group', { name: 'Светлячок Лучик' })
-      .getByRole('button', { name: /Купить/ })
+      .getByRole('group', { name: 'Glimmer the Firefly' })
+      .getByRole('button', { name: /Buy/ })
       .count(),
     0,
     `${tag}: quest pet not for sale`,
   );
   await buy.tap();
-  await page.getByRole('dialog').getByRole('button', { name: 'Подтвердить' }).tap();
+  await page.getByRole('dialog').getByRole('button', { name: 'Confirm' }).tap();
   await page.waitForFunction(() =>
     JSON.parse(localStorage.getItem('skazki.profile')).ownedPets.includes('owlet'),
   );
   await noHorizontalScroll(page, `${tag} shop pets`);
-  // «Питомцы» page from the hub tile: make the owlet the active pet.
-  await nav('Главная').scrollIntoViewIfNeeded();
-  await nav('Главная').tap();
-  const tile = page.locator('.hub-tile', { hasText: 'Питомцы' });
+  // «Pets» page from the hub tile: make the owlet the active pet.
+  await nav('Home').scrollIntoViewIfNeeded();
+  await nav('Home').tap();
+  const tile = page.locator('.hub-tile', { hasText: 'Pets' });
   await tile.scrollIntoViewIfNeeded();
   await tile.tap();
-  const choose = page.getByRole('group', { name: 'Совёнок Угу' }).getByRole('button', {
-    name: 'Взять в забег',
+  const choose = page.getByRole('group', { name: 'Hoot the Owlet' }).getByRole('button', {
+    name: 'Take on runs',
   });
   await choose.scrollIntoViewIfNeeded();
   await tapTarget(choose, `${tag} activate pet`);
@@ -365,14 +365,14 @@ for (const viewport of [
     () => JSON.parse(localStorage.getItem('skazki.profile')).activePet === 'owlet',
   );
   await noHorizontalScroll(page, `${tag} pets page`);
-  // Forge → «Питомцы» → upgrade to level 2 (500 Gold, 10 ore).
-  await nav('Кузница').scrollIntoViewIfNeeded();
-  await nav('Кузница').tap();
+  // Forge → «Pets» → upgrade to level 2 (500 Gold, 10 ore).
+  await nav('Forge').scrollIntoViewIfNeeded();
+  await nav('Forge').tap();
   await page
-    .getByRole('group', { name: 'Разделы кузницы' })
-    .getByRole('button', { name: 'Питомцы' })
+    .getByRole('group', { name: 'Forge sections' })
+    .getByRole('button', { name: 'Pets' })
     .evaluate((el) => el.click()); // under the DEV toggle (debug builds)
-  const upPet = page.getByRole('button', { name: /Улучшить до уровня 2/ });
+  const upPet = page.getByRole('button', { name: /Upgrade to level 2/ });
   await upPet.scrollIntoViewIfNeeded();
   await tapTarget(upPet, `${tag} upgrade pet`);
   const beforePet = await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.profile')));
@@ -385,9 +385,9 @@ for (const viewport of [
   assert.equal(afterPet.ore, beforePet.ore - 10, `${tag}: pet upgrade ore`);
   await noHorizontalScroll(page, `${tag} forge pets`);
   // A run brings the active pet (any class).
-  await nav('Главная').scrollIntoViewIfNeeded();
-  await nav('Главная').tap();
-  await page.getByRole('button', { name: /^Начать забег · карта/ }).tap();
+  await nav('Home').scrollIntoViewIfNeeded();
+  await nav('Home').tap();
+  await page.getByRole('button', { name: /^Start run · map/ }).tap();
   await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
   assert.deepEqual(
     await page.evaluate(() => {
@@ -398,25 +398,25 @@ for (const viewport of [
     `${tag}: the run starts with the active pet`,
   );
   await page.locator('.pet-hud').waitFor();
-  // Task 21: winning map 5 completes «Победить на карте 5» → results toast, hub badge, claim by tap.
+  // Task 21: winning map 5 completes «Win on map 5» → results toast, hub badge, claim by tap.
   await command({ type: 'campaign-force', outcome: 'victory' });
   await page.waitForFunction(() => window.__alpha.state().screen === 'results');
   const toast = page.locator('.results-quests');
   await toast.waitFor();
-  assert.match(await toast.innerText(), /Победить на карте 5/, `${tag}: quest toast`);
-  await page.locator('.results-actions').getByRole('button', { name: 'В меню' }).tap();
+  assert.match(await toast.innerText(), /Win on map 5/, `${tag}: quest toast`);
+  await page.locator('.results-actions').getByRole('button', { name: 'To menu' }).tap();
   await page.waitForFunction(() => window.__alpha.state().screen === 'menu');
-  await nav('Главная').scrollIntoViewIfNeeded();
-  await nav('Главная').tap();
-  const questsTile = page.locator('.hub-tile', { hasText: 'Задания' });
+  await nav('Home').scrollIntoViewIfNeeded();
+  await nav('Home').tap();
+  const questsTile = page.locator('.hub-tile', { hasText: 'Quests' });
   await questsTile.scrollIntoViewIfNeeded();
   assert.ok(
     Number(await questsTile.locator('.hub-badge').innerText()) >= 1,
     `${tag}: hub badge counts claimable quests`,
   );
   await questsTile.tap();
-  const map5 = page.getByRole('group', { name: /^Победить на карте 5/ });
-  const claimButton = map5.getByRole('button', { name: 'Забрать' });
+  const map5 = page.getByRole('group', { name: /^Win on map 5/ });
+  const claimButton = map5.getByRole('button', { name: 'Claim' });
   await claimButton.scrollIntoViewIfNeeded();
   await tapTarget(claimButton, `${tag} claim quest`);
   const beforeClaim = await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.profile')));
@@ -427,7 +427,7 @@ for (const viewport of [
   const afterClaim = await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.profile')));
   assert.equal(afterClaim.gold, beforeClaim.gold + 300, `${tag}: quest Gold`);
   assert.equal(afterClaim.ore, beforeClaim.ore + 10, `${tag}: quest ore`);
-  await map5.getByText('Получено').waitFor();
+  await map5.getByText('Claimed').waitFor();
   await noHorizontalScroll(page, `${tag} quests`);
   await context.close();
 }

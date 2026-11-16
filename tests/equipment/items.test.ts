@@ -68,10 +68,10 @@ describe('Task 11 §1.2 — items (templates × tiers)', () => {
       const base = [80, 300, 700, 1400, 2500][(item.tier as number) - 1];
       expect(item.price).toBe(item.slot === 'weapon' ? base * 1.25 : base);
     }
-    expect(getItem('heavy_sword-t3').name).toBe('Редкий тяжёлый меч');
-    expect(getItem('robe-t5').name).toBe('Легендарная мантия');
-    expect(getItem('plate-t2').name).toBe('Добротные латы');
-    expect(getItem('ring_fury-t4').name).toBe('Эпическое кольцо ярости');
+    expect(getItem('heavy_sword-t3').name).toBe('Rare Heavy Sword');
+    expect(getItem('robe-t5').name).toBe('Legendary Robe');
+    expect(getItem('plate-t2').name).toBe('Uncommon Plate Armor');
+    expect(getItem('ring_fury-t4').name).toBe('Epic Ring of Fury');
   });
   it('shop unlock by highest cleared map: tier 1 from start, 2 after 8, 3 after 16, 4 after 24, 5 after 32', () => {
     expect([1, 2, 3, 4, 5].map((t) => TIER_CONFIG[t as Tier].unlockAfterMap)).toEqual([

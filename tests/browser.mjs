@@ -15,7 +15,7 @@ try {
   await page.goto(base + '/?prototype&debug');
   await page.waitForFunction(() => !!window.__survivors);
   await page.screenshot({ path: 'artifacts/01-menu.png' });
-  await page.getByRole('button', { name: 'Войти в руины' }).click();
+  await page.getByRole('button', { name: 'Enter the ruins' }).click();
   await page.waitForFunction(() => window.__survivors.state().phase === 'playing');
   const state = () => page.evaluate(() => window.__survivors.state());
   const before = await state();
@@ -23,7 +23,7 @@ try {
   await page.waitForTimeout(400);
   await page.keyboard.up('d');
   assert.ok((await state()).x > before.x + 30, 'WASD movement');
-  await page.getByRole('button', { name: 'Пауза', exact: true }).click();
+  await page.getByRole('button', { name: 'Pause', exact: true }).click();
   const paused = await state();
   await page.waitForTimeout(250);
   assert.equal((await state()).seconds, paused.seconds);
@@ -90,7 +90,7 @@ try {
   if ((await state()).phase === 'upgrade') await page.locator('.upgrade-card').first().click();
   await page.screenshot({ path: 'artifacts/02-arena.png' });
   await page.evaluate(() => window.__survivors.grantXp(100));
-  await page.getByRole('dialog', { name: 'Новый уровень.' }).waitFor();
+  await page.getByRole('dialog', { name: 'Level up.' }).waitFor();
   assert.equal(await page.locator('.upgrade-card').count(), 3);
   const upgradeTime = (await state()).seconds;
   await page.waitForTimeout(200);
@@ -104,7 +104,7 @@ try {
   assert.ok(chosen >= 2, 'queued levels each get a choice');
   assert.equal((await state()).phase, 'playing');
   await page.evaluate(() => window.__survivors.hurt(99999));
-  await page.getByRole('heading', { name: 'Искра погасла.' }).waitFor();
+  await page.getByRole('heading', { name: 'The spark has faded.' }).waitFor();
   assert.equal((await state()).hp, 0);
   await page.screenshot({ path: 'artifacts/04-end.png' });
   const save = await page.evaluate(() =>
@@ -112,7 +112,7 @@ try {
   );
   assert.equal(save.version, 1);
   assert.ok(save.runs >= 1);
-  await page.getByRole('button', { name: 'Зажечь снова' }).click();
+  await page.getByRole('button', { name: 'Light it again' }).click();
   const reset = await state();
   assert.equal(reset.hp, 100);
   assert.equal(reset.level, 1);
@@ -135,7 +135,7 @@ try {
     await mobile.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
     true,
   );
-  await mobile.getByRole('button', { name: 'Войти в руины' }).click();
+  await mobile.getByRole('button', { name: 'Enter the ruins' }).click();
   const x = await mobile.evaluate(() => window.__survivors.state().x);
   await mobile.mouse.move(60, 500);
   await mobile.mouse.down();
@@ -155,7 +155,7 @@ try {
   );
   await mobile.locator('.upgrade-card').first().click();
   assert.equal(await mobile.evaluate(() => window.__survivors.state().phase), 'playing');
-  await page.getByRole('button', { name: 'Войти в руины' }).click();
+  await page.getByRole('button', { name: 'Enter the ruins' }).click();
   await page.evaluate(() => window.__survivors.spawnEnemies(300));
   assert.ok((await state()).enemies <= 240);
   assert.ok((await state()).enemies >= 235);

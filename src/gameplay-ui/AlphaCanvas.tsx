@@ -6,8 +6,8 @@ import { QUALITY_PRESETS } from '../engine/visuals/quality';
 import { uiSettings } from './ui-settings';
 
 /**
- * The Phaser canvas. Task 16: the canvas has CSS size × DPR pixels (DPR capped by «Качество
- * графики») and is displayed at CSS size; the scene zooms its camera by DPR (same world area, sharper
+ * The Phaser canvas. Task 16: the canvas has CSS size × DPR pixels (DPR capped by «Graphics
+ * quality») and is displayed at CSS size; the scene zooms its camera by DPR (same world area, sharper
  * picture). Resizes (rotation, fullscreen, address bar) and quality changes are applied live.
  */
 export function AlphaCanvas() {
@@ -61,5 +61,5 @@ export function AlphaCanvas() {
       game.destroy(true);
     };
   }, []);
-  return <div className="game-canvas" ref={ref} aria-label="Боевая арена" />;
+  return <div className="game-canvas" ref={ref} aria-label="Battle arena" />;
 }

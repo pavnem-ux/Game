@@ -5,31 +5,31 @@ import { campaignStore } from './campaign-state';
 import { uiSettings } from './ui-settings';
 import { uiSound } from './sound';
 import { GRAPHICS_QUALITIES } from '../engine/visuals/quality';
-import { RU } from './strings-ru';
+import { EN } from './strings-en';
 import { statusText } from './save-messages';
 
-const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString('ru-RU') : 'ещё не было');
+const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString('en-US') : 'never yet');
 
 /** Settings → Save Management (export, import with confirmation, status, warnings). */
 /** Task 08.5 §5.3: presentation preferences (own key, never the save). */
 function GameplaySettings() {
   const settings = useSyncExternalStore(uiSettings.subscribe, uiSettings.get);
   return (
-    <section className="gameplay-settings" aria-label={RU.settings.title}>
-      <h3>{RU.settings.title}</h3>
+    <section className="gameplay-settings" aria-label={EN.settings.title}>
+      <h3>{EN.settings.title}</h3>
       <label className="settings-toggle">
         <input
           type="checkbox"
           checked={settings.screenShake}
           onChange={(e) => uiSettings.set({ screenShake: e.target.checked })}
         />
-        {RU.settings.screenShake}
+        {EN.settings.screenShake}
       </label>
-      <p className="faint">{RU.settings.screenShakeHint}</p>
-      <h3>{RU.settings.sound}</h3>
+      <p className="faint">{EN.settings.screenShakeHint}</p>
+      <h3>{EN.settings.sound}</h3>
       {(['masterVolume', 'sfxVolume', 'musicVolume'] as const).map((key) => (
         <label key={key} className="settings-slider">
-          <span>{RU.settings[key]}</span>
+          <span>{EN.settings[key]}</span>
           <input
             type="range"
             min={0}
@@ -51,12 +51,12 @@ function GameplaySettings() {
           checked={settings.muted}
           onChange={(e) => uiSettings.set({ muted: e.target.checked })}
         />
-        {RU.settings.muted}
+        {EN.settings.muted}
       </label>
-      <p className="faint">{RU.settings.soundHint}</p>
-      <h3>{RU.settings.graphics}</h3>
+      <p className="faint">{EN.settings.soundHint}</p>
+      <h3>{EN.settings.graphics}</h3>
       <label className="settings-slider">
-        <span>{RU.settings.graphicsQuality}</span>
+        <span>{EN.settings.graphicsQuality}</span>
         <select
           value={settings.graphicsQuality}
           onChange={(e) =>
@@ -65,20 +65,20 @@ function GameplaySettings() {
         >
           {GRAPHICS_QUALITIES.map((q) => (
             <option key={q} value={q}>
-              {RU.settings.graphicsQualityOptions[q]}
+              {EN.settings.graphicsQualityOptions[q]}
             </option>
           ))}
         </select>
       </label>
-      <p className="faint">{RU.settings.graphicsHint}</p>
-      <h3>{RU.settings.touch}</h3>
+      <p className="faint">{EN.settings.graphicsHint}</p>
+      <h3>{EN.settings.touch}</h3>
       <label className="settings-toggle">
         <input
           type="checkbox"
           checked={settings.leftHanded}
           onChange={(e) => uiSettings.set({ leftHanded: e.target.checked })}
         />
-        {RU.settings.leftHanded}
+        {EN.settings.leftHanded}
       </label>
       <label className="settings-toggle">
         <input
@@ -86,9 +86,9 @@ function GameplaySettings() {
           checked={settings.haptics}
           onChange={(e) => uiSettings.set({ haptics: e.target.checked })}
         />
-        {RU.settings.haptics}
+        {EN.settings.haptics}
       </label>
-      <p className="faint">{RU.settings.touchHint}</p>
+      <p className="faint">{EN.settings.touchHint}</p>
     </section>
   );
 }
@@ -99,39 +99,39 @@ export function SettingsPage() {
   const pending = ui.pendingImport;
   return (
     <div className="campaign-page settings-page">
-      <h2>Настройки</h2>
+      <h2>Settings</h2>
       <GameplaySettings />
-      <section className="save-management" aria-label="Управление сохранением">
-        <h3>Управление сохранением</h3>
+      <section className="save-management" aria-label="Save management">
+        <h3>Save management</h3>
         <p className={`save-status save-${status.state}`} role="status">
           {statusText(status)}
         </p>
-        <p>Последнее сохранение: {when(status.lastSavedAt)}</p>
+        <p>Last saved: {when(status.lastSavedAt)}</p>
         <p className="save-warning">
-          Прогресс хранится только в этом браузере. Очистка данных сайта или браузера удалит его —
-          регулярно экспортируйте сохранение в файл.
+          Progress is stored only in this browser. Clearing site or browser data deletes it — export
+          your save to a file regularly.
         </p>
         <div className="save-actions">
           <button className="button" disabled={!profile} onClick={() => campaignStore.exportSave()}>
-            Экспорт сохранения
+            Export save
           </button>
           <button
             className="button"
             disabled={status.state === 'error'}
             onClick={() => file.current?.click()}
           >
-            Импорт сохранения
+            Import save
           </button>
           {status.state === 'unsaved' && (
             <button className="button primary" onClick={() => campaignStore.retrySave()}>
-              Повторить сохранение
+              Retry save
             </button>
           )}
           <input
             ref={file}
             type="file"
             accept="application/json,.json"
-            aria-label="Файл сохранения"
+            aria-label="Save file"
             hidden
             onChange={(e) => {
               const f = e.target.files?.[0];
@@ -158,10 +158,10 @@ export function SettingsPage() {
           aria-labelledby="import-title"
         >
           <div className="small-modal import-confirm">
-            <h2 id="import-title">Заменить сохранение?</h2>
+            <h2 id="import-title">Replace your save?</h2>
             <p>
-              Файл «{pending.fileName}»: золото {pending.profile.gold}, открыто карт{' '}
-              {pending.profile.highestUnlockedMap}, пройдено {pending.profile.completedMaps.length}.
+              File “{pending.fileName}”: Gold {pending.profile.gold}, maps unlocked{' '}
+              {pending.profile.highestUnlockedMap}, cleared {pending.profile.completedMaps.length}.
             </p>
             <p>
               {CHARACTER_CLASSES.map(
@@ -169,20 +169,20 @@ export function SettingsPage() {
               ).join(' · ')}
             </p>
             <p className="save-warning">
-              Текущий прогресс будет заменён. Сначала можно экспортировать его в файл.
+              Your current progress will be replaced. You can export it to a file first.
             </p>
             <button
               className="button"
               disabled={!profile}
               onClick={() => campaignStore.exportSave()}
             >
-              Сначала экспортировать текущее
+              Export current first
             </button>
             <button className="button primary" onClick={() => campaignStore.confirmImport()}>
-              Заменить сохранение
+              Replace save
             </button>
             <button className="text-button" onClick={() => campaignStore.cancelImport()}>
-              Отмена
+              Cancel
             </button>
           </div>
         </div>
@@ -200,7 +200,7 @@ export function SaveWarning() {
     <div className={`save-banner save-${status.state}`} role="alert">
       ⚠ {statusText(status)}{' '}
       <button className="text-button" onClick={() => campaignStore.setPage('settings')}>
-        Управление сохранением
+        Save management
       </button>
     </div>
   );

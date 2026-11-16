@@ -58,7 +58,7 @@ function edit(change: (p: PlayerProfile) => PlayerProfile): boolean {
   return campaignStore.service().replaceProfile(withProfileLoadoutCounter(change(profile))).ok;
 }
 /**
- * Task 08.5 §3.4: extracts the embedded save from a «Сообщить о проблеме» report. Only the
+ * Task 08.5 §3.4: extracts the embedded save from a «Report a problem» report. Only the
  * report envelope is checked here; the save itself then goes through the normal import
  * validation (`prepareImport` via `campaignStore.stageImport`) and its confirmation.
  */
@@ -66,18 +66,18 @@ export function saveFromReport(
   text: string,
 ): { ok: true; saveJson: string } | { ok: false; reason: string } {
   if (typeof text !== 'string' || text.length > MAX_IMPORT_BYTES)
-    return { ok: false, reason: 'Файл слишком большой или пустой.' };
+    return { ok: false, reason: 'The file is too large or empty.' };
   let report: unknown;
   try {
     report = JSON.parse(text);
   } catch {
-    return { ok: false, reason: 'Файл не является JSON.' };
+    return { ok: false, reason: 'The file is not JSON.' };
   }
   const r = report as { format?: unknown; save?: { ok?: unknown; profile?: unknown } } | null;
   if (!r || typeof r !== 'object' || r.format !== REPORT_FORMAT)
-    return { ok: false, reason: 'Это не файл отчёта (skazki-report).' };
+    return { ok: false, reason: 'This is not a report file (skazki-report).' };
   if (!r.save || r.save.ok !== true || !r.save.profile || typeof r.save.profile !== 'object')
-    return { ok: false, reason: 'В отчёте нет корректного сохранения.' };
+    return { ok: false, reason: 'The report contains no valid save.' };
   return { ok: true, saveJson: JSON.stringify(r.save.profile) };
 }
 export const campaignDebug = {
@@ -88,8 +88,8 @@ export const campaignDebug = {
     }));
   },
   /**
-   * Task 10 §1.5: jump to any map — unlocks maps up to it (same profile edit as «Открыть все
-   * карты», never locks anything) and starts a normal campaign run there.
+   * Task 10 §1.5: jump to any map — unlocks maps up to it (same profile edit as «Unlock all
+   * maps», never locks anything) and starts a normal campaign run there.
    */
   jumpToMap(mapId: number): boolean {
     if (!Number.isInteger(mapId) || mapId < 1 || mapId > CAMPAIGN_MAPS.length) return false;
@@ -365,13 +365,13 @@ export const campaignDebug = {
       const main = read(SAVE_KEY);
       return [
         `${SAVE_KEY}: ${main ? `${main.length} B` : '—'}`,
-        `${BACKUP_KEY}: ${read(BACKUP_KEY) ? 'есть' : '—'}`,
-        `${QUARANTINE_KEY}: ${read(QUARANTINE_KEY) ? 'есть' : '—'}`,
+        `${BACKUP_KEY}: ${read(BACKUP_KEY) ? 'present' : '—'}`,
+        `${QUARANTINE_KEY}: ${read(QUARANTINE_KEY) ? 'present' : '—'}`,
         '',
         main ? JSON.stringify(JSON.parse(main), null, 2) : '',
       ].join('\n');
     } catch {
-      return 'Хранилище недоступно.';
+      return 'Storage unavailable.';
     }
   },
 };

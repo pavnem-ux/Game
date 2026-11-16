@@ -6,7 +6,7 @@ import { SaveWarning, SettingsPage } from './SaveManagement';
 import { BuildLabel } from './BuildLabel';
 import { ShopPage } from './ShopPages';
 import { Backdrop, CurrencyBadge, OreBadge } from './kit';
-import { RU } from './strings-ru';
+import { EN } from './strings-en';
 import { HubPage } from './meta/Hub';
 import { CharacterSelectPage } from './meta/CharacterSelect';
 import { EquipmentPage } from './meta/EquipmentScreen';
@@ -17,7 +17,7 @@ import { PetsPage } from './meta/PetsScreen';
 import { QuestsPage } from './meta/QuestsScreen';
 import './meta/meta.css';
 
-const N = RU.meta.nav;
+const N = EN.meta.nav;
 const PAGES: readonly { id: MenuPage; label: string }[] = [
   { id: 'hub', label: N.hub },
   { id: 'character', label: N.character },
@@ -69,9 +69,9 @@ export function CampaignMenu() {
         <button
           className="meta-brand"
           onClick={() => campaignStore.setPage('hub')}
-          aria-label={`${RU.meta.title} — ${N.hub}`}
+          aria-label={`${EN.meta.title} — ${N.hub}`}
         >
-          <span aria-hidden="true">✦</span> {RU.meta.title}
+          <span aria-hidden="true">✦</span> {EN.meta.title}
         </button>
         <nav className="meta-nav" aria-label={N.label} ref={navRef}>
           {PAGES.map((p) => (

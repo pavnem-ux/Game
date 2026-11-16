@@ -36,7 +36,7 @@ export const crashState = {
       emit();
     }
   },
-  /** «Вернуться в меню»: fresh menu state; the game remounts from scratch. */
+  /** «Back to the menu»: fresh menu state; the game remounts from scratch. */
   recover(): void {
     crash = null;
     generation++;

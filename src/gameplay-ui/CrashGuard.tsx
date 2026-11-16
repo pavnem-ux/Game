@@ -3,11 +3,11 @@ import type { ErrorInfo, ReactNode } from 'react';
 import { BuildLabel } from './BuildLabel';
 import { ReportButton } from './ReportButton';
 import { crashState } from './crash-state';
-import { RU } from './strings-ru';
+import { EN } from './strings-en';
 
-/** Task 08.5 §3.2 friendly crash screen; «Вернуться в меню» remounts the app from scratch. */
+/** Task 08.5 §3.2 friendly crash screen; «Back to the menu» remounts the app from scratch. */
 function CrashScreen() {
-  const t = RU.crash;
+  const t = EN.crash;
   const entry = crashState.get();
   return (
     <div className="crash-shell">

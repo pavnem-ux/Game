@@ -31,7 +31,7 @@ import { BuildLabel } from './BuildLabel';
 import { ReportButton } from './ReportButton';
 import { campaignStore } from './campaign-state';
 import { Button } from './kit';
-import { RU } from './strings-ru';
+import { EN } from './strings-en';
 import { skipCoins } from '../equipment/economy';
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
@@ -42,7 +42,7 @@ const cardKey = (c: OfferCard) => (c.kind === 'skill' ? c.skillId : `bonus:${c.b
 /** Level-up choice: up to three cards, exactly one pick, three rerolls per run. */
 /**
  * Task 22: no keyboard shortcuts on this screen (R/B/S/1–3 were removed — S also moves the player,
- * so a held key could skip an offer) and no «Навыки» button; mouse / touch and Tab / Enter focus
+ * so a held key could skip an offer) and no «Skills» button; mouse / touch and Tab / Enter focus
  * navigation remain.
  */
 export function LevelUpDialog({ world }: { world: GameplaySnapshot }) {
@@ -58,7 +58,7 @@ export function LevelUpDialog({ world }: { world: GameplaySnapshot }) {
     banishRef.current = on;
     setBanishModeState(on);
   };
-  const O = RU.meta.offer;
+  const O = EN.meta.offer;
   const anyBanishable = offer.cards.some((c) => skills.banishBlocked[cardKey(c)] === null);
   const banishReason = bonus
     ? O.reasons['no-offer']
@@ -90,17 +90,17 @@ export function LevelUpDialog({ world }: { world: GameplaySnapshot }) {
       <div className="upgrade-panel skill-panel">
         <div className="modal-sigil">✧</div>
         <div className="eyebrow centered">
-          {bonus ? 'ВСЕ НАВЫКИ НА ПРЕДЕЛЕ' : 'ИСКРА СТАНОВИТСЯ СИЛЬНЕЕ'}
+          {bonus ? 'ALL SKILLS AT THEIR PEAK' : 'THE SPARK GROWS STRONGER'}
         </div>
         <h2 id="skill-title">
-          Уровень забега {world.progression.level}
+          Run level {world.progression.level}
           <span>.</span>
         </h2>
         <p className="modal-description">
           {bonus
-            ? 'Выберите награду. Слоты не тратятся.'
-            : `Активные ${skills.slots.auto.used}/${skills.slots.auto.max} · пассивные ${skills.slots.passive.used}/${skills.slots.passive.max} · выбор навсегда до конца забега`}
-          {skills.pendingChoices > 1 && ` · ещё выборов: ${skills.pendingChoices - 1}`}
+            ? 'Choose a reward. No slots are used.'
+            : `Active ${skills.slots.auto.used}/${skills.slots.auto.max} · passive ${skills.slots.passive.used}/${skills.slots.passive.max} · choices last until the run ends`}
+          {skills.pendingChoices > 1 && ` · choices left: ${skills.pendingChoices - 1}`}
         </p>
         <div className="upgrade-grid" role="list">
           {offer.cards.map((card, i) => {
@@ -128,8 +128,8 @@ export function LevelUpDialog({ world }: { world: GameplaySnapshot }) {
                   banishMode
                     ? O.banishCard(card.name)
                     : card.kind === 'skill'
-                      ? `${card.name}, ${card.isNew ? 'новый навык' : 'улучшение'}, ранг ${ROMAN[card.nextRank]}${opens ? `, откроет синергию: ${hints!.unlocks.map((u) => u.synergy.name).join(', ')}` : ''}${raises.length ? `, поднимет синергию: ${raises.map((r) => `${r.synergy.name} ${LEVEL_ROMAN[r.level]}`).join(', ')}` : ''}`
-                      : `${card.name}, награда`
+                      ? `${card.name}, ${card.isNew ? 'new skill' : 'upgrade'}, rank ${ROMAN[card.nextRank]}${opens ? `, unlocks synergy: ${hints!.unlocks.map((u) => u.synergy.name).join(', ')}` : ''}${raises.length ? `, raises synergy: ${raises.map((r) => `${r.synergy.name} ${LEVEL_ROMAN[r.level]}`).join(', ')}` : ''}`
+                      : `${card.name}, reward`
                 }
                 onClick={() => pick(cardKey(card))}
                 disabled={banishMode && skills.banishBlocked[cardKey(card)] !== null}
@@ -137,8 +137,8 @@ export function LevelUpDialog({ world }: { world: GameplaySnapshot }) {
                 <div className="card-top">
                   <span>
                     {card.kind === 'bonus'
-                      ? 'НАГРАДА'
-                      : `${card.skillKind === 'auto' ? 'АКТИВНЫЙ' : 'ПАССИВНЫЙ'} · ${card.isNew ? 'НОВЫЙ' : 'УЛУЧШЕНИЕ'}`}
+                      ? 'REWARD'
+                      : `${card.skillKind === 'auto' ? 'ACTIVE' : 'PASSIVE'} · ${card.isNew ? 'NEW' : 'UPGRADE'}`}
                   </span>
                   <small>0{i + 1}</small>
                 </div>
@@ -161,11 +161,11 @@ export function LevelUpDialog({ world }: { world: GameplaySnapshot }) {
                   <span>
                     {card.kind === 'skill'
                       ? card.isNew
-                        ? 'РАНГ I'
-                        : `РАНГ ${ROMAN[card.currentRank]} → ${ROMAN[card.nextRank]}`
-                      : 'ПОВТОРЯЕМАЯ'}
+                        ? 'RANK I'
+                        : `RANK ${ROMAN[card.currentRank]} → ${ROMAN[card.nextRank]}`
+                      : 'REPEATABLE'}
                   </span>
-                  <b>Выбрать →</b>
+                  <b>Choose →</b>
                 </div>
               </button>
             );
@@ -178,15 +178,15 @@ export function LevelUpDialog({ world }: { world: GameplaySnapshot }) {
               0,
         ) && (
           <p className="faint synergy-hint-note">
-            ✦ Синергия открывается, когда собраны оба навыка пары, и срабатывает в бою, когда
-            выполнено её условие.
+            ✦ A synergy unlocks once both skills of a pair are collected, and triggers in battle
+            when its condition is met.
           </p>
         )}
         {offer.cards.some((c) => c.kind === 'skill') && (
           <p className="faint damage-note">{DAMAGE_NOTE}</p>
         )}
         {/* Task 14: reroll / banish / skip with counters (kit buttons, reasons as tooltips). */}
-        <div className="meta-ui offer-controls" role="group" aria-label="Управление выбором">
+        <div className="meta-ui offer-controls" role="group" aria-label="Choice controls">
           {banishMode && <p className="offer-banish-hint">{O.banishHint}</p>}
           <Button
             size="s"
@@ -212,14 +212,14 @@ export function LevelUpDialog({ world }: { world: GameplaySnapshot }) {
             <small className="offer-hotkeys">{O.banished(skills.banished.length)}</small>
           )}
         </div>
-        <p className="faint">Время остановлено. Выбирайте без спешки.</p>
+        <p className="faint">Time is frozen. Take your time.</p>
       </div>
     </section>
   );
 }
 
 /**
- * Task 09.1 C1 (Mage superpower «Пятый круг»): the one-time choice of the enhanced skill among
+ * Task 09.1 C1 (Mage superpower «The Fifth Circle»): the one-time choice of the enhanced skill among
  * the five actives, shown when the 5th active is acquired. Time stays stopped until a choice.
  */
 export function EnhancedSkillDialog({ world }: { world: GameplaySnapshot }) {
@@ -234,14 +234,14 @@ export function EnhancedSkillDialog({ world }: { world: GameplaySnapshot }) {
     >
       <div className="upgrade-panel skill-panel">
         <div className="modal-sigil">✶</div>
-        <div className="eyebrow centered">ПЯТЫЙ КРУГ</div>
+        <div className="eyebrow centered">THE FIFTH CIRCLE</div>
         <h2 id="enhanced-title">
-          Усиленный навык<span>.</span>
+          Enhanced skill<span>.</span>
         </h2>
         <p className="modal-description">
-          Пятый активный слот открыт. Выберите один из пяти активных навыков — он станет усиленным
-          (таланты ветки «Верховный маг»). Выбор разовый; по умолчанию усилен последний полученный
-          навык.
+          The fifth active slot is open. Choose one of your five active skills to become enhanced
+          (the “Archmage” branch talents). The choice is final; by default the most recently
+          acquired skill is enhanced.
         </p>
         <div className="upgrade-grid" role="list">
           {enhancedChoice.map((id, i) => {
@@ -253,11 +253,11 @@ export function EnhancedSkillDialog({ world }: { world: GameplaySnapshot }) {
                 className={`upgrade-card skill-card kind-auto${current ? ' enhanced' : ''}`}
                 autoFocus={current}
                 role="listitem"
-                aria-label={`${skill?.name ?? id}${current ? ', сейчас усилен' : ''}`}
+                aria-label={`${skill?.name ?? id}${current ? ', currently enhanced' : ''}`}
                 onClick={() => alphaBridge.send({ type: 'choose-enhanced', skillId: id })}
               >
                 <div className="card-top">
-                  <span>{current ? 'ПО УМОЛЧАНИЮ' : 'АКТИВНЫЙ'}</span>
+                  <span>{current ? 'DEFAULT' : 'ACTIVE'}</span>
                   <small>0{i + 1}</small>
                 </div>
                 <div className="upgrade-icon">{textGlyph(skill?.icon ?? '✶')}</div>
@@ -271,13 +271,13 @@ export function EnhancedSkillDialog({ world }: { world: GameplaySnapshot }) {
                       .tags.filter((t) => t === 'fire' || t === 'ice')
                       .join(' · ')}
                   </span>
-                  <b>Усилить →</b>
+                  <b>Enhance →</b>
                 </div>
               </button>
             );
           })}
         </div>
-        <p className="faint">Время остановлено. Выбирайте без спешки.</p>
+        <p className="faint">Time is frozen. Take your time.</p>
       </div>
     </section>
   );
@@ -289,8 +289,8 @@ export function SkillBar({ world }: { world: GameplaySnapshot }) {
   const { barrier, buffs } = world.skillCombat;
   return (
     <>
-      <div className="skill-bar" aria-label="Навыки забега">
-        {/* Task 22: the «Навыки» button, slot counts and passive icons were removed (the full
+      <div className="skill-bar" aria-label="Run skills">
+        {/* Task 22: the «Skills» button, slot counts and passive icons were removed (the full
             list is in the pause menu); active skills are drawn by <ActiveSkills /> bottom-left. */}
         {gold > 0 && <span className="skill-gold">◎ {gold}</span>}
         {barrier > 0 && <span className="skill-barrier">◈ {Math.ceil(barrier)}</span>}
@@ -299,14 +299,14 @@ export function SkillBar({ world }: { world: GameplaySnapshot }) {
           className={`skill-dash ${world.time < world.dash.readyAt ? 'cooling' : 'ready'}`}
           aria-label={
             world.time < world.dash.readyAt
-              ? `Рывок: ${(world.dash.readyAt - world.time).toFixed(1)} с`
-              : 'Рывок готов (Пробел / Shift)'
+              ? `Dash: ${(world.dash.readyAt - world.time).toFixed(1)} s`
+              : 'Dash ready (Space / Shift)'
           }
         >
           ⇢{' '}
           {world.time < world.dash.readyAt
-            ? `${(world.dash.readyAt - world.time).toFixed(1)} с`
-            : 'Рывок'}
+            ? `${(world.dash.readyAt - world.time).toFixed(1)} s`
+            : 'Dash'}
         </span>
         {/* Task 20: the pet — small portrait with a cooldown ring for timed pets. */}
         {world.pet && <PetHudIcon pet={world.pet} time={world.time} />}
@@ -328,13 +328,13 @@ const short = (list: readonly string[]) =>
     : list.join(', ');
 
 /** Compact synergy hint for one offered card (pair prerequisites only, never a trigger promise). */
-/** Task 15: synergy level as 3 pips (I / II / III «Пробуждение»). */
+/** Task 15: synergy level as 3 pips (I / II / III «Awakening»). */
 export function SynergyPips({ level }: { level: number }) {
   return (
     <span
       className={`synergy-pips level-${level}`}
       role="img"
-      aria-label={level ? `Уровень синергии ${LEVEL_ROMAN[level]} из III` : 'Синергия закрыта'}
+      aria-label={level ? `Synergy level ${LEVEL_ROMAN[level]} of III` : 'Synergy locked'}
     >
       {[1, 2, 3].map((i) => (
         <i key={i} className={i <= level ? 'on' : undefined} />
@@ -342,7 +342,7 @@ export function SynergyPips({ level }: { level: number }) {
     </span>
   );
 }
-/** Task 15 card hint «▲ <Синергия> II/III»: only when this pick raises the level. */
+/** Task 15 card hint «▲ <Synergy> II/III»: only when this pick raises the level. */
 function CardLevelHint({ raises }: { raises: ReturnType<typeof cardLevelRaises> }) {
   if (raises.length === 0) return null;
   return (
@@ -353,8 +353,8 @@ function CardLevelHint({ raises }: { raises: ReturnType<typeof cardLevelRaises> 
           className={r.level === 3 ? 'card-synergy-awaken' : 'card-synergy-raise'}
           title={
             r.level === 3
-              ? `Пробуждение: ${SYNERGY_LEVEL_TEXT[r.synergy.id as SynergyId].awakened}`
-              : `Уровень II: ${SYNERGY_LEVEL_TEXT[r.synergy.id as SynergyId].levelTwo}`
+              ? `Awakening: ${SYNERGY_LEVEL_TEXT[r.synergy.id as SynergyId].awakened}`
+              : `Level II: ${SYNERGY_LEVEL_TEXT[r.synergy.id as SynergyId].levelTwo}`
           }
         >
           ▲ {r.synergy.name} {LEVEL_ROMAN[r.level]}
@@ -370,35 +370,35 @@ function CardSynergyHint({ hints }: { hints: ReturnType<typeof cardSynergyHints>
   const already = hints.alreadyOpened.map((u) => u.name);
   if (!unlocks.length && !halves.length && !already.length) return null;
   return (
-    <div className="card-synergy" aria-label="Синергии карты">
+    <div className="card-synergy" aria-label="Card synergies">
       {unlocks.length > 0 && (
         <span
           className="card-synergy-unlock"
-          title={`Откроет: ${hints.unlocks.map((u) => `${u.synergy.name} (пара с: ${u.withSkills.join(' / ')})`).join('; ')}`}
+          title={`Unlocks: ${hints.unlocks.map((u) => `${u.synergy.name} (pairs with: ${u.withSkills.join(' / ')})`).join('; ')}`}
         >
-          ✦ Откроет: {short(unlocks)} · с {short(unlockWith)}
+          ✦ Unlocks: {short(unlocks)} · with {short(unlockWith)}
         </span>
       )}
       {halves.length > 0 && (
         <span
           className="card-synergy-pair"
           title={hints.halfPairs
-            .map((h) => `${h.synergy.name}: нужен ещё ${h.partners.join(' или ')}`)
+            .map((h) => `${h.synergy.name}: still needs ${h.partners.join(' or ')}`)
             .join('; ')}
         >
-          ◇ Половина пары: {short(halves)}
+          ◇ Half a pair: {short(halves)}
         </span>
       )}
       {already.length > 0 && (
-        <span className="card-synergy-owned" title={`Уже открывает: ${already.join(', ')}`}>
-          Уже открывает: {short(already)}
+        <span className="card-synergy-owned" title={`Already unlocks: ${already.join(', ')}`}>
+          Already unlocks: {short(already)}
         </span>
       )}
     </div>
   );
 }
 
-const DAMAGE_NOTE = `Урон — пример для текущих характеристик против врага с Resistance ${ALPHA_ENEMY_STATS.resistance}. Крит, число целей, метки и Dodge не гарантированы; итог боя — сумма отдельных попаданий и тиков.`;
+const DAMAGE_NOTE = `Damage is an example for your current stats against an enemy with ${ALPHA_ENEMY_STATS.resistance} Resistance. Crits, target count, marks and Dodge are not guaranteed; the fight total is the sum of separate hits and ticks.`;
 /** Readout context from the throttled snapshot only (stats already include passives and buffs). */
 function damageContext(world: GameplaySnapshot): DamageContext {
   const ranks = new Map(world.skills.owned.map((o) => [o.skillId, o.rank]));
@@ -414,23 +414,23 @@ const DOT_LABEL = { burn: 'Burn', poison: 'Poison', bleed: 'Bleed' } as const;
 function lineText(l: ReadoutLine): { main: string; detail?: string } {
   if (l.kind === 'hit') {
     const count = l.count > 1 ? `${l.count} × ` : '';
-    const scope = l.perTarget ? ' за цель' : l.count > 1 ? ' каждый' : '';
-    const periodic = l.every ? `, каждые ${n1(l.every)} с (до ${l.ticks} тиков)` : '';
+    const scope = l.perTarget ? ' per target' : l.count > 1 ? ' each' : '';
+    const periodic = l.every ? `, every ${n1(l.every)} s (up to ${l.ticks} ticks)` : '';
     return {
       main: `${l.label}: ${count}×${n1(l.coefficient)} → ${l.amount.normal}${scope}${periodic}`,
-      detail: `${l.damageType === 'magical' ? 'маг.' : 'физ.'} · крит ${l.amount.critical} (шанс ${n1(l.amount.critChance)}%)${l.secondary ? ' · доп. эффект, без синергий' : ''}${l.condition ? ` · ${l.condition}` : ''}`,
+      detail: `${l.damageType === 'magical' ? 'magic' : 'phys.'} · crit ${l.amount.critical} (chance ${n1(l.amount.critChance)}%)${l.secondary ? ' · secondary effect, no synergies' : ''}${l.condition ? ` · ${l.condition}` : ''}`,
     };
   }
   if (l.kind === 'dot')
     return {
-      main: `${l.label}: ${n1(l.rawPerStack)} за стак/тик → ${l.perStackTick}`,
-      detail: `${DOT_LABEL[l.effectType]} · ${l.stacks > 1 ? `${l.stacks} стака · ` : ''}${l.chance < 100 ? `шанс ${n1(l.chance)}% · ` : ''}${n1(l.duration)} с · тик ${n1(l.tickInterval)} с · до ${l.stackCap} стаков (${l.fullStackTick}/тик)${l.condition ? ` · ${l.condition}` : ''}`,
+      main: `${l.label}: ${n1(l.rawPerStack)} per stack/tick → ${l.perStackTick}`,
+      detail: `${DOT_LABEL[l.effectType]} · ${l.stacks > 1 ? `${l.stacks} stacks · ` : ''}${l.chance < 100 ? `chance ${n1(l.chance)}% · ` : ''}${n1(l.duration)} s · tick ${n1(l.tickInterval)} s · up to ${l.stackCap} stacks (${l.fullStackTick}/tick)${l.condition ? ` · ${l.condition}` : ''}`,
     };
   return { main: l.text };
 }
 const CHANGE_BADGE: Record<LineChange, string | null> = {
-  new: 'новое',
-  changed: 'изменено',
+  new: 'new',
+  changed: 'changed',
   same: null,
 };
 /** Separate damage events of one skill rank (never a single "total"). */
@@ -444,9 +444,9 @@ function DamageLines({
   compact?: boolean;
 }) {
   return (
-    <ul className={`damage-lines${compact ? ' is-compact' : ''}`} aria-label="Урон навыка">
+    <ul className={`damage-lines${compact ? ' is-compact' : ''}`} aria-label="Skill damage">
       {readout.kind === 'auto' && !readout.hasDirectDamage && (
-        <li className="damage-line damage-none">Нет прямого урона</li>
+        <li className="damage-line damage-none">No direct damage</li>
       )}
       {readout.lines.map((line, i) => {
         const text = lineText(line);
@@ -462,7 +462,7 @@ function DamageLines({
         );
       })}
       {readout.cooldown !== undefined && (
-        <li className="damage-line damage-cooldown">Перезарядка {n1(readout.cooldown)} с</li>
+        <li className="damage-line damage-cooldown">Cooldown {n1(readout.cooldown)} s</li>
       )}
     </ul>
   );
@@ -481,12 +481,12 @@ export function SkillsOverviewBody({ world }: { world: GameplaySnapshot }) {
             <section
               key={kind}
               className={`skill-group kind-${kind}`}
-              aria-label={kind === 'auto' ? 'Автоматические навыки' : 'Пассивные навыки'}
+              aria-label={kind === 'auto' ? 'Automatic skills' : 'Passive skills'}
             >
               <h3>
-                {kind === 'auto' ? 'Автоматические' : 'Пассивные'} — {slots.used}/{slots.max}
+                {kind === 'auto' ? 'Automatic' : 'Passive'} — {slots.used}/{slots.max}
               </h3>
-              <p>Свободных слотов: {slots.max - slots.used}</p>
+              <p>Free slots: {slots.max - slots.used}</p>
               <ul>
                 {owned.map((skill) => {
                   const definition = getSkill(skill.skillId);
@@ -501,8 +501,8 @@ export function SkillsOverviewBody({ world }: { world: GameplaySnapshot }) {
                       <p>{definition.rankSummaries[skill.rank - 1]}</p>
                       <DamageLines readout={skillDamageReadout(skill.skillId, skill.rank, ctx)} />
                       {kind === 'auto' && (
-                        <span aria-label={`Перезарядка: ${skill.name}`}>
-                          {remaining > 0.05 ? `Перезарядка: ${remaining.toFixed(1)} с` : 'Готов'}
+                        <span aria-label={`Cooldown: ${skill.name}`}>
+                          {remaining > 0.05 ? `Cooldown: ${remaining.toFixed(1)} s` : 'Ready'}
                         </span>
                       )}
                     </li>
@@ -510,11 +510,11 @@ export function SkillsOverviewBody({ world }: { world: GameplaySnapshot }) {
                 })}
                 {Array.from({ length: slots.max - slots.used }, (_, i) => (
                   <li key={`empty-${i}`} className="skill-empty-slot">
-                    ◇ Свободный слот {slots.used + i + 1}
+                    ◇ Free slot {slots.used + i + 1}
                   </li>
                 ))}
               </ul>
-              {owned.length === 0 && <p>Пока нет приобретённых навыков.</p>}
+              {owned.length === 0 && <p>No skills acquired yet.</p>}
             </section>
           );
         })}
@@ -535,12 +535,12 @@ function SynergySection({ world }: { world: GameplaySnapshot }) {
   // Effective levels (a DEV/QA override can differ from the ranks).
   const effective = new Map(world.synergyLevels.map((l) => [l.id, l.level]));
   return (
-    <section className="synergy-overview" aria-label="Синергии">
-      <h3>Синергии</h3>
+    <section className="synergy-overview" aria-label="Synergies">
+      <h3>Synergies</h3>
       <p className="synergy-overview-note">
-        Синергии не занимают слоты и не выбираются. Каждая открывается любой своей парой из двух
-        приобретённых навыков (ранг I или выше); «Доступна» не значит «сработала» — эффект
-        появляется в бою, когда выполнено условие.
+        Synergies take no slots and are not chosen. Each unlocks with any of its pairs of two
+        acquired skills (rank I or higher); “Available” does not mean “triggered” — the effect
+        appears in battle when its condition is met.
       </p>
       <ul>
         {info.map((s) => (
@@ -548,23 +548,23 @@ function SynergySection({ world }: { world: GameplaySnapshot }) {
             key={s.id}
             className={`synergy-entry is-${s.status}`}
             data-synergy-id={s.id}
-            aria-label={`${s.name}: ${s.status === 'available' ? 'доступна' : 'закрыта'}`}
+            aria-label={`${s.name}: ${s.status === 'available' ? 'available' : 'locked'}`}
           >
             <div className="synergy-entry-heading">
               <strong>{s.name}</strong>
               <SynergyPips level={effective.get(s.id) ?? s.level} />
               <span className="synergy-status">
-                {s.status === 'available' ? '✓ Доступна' : '◇ Закрыта'}
+                {s.status === 'available' ? '✓ Available' : '◇ Locked'}
               </span>
             </div>
             <p>
-              <b>Условие:</b> {s.condition}
+              <b>Condition:</b> {s.condition}
             </p>
             <p>
-              <b>Эффект:</b> {s.effect}
+              <b>Effect:</b> {s.effect}
             </p>
             <div className="synergy-pairs">
-              <b>Пары:</b>
+              <b>Pairs:</b>
               <ul>
                 {s.pairs.map((pair) => (
                   <li
@@ -579,24 +579,24 @@ function SynergySection({ world }: { world: GameplaySnapshot }) {
                       </span>
                     ))}
                     {pair.complete
-                      ? ' — собрана'
+                      ? ' — complete'
                       : pair.missing.length === 1
-                        ? ` — нужен ${pair.missing[0]}`
+                        ? ` — needs ${pair.missing[0]}`
                         : ''}
                   </li>
                 ))}
               </ul>
             </div>
             <p className="synergy-levels">
-              <b>II</b> (оба навыка пары ранга III+): {SYNERGY_LEVEL_TEXT[s.id].levelTwo}.{' '}
-              <b>III «{SYNERGY_LEVEL_TEXT[s.id].awakened}»</b> (оба ранга V):{' '}
+              <b>II</b> (both skills of a pair at rank III+): {SYNERGY_LEVEL_TEXT[s.id].levelTwo}.{' '}
+              <b>III “{SYNERGY_LEVEL_TEXT[s.id].awakened}”</b> (both at rank V):{' '}
               {SYNERGY_LEVEL_TEXT[s.id].awakenedEffect}.
             </p>
             <p className="synergy-explanation">
               {s.explanation}
               {s.bestPair &&
                 s.level > 1 &&
-                ` Уровень ${LEVEL_ROMAN[s.level]} даёт пара: ${s.bestPair}.`}
+                ` Level ${LEVEL_ROMAN[s.level]} comes from the pair: ${s.bestPair}.`}
             </p>
           </li>
         ))}
@@ -617,19 +617,19 @@ export function PauseDialog({ world }: { world: GameplaySnapshot }) {
       <div className="pause-panel">
         <div className="pause-header">
           <div className="modal-sigil">Ⅱ</div>
-          <div className="eyebrow centered">МИГ ТИШИНЫ</div>
-          <h2 id="alpha-dialog-title">Перевести дух.</h2>
-          <p>Всё игровое время остановлено. P / Esc — продолжить.</p>
+          <div className="eyebrow centered">A MOMENT OF SILENCE</div>
+          <h2 id="alpha-dialog-title">Catch your breath.</h2>
+          <p>All game time is frozen. P / Esc to continue.</p>
           {/* Task 22: the run details removed from the in-run HUD. */}
-          <p className="pause-run-info" aria-label="Забег">
+          <p className="pause-run-info" aria-label="Run">
             {world.campaign
-              ? `${world.campaign.mapId}. ${world.campaign.mapName} · Этап: ${world.campaign.stage.name} · ${
+              ? `${world.campaign.mapId}. ${world.campaign.mapName} · Stage: ${world.campaign.stage.name} · ${
                   world.campaign.durationReached
-                    ? 'время вышло'
-                    : `осталось ${clock(world.campaign.remaining)}`
+                    ? 'time is up'
+                    : `${clock(world.campaign.remaining)} left`
                 } · `
-              : 'Забытая роща · '}
-            Волна {world.spawning.waves + 1}
+              : 'Forgotten Grove · '}
+            Wave {world.spawning.waves + 1}
           </p>
           <div className="pause-actions">
             <button
@@ -637,27 +637,28 @@ export function PauseDialog({ world }: { world: GameplaySnapshot }) {
               autoFocus
               onClick={() => alphaBridge.send({ type: 'resume' })}
             >
-              Продолжить →
+              Continue →
             </button>
             <button className="text-button" onClick={() => campaignStore.quitToMenu()}>
-              {world.campaign ? 'Выйти в меню · забег не засчитается' : 'Выбрать класс'}
+              {world.campaign ? 'Exit to menu · the run will not count' : 'Choose class'}
             </button>
             {world.campaign && (
               <p className="faint pause-forfeit-note">
-                Сохранения внутри забега нет: выход или перезагрузка страницы — отказ без награды.
+                There is no saving mid-run: leaving or reloading the page abandons the run with no
+                reward.
               </p>
             )}
             <ReportButton />
             <BuildLabel />
           </div>
         </div>
-        <section className="pause-skills" aria-label="Обзор навыков">
+        <section className="pause-skills" aria-label="Skills overview">
           <div className="skill-overview-heading">
-            <h2>Навыки забега</h2>
+            <h2>Run skills</h2>
             <span
               className="skill-rerolls"
-              aria-label={`Перебросов осталось: ${world.skills.rerolls}`}
-              title="Оставшиеся перебросы"
+              aria-label={`Rerolls left: ${world.skills.rerolls}`}
+              title="Rerolls left"
             >
               ↻ {world.skills.rerolls}
             </span>
@@ -681,8 +682,8 @@ function PetHudIcon({ pet, time }: { pet: PetSnapshot; time: number }) {
       style={{ ['--progress' as string]: String(progress) }}
       aria-label={
         pet.interval
-          ? `Питомец «${name}», уровень ${pet.level}: действие через ${remaining.toFixed(1)} с`
-          : `Питомец «${name}», уровень ${pet.level}: аура`
+          ? `Pet “${name}”, level ${pet.level}: acts in ${remaining.toFixed(1)} s`
+          : `Pet “${name}”, level ${pet.level}: aura`
       }
       title={name}
     >
@@ -703,7 +704,7 @@ export function ActiveSkills({ world }: { world: GameplaySnapshot }) {
   if (autos.length === 0) return null;
   const { cooldowns } = world.skillCombat;
   return (
-    <ul className={`active-skills${leftHanded ? ' left-handed' : ''}`} aria-label="Активные навыки">
+    <ul className={`active-skills${leftHanded ? ' left-handed' : ''}`} aria-label="Active skills">
       {autos.map((s) => {
         const left = cooldowns[s.skillId] ?? 0;
         const cooling = left > 0.05;
@@ -715,7 +716,7 @@ export function ActiveSkills({ world }: { world: GameplaySnapshot }) {
             }`}
             title={`${s.name} ${ROMAN[s.rank]}`}
             aria-label={`${s.name} ${ROMAN[s.rank]}: ${
-              cooling ? `перезарядка ${left.toFixed(1)} с` : 'готов'
+              cooling ? `cooldown ${left.toFixed(1)} s` : 'ready'
             }`}
           >
             <i aria-hidden="true">{textGlyph(s.icon)}</i>

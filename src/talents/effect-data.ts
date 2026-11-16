@@ -25,7 +25,7 @@ const BALLISTA = {
 };
 
 export const TALENT_RANK_EFFECTS: Readonly<Record<string, RankEffects>> = Object.freeze({
-  // ── Rogue · Ассасин (Phase 2) ──
+  // ── Rogue · Assassin (Phase 2) ──
   'rogue.b1.n01': {
     1: same({ bonus: 6 }),
     2: same({ bonus: 10, stacks: 5, extra: 5 }),
@@ -47,7 +47,7 @@ export const TALENT_RANK_EFFECTS: Readonly<Record<string, RankEffects>> = Object
     2: same({ critDamage: 18, bleedExtra: 7 }),
     3: same({ critDamage: 28, hpBelow: 30, lowHpExtra: 12 }),
   },
-  // ── Rogue · Теневой охотник (Phase 2; G3, G4, C8) ──
+  // ── Rogue · Shadow Hunter (Phase 2; G3, G4, C8) ──
   'rogue.b2.n01': {
     1: [st('dodgeChance', 2)],
     2: [st('dodgeChance', 4), st('movementSpeedPercent', 3)],
@@ -116,7 +116,7 @@ export const TALENT_RANK_EFFECTS: Readonly<Record<string, RankEffects>> = Object
     2: same({ coefficient: 2, radius: 100, cooldown: 8, stacks: 10 }),
     3: same({ coefficient: 2.6, radius: 130, cooldown: 8, stacks: 10 }),
   },
-  // ── Mage · Повелитель стихий / Арканист (Phase 4; C2) ──
+  // ── Mage · Elementalist / Arcanist (Phase 4; C2) ──
   'mage.b1.n01': {
     1: same({ bonus: 5 }),
     2: same({ bonus: 9, area: 4 }),
@@ -167,7 +167,7 @@ export const TALENT_RANK_EFFECTS: Readonly<Record<string, RankEffects>> = Object
     2: same({ reduce: 0.2, icd: 1 }),
     3: same({ reduce: 0.3, icd: 0.8 }),
   },
-  // ── Mage · Верховный маг (Phase 5; C1: enhanced = the 5th-slot active) ──
+  // ── Mage · Archmage (Phase 5; C1: enhanced = the 5th-slot active) ──
   'mage.b3.n01': {
     1: same({ extraSlots: 1 }),
     2: same({ extraSlots: 1, bonus: 8 }),
@@ -188,7 +188,7 @@ export const TALENT_RANK_EFFECTS: Readonly<Record<string, RankEffects>> = Object
     2: same({ bonus: 18, critDamage: 15 }),
     3: same({ bonus: 28, critDamage: 25 }),
   },
-  // ── Warrior · Берсерк / Страж (Phase 6; C3, C6, G12) ──
+  // ── Warrior · Berserker / Guardian (Phase 6; C3, C6, G12) ──
   'warrior.b1.n01': {
     1: same({ bonus: 6 }),
     2: same({ bonus: 10, multi: 4 }),
@@ -240,7 +240,7 @@ export const TALENT_RANK_EFFECTS: Readonly<Record<string, RankEffects>> = Object
     2: same({ hpBelow: 30, resistance: 9, heal: 3, cooldown: 30 }),
     3: same({ hpBelow: 30, resistance: 14, heal: 6, cooldown: 30 }),
   },
-  // ── Warrior · Мастер двух клинков (Phase 7; G6, G7, C4) ──
+  // ── Warrior · Twin-Blade Master (Phase 7; G6, G7, C4) ──
   'warrior.b3.n01': {
     1: same({ coefficient: 0.45 }),
     2: same({ coefficient: 0.6 }),
@@ -261,7 +261,7 @@ export const TALENT_RANK_EFFECTS: Readonly<Record<string, RankEffects>> = Object
     2: same({ bonus: 15, hpBelow: 30, lowHp: 5 }),
     3: same({ bonus: 25, hpBelow: 30, lowHp: 10 }),
   },
-  // ── Archer · Снайпер / Следопыт (Phase 8; G11) ──
+  // ── Archer · Sniper / Pathfinder (Phase 8; G11) ──
   'archer.b1.n01': {
     1: same({ critChance: 3 }),
     2: same({ critChance: 5, critDamage: 8 }),
@@ -311,7 +311,7 @@ export const TALENT_RANK_EFFECTS: Readonly<Record<string, RankEffects>> = Object
     2: same({ bonus: 13, duration: 4 }),
     3: same({ bonus: 20, duration: 5 }),
   },
-  // ── Archer · Осадный инженер (Phase 9; G8, G9, G10, C7) ──
+  // ── Archer · Siege Engineer (Phase 9; G8, G9, G10, C7) ──
   'archer.b3.n01': {
     // G8: 20 + 15/25/35% physicalDamage per hit; 20/20/24 s; summon CD 30 s; interval 1.6 s,
     // range 420, 60 behind, bolt 600 u/s radius 5.

@@ -1,12 +1,12 @@
 import type { RunStatsSnapshot } from '../gameplay';
 import { clock } from './campaign-format';
-import { RU, damageSourceLabel, enemyTypeLabel } from './strings-ru';
+import { EN, damageSourceLabel, enemyTypeLabel } from './strings-en';
 
-const whole = (n: number) => Math.round(n).toLocaleString('ru-RU');
+const whole = (n: number) => Math.round(n).toLocaleString('en-US');
 
 /** Task 08.5 §2.2 compact results statistics: top damage sources, damage taken, death time. */
 export function RunStatsPanel({ stats }: { stats: RunStatsSnapshot }) {
-  const t = RU.stats;
+  const t = EN.stats;
   const top = stats.bySource.slice(0, 5);
   const worst = stats.takenByType[0];
   return (

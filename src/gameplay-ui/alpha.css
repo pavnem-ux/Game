@@ -1630,7 +1630,7 @@ p.damage-note {
   background: #0d1424;
 }
 
-/* Task 15: synergy banners (unlock / II / III «Пробуждение» in gold), level pips, card level hints */
+/* Task 15: synergy banners (unlock / II / III «Awakening» in gold), level pips, card level hints */
 .synergy-banners {
   position: absolute;
   top: 92px;
@@ -1725,7 +1725,7 @@ p.damage-note {
   text-shadow: 0 0 6px rgba(232, 195, 106, 0.5);
 }
 
-/* Task 16 touch controls: dash button (≥ 72 px, thumb-reachable, cooldown ring); «Левша» mirrors. */
+/* Task 16 touch controls: dash button (≥ 72 px, thumb-reachable, cooldown ring); «Left-handed» mirrors. */
 .touch-controls {
   position: absolute;
   inset: auto max(16px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) auto;

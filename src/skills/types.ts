@@ -172,7 +172,7 @@ export interface SynergyTriggeredEvent {
   readonly synergyId: string;
   readonly targetId: string;
   readonly position: Point;
-  /** Task 15: synergy level when it fired (1–3; 3 = «Пробуждение»). */
+  /** Task 15: synergy level when it fired (1–3; 3 = «Awakening»). */
   readonly level?: 1 | 2 | 3;
   /** Task 15: an awakened property acted in this trigger (explosion, shards, rift, transfer…). */
   readonly awakened?: boolean;

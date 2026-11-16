@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { alphaBridge } from './store';
-import { RU } from './strings-ru';
+import { EN } from './strings-en';
 import { useTouchDevice } from './touch';
 
 /**
@@ -30,7 +30,7 @@ function useMedia(query: string): boolean {
   }, [query]);
   return match;
 }
-/** «Поверните устройство»: shown during a run on a portrait phone; the run pauses meanwhile. */
+/** «Rotate your device»: shown during a run on a portrait phone; the run pauses meanwhile. */
 export function OrientationNotice({ inRun, playing }: { inRun: boolean; playing: boolean }) {
   const portrait = useMedia(PORTRAIT_PHONE);
   // Phones only: a narrow desktop window keeps playing in any shape.
@@ -45,13 +45,13 @@ export function OrientationNotice({ inRun, playing }: { inRun: boolean; playing:
       className="rotate-notice"
       role="alertdialog"
       aria-live="assertive"
-      aria-label={RU.device.rotate}
+      aria-label={EN.device.rotate}
     >
       <div className="rotate-icon" aria-hidden="true">
         ⟳
       </div>
-      <strong>{RU.device.rotate}</strong>
-      <span>{RU.device.rotateHint}</span>
+      <strong>{EN.device.rotate}</strong>
+      <span>{EN.device.rotateHint}</span>
     </div>
   );
 }
@@ -95,7 +95,7 @@ export function FullscreenButton() {
     <button
       type="button"
       className="icon-button fullscreen-button"
-      aria-label={active ? RU.device.exitFullscreen : RU.device.fullscreen}
+      aria-label={active ? EN.device.exitFullscreen : EN.device.fullscreen}
       aria-pressed={active}
       onClick={() => void toggle()}
     >

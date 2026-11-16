@@ -15,7 +15,7 @@ const LIGHT_SIZE = 256;
 const VIGNETTE_SIZE = 512;
 
 /**
- * Task 18 «Последний свет»: a darkness overlay with holes cut by light sources. High/Medium: a
+ * Task 18 «The Last Light»: a darkness overlay with holes cut by light sources. High/Medium: a
  * reduced-resolution render texture fixed to the screen, filled with darkness each frame and erased
  * with a radial light texture per source (Canvas `destination-out`). Low: one baked radial
  * vignette centred on the player (no per-frame render texture). Rendering only.

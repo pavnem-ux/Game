@@ -1,5 +1,5 @@
 import type { CombatAttributes } from '../../character-stats';
-import { RU } from '../strings-ru';
+import { EN } from '../strings-en';
 
 /**
  * Task 13 UI kit — pure presentation helpers (no gameplay rules: they only format values the
@@ -9,17 +9,17 @@ import { RU } from '../strings-ru';
 /** Rows of the final-stats panels and compare tooltips: attribute, label, decimals. */
 export const STAT_ROWS: readonly (readonly [keyof CombatAttributes, string, number])[] =
   Object.freeze([
-    ['maxHp', RU.meta.stats.maxHp, 0],
-    ['physicalDamage', RU.meta.stats.physicalDamage, 0],
-    ['magicalDamage', RU.meta.stats.magicalDamage, 0],
-    ['attackSpeed', RU.meta.stats.attackSpeed, 0],
-    ['criticalChance', RU.meta.stats.criticalChance, 1],
-    ['criticalDamage', RU.meta.stats.criticalDamage, 0],
-    ['resistance', RU.meta.stats.resistance, 0],
-    ['dodgeChance', RU.meta.stats.dodgeChance, 1],
-    ['movementSpeed', RU.meta.stats.movementSpeed, 0],
-    ['cooldownReduction', RU.meta.stats.cooldownReduction, 1],
-    ['areaSize', RU.meta.stats.areaSize, 0],
+    ['maxHp', EN.meta.stats.maxHp, 0],
+    ['physicalDamage', EN.meta.stats.physicalDamage, 0],
+    ['magicalDamage', EN.meta.stats.magicalDamage, 0],
+    ['attackSpeed', EN.meta.stats.attackSpeed, 0],
+    ['criticalChance', EN.meta.stats.criticalChance, 1],
+    ['criticalDamage', EN.meta.stats.criticalDamage, 0],
+    ['resistance', EN.meta.stats.resistance, 0],
+    ['dodgeChance', EN.meta.stats.dodgeChance, 1],
+    ['movementSpeed', EN.meta.stats.movementSpeed, 0],
+    ['cooldownReduction', EN.meta.stats.cooldownReduction, 1],
+    ['areaSize', EN.meta.stats.areaSize, 0],
   ]);
 
 /** Rounds for display (no trailing zeros), e.g. 12.345 → "12.3" with 1 decimal. */
@@ -89,10 +89,10 @@ export function romanRank(rank: number): string {
   return ['', 'I', 'II', 'III'][rank] ?? String(rank);
 }
 
-/** Gold amounts with thin-space thousands, e.g. 12500 → «12 500». */
+/** Gold amounts with comma thousands, e.g. 12500 → 12,500 (Task 23: English format). */
 export function formatGold(amount: number): string {
   if (!Number.isFinite(amount)) return '0';
   return Math.round(amount)
     .toString()
-    .replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }

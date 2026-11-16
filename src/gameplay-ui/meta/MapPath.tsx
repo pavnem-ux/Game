@@ -6,9 +6,9 @@ import { isMapUnlocked, recommendedLevel } from '../../profile';
 import { campaignStore } from '../campaign-state';
 import { clock, factor, minutes } from '../campaign-format';
 import { Button, Panel } from '../kit';
-import { RU } from '../strings-ru';
+import { EN } from '../strings-en';
 
-const M = RU.meta.maps;
+const M = EN.meta.maps;
 /** Path geometry (px): node spacing, act banner height, winding amplitude. */
 const STEP = 96;
 const BANNER = 120;
@@ -35,7 +35,7 @@ const PATH_HEIGHT = BANNER + CAMPAIGN_ACTS.length * BANNER + CAMPAIGN_MAPS.lengt
 /**
  * Task 13 §3 Map path: 40 nodes on a winding path through 4 act regions; states locked /
  * available (pulsing) / completed (best result); boss crest and modifier icons per node; the
- * current node is centred on open; a side panel shows the selected map with «В бой».
+ * current node is centred on open; a side panel shows the selected map with «To battle».
  */
 export function MapPathPage() {
   const ui = useSyncExternalStore(campaignStore.subscribe, campaignStore.getSnapshot);
@@ -46,7 +46,7 @@ export function MapPathPage() {
     current.current?.scrollIntoView({ block: 'center' });
     current.current?.focus({ preventScroll: true });
   }, []);
-  if (!profile) return <p className="campaign-empty">Профиль недоступен.</p>;
+  if (!profile) return <p className="campaign-empty">Profile unavailable.</p>;
   const map = CAMPAIGN_MAPS[panelMap - 1];
   const points = CAMPAIGN_MAPS.map((m) => mapNodePosition(m.id));
   const done = new Set(profile.completedMaps);
@@ -65,7 +65,7 @@ export function MapPathPage() {
                 aria-label={M.act(a.roman, a.name)}
               >
                 <h3 className="act-banner">
-                  <small>Акт {a.roman}</small>
+                  <small>Act {a.roman}</small>
                   {a.name}
                   <span>
                     {a.firstMap}–{a.lastMap}
@@ -176,7 +176,7 @@ function MapPanel({ map }: { map: CampaignMap }) {
         <dd>{minutes(map.durationSeconds)}</dd>
         <dt>{M.difficulty}</dt>
         <dd>
-          здоровье {factor(map.difficulty.hp)} · урон {factor(map.difficulty.damage)} · волны{' '}
+          health {factor(map.difficulty.hp)} · damage {factor(map.difficulty.damage)} · waves{' '}
           {factor(map.difficulty.spawnRate)}
         </dd>
         <dt>{M.recommended}</dt>
@@ -188,7 +188,7 @@ function MapPanel({ map }: { map: CampaignMap }) {
         <dt>{M.modifiers}</dt>
         <dd>
           {map.modifiers.length ? (
-            <ul className="map-modifiers" aria-label="Особенности карты">
+            <ul className="map-modifiers" aria-label="Map modifiers">
               {map.modifiers.map((x) => (
                 <li key={x.id}>
                   {MODIFIER_ICONS[x.id] ?? '✦'} {x.label}
@@ -204,9 +204,9 @@ function MapPanel({ map }: { map: CampaignMap }) {
         <dt>{M.best}</dt>
         <dd>
           {best
-            ? `побед ${best.victories}${
-                best.bestClearTime !== null ? ` · победа за ${clock(best.bestClearTime)}` : ''
-              } · выжить ${clock(best.bestSurvivalTime)} · ${best.bestKills} повержено`
+            ? `victories ${best.victories}${
+                best.bestClearTime !== null ? ` · best clear ${clock(best.bestClearTime)}` : ''
+              } · survived ${clock(best.bestSurvivalTime)} · ${best.bestKills} defeated`
             : M.notDone}
         </dd>
       </dl>

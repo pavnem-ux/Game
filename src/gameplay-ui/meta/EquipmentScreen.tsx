@@ -29,19 +29,19 @@ import {
   compareStats,
   formatStat,
 } from '../kit';
-import { RU } from '../strings-ru';
+import { EN } from '../strings-en';
 import { ItemStats, REFUSALS, tierLabel } from '../ShopPages';
 import { TierRows } from './TierRows';
 import { PET_CONFIG, isPetId, petLevel } from '../../pets';
 import { PetPortrait } from '../pets/PetPortrait';
 import { petLevelLabel } from '../pets/pet-text';
 
-const E = RU.meta.equipment;
+const E = EN.meta.equipment;
 type SlotFilter = GearSlot | 'all';
 
 /**
  * Task 13 §3 Equipment: paper doll (class silhouette with the 4 slots around it), owned items grid
- * with slot filters, compare tooltip on hover and a compare preview on selection («Надеть»),
+ * with slot filters, compare tooltip on hover and a compare preview on selection («Equip»),
  * unequip, link to the shop, final stats. Purchases/equipping stay in the existing store/profile
  * functions (one validated save per action).
  */
@@ -55,7 +55,7 @@ export function EquipmentPage() {
   const [slotDetail, setSlotDetail] = useState<GearSlot | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
   const [message, setMessage] = useState('');
-  if (!profile) return <p className="campaign-empty">Профиль недоступен.</p>;
+  if (!profile) return <p className="campaign-empty">Profile unavailable.</p>;
   const cls = shown ?? ui.viewClass ?? profile.selectedClass;
   const progress = profile.classes[cls];
   const loadout = progress.loadout;
@@ -68,7 +68,7 @@ export function EquipmentPage() {
     ...profile.ownedItems.map((id) => findItem(id)).filter((i): i is GearItem => !!i),
   ].filter((i) => isEligible(i, cls, i.slot) && (filter === 'all' || i.slot === filter));
   const isEquipped = (item: GearItem) => loadout[item.slot] === item.id;
-  // Task 19: names and stats at the item's forge level («Кольцо точности +3»).
+  // Task 19: names and stats at the item's forge level («Ring of Precision +3»).
   const levelOf = (item: GearItem) => itemLevel(profile.itemLevels, item.id);
   const nameOf = (item: GearItem) => itemDisplayName(item, levelOf(item));
   const preview = (id: string | null) => {
@@ -96,7 +96,7 @@ export function EquipmentPage() {
       <header className="meta-page-head">
         <h2 className="meta-title">{E.title}</h2>
         <Tabs
-          label="Класс экипировки"
+          label="Equipment class"
           items={CHARACTER_CLASSES.map((c) => ({ id: c, label: CLASS_LABELS[c] }))}
           value={cls}
           onChange={(c) => {
@@ -109,7 +109,7 @@ export function EquipmentPage() {
           ⚖ {E.toShop} →
         </Button>
       </header>
-      <section className="equipment-layout" aria-label={`Снаряжение: ${CLASS_LABELS[cls]}`}>
+      <section className="equipment-layout" aria-label={`Equipment: ${CLASS_LABELS[cls]}`}>
         <div className="paper-doll">
           <div className={`doll-figure doll-${cls}`} aria-hidden="true">
             <DollSilhouette />
@@ -125,7 +125,7 @@ export function EquipmentPage() {
               >
                 <button
                   className="doll-slot-button"
-                  aria-label={`${SLOT_LABELS[slot]}: ${item ? `${nameOf(item)}, подробнее` : E.empty}`}
+                  aria-label={`${SLOT_LABELS[slot]}: ${item ? `${nameOf(item)}, details` : E.empty}`}
                   aria-pressed={item ? slotDetail === slot : filter === slot}
                   onClick={() => {
                     // Task 22: a filled slot opens the item details; an empty one filters the list.
@@ -155,7 +155,7 @@ export function EquipmentPage() {
           <PetSlot />
         </div>
         <div className="equipment-side">
-          {/* Task 22: the details / «Надеть» panel sits at the top of the item area (sticky on
+          {/* Task 22: the details / «Equip» panel sits at the top of the item area (sticky on
               phones), never at the bottom of the page. */}
           {(chosen || equippedDetail || message) && (
             <div className="equipment-detail">
@@ -163,7 +163,7 @@ export function EquipmentPage() {
                 <Panel
                   className="equipment-preview equipped-detail"
                   role="group"
-                  aria-label="Надетый предмет"
+                  aria-label="Equipped item"
                   title={nameOf(equippedDetail)}
                 >
                   <p className="equipped-detail-meta">
@@ -208,7 +208,7 @@ export function EquipmentPage() {
                 <Panel
                   className="equipment-preview"
                   role="group"
-                  aria-label="Предпросмотр снаряжения"
+                  aria-label="Equipment preview"
                   title={E.compare(nameOf(chosen.item))}
                 >
                   <CompareList deltas={chosen.deltas} empty={E.noChange} />
@@ -225,10 +225,10 @@ export function EquipmentPage() {
                           })
                         }
                       >
-                        ⚒ {RU.meta.forge.toForge}
+                        ⚒ {EN.meta.forge.toForge}
                       </Button>
                     )}
-                    <Button onClick={() => setSelected(null)}>{RU.meta.modal.cancel}</Button>
+                    <Button onClick={() => setSelected(null)}>{EN.meta.modal.cancel}</Button>
                   </div>
                 </Panel>
               )}
@@ -244,7 +244,7 @@ export function EquipmentPage() {
             className="owned-panel"
             actions={
               <Tabs
-                label="Фильтр по слоту"
+                label="Filter by slot"
                 items={[
                   { id: 'all' as SlotFilter, label: E.all },
                   ...GEAR_SLOTS.map((s) => ({ id: s as SlotFilter, label: SLOT_LABELS[s] })),
@@ -303,7 +303,7 @@ export function EquipmentPage() {
           <table className="equipment-stats">
             <thead>
               <tr>
-                <th>Характеристика</th>
+                <th>Stat</th>
                 <th>{E.without}</th>
                 <th>{E.with}</th>
               </tr>
@@ -337,11 +337,11 @@ function DollSilhouette() {
   );
 }
 
-/** Task 20: the profile's one active pet — the same slot for every class; opens «Питомцы». */
+/** Task 20: the profile's one active pet — the same slot for every class; opens «Pets». */
 function PetSlot() {
   const ui = useSyncExternalStore(campaignStore.subscribe, campaignStore.getSnapshot);
   const profile = ui.progression.profile!;
-  const P = RU.meta.pets;
+  const P = EN.meta.pets;
   const id = profile.activePet && isPetId(profile.activePet) ? profile.activePet : null;
   return (
     <div className="doll-slot doll-slot-pet kit-tier-frame tier-0">

@@ -23,9 +23,9 @@ function Keyboard() {
         </span>
       </span>
       <div>
-        <strong>Двигайтесь, чтобы выжить</strong>
-        <p>Атака автоматическая · P / Esc — пауза</p>
-        <p className="touch-hint">На телефоне: потяните по левой части арены</p>
+        <strong>Keep moving to survive</strong>
+        <p>Attacks are automatic · P / Esc to pause</p>
+        <p className="touch-hint">On a phone: drag on the left side of the arena</p>
       </div>
     </div>
   );
@@ -36,67 +36,67 @@ function Menu({ state }: { state: Snapshot }) {
       <div className="menu-layout">
         <div className="intro">
           <div className="eyebrow">
-            <i /> FANTASY SURVIVORS <span>01 / АРЕНА</span>
+            <i /> FANTASY SURVIVORS <span>01 / ARENA</span>
           </div>
           <h1 id="game-title">
-            Последний
+            The Last
             <br />
-            <em>свет.</em>
+            <em>Light.</em>
           </h1>
           <p className="intro-copy">
-            Руины пробудились. Тьма приближается.
+            The ruins have awoken. The darkness draws near.
             <br />
-            Сохраните искру — и не останавливайтесь.
+            Keep the spark alive — and never stop.
           </p>
           <div className="run-details">
             <span>
-              <Icon name="clock" /> БЕСКОНЕЧНЫЙ ЗАБЕГ
+              <Icon name="clock" /> ENDLESS RUN
             </span>
-            <span>✧ ОПЫТ И УЛУЧШЕНИЯ</span>
+            <span>✧ XP AND UPGRADES</span>
           </div>
           <button
             className="button primary start-button"
             onClick={() => bridge.send({ type: 'start' })}
           >
-            Войти в руины <Icon name="arrow" />
+            Enter the ruins <Icon name="arrow" />
           </button>
           <Keyboard />
           {state.record > 0 && (
             <p className="record">
-              ВАШ РЕКОРД <strong>{timeLabel(state.record)}</strong>
+              YOUR RECORD <strong>{timeLabel(state.record)}</strong>
             </p>
           )}
         </div>
         <div className="character-card">
           <div className="character-top">
-            <span>ВАШ ГЕРОЙ</span>
-            <span className="class-tag">МАГ</span>
+            <span>YOUR HERO</span>
+            <span className="class-tag">MAGE</span>
           </div>
           <Portrait />
           <div className="character-info">
-            <div className="tiny">ХРАНИТЕЛЬ I</div>
+            <div className="tiny">KEEPER I</div>
             <h2>{CLASS.name}</h2>
-            <p>Его посох помнит тепло ушедшего солнца.</p>
+            <p>Their staff remembers the warmth of a vanished sun.</p>
             <div className="character-stats">
               <div>
                 <b>100</b>
-                <span>ЗДОРОВЬЕ</span>
+                <span>HEALTH</span>
               </div>
               <div>
                 <b>20</b>
-                <span>УРОН</span>
+                <span>DAMAGE</span>
               </div>
               <div>
                 <b>✦</b>
-                <span>ИСКРА</span>
+                <span>SPARK</span>
               </div>
             </div>
           </div>
         </div>
       </div>
       <div className="menu-foot">
-        <span>ОДИН ХРАНИТЕЛЬ. ОДНА ИСКРА. НЕСЧЁТНАЯ ТЬМА.</span>
-        <span>ПРОТОТИП · ЭТАП 1</span>
+        <span>ONE KEEPER. ONE SPARK. COUNTLESS DARKNESS.</span>
+        <span>PROTOTYPE · STAGE 1</span>
       </div>
     </section>
   );
@@ -107,7 +107,7 @@ function Hud({ state: s }: { state: Snapshot }) {
       <div
         className="xp-track"
         role="progressbar"
-        aria-label="Опыт"
+        aria-label="XP"
         aria-valuemin={0}
         aria-valuemax={s.nextXp}
         aria-valuenow={s.xp}
@@ -119,7 +119,7 @@ function Hud({ state: s }: { state: Snapshot }) {
           <div className="avatar">✦</div>
           <div className="health-details">
             <div className="health-label">
-              <strong>Хранитель</strong>
+              <strong>Keeper</strong>
               <span>
                 {Math.ceil(s.hp)} <small>/ {s.maxHp} HP</small>
               </span>
@@ -127,7 +127,7 @@ function Hud({ state: s }: { state: Snapshot }) {
             <div
               className="health-track"
               role="progressbar"
-              aria-label="Здоровье"
+              aria-label="Health"
               aria-valuemin={0}
               aria-valuemax={s.maxHp}
               aria-valuenow={s.hp}
@@ -135,25 +135,25 @@ function Hud({ state: s }: { state: Snapshot }) {
               <div style={{ width: `${(s.hp / s.maxHp) * 100}%` }} />
             </div>
             <div className="level-label">
-              <span>УРОВЕНЬ {s.level}</span>
+              <span>LEVEL {s.level}</span>
               <span>
-                {s.xp} / {s.nextXp} ОПЫТА
+                {s.xp} / {s.nextXp} XP
               </span>
             </div>
           </div>
         </div>
         <div className="timer">
-          <span>ВРЕМЯ В РУИНАХ</span>
+          <span>TIME IN THE RUINS</span>
           <strong data-testid="timer">{timeLabel(s.seconds)}</strong>
         </div>
         <div className="hud-right">
           <div className="kill-count">
-            <span>ПОВЕРЖЕНО</span>
+            <span>DEFEATED</span>
             <strong>{s.kills.toString().padStart(3, '0')}</strong>
           </div>
           <button
             className="icon-button"
-            aria-label="Пауза"
+            aria-label="Pause"
             disabled={s.phase !== 'playing'}
             onClick={() => bridge.send({ type: 'pause' })}
           >
@@ -165,16 +165,16 @@ function Hud({ state: s }: { state: Snapshot }) {
         <div className="weapon">
           <span className="weapon-icon">✦</span>
           <div>
-            <strong>Искра</strong>
-            <span>СИЛА {s.ranks.power + 1} · АВТОАТАКА</span>
+            <strong>Spark</strong>
+            <span>POWER {s.ranks.power + 1} · AUTO-ATTACK</span>
           </div>
           {s.ranks.multishot > 0 && <b>×{s.ranks.multishot + 1}</b>}
         </div>
         <span className="arena-caption">
-          ЗАБЫТАЯ РОЩА <i /> <small>ВОЛНА {1 + Math.floor(s.seconds / 60)}</small>
+          FORGOTTEN GROVE <i /> <small>WAVE {1 + Math.floor(s.seconds / 60)}</small>
         </span>
         <span className="pause-hint">
-          <kbd>P</kbd> ПАУЗА
+          <kbd>P</kbd> PAUSE
         </span>
       </div>
     </>
@@ -190,13 +190,11 @@ function LevelUp({ state: s }: { state: Snapshot }) {
     >
       <div className="upgrade-panel">
         <div className="modal-sigil">✧</div>
-        <div className="eyebrow centered">ИСКРА СТАНОВИТСЯ СИЛЬНЕЕ</div>
+        <div className="eyebrow centered">THE SPARK GROWS STRONGER</div>
         <h2 id="upgrade-title">
-          Новый уровень<span>.</span>
+          Level up<span>.</span>
         </h2>
-        <p className="modal-description">
-          Уровень {s.level} · Выберите благословение для этого забега
-        </p>
+        <p className="modal-description">Level {s.level} · Choose a blessing for this run</p>
         <div className="upgrade-grid">
           {s.choices.map((u, i) => (
             <button
@@ -213,15 +211,15 @@ function LevelUp({ state: s }: { state: Snapshot }) {
               <h3>{u.name}</h3>
               <p>{u.description}</p>
               <div className="card-bottom">
-                <span>РАНГ {s.ranks[u.id] + 1}</span>
+                <span>RANK {s.ranks[u.id] + 1}</span>
                 <b>
-                  Выбрать <Icon name="arrow" />
+                  Choose <Icon name="arrow" />
                 </b>
               </div>
             </button>
           ))}
         </div>
-        <p className="faint">Время остановлено. Выбирайте без спешки.</p>
+        <p className="faint">Time is frozen. Take your time.</p>
       </div>
     </section>
   );
@@ -238,17 +236,17 @@ function Pause() {
         <div className="modal-sigil">
           <Icon name="pause" />
         </div>
-        <div className="eyebrow centered">МИГ ТИШИНЫ</div>
-        <h2 id="pause-title">Перевести дух.</h2>
-        <p>Руины подождут. Забег на паузе.</p>
+        <div className="eyebrow centered">A MOMENT OF SILENCE</div>
+        <h2 id="pause-title">Catch your breath.</h2>
+        <p>The ruins will wait. The run is paused.</p>
         <button
           autoFocus
           className="button primary"
           onClick={() => bridge.send({ type: 'resume' })}
         >
-          Продолжить <Icon name="arrow" />
+          Continue <Icon name="arrow" />
         </button>
-        <p className="faint">P / Esc — вернуться в игру</p>
+        <p className="faint">P / Esc to return to the game</p>
       </div>
     </section>
   );
@@ -263,35 +261,35 @@ function Death({ state: s }: { state: Snapshot }) {
     >
       <div className="small-modal death-modal">
         <div className="modal-sigil">◇</div>
-        <div className="eyebrow centered">КАЖДЫЙ ОГОНЬ ОСТАВЛЯЕТ СЛЕД</div>
-        <h2 id="death-title">Искра погасла.</h2>
-        <p>Но свет ещё вернётся в эти руины.</p>
+        <div className="eyebrow centered">EVERY FIRE LEAVES A MARK</div>
+        <h2 id="death-title">The spark has faded.</h2>
+        <p>But the light will return to these ruins.</p>
         <div className="result-grid">
           <div>
             <strong>{timeLabel(s.seconds)}</strong>
-            <span>ВЫЖИВАНИЕ</span>
+            <span>SURVIVAL</span>
           </div>
           <div>
             <strong>{s.kills}</strong>
-            <span>ПОВЕРЖЕНО</span>
+            <span>DEFEATED</span>
           </div>
           <div>
             <strong>{s.level}</strong>
-            <span>УРОВЕНЬ</span>
+            <span>LEVEL</span>
           </div>
         </div>
         <div className="best-result">
-          Личный рекорд <strong>{timeLabel(s.record)}</strong>
+          Personal record <strong>{timeLabel(s.record)}</strong>
         </div>
         <button
           autoFocus
           className="button primary"
           onClick={() => bridge.send({ type: 'restart' })}
         >
-          Зажечь снова <Icon name="retry" />
+          Light it again <Icon name="retry" />
         </button>
         <button className="text-button" onClick={() => bridge.send({ type: 'menu' })}>
-          Вернуться в меню
+          Back to menu
         </button>
       </div>
     </section>
@@ -308,9 +306,9 @@ export function App() {
             FANTASY <b>SURVIVORS</b>
           </span>
         </div>
-        <div className="header-caption">ХРОНИКИ ПОСЛЕДНЕГО СВЕТА</div>
+        <div className="header-caption">CHRONICLES OF THE LAST LIGHT</div>
         <div className="build-badge">
-          <i /> ЭТАП 1 <span>v0.1</span>
+          <i /> STAGE 1 <span>v0.1</span>
         </div>
       </header>
       <main className={`arena phase-${state.phase}`}>
@@ -322,9 +320,9 @@ export function App() {
         {state.phase === 'dead' && <Death state={state} />}
       </main>
       <footer className="page-footer">
-        <span>✦ СОХРАНИТЕ СВОЙ СВЕТ</span>
+        <span>✦ KEEP YOUR LIGHT</span>
         <span>
-          WASD / СТРЕЛКИ <i>·</i> АТАКА АВТОМАТИЧЕСКАЯ
+          WASD / ARROWS <i>·</i> AUTOMATIC ATTACKS
         </span>
       </footer>
     </div>

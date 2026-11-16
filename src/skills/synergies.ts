@@ -25,7 +25,7 @@ export type SynergyId =
   | 'blood_frenzy'
   | 'deep_wounds'
   | 'final_cut';
-/** Two distinct skill IDs; order is presentation only (the workbook's «Навык 1» / «Навык 2»). */
+/** Two distinct skill IDs; order is presentation only (the workbook's «Skill 1» / «Skill 2»). */
 export type SynergyPair = readonly [string, string];
 const pairs = (list: readonly (readonly [string, string])[]): readonly SynergyPair[] =>
   Object.freeze(list.map((pair) => Object.freeze([pair[0], pair[1]] as const)));
@@ -36,7 +36,7 @@ export interface SynergyRule {
   readonly trigger: 'hit' | 'kill';
   /**
    * Task 07.2 v2 unlock: an OR of explicit two-skill pairs. A pair counts once both distinct skill
-   * IDs are acquired in this run (rank I+). Source: workbook sheet «Пары синергий» (40 rows).
+   * IDs are acquired in this run (rank I+). Source: workbook sheet «Synergy pairs» (40 rows).
    */
   readonly unlockPairs: readonly SynergyPair[];
   readonly description: string;
@@ -55,12 +55,12 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
       ['flame_burst', 'blizzard'],
       ['inferno', 'frost_nova'],
     ]),
-    name: 'Термошок',
+    name: 'Thermal Shock',
     characterClass: 'mage',
     trigger: 'hit',
-    condition: 'Прямой ледяной удар по врагу, который горит (Burn).',
-    effect: 'Дополнительный магический взрыв по цели.',
-    description: 'Прямой удар льдом по цели с Burn — магический взрыв.',
+    condition: 'A direct ice hit on an enemy that is burning (Burn).',
+    effect: 'An extra magic explosion on the target.',
+    description: 'A direct ice hit on a target with Burn — a magic explosion.',
   },
   {
     id: 'wildfire',
@@ -70,12 +70,12 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
       ['flame_burst', 'inferno'],
       ['inferno', 'elemental_mastery'],
     ]),
-    name: 'Лесной пожар',
+    name: 'Wildfire',
     characterClass: 'mage',
     trigger: 'kill',
-    condition: 'Враг погибает, пока на нём горит Burn.',
-    effect: 'Burn переходит на ближайших врагов.',
-    description: 'Смерть цели с Burn распространяет Burn на соседей.',
+    condition: 'An enemy dies while Burn is on it.',
+    effect: 'Burn spreads to the nearest enemies.',
+    description: 'The death of a target with Burn spreads Burn to its neighbours.',
   },
   {
     id: 'shattered_ice',
@@ -85,12 +85,12 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
       ['ice_shards', 'blizzard'],
       ['blizzard', 'elemental_mastery'],
     ]),
-    name: 'Расколотый лёд',
+    name: 'Shattered Ice',
     characterClass: 'mage',
     trigger: 'hit',
-    condition: 'Прямой ледяной удар по замедленному врагу (Slow).',
-    effect: 'Бонусный ледяной урон по цели.',
-    description: 'Прямой удар льдом по замедленной цели — бонусный ледяной урон.',
+    condition: 'A direct ice hit on a slowed enemy (Slow).',
+    effect: 'Bonus ice damage to the target.',
+    description: 'A direct ice hit on a slowed target — bonus ice damage.',
   },
   {
     id: 'skull_crusher',
@@ -99,12 +99,12 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
       ['shield_bash', 'whirlwind'],
       ['ground_slam', 'cleave'],
     ]),
-    name: 'Сокрушитель черепов',
+    name: 'Skull Crusher',
     characterClass: 'warrior',
     trigger: 'hit',
-    condition: 'Физический удар ближнего боя по оглушённому врагу (Stun).',
-    effect: 'Дополнительный физический урон.',
-    description: 'Физический удар ближнего боя по оглушённой цели — доп. урон.',
+    condition: 'A physical melee hit on a stunned enemy (Stun).',
+    effect: 'Extra physical damage.',
+    description: 'A physical melee hit on a stunned target — extra damage.',
   },
   {
     id: 'battle_momentum',
@@ -114,12 +114,12 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
       ['ground_slam', 'battle_fury'],
       ['war_cry', 'battle_fury'],
     ]),
-    name: 'Боевой напор',
+    name: 'Battle Momentum',
     characterClass: 'warrior',
     trigger: 'kill',
-    condition: 'Убийство врага ударом ближнего боя.',
-    effect: 'Кратковременный бонус к скорости атаки.',
-    description: 'Убийство в ближнем бою — краткий бонус скорости атаки.',
+    condition: 'Killing an enemy with a melee hit.',
+    effect: 'A brief Attack speed bonus.',
+    description: 'A melee kill — a brief Attack speed bonus.',
   },
   {
     id: 'seismic_impact',
@@ -128,12 +128,12 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
       ['shield_bash', 'earthquake'],
       ['ground_slam', 'shield_bash'],
     ]),
-    name: 'Сейсмический удар',
+    name: 'Seismic Impact',
     characterClass: 'warrior',
     trigger: 'hit',
-    condition: 'Тяжёлый удар ближнего боя по уже оглушённому врагу.',
-    effect: 'Ударная волна вокруг цели.',
-    description: 'Тяжёлый удар по оглушённой цели — ударная волна.',
+    condition: 'A heavy melee hit on an already stunned enemy.',
+    effect: 'A shockwave around the target.',
+    description: 'A heavy hit on a stunned target — a shockwave.',
   },
   {
     id: 'toxic_barrage',
@@ -142,14 +142,13 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
       ['toxic_volley', 'split_shot'],
       ['poison_trap', 'split_shot'],
     ]),
-    name: 'Токсичный шквал',
+    name: 'Toxic Barrage',
     characterClass: 'archer',
     trigger: 'hit',
-    condition:
-      'Несколько разных снарядов попадают в отравленного врага (Poison) за короткое время.',
-    effect: 'Ядовитый взрыв и дополнительный Poison.',
+    condition: 'Several different projectiles hit a poisoned enemy (Poison) within a short time.',
+    effect: 'A toxic explosion and extra Poison.',
     description:
-      'Несколько разных снарядов по отравленной цели за короткое время — ядовитый взрыв.',
+      'Several different projectiles on a poisoned target within a short time — a toxic explosion.',
   },
   {
     id: 'plague_chain',
@@ -158,12 +157,12 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
       ['toxic_volley', 'split_shot'],
       ['poison_trap', 'arrow_rain'],
     ]),
-    name: 'Цепь чумы',
+    name: 'Plague Chain',
     characterClass: 'archer',
     trigger: 'kill',
-    condition: 'Враг погибает, будучи отравленным (Poison).',
-    effect: 'Poison переходит на ближайших врагов.',
-    description: 'Смерть отравленной цели распространяет Poison.',
+    condition: 'An enemy dies while poisoned (Poison).',
+    effect: 'Poison spreads to the nearest enemies.',
+    description: 'The death of a poisoned target spreads Poison.',
   },
   {
     id: 'deadly_precision',
@@ -172,12 +171,12 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
       ['split_shot', 'hunters_mark'],
       ['toxic_volley', 'hunters_mark'],
     ]),
-    name: 'Смертельная точность',
+    name: 'Deadly Precision',
     characterClass: 'archer',
     trigger: 'hit',
-    condition: 'Серия прямых попаданий подряд по одному отравленному врагу.',
-    effect: 'Временный бонус урона по этой цели.',
-    description: 'Серия прямых попаданий по одной отравленной цели — бонус урона по ней.',
+    condition: 'A streak of direct hits in a row on one poisoned enemy.',
+    effect: 'A temporary damage bonus against that target.',
+    description: 'A streak of direct hits on one poisoned target — a damage bonus against it.',
   },
   {
     id: 'blood_frenzy',
@@ -186,12 +185,12 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
       ['blood_blades', 'blade_flurry'],
       ['fan_of_knives', 'serrated_blades'],
     ]),
-    name: 'Кровавое безумие',
+    name: 'Blood Frenzy',
     characterClass: 'rogue',
     trigger: 'hit',
-    condition: 'Удар кинжалом по кровоточащему врагу (Bleed).',
-    effect: 'Кратковременный бонус к скорости атаки.',
-    description: 'Удар кинжалом по кровоточащей цели — бонус скорости атаки.',
+    condition: 'A dagger hit on a bleeding enemy (Bleed).',
+    effect: 'A brief Attack speed bonus.',
+    description: 'A dagger hit on a bleeding target — an Attack speed bonus.',
   },
   {
     id: 'deep_wounds',
@@ -200,12 +199,12 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
       ['lacerate', 'serrated_blades'],
       ['blood_blades', 'blade_flurry'],
     ]),
-    name: 'Глубокие раны',
+    name: 'Deep Wounds',
     characterClass: 'rogue',
     trigger: 'hit',
-    condition: 'Критический удар по кровоточащему врагу.',
-    effect: 'Дополнительный стак Bleed.',
-    description: 'Крит по кровоточащей цели — дополнительный стак Bleed.',
+    condition: 'A critical hit on a bleeding enemy.',
+    effect: 'An extra Bleed stack.',
+    description: 'A crit on a bleeding target — an extra Bleed stack.',
   },
   {
     id: 'final_cut',
@@ -214,12 +213,12 @@ export const SYNERGY_RULES: readonly SynergyRule[] = Object.freeze([
       ['blood_blades', 'death_mark'],
       ['blade_flurry', 'death_mark'],
     ]),
-    name: 'Последний разрез',
+    name: 'Final Cut',
     characterClass: 'rogue',
     trigger: 'hit',
-    condition: 'Удар по кровоточащему врагу с низким запасом здоровья.',
-    effect: 'Добивающий урон.',
-    description: 'Удар по кровоточащей цели с низким HP — добивающий урон.',
+    condition: 'A hit on a bleeding enemy with low health.',
+    effect: 'Finishing damage.',
+    description: 'A hit on a bleeding target with low HP — finishing damage.',
   },
 ] satisfies SynergyRule[]);
 
@@ -248,7 +247,7 @@ export function synergyUnlocked(
   return completedPairs(rule, ownedIds).length > 0;
 }
 
-/** Task 15 synergy level: 0 locked, 1 (I), 2 (II), 3 (III «Пробуждение»). */
+/** Task 15 synergy level: 0 locked, 1 (I), 2 (II), 3 (III «Awakening»). */
 export type SynergyLevel = 0 | 1 | 2 | 3;
 /** Level of one pair from its weakest skill rank (0 when a skill is missing). */
 export function pairLevel(pair: SynergyPair, ranks: ReadonlyMap<string, number>): SynergyLevel {
@@ -545,7 +544,7 @@ export class SynergyResolver {
           const awake = this.awake('thermal_shock') && !!pre.position;
           this.cool('thermal_shock', targetId, t.cooldown);
           this.announce('thermal_shock', targetId, pre.position, awake);
-          // III «Паровой взрыв»: the explosion hits every enemy around the target once.
+          // III «Steam Blast»: the explosion hits every enemy around the target once.
           if (awake)
             this.burst(
               'thermal_shock',
@@ -570,7 +569,7 @@ export class SynergyResolver {
           this.cool('shattered_ice', targetId, t.cooldown);
           this.announce('shattered_ice', targetId, pre.position, awake);
           this.procDamage('shattered_ice', targetId, t.coefficient, 'magical', ['ice']);
-          // III «Ледяная шрапнель»: shards into the nearest other enemies (ice damage + Slow).
+          // III «Ice Shrapnel»: shards into the nearest other enemies (ice damage + Slow).
           if (awake) {
             const shards = this.nearestAround(
               pre.position!,
@@ -599,7 +598,7 @@ export class SynergyResolver {
           this.cool('skull_crusher', targetId, t.cooldown);
           this.announce('skull_crusher', targetId, pre.position, awake);
           this.procDamage('skull_crusher', targetId, t.coefficient, 'physical');
-          // III «Сотрясение»: extend the current Stun once per Stun, within the limits.
+          // III «Concussion»: extend the current Stun once per Stun, within the limits.
           if (awake && alive()) this.e.extendStun(targetId, A.skullCrusher.stunExtension);
         }
         if (
@@ -614,7 +613,7 @@ export class SynergyResolver {
           this.cool('seismic_impact', targetId, t.cooldown);
           this.announce('seismic_impact', targetId, pre.position, awake);
           this.burst('seismic_impact', pre.position, t.radius, t.coefficient, 'physical');
-          // III «Разлом»: a rift ticking physical damage + default Slow (a zone of the engine).
+          // III «Rift»: a rift ticking physical damage + default Slow (a zone of the engine).
           if (awake) this.rift(pre.position);
         }
         break;
@@ -656,7 +655,7 @@ export class SynergyResolver {
                 'synergy:toxic_barrage',
               );
             if (awake) {
-              // III «Чумной ливень»: explosion around the target; 2 Poison stacks on each enemy hit.
+              // III «Plague Downpour»: explosion around the target; 2 Poison stacks on each enemy hit.
               const hitIds = this.burst(
                 'toxic_barrage',
                 pre.position!,
@@ -705,7 +704,7 @@ export class SynergyResolver {
           if (!current) this.announce('blood_frenzy', targetId, pre.position);
           // Refresh duration, never stack: the global Attack Speed cap still applies.
           this.e.setBuff('blood_frenzy', 1, t.attackSpeed, this.now() + t.duration);
-          // III «Кровавый пир»: heal through Combat Core (never revives), once per interval.
+          // III «Blood Feast»: heal through Combat Core (never revives), once per interval.
           if (this.awake('blood_frenzy') && this.ready('blood_frenzy', HEAL_KEY)) {
             this.cool('blood_frenzy', HEAL_KEY, A.bloodFrenzy.interval);
             const player = this.e.host.core.getEntity(this.e.host.playerId);
@@ -722,7 +721,7 @@ export class SynergyResolver {
           const awake = this.awake('deep_wounds');
           this.cool('deep_wounds', targetId, t.cooldown);
           this.announce('deep_wounds', targetId, pre.position, awake);
-          // III «Рваные раны»: 2 stacks; a new stack refreshes the group duration (Status rules).
+          // III «Lacerations»: 2 stacks; a new stack refreshes the group duration (Status rules).
           this.e.applyStatus(
             targetId,
             {
@@ -747,7 +746,7 @@ export class SynergyResolver {
             this.cool('final_cut', targetId, t.cooldown);
             this.announce('final_cut', targetId, pre.position, awake);
             this.procDamage('final_cut', targetId, t.coefficient, 'physical');
-            // III «Казнь»: a lethal execution explodes around the target.
+            // III «Execution»: a lethal execution explodes around the target.
             if (awake && !alive() && pre.position) {
               const f = A.finalCut;
               const hitIds = this.burst(
@@ -776,7 +775,7 @@ export class SynergyResolver {
       }
     }
   }
-  /** Seismic Impact III «Разлом»: engine zone (scheduled by GameplayWorld through the engine). */
+  /** Seismic Impact III «Rift»: engine zone (scheduled by GameplayWorld through the engine). */
   private rift(center: Point) {
     const r = SYNERGY_AWAKENING.seismicImpact;
     const radius = this.e.area(r.radius);
@@ -801,7 +800,7 @@ export class SynergyResolver {
   }
   /**
    * Task 15: death reactions that deal no damage, for any death of a tracked target (also by
-   * secondary damage). Deadly Precision III «Инстинкт охотника» moves an active bonus to the
+   * secondary damage). Deadly Precision III «Hunter's Instinct» moves an active bonus to the
    * nearest poisoned enemy with full duration, at most 3 times per activation.
    */
   onDeath(targetId: string, pre: PreHit): void {
@@ -863,7 +862,7 @@ export class SynergyResolver {
         radius: t.radius,
         maxTargets: t.maxTargets,
       });
-      // III «Огненная буря»: 5 neighbours + the talent's extra neighbours, total cap 7 (the cap
+      // III «Firestorm»: 5 neighbours + the talent's extra neighbours, total cap 7 (the cap
       // replaces the talent's own 4/5 limit); 2 Burn stacks each.
       const targets = awake
         ? Math.min(
@@ -887,7 +886,7 @@ export class SynergyResolver {
     if (this.isEligible('plague_chain') && pre.effects.has('poison') && pre.position) {
       const t = this.tuning('plague_chain').plagueChain;
       const awake = this.awake('plague_chain');
-      // III «Мор»: 5 neighbours, each half the dead target's Poison stacks (ceil, 1–5).
+      // III «Pestilence»: 5 neighbours, each half the dead target's Poison stacks (ceil, 1–5).
       const dead = pre.stacks?.get('poison') ?? 1;
       const stacks = awake
         ? Math.min(A.plagueChain.maxStacks, Math.max(A.plagueChain.minStacks, Math.ceil(dead / 2)))
@@ -910,7 +909,7 @@ export class SynergyResolver {
       const awake = this.awake('battle_momentum');
       const current = this.e.buff('battle_momentum');
       if (!current) this.announce('battle_momentum', targetId, pre.position, awake);
-      // III «Неудержимый»: +1 stack per melee kill (max 3, duration refreshed) and +10% move speed.
+      // III «Unstoppable»: +1 stack per melee kill (max 3, duration refreshed) and +10% move speed.
       const stacks = awake ? Math.min(A.battleMomentum.maxStacks, (current?.stacks ?? 0) + 1) : 1;
       this.e.setBuff(
         'battle_momentum',

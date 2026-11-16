@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { campaignStore } from './campaign-state';
-import { RU } from './strings-ru';
+import { EN } from './strings-en';
 
-/** Task 08.5 §3.3 «Сообщить о проблеме» (pause, results and crash screens). */
+/** Task 08.5 §3.3 «Report a problem» (pause, results and crash screens). */
 export function ReportButton() {
   const [status, setStatus] = useState<string | null>(null);
   return (
@@ -11,10 +11,10 @@ export function ReportButton() {
         className="text-button report-button"
         onClick={() => {
           const file = campaignStore.downloadReport();
-          setStatus(file ? RU.report.done(file) : RU.report.failed);
+          setStatus(file ? EN.report.done(file) : EN.report.failed);
         }}
       >
-        {RU.report.button}
+        {EN.report.button}
       </button>
       {status && (
         <p className="report-status" role="status">

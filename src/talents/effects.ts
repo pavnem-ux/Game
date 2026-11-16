@@ -2,7 +2,7 @@ import type { RunStatModifiers } from '../skills/stats';
 
 /**
  * Task 09 §1.2 talent effect descriptors (data, no logic). A rank's effects are its complete
- * effect at that rank (catalog ranks state totals, e.g. «Ранг II: +4 п.п.»), so only the current
+ * effect at that rank (catalog ranks state totals, e.g. «Rank II: +4 pp»), so only the current
  * rank of a node applies — never ranks I+II+III together.
  *
  * Kinds available to the pipeline (Phase 3). Conditional, proc and secondary-attack kinds are

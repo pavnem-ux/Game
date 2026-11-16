@@ -30,11 +30,11 @@ function world(mapId: number) {
 const alive = (w: GameplayWorld) => w.getSnapshot().enemies.filter((e) => e.alive);
 
 describe('Task 10 Phase 3 — per-map modifiers (existing levers only)', () => {
-  it('at most 2 per map, none on Act I, Russian labels, a ranged override never above 0.18', () => {
+  it('at most 2 per map, none on Act I, English labels, a ranged override never above 0.18', () => {
     for (const m of CAMPAIGN_MAPS) {
       expect(m.modifiers.length).toBeLessThanOrEqual(2);
       if (m.id <= 10) expect(m.modifiers).toEqual([]);
-      for (const x of m.modifiers) expect(x.label).toMatch(/[А-ЯЁа-яё]/);
+      for (const x of m.modifiers) expect(x.label).toMatch(/^[^\u0400-\u04ff]+$/);
       if (m.rangedShare !== undefined)
         expect(m.rangedShare).toBeLessThanOrEqual(CAMPAIGN_BALANCE.maxRangedShare);
     }

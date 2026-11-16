@@ -22,19 +22,20 @@ const spawning = (id: number) =>
   campaignSpawning(getCampaignMap(id), spawningSettings(), ALPHA.enemyCap);
 
 describe('Task 10 Phase 1 — 40 maps in 4 acts', () => {
-  it('40 maps; acts of 10 with Russian names; maps 11–40 last 15 min with the boss at the end', () => {
+  it('40 maps; acts of 10 with English names; maps 11–40 last 15 min with the boss at the end', () => {
     expect(CAMPAIGN_MAPS).toHaveLength(40);
     expect(CAMPAIGN_MAPS.map((m) => m.id)).toEqual(Array.from({ length: 40 }, (_, i) => i + 1));
     expect(CAMPAIGN_ACTS.map((a) => [a.roman, a.name, a.firstMap, a.lastMap])).toEqual([
-      ['I', 'Забытые сказки', 1, 10],
-      ['II', 'Заколдованные земли', 11, 20],
-      ['III', 'Мёртвое царство', 21, 30],
-      ['IV', 'Последняя сказка', 31, 40],
+      ['I', 'Forgotten Tales', 1, 10],
+      ['II', 'Enchanted Lands', 11, 20],
+      ['III', 'Kingdom of the Dead', 21, 30],
+      ['IV', 'The Last Tale', 31, 40],
     ]);
     for (const m of CAMPAIGN_MAPS) {
       expect(m.act).toBe(actOf(m.id).id);
-      expect(m.name).toMatch(/[А-ЯЁа-яё]/);
-      expect(m.bossName).toMatch(/[А-ЯЁа-яё]/);
+      // Task 23: display names are English (no Cyrillic), ids unchanged.
+      expect(m.name).toMatch(/^[^\u0400-\u04ff]+$/);
+      expect(m.bossName).toMatch(/^[^\u0400-\u04ff]+$/);
       if (m.id > 10) expect(m.durationSeconds).toBe(900);
       // Owner decision (Task 11 review): the boss appears when the map timer ends (was 10:00).
       const boss = campaignSchedule(m).filter((e) => e.kind === 'boss');
