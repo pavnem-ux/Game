@@ -194,7 +194,12 @@ try {
   // Task 11: Gold = coins collected in the run + victory bonus (30 on map 1).
   assert.match(text, /Coins\s+\d+/);
   assert.match(text, /Victory bonus\s+\+30/);
-  assert.match(text, /Ore\s+\+6 \(first victory ×3\)/); // Task 19: Map 1, first victory
+  // Task 19: Map 1, first victory → 6 map Ore. Task 24: a victory also pays the Ore banked by
+  // activities this run (e.g. the thief's seeded 20% chance), shown as «(activities +N)»; the run
+  // seed is random, so the total is 6 + N.
+  const ore = /Ore\s+\+(\d+) \(first victory ×3\)(?: \(activities \+(\d+)\))?/.exec(text);
+  assert.ok(ore, 'victory Ore line');
+  assert.equal(Number(ore[1]), 6 + Number(ore[2] ?? 0), `map Ore 6 + activity Ore (${ore[0]})`);
   assert.match(text, /1 → 2 \(\+1\)/);
   assert.match(text, /Talent points\s+\+1/);
   assert.match(text, /Map 2 unlocked: Misty Marshes/);
