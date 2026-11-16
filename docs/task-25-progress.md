@@ -6,9 +6,9 @@ Spec: [task-25-art-pack-1.md](task-25-art-pack-1.md) (owner's file, kept verbati
 `public/assets/…` and `docs/ART_PROVENANCE.md`. Rendering only: hitboxes, simulation and balance
 are unchanged.
 
-Current: Phase 3 done — next: Phase 4 (delivery)
+Current: done — PR ready for review (not merged)
 
-Draft PR: https://github.com/pavnem-ux/Game/pull/23
+PR: https://github.com/pavnem-ux/Game/pull/23
 
 ## Checklist
 
@@ -18,7 +18,7 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/23
   - [x] 1.2 Manifest loader and asset registry with procedural fallback; tests
 - [x] 2 In-run sprites: players, enemies, elites, thief, nest; size/anchor/flip; effects kept; tests
 - [x] 3 Portraits: character select + hub
-- [ ] 4 Delivery: full checks, e2e desktop/mobile, `test:production`, FPS at 120 enemies, "after"
+- [x] 4 Delivery: full checks, e2e desktop/mobile, `test:production`, FPS at 120 enemies, "after"
       screenshots (incl. every enemy type on all four biome grounds), README, PR
 
 ## Pack contents (checked in Phase 0)
@@ -122,3 +122,21 @@ budget.
     running: a sub-pixel transform made the box 43.99998 px high and failed the 44 px rule on a
     slower run (it passed on others). The test now waits for that panel's animations to finish
     before measuring; the 44 px rule itself is unchanged.
+- **Delivery (Phase 4).** Module doc [ART_PACK.md](ART_PACK.md) (manifest format, adding a pack,
+  mapping, loading, tuning table, verification, FPS, limits), a README section and a pointer in
+  `VISUALS.md`. "After" screenshots in `docs/art-pack-1/after-*.jpg` (same scenes as "before") plus
+  `after-biome-map{1,11,21,31}.jpg`: 2× close-ups of every enemy type around the player on the four
+  biome grounds — all types read clearly on each, including the dark act III / IV grounds.
+  - **FPS at 120 enemies** (`tests/art-fps.mjs`): sandbox run (a campaign map reserves 20 of the
+    120 slots for elites / boss, so it tops out at 100 ordinary enemies), 1280×720, headless
+    Chromium on a 4-core cloud container without GPU, two alternating rounds: DPR 1 procedural
+    54.6 / 55.6 fps vs art 55.8 / 53.6 fps; DPR 2 procedural 54.0 / 51.3 vs art 53.2 / 50.1. No
+    measurable difference beyond run-to-run noise. Real phones not measured.
+  - **Checks:** typecheck, `npm test` (140 files, 1,478 tests), format, build, `test:production`,
+    QA build + `test:qa`, `test:build-policy`, full `test:e2e` (7 suites incl. the new art e2e).
+  - **Intermittent e2e failure seen (not fixed, reported).** In 2 of ~16 runs, both inside the
+    full `npm run test:e2e` chain, `alpha-browser.mjs` failed "dash moved the player ~140 units"
+    (Task 14 check). It never failed in 13 standalone / paired runs with a diagnostic message, and
+    the last full chain passed. This task does not touch the dash, input or world code (rendering
+    only; the new `move` testing action is not used there). The assertion message now prints the
+    dash / movement state so the next failure shows its cause; the check itself is unchanged.

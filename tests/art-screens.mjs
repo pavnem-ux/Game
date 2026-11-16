@@ -6,7 +6,8 @@ import { chromium } from 'playwright-core';
  * server (`/?debug` tools). Writes small JPEGs to `docs/art-pack-1/<tag>-*.jpg`:
  * hub and character select (desktop 1280×720 + phone 844×390), and in-run scenes on map 1 and
  * map 25 with every enemy type (melee, ranged, swift, brute, bombard), both elite profiles, the
- * treasure thief and the blight nest spawned through the DEV tools.
+ * treasure thief and the blight nest spawned through the DEV tools; plus 2× close-ups of every
+ * enemy type around the player on the four biome grounds (maps 1, 11, 21, 31).
  *
  *   CHROMIUM_PATH=… node tests/art-screens.mjs before
  */
@@ -113,6 +114,60 @@ for (const [device, viewport, touch] of [
     await shot(page, `${device}-map${mapId}`);
     await page.goto(base + '/?debug'); // leaving abandons the run (no rewards)
     await nav.waitFor();
+  }
+  await context.close();
+}
+
+// Readability on the four biome grounds (acts I–IV: maps 1, 11, 21, 31): a 2× close-up of the
+// player with two of each enemy type around it.
+{
+  const context = await browser.newContext({
+    viewport: { width: 1280, height: 720 },
+    deviceScaleFactor: 2,
+  });
+  const page = await context.newPage();
+  page.on('pageerror', (e) => errors.push(`biomes: ${e.message}`));
+  await page.goto(base + '/?debug');
+  const nav = page.getByRole('navigation', { name: 'Main menu' });
+  await nav.waitFor();
+  for (const mapId of [1, 11, 21, 31]) {
+    // Leave any run first (leaving saves the abandoned run), then edit the profile and reload.
+    await page.goto(base + '/?debug');
+    await nav.waitFor();
+    await page.evaluate((id) => {
+      const p = JSON.parse(localStorage.getItem('skazki.profile'));
+      p.completedMaps = Array.from({ length: id - 1 }, (_, i) => i + 1);
+      p.highestUnlockedMap = id;
+      localStorage.setItem('skazki.profile', JSON.stringify(p));
+    }, mapId);
+    await page.goto(base + '/?debug');
+    await nav.waitFor();
+    await page.getByRole('button', { name: new RegExp(`^Start run · map ${mapId}\\b`) }).click();
+    await page.waitForFunction(() => window.__alpha?.state().screen === 'playing');
+    await page
+      .getByRole('button', { name: 'Hide' })
+      .click({ timeout: 2000 })
+      .catch(() => {});
+    const command = (a) => page.evaluate((x) => window.__alpha.command(x), a);
+    await command({ type: 'protection', enabled: true });
+    await command({ type: 'spawning', settings: { enabled: false } });
+    await command({ type: 'clear-enemies' });
+    for (const [kind, distance] of [
+      ['melee', 80],
+      ['ranged', 115],
+      ['swift', 150],
+      ['brute', 185],
+      ['bombard', 220],
+    ])
+      await command({ type: 'spawn-n', kind, count: 2, distance });
+    await page.evaluate(() => window.__alpha.advance(0.05));
+    await page.waitForTimeout(400);
+    await page.screenshot({
+      path: `${out}/${tag}-biome-map${mapId}.jpg`,
+      type: 'jpeg',
+      quality: 72,
+      clip: { x: 370, y: 230, width: 540, height: 300 },
+    });
   }
   await context.close();
 }

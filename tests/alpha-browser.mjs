@@ -344,7 +344,21 @@ try {
   await page.evaluate(() => window.__alpha.advance(0.3));
   s = await state();
   assert.equal(s.world.dash.used, 1);
-  assert.ok(s.world.playerBody.x - dashStart >= 139, 'dash moved the player ~140 units');
+  assert.ok(
+    s.world.playerBody.x - dashStart >= 139,
+    // The state is in the message: this check failed intermittently in the full e2e chain
+    // (Task 25, not reproduced standalone) — the next failure should show why.
+    `dash moved the player ~140 units ${JSON.stringify({
+      moved: s.world.playerBody.x - dashStart,
+      start: dashStart,
+      player: s.world.playerBody,
+      dash: s.world.dash,
+      movement: s.world.movement,
+      time: s.world.time,
+      paused: s.world.paused,
+      screen: s.screen,
+    })}`,
+  );
   await page.getByLabel(/^Dash: \d+\.\d s$/).waitFor();
   await page.keyboard.press('Shift');
   await page.evaluate(() => window.__alpha.advance(0.1));
