@@ -197,9 +197,13 @@ try {
   // Task 19: Map 1, first victory → 6 map Ore. Task 24: a victory also pays the Ore banked by
   // activities this run (e.g. the thief's seeded 20% chance), shown as «(activities +N)»; the run
   // seed is random, so the total is 6 + N.
-  const ore = /Ore\s+\+(\d+) \(first victory ×3\)(?: \(activities \+(\d+)\))?/.exec(text);
-  assert.ok(ore, 'victory Ore line');
-  assert.equal(Number(ore[1]), 6 + Number(ore[2] ?? 0), `map Ore 6 + activity Ore (${ore[0]})`);
+  const victoryOre = /Ore\s+\+(\d+) \(first victory ×3\)(?: \(activities \+(\d+)\))?/.exec(text);
+  assert.ok(victoryOre, 'victory Ore line');
+  assert.equal(
+    Number(victoryOre[1]),
+    6 + Number(victoryOre[2] ?? 0),
+    `map Ore 6 + activity Ore (${victoryOre[0]})`,
+  );
   assert.match(text, /1 → 2 \(\+1\)/);
   assert.match(text, /Talent points\s+\+1/);
   assert.match(text, /Map 2 unlocked: Misty Marshes/);
@@ -417,9 +421,10 @@ try {
   await devProfile.getByRole('button', { name: /Set level/ }).click();
   await page.getByLabel('Debug gold').fill('500');
   await devProfile.getByRole('button', { name: 'Grant Gold' }).click();
-  // Task 19: ore for the forge step below (Map 1 was won above: first victory ×3 = 6 ore).
+  // Task 19: ore for the forge step below (Map 1 was won above: first victory ×3 = 6 ore, plus any
+  // Ore banked by activities in that run — Task 24 — exactly as the results screen paid it).
   const oreBefore = JSON.parse(await stored()).ore;
-  assert.equal(oreBefore, 6);
+  assert.equal(oreBefore, Number(victoryOre[1]));
   await page.getByLabel('Debug ore').fill('20');
   await page
     .getByRole('group', { name: 'Gear Debug' })
