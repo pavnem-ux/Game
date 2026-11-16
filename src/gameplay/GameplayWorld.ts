@@ -1306,6 +1306,10 @@ export class GameplayWorld {
     const { state, resolved } = reduceRun(this.campaignRun, input);
     this.campaignRun = state;
     if (resolved) {
+      // AGENTS §4.6 / Task 24 review: activity results already due at T (e.g. a shrine completing
+      // at the instant of a terminal lethal hit) finish and are rewarded before the run ends;
+      // `endRun()` below then discards only future activity work.
+      if (this.activities) this.applyActivityEvents(this.activities.resolveDue(this.clock));
       this.input = Object.freeze({ x: 0, y: 0 });
       this.record('campaign', [
         Object.freeze({

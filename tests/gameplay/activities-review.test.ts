@@ -96,3 +96,73 @@ describe('Task 24 review — activities already due when the player dies still f
     expect(w.time).toBeCloseTo(due, 9);
   });
 });
+
+/** Walks into the shrine and lands a lethal bleed tick exactly on its 9 s completion. */
+function dieAtShrineCompletion(w: GameplayWorld) {
+  w.setTestProtection(true); // the shrine's guards must not decide the outcome
+  const id = w.debugSpawnActivity('shrine')!;
+  const s = w.getSnapshot().activities!.items.find((a) => a.id === id)!;
+  let seq = w.getEvents().at(-1)?.sequence ?? 0;
+  let started: number | null = null;
+  for (let i = 0; i < 600 && started === null; i++) {
+    const p = w.getSnapshot().playerBody;
+    const d = Math.hypot(s.x - p.x, s.y - p.y);
+    if (d > 5) w.setMovement((s.x - p.x) / d, (s.y - p.y) / d);
+    else w.setMovement(0, 0);
+    w.update(1 / 60);
+    for (const e of w.getEvents(seq)) {
+      seq = e.sequence;
+      if (e.channel === 'activities' && e.event.type === 'activity-started') started = e.time;
+    }
+  }
+  w.setMovement(0, 0);
+  const due = started! + 9;
+  w.update(due - 1 - w.time);
+  w.setTestProtection(false); // only the lethal tick below lands
+  w.applyEffect({
+    targetId: 'player',
+    sourceId: 'player',
+    effectType: 'bleed',
+    probabilityPercent: 100,
+    duration: 3,
+    rawDamagePerTick: 1_000_000,
+  });
+  return { due, events: step(w, 2, 0.25) };
+}
+
+describe('Task 24 review — a terminal death at a completion instant keeps the result', () => {
+  it('revival already used: the run ends, but the shrine due at that instant completes first', () => {
+    const w = new GameplayWorld({
+      characterClass: 'mage',
+      seed: 1,
+      initialEnemies: false,
+      spawning: { enabled: false },
+      onHit: [],
+      campaign: { mapId: 1 },
+    });
+    w.weapons.setAttackSpeed('player', 0.01);
+    // Use up the one revival with a real lethal hit.
+    w.applyEffect({
+      targetId: 'player',
+      sourceId: 'player',
+      effectType: 'bleed',
+      probabilityPercent: 100,
+      duration: 3,
+      rawDamagePerTick: 1_000_000,
+    });
+    step(w, 2, 0.25);
+    w.decide('revive');
+    step(w, 4, 0.25); // past the 3 s revival protection
+    const { due, events } = dieAtShrineCompletion(w);
+    const resolved = events.find(
+      (e) => e.channel === 'campaign' && e.event.type === 'run-resolved',
+    );
+    expect(resolved?.time).toBeCloseTo(due, 9);
+    expect(w.getSnapshot().campaign!.status).toBe('defeat');
+    const done = activityEvents(events, 'activity-completed');
+    expect(done).toHaveLength(1);
+    expect(done[0].time).toBeCloseTo(due, 9);
+    expect(w.getSnapshot().runStats.activities.completed.shrine).toBe(1);
+    expect(w.getSnapshot().activities!.items).toHaveLength(0);
+  });
+});
