@@ -77,4 +77,10 @@ export class ArtRegistry {
     const slot = this.slots.get(key);
     return slot && slot.loaded ? slot.entry : null;
   }
+  /** Number of looks currently drawn with art (diagnostics / tests). */
+  loadedLooks(): number {
+    let n = 0;
+    for (const slot of this.slots.values()) if (slot.loaded) n++;
+    return n;
+  }
 }

@@ -25,6 +25,15 @@ import { EN } from '../gameplay-ui/strings-en';
 import { buildUnitTextures } from './visuals/texture-factory';
 import { startArtLoad } from './visuals/art-loader';
 import { ArtRegistry } from './visuals/art-registry';
+import { ArtSprites } from './visuals/art-sprites';
+import {
+  ENEMY_FACING_THRESHOLD,
+  PLAYER_FACING_THRESHOLD,
+  flipSign,
+  nextFacing,
+} from './visuals/art-display';
+import type { Facing } from './visuals/art-display';
+import type { TextureKey } from './visuals/keys';
 import { BiomeRenderer } from './visuals/BiomeRenderer';
 import { BOSS_DARK, LightRenderer, WARM_DARK } from './visuals/LightRenderer';
 import { QUALITY_PRESETS } from './visuals/quality';
@@ -67,6 +76,9 @@ export class AlphaScene extends Phaser.Scene {
    * the background loader swaps in the manifest-backed registry.
    */
   private art = new ArtRegistry(new Map());
+  private artSprites!: ArtSprites;
+  /** Task 25: facing of each art unit (changes only past a threshold: no flip jitter). */
+  private readonly facing = new Map<string, Facing>();
   /** Task 18: the map's biome (ground, decor, particles), rebuilt when the map changes. */
   private biome!: BiomeRenderer;
   private mapId: number | null = null;
@@ -117,6 +129,7 @@ export class AlphaScene extends Phaser.Scene {
     this.graphics = this.add.graphics().setDepth(5);
     buildUnitTextures(this);
     this.units = new UnitRenderer(this);
+    this.artSprites = new ArtSprites(this);
     startArtLoad(this, (registry) => (this.art = registry));
     this.lighting = new LightRenderer(this);
     // Task 18: quality applies to every visual layer now and whenever the setting changes.
@@ -217,6 +230,8 @@ export class AlphaScene extends Phaser.Scene {
             },
             presentation: () =>
               Object.freeze({
+                // Task 25: looks currently drawn with the owner's art (13 once the pack loaded).
+                artLooks: this.art.loadedLooks(),
                 stunIndicators: Object.freeze(
                   this.stunLabels
                     .filter((label) => label.visible)
@@ -253,6 +268,7 @@ export class AlphaScene extends Phaser.Scene {
     this.lastEvent = 0;
     this.fx = [];
     this.lastEnemyPos.clear();
+    this.facing.clear();
     this.revivedAt = Number.NEGATIVE_INFINITY;
     this.error = '';
     this.clearInput();
@@ -540,6 +556,49 @@ export class AlphaScene extends Phaser.Scene {
    * a pointer (icon + distance) at the screen edge for each activity outside the view.
    * Presentation only; everything comes from the snapshot.
    */
+  /**
+   * Task 25: draws a unit with the owner's art when its image has loaded (feet at y + radius,
+   * body ≈ 2.4 × radius wide, mirrored toward `dx` once |dx| > threshold). Returns the top of the
+   * drawn body (HP bars / labels go above it), or null when the look still uses procedural art.
+   */
+  private drawArtUnit(
+    id: string,
+    look: TextureKey,
+    x: number,
+    y: number,
+    radius: number,
+    dx: number,
+    threshold: number,
+    time: number,
+    flash: number,
+    options: { alpha?: number; glow?: number; glowScale?: number },
+  ): number | null {
+    const entry = this.art.art(look);
+    if (!entry) return null;
+    const d = this.artSprites.draw(entry.key, radius);
+    const facing = nextFacing(this.facing.get(id) ?? 1, dx, threshold);
+    if (this.facing.get(id) !== facing) {
+      if (this.facing.size > 1024) this.facing.clear();
+      this.facing.set(id, facing);
+    }
+    const feetY = y + radius;
+    this.units.artUnit(
+      id,
+      d.texture,
+      x,
+      feetY,
+      d.scale,
+      d.originX,
+      d.originY,
+      d.height,
+      radius,
+      flipSign(facing, d.tuning),
+      time,
+      flash,
+      options,
+    );
+    return feetY - d.height;
+  }
   private drawActivities(s: GameplaySnapshot) {
     const items = s.activities?.items ?? [];
     const g = this.graphics;
@@ -861,7 +920,7 @@ export class AlphaScene extends Phaser.Scene {
       const role = isBoss ? 'boss' : eliteName ? 'elite' : 'normal';
       const special = kind !== 'melee' && kind !== 'ranged';
       const k = special && !eliteName ? enemy.config.radius / 14 : f;
-      const barY = y - 25 * (isBoss ? enemy.config.radius / 17 : k);
+      let barY = y - 25 * (isBoss ? enemy.config.radius / 17 : k);
       // Task 18: the unit is a pooled sprite (shadow, rim glow/aura, body, hit flash).
       if (eliteName)
         g.lineStyle(
@@ -881,22 +940,39 @@ export class AlphaScene extends Phaser.Scene {
           : activity
             ? ACTIVITY_COLORS[activity]
             : undefined;
-      this.units.unit(
+      const look = activity ? activityTextureKey(activity) : enemyTextureKey(kind, role, ranged);
+      const glowOptions =
+        glowColor !== undefined ? { glow: glowColor, glowScale: isBoss ? 1.6 : 1.1 } : {};
+      // Task 25: owner art when loaded (enemies face the player; the fleeing thief faces away).
+      const towardPlayer = s.playerBody.x - x;
+      const artTop = this.drawArtUnit(
         enemy.entityId,
-        activity ? activityTextureKey(activity) : enemyTextureKey(kind, role, ranged),
+        look,
         x,
         y,
-        activity
-          ? enemy.config.radius / (activity === 'nest' ? 24 : 12) / ART_SCALE
-          : role === 'normal'
-            ? k / ART_SCALE
-            : unitScale(role, enemy.config.radius, ranged),
+        enemy.config.radius,
+        enemy.config.behavior === 'flee' ? -towardPlayer : towardPlayer,
+        ENEMY_FACING_THRESHOLD,
         s.time,
         flash,
-        {
-          ...(glowColor !== undefined ? { glow: glowColor, glowScale: isBoss ? 1.6 : 1.1 } : {}),
-        },
+        glowOptions,
       );
+      if (artTop !== null) barY = artTop - (eliteName ? 8 : 6);
+      else
+        this.units.unit(
+          enemy.entityId,
+          look,
+          x,
+          y,
+          activity
+            ? enemy.config.radius / (activity === 'nest' ? 24 : 12) / ART_SCALE
+            : role === 'normal'
+              ? k / ART_SCALE
+              : unitScale(role, enemy.config.radius, ranged),
+          s.time,
+          flash,
+          glowOptions,
+        );
       const last = this.lastEnemyPos.get(enemy.entityId);
       const tone = glowColor ?? (ranged ? 0xb2739b : 0x87996e);
       if (last) {
@@ -924,6 +1000,8 @@ export class AlphaScene extends Phaser.Scene {
           .strokeCircle(x, y, 22)
           .lineBetween(x - 26, y, x - 18, y)
           .lineBetween(x + 18, y, x + 26, y);
+      // Task 25: with art, labels sit above the drawn body (procedural looks keep their offsets).
+      const labelY = artTop === null ? y - 39 : barY - (eliteName ? 24 : 14);
       const stun = stunIndicator(enemy);
       if (stun) {
         const index = stunLabel++;
@@ -936,17 +1014,22 @@ export class AlphaScene extends Phaser.Scene {
             .setPadding(4, 2)
             .setDepth(12);
         badge
-          .setPosition(x, y + stun.offsetY)
+          .setPosition(x, artTop === null ? y + stun.offsetY : labelY - 16)
           .setData('entityId', enemy.entityId)
           .setVisible(true);
-        o.lineStyle(2, 0xffe88e, 0.95).lineBetween(x - 7, y - 39, x + 7, y - 39);
+        o.lineStyle(2, 0xffe88e, 0.95).lineBetween(x - 7, labelY, x + 7, labelY);
       } else if (enemy.control && enemy.control.movementMultiplier < 1)
-        g.lineStyle(2, 0x9fdcff, 0.7).strokeEllipse(x, y + 14, 34, 10);
+        g.lineStyle(2, 0x9fdcff, 0.7).strokeEllipse(
+          x,
+          artTop === null ? y + 14 : y + enemy.config.radius,
+          34,
+          10,
+        );
       const effects = s.statuses.filter((v) => v.targetId === enemy.entityId);
       if (effects.length) {
         const text = this.label(this.labels, label++);
         text
-          .setPosition(x, y - 39)
+          .setPosition(x, labelY)
           .setText(
             effects
               .map((v) => `${v.effectType.slice(0, 2).toUpperCase()}×${v.stacks.length}`)
@@ -1003,17 +1086,26 @@ export class AlphaScene extends Phaser.Scene {
       const age = s.time - dash.startedAt;
       if (age >= 0 && age < 0.4) {
         const fade = 1 - age / 0.4;
+        // Task 25: ghosts use the player's art when it has loaded (centred on its body).
+        const look = playerTextureKey(s.character.characterClass);
+        const entry = this.art.art(look);
+        const d = entry ? this.artSprites.draw(entry.key, ALPHA.playerRadius) : null;
+        const flip = d ? flipSign(this.facing.get('player') ?? 1, d.tuning) : 1;
         for (let i = 0; i < 4; i++) {
           const t = i / 4;
           const gx = dash.from.x + (x - dash.from.x) * t,
             gy = dash.from.y + (y - dash.from.y) * t;
-          this.units.item(
-            playerTextureKey(s.character.characterClass),
-            gx,
-            gy,
-            1 / ART_SCALE,
-            0.12 + 0.2 * t * fade,
-          );
+          if (d)
+            this.units.item(
+              d.texture,
+              gx,
+              gy + ALPHA.playerRadius - d.height / 2,
+              d.scale,
+              0.12 + 0.2 * t * fade,
+              0,
+              flip,
+            );
+          else this.units.item(look, gx, gy, 1 / ART_SCALE, 0.12 + 0.2 * t * fade);
         }
       }
     }
@@ -1027,16 +1119,26 @@ export class AlphaScene extends Phaser.Scene {
     }
     // Task 18: the player is a pooled sprite (class silhouette baked once); hit flash on damage.
     const hitAge = s.time - this.playerHitAt;
-    this.units.unit(
-      'player',
-      playerTextureKey(s.character.characterClass),
-      x,
-      y,
-      1 / ART_SCALE,
-      s.time,
-      hitAge >= 0 && hitAge < 0.15 ? 1 - hitAge / 0.15 : 0,
-      { alpha: s.player.alive ? 1 : 0.4 },
-    );
+    const playerFlash = hitAge >= 0 && hitAge < 0.15 ? 1 - hitAge / 0.15 : 0;
+    const playerLook = playerTextureKey(s.character.characterClass);
+    // Task 25: owner art when loaded (faces the movement direction), else the class silhouette.
+    if (
+      this.drawArtUnit(
+        'player',
+        playerLook,
+        x,
+        y,
+        ALPHA.playerRadius,
+        s.movement.x,
+        PLAYER_FACING_THRESHOLD,
+        s.time,
+        playerFlash,
+        { alpha: s.player.alive ? 1 : 0.4 },
+      ) === null
+    )
+      this.units.unit('player', playerLook, x, y, 1 / ART_SCALE, s.time, playerFlash, {
+        alpha: s.player.alive ? 1 : 0.4,
+      });
     if (s.survival.directProtected)
       g.lineStyle(
         s.survival.fullyProtected ? 3 : 1,

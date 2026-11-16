@@ -6,7 +6,7 @@ Spec: [task-25-art-pack-1.md](task-25-art-pack-1.md) (owner's file, kept verbati
 `public/assets/…` and `docs/ART_PROVENANCE.md`. Rendering only: hitboxes, simulation and balance
 are unchanged.
 
-Current: Phase 1 done — next: Phase 2 (in-run sprites)
+Current: Phase 2 done — next: Phase 3 (portraits)
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/23
 
@@ -16,7 +16,7 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/23
 - [x] 1 Pipeline
   - [x] 1.1 Files under `public/assets/`, `docs/ART_PROVENANCE.md`, AGENTS.md §4.12 (owner decision)
   - [x] 1.2 Manifest loader and asset registry with procedural fallback; tests
-- [ ] 2 In-run sprites: players, enemies, elites, thief, nest; size/anchor/flip; effects kept; tests
+- [x] 2 In-run sprites: players, enemies, elites, thief, nest; size/anchor/flip; effects kept; tests
 - [ ] 3 Portraits: character select + hub
 - [ ] 4 Delivery: full checks, e2e desktop/mobile, `test:production`, FPS at 120 enemies, "after"
       screenshots (incl. every enemy type on all four biome grounds), README, PR
@@ -69,3 +69,37 @@ budget.
   procedural look. Portraits (433 KB) are not loaded by the scene; the menus load them as images.
   Measured in Chromium: the manifest and all 13 unit images load with 200; the only 404 on the page
   is the browser's automatic `/favicon.ico`, which existed before this task.
+- **In-run sprites (Phase 2).** `art-display.ts` (pure) holds the single tuning table
+  (`ART_BODY_WIDTH_PER_RADIUS = 2.4`, per-key `scale` / `facesLeft` / `flip`), the visible-body
+  measurement and the facing rule; `art-sprites.ts` measures each image's opaque bounds once and
+  bakes a display copy per (image, radius). `UnitRenderer.artUnit` draws it; the scene uses it for
+  the player, the five enemy kinds, both elite profiles, the thief and the nest whenever that image
+  has loaded, and the unchanged procedural path otherwise. Bosses keep their art.
+  - **Size and anchor.** The visible body (opaque pixels, not the transparent padding) is
+    2.4 × the collision radius wide; the feet (bottom of the body) are at position.y + radius, the
+    body's horizontal centre on position.x. Resulting widths: swift 26 px, player 31, melee 34,
+    ranged / bombard / thief 36, brute 53, nest 72; elites scale with their larger radius.
+    Hitboxes are untouched (the simulation never sees any of this).
+  - **Pre-scaled copies.** Each image is baked once per radius at 2 × its world size (sharp at DPR 2) by repeated halving with high-quality smoothing. Drawing a 256–384 px image at 30–70 px on
+    every frame is both slower on the Canvas renderer (Task 18 measured 1:1 textures as fastest)
+    and visibly aliased. Bakes, bounds and layouts are cached, so the render loop allocates nothing
+    new per unit.
+  - **Facing.** Enemies face the player and the fleeing thief faces away from it; the player faces
+    its movement input. The facing only changes when |dx| > 8 px (enemies) or |input.x| > 0.2
+    (player), so units hovering around the player's x never flicker. The thief's image runs left
+    (`facesLeft`); the nest never flips.
+  - **Feedback kept.** A separate ground shadow under the feet (procedural textures bake theirs
+    in), idle bob (lifts the body, never below the feet), squash on hit with the feet planted,
+    white hit-flash silhouette (baked from the display copy), elite / activity rim glow around the
+    body, elite ground ring, HP bars, names, status labels, stun badge and slow ring placed above
+    the drawn body / at the feet, dash afterimages with the player's art, Task 18 lighting
+    unchanged.
+  - **Quality «Low».** Uses the same baked copies (no separate mip); not needed after baking.
+  - **Tests.** `tests/engine/art-display.test.ts`: bounds, 2.4 × radius width, anchors, tuning
+    table, facing threshold (no flicker around the player's x), mirror signs.
+    `tests/art-browser.mjs` (in `test:e2e`): the same seeded map-25 run with every enemy type,
+    thief, nest and a turning player is advanced 24 × 0.25 s with the page clock paused (only
+    `__alpha.advance` drives the world, and it draws every step). The world digest after each step
+    is identical with the art loaded and with the manifest blocked (procedural fallback). All 13
+    looks load, with no missing-texture warnings or errors. Test support: a DEV/QA-only `move`
+    testing action and `artLooks` in `__alpha.presentation()`.

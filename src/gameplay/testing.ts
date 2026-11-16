@@ -33,6 +33,11 @@ export function createTestingController(
       case 'spawn':
         w.spawnEnemy(a.kind as EnemyKind, a.distance as number);
         break;
+      // Task 25: a movement input for scripted runs (the next real frame replaces it with the
+      // keyboard / joystick input; tests pause the page clock so `advance` alone drives the world).
+      case 'move':
+        w.setMovement(a.x as number, a.y as number);
+        break;
       // Task 12 §1.5: N enemies of a given kind, a chest of a given type/content, any buff,
       // auto-collect (pacing measurement).
       case 'spawn-n': {
