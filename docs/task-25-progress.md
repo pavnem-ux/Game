@@ -6,14 +6,16 @@ Spec: [task-25-art-pack-1.md](task-25-art-pack-1.md) (owner's file, kept verbati
 `public/assets/…` and `docs/ART_PROVENANCE.md`. Rendering only: hitboxes, simulation and balance
 are unchanged.
 
-Current: Phase 0 done — next: Phase 1 (pipeline)
+Current: Phase 1 (pipeline) — step 1.1 files + provenance + AGENTS.md done
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/23
 
 ## Checklist
 
 - [x] 0 Setup: branch, spec, progress file, draft PR, "before" screenshots
-- [ ] 1 Pipeline: files + provenance + AGENTS.md §4.12; manifest loader; registry with fallback; tests
+- [ ] 1 Pipeline
+  - [x] 1.1 Files under `public/assets/`, `docs/ART_PROVENANCE.md`, AGENTS.md §4.12 (owner decision)
+  - [ ] 1.2 Manifest loader and asset registry with procedural fallback; tests
 - [ ] 2 In-run sprites: players, enemies, elites, thief, nest; size/anchor/flip; effects kept; tests
 - [ ] 3 Portraits: character select + hub
 - [ ] 4 Delivery: full checks, e2e desktop/mobile, `test:production`, FPS at 120 enemies, "after"

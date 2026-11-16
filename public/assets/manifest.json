@@ -1,0 +1,155 @@
+{
+ "player_archer": {
+  "file": "assets/characters/player_archer.webp",
+  "size": [
+   256,
+   256
+  ],
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image), processed: alpha fix, trim, resize, WebP q90"
+ },
+ "player_mage": {
+  "file": "assets/characters/player_mage.webp",
+  "size": [
+   256,
+   256
+  ],
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image), processed: alpha fix, trim, resize, WebP q90"
+ },
+ "player_rogue": {
+  "file": "assets/characters/player_rogue.webp",
+  "size": [
+   256,
+   256
+  ],
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image), processed: alpha fix, trim, resize, WebP q90"
+ },
+ "player_warrior": {
+  "file": "assets/characters/player_warrior.webp",
+  "size": [
+   256,
+   256
+  ],
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image), processed: alpha fix, trim, resize, WebP q90"
+ },
+ "elite_dark_conjurer": {
+  "file": "assets/enemies/elite_dark_conjurer.webp",
+  "size": [
+   384,
+   384
+  ],
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image), processed: alpha fix, trim, resize, WebP q90"
+ },
+ "elite_savage_brute": {
+  "file": "assets/enemies/elite_savage_brute.webp",
+  "size": [
+   384,
+   384
+  ],
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image), processed: alpha fix, trim, resize, WebP q90"
+ },
+ "enemy_bombard_warlock": {
+  "file": "assets/enemies/enemy_bombard_warlock.webp",
+  "size": [
+   256,
+   256
+  ],
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image), processed: alpha fix, trim, resize, WebP q90"
+ },
+ "enemy_melee": {
+  "file": "assets/enemies/enemy_melee.webp",
+  "size": [
+   256,
+   256
+  ],
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image), processed: alpha fix, trim, resize, WebP q90"
+ },
+ "enemy_ranged": {
+  "file": "assets/enemies/enemy_ranged.webp",
+  "size": [
+   256,
+   256
+  ],
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image), processed: alpha fix, trim, resize, WebP q90"
+ },
+ "enemy_stone_troll": {
+  "file": "assets/enemies/enemy_stone_troll.webp",
+  "size": [
+   384,
+   384
+  ],
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image), processed: alpha fix, trim, resize, WebP q90"
+ },
+ "enemy_swift_imp": {
+  "file": "assets/enemies/enemy_swift_imp.webp",
+  "size": [
+   256,
+   256
+  ],
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image), processed: alpha fix, trim, resize, WebP q90"
+ },
+ "enemy_treasure_thief": {
+  "file": "assets/enemies/enemy_treasure_thief.webp",
+  "size": [
+   256,
+   256
+  ],
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image), processed: alpha fix, trim, resize, WebP q90"
+ },
+ "nest_blight": {
+  "file": "assets/enemies/nest_blight.webp",
+  "size": [
+   384,
+   384
+  ],
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image), processed: alpha fix, trim, resize, WebP q90"
+ },
+ "portrait_archer": {
+  "file": "assets/portraits/portrait_archer.webp",
+  "size": [
+   768,
+   768
+  ],
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image), processed: alpha fix, trim, resize, WebP q90"
+ },
+ "portrait_mage": {
+  "file": "assets/portraits/portrait_mage.webp",
+  "size": [
+   768,
+   768
+  ],
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image), processed: alpha fix, trim, resize, WebP q90"
+ },
+ "portrait_rogue": {
+  "file": "assets/portraits/portrait_rogue.webp",
+  "size": [
+   768,
+   768
+  ],
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image), processed: alpha fix, trim, resize, WebP q90"
+ },
+ "portrait_warrior": {
+  "file": "assets/portraits/portrait_warrior.webp",
+  "size": [
+   768,
+   768
+  ],
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image), processed: alpha fix, trim, resize, WebP q90"
+ }
+}
