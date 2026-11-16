@@ -2026,17 +2026,19 @@ export class GameplayWorld {
       // crumble right after the chest expiry (8.6); extra activity spawns right after the
       // reinforcement spawning (9); the activity spawn right after the chest spawn (9.25). No new
       // activities at or after the map duration.
-      if (
-        this.activities &&
-        this.campaignRun.status === 'active' &&
-        this.survival.getState().canPlayerAct
-      ) {
+      if (this.activities && this.campaignRun.status === 'active') {
+        const canAct = this.survival.getState().canPlayerAct;
         const due = this.activities.nextResolveAt();
-        if (due !== null) add(due, 8.7, 'activity-resolve');
-        const spawns = this.activities.nextEnemySpawnAt();
-        if (spawns !== null) add(spawns, 9.1, 'activity-enemies');
-        if (this.activities.nextSpawnAt < this.campaignMap!.durationSeconds)
-          add(this.activities.nextSpawnAt, 9.3, 'activity-spawn');
+        // AGENTS §4.6: after a lethal hit at T, activity results already due at T still finish;
+        // everything later (new spawns, extra enemies, future deadlines) stays frozen.
+        if (due !== null && (canAct || due <= this.clock || sameInstant(due, this.clock)))
+          add(due, 8.7, 'activity-resolve');
+        if (canAct) {
+          const spawns = this.activities.nextEnemySpawnAt();
+          if (spawns !== null) add(spawns, 9.1, 'activity-enemies');
+          if (this.activities.nextSpawnAt < this.campaignMap!.durationSeconds)
+            add(this.activities.nextSpawnAt, 9.3, 'activity-spawn');
+        }
       }
       // Task 08: scheduled elite/boss/end events resolve last at equal time (after reinforcements).
       const scheduled = this.director?.peek();

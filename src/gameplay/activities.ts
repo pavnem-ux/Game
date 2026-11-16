@@ -420,6 +420,9 @@ export class RunActivities {
     if (a.type === 'shrine') {
       if (!a.started) return a.spawnedAt + r.startWindow;
       if (a.rate > 0) return a.valueAt + (r.shrine.captureTime - a.value) / a.rate;
+      // Decayed to 0 (possibly resampled exactly at that instant, which zeroes the rate): the
+      // abandon failure is due now — it must not be lost.
+      if (a.value <= 0) return a.valueAt;
       if (a.rate < 0) return a.valueAt + a.value / -a.rate;
       return null;
     }
@@ -430,6 +433,8 @@ export class RunActivities {
       return fade;
     }
     const end = a.endsAt!;
+    // Light already at 0 (e.g. the drainers left on the very step it ran out): failure is due.
+    if (a.value <= 0) return Math.min(end, a.valueAt);
     if (a.rate < 0) return Math.min(end, a.valueAt + a.value / -a.rate);
     return end;
   }

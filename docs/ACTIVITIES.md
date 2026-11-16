@@ -72,7 +72,10 @@ live in `ACTIVITY_RULES` (`src/gameplay/activities.ts`).
 Progress is `value at t0 + rate`: the player's position changes only at the fixed 1/60 s control
 step, so "inside the shrine / lantern" and "enemies near the lantern" are sampled at each control
 step and stay constant until the next one; completion and failure times are exact boundaries.
-Nothing accumulates per rendered frame, so the frame rate cannot change outcomes. Extra spawns use
+Nothing accumulates per rendered frame, so the frame rate cannot change outcomes. A failure that
+is already due survives a resample at its deadline (shrine progress or lantern Light at exactly 0
+with a zero rate), and after a lethal hit at time T the activity results already due at T still
+resolve (AGENTS.md §4.6); new spawns, extra enemies and later deadlines stay frozen. Extra spawns use
 the act's enemy mix with their own counters (reinforcement-wave composition is unchanged). All
 randomness uses the new seeded stream `activities`.
 
