@@ -15,6 +15,7 @@ export {
   Tooltip,
 } from './components';
 export { ClassEmblem } from './ClassEmblem';
+export { ClassPortrait } from './ClassPortrait';
 export {
   STAT_ROWS,
   compareStats,

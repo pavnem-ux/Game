@@ -101,9 +101,71 @@ async function scenario(withArt) {
   return { digests, logs, artLooks };
 }
 
+/**
+ * Phase 3: portraits on character select (4 cards) and the hub's chosen-hero panel; the emblem is
+ * the fallback without the pack. Returns what is shown and whether the page scrolls sideways.
+ */
+async function portraits(withArt, viewport, touch) {
+  const context = await browser.newContext({ viewport, hasTouch: touch, isMobile: touch });
+  const page = await context.newPage();
+  if (!withArt)
+    await page.route('**/assets/manifest.json', (route) => route.fulfill({ status: 404 }));
+  await page.goto(base + '/');
+  const nav = page.getByRole('navigation', { name: 'Main menu' });
+  await nav.waitFor();
+  const go = (label) =>
+    nav.getByRole('button', { name: label, exact: true }).evaluate((el) => el.click());
+  /** Loaded portrait images (natural size > 0) and SVG emblems inside `selector`. */
+  const shown = (selector) =>
+    page.evaluate(async (sel) => {
+      const root = document.querySelectorAll(sel);
+      const imgs = [...document.querySelectorAll(`${sel} .class-portrait img`)];
+      await Promise.all(imgs.map((i) => (i.complete ? null : i.decode().catch(() => null))));
+      return {
+        blocks: root.length,
+        portraits: imgs
+          .filter((i) => i.naturalWidth > 0)
+          .map((i) => new URL(i.src).pathname)
+          .sort(),
+        emblems: document.querySelectorAll(`${sel} svg.class-emblem`).length,
+        scroll: document.documentElement.scrollWidth > window.innerWidth + 1,
+      };
+    }, selector);
+  await go('Hero');
+  if (withArt) await page.locator('.character-card .class-portrait img').first().waitFor();
+  else await page.waitForTimeout(500);
+  const select = await shown('.character-card');
+  await go('Home');
+  if (withArt) await page.locator('.hub-champion .class-portrait img').waitFor();
+  const hub = await shown('.hub-champion');
+  await context.close();
+  return { select, hub };
+}
+
 const art = await scenario(true);
 const procedural = await scenario(false);
+const shots = {
+  desktop: await portraits(true, { width: 1280, height: 720 }, false),
+  phone: await portraits(true, { width: 844, height: 390 }, true),
+  fallback: await portraits(false, { width: 1280, height: 720 }, false),
+};
 await browser.close();
+
+const CLASSES = ['archer', 'mage', 'rogue', 'warrior'];
+for (const tag of ['desktop', 'phone']) {
+  const { select, hub } = shots[tag];
+  assert.deepEqual(
+    select.portraits,
+    CLASSES.map((c) => `/assets/portraits/portrait_${c}.webp`),
+    `${tag}: four character-select portraits`,
+  );
+  assert.equal(select.emblems, 0, `${tag}: no emblem left on the cards`);
+  assert.equal(hub.portraits.length, 1, `${tag}: hub chosen-hero portrait`);
+  assert.equal(select.scroll || hub.scroll, false, `${tag}: no horizontal scroll`);
+}
+assert.deepEqual(shots.fallback.select.portraits, [], 'fallback: no portrait without the pack');
+assert.equal(shots.fallback.select.emblems, 4, 'fallback: the four emblems are back');
+assert.equal(shots.fallback.hub.emblems, 1, 'fallback: hub emblem');
 
 assert.equal(art.artLooks, 13, 'all 13 unit looks drawn with the owner art');
 assert.equal(procedural.artLooks, 0, 'no manifest: every look stays procedural');
@@ -126,5 +188,5 @@ assert.deepEqual(
   'the fallback only logs its one "manifest unavailable" warning',
 );
 console.log(
-  'PASS art: same seed ⇒ identical simulation with art on / off (24 steps, map 25, every enemy type, thief, nest); 13 looks from the pack; no missing-texture warnings; procedural fallback without the manifest.',
+  'PASS art: same seed ⇒ identical simulation with art on / off (24 steps, map 25, every enemy type, thief, nest); 13 looks from the pack; no missing-texture warnings; procedural fallback without the manifest; class portraits on character select + hub (desktop and phone, no horizontal scroll), emblems as the fallback.',
 );

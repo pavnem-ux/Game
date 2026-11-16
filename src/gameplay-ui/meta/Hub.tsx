@@ -5,7 +5,7 @@ import { CLASS_LABELS, WEAPON_LABELS } from '../../gameplay';
 import { xpToNextLevel } from '../../profile';
 import { campaignStore } from '../campaign-state';
 import type { MenuPage } from '../campaign-state';
-import { Button, ClassEmblem, Panel, ProgressBar } from '../kit';
+import { Button, ClassEmblem, ClassPortrait, Panel, ProgressBar } from '../kit';
 import { EN } from '../strings-en';
 import { claimableQuests } from '../../quests';
 
@@ -43,7 +43,7 @@ export function HubPage() {
           {EN.meta.title}
         </h1>
         <Panel className="hub-champion" aria-label={H.selected}>
-          <ClassEmblem characterClass={cls} size={84} glow />
+          <ClassPortrait characterClass={cls} size={96} glow />
           <div className="hub-champion-body">
             <small className="meta-eyebrow">{H.selected}</small>
             <strong className={`hub-class class-text-${cls}`}>{CLASS_LABELS[cls]}</strong>

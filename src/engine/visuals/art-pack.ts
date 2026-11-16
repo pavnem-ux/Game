@@ -12,11 +12,16 @@ export const artUrl = (file: string): string => `${import.meta.env.BASE_URL}${fi
 
 let pending: Promise<ArtManifest | null> | null = null;
 let current: ArtManifest | null = null;
+const listeners = new Set<() => void>();
 
 export function loadArtManifest(): Promise<ArtManifest | null> {
   pending ??= fetch(artUrl(ART_MANIFEST_FILE))
     .then((r) => (r.ok ? r.text() : Promise.reject(new Error(`HTTP ${r.status}`))))
-    .then((text) => (current = parseArtManifest(text)))
+    .then((text) => {
+      current = parseArtManifest(text);
+      listeners.forEach((fn) => fn());
+      return current;
+    })
     .catch((e: unknown) => {
       console.warn(`[art] manifest unavailable, using procedural art: ${(e as Error).message}`);
       return null;
@@ -25,3 +30,17 @@ export function loadArtManifest(): Promise<ArtManifest | null> {
 }
 /** The manifest if it has already loaded (null before, or when unavailable). */
 export const artManifest = (): ArtManifest | null => current;
+/**
+ * `useSyncExternalStore` source for React: subscribing starts the (single) fetch; listeners are
+ * told once when the manifest arrives.
+ */
+export const artManifestStore = {
+  subscribe(fn: () => void): () => void {
+    listeners.add(fn);
+    void loadArtManifest();
+    return () => {
+      listeners.delete(fn);
+    };
+  },
+  getSnapshot: artManifest,
+};

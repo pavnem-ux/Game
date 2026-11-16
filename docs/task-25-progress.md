@@ -6,7 +6,7 @@ Spec: [task-25-art-pack-1.md](task-25-art-pack-1.md) (owner's file, kept verbati
 `public/assets/…` and `docs/ART_PROVENANCE.md`. Rendering only: hitboxes, simulation and balance
 are unchanged.
 
-Current: Phase 2 done — next: Phase 3 (portraits)
+Current: Phase 3 done — next: Phase 4 (delivery)
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/23
 
@@ -17,7 +17,7 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/23
   - [x] 1.1 Files under `public/assets/`, `docs/ART_PROVENANCE.md`, AGENTS.md §4.12 (owner decision)
   - [x] 1.2 Manifest loader and asset registry with procedural fallback; tests
 - [x] 2 In-run sprites: players, enemies, elites, thief, nest; size/anchor/flip; effects kept; tests
-- [ ] 3 Portraits: character select + hub
+- [x] 3 Portraits: character select + hub
 - [ ] 4 Delivery: full checks, e2e desktop/mobile, `test:production`, FPS at 120 enemies, "after"
       screenshots (incl. every enemy type on all four biome grounds), README, PR
 
@@ -103,3 +103,22 @@ budget.
     is identical with the art loaded and with the manifest blocked (procedural fallback). All 13
     looks load, with no missing-texture warnings or errors. Test support: a DEV/QA-only `move`
     testing action and `artLooks` in `__alpha.presentation()`.
+- **Portraits (Phase 3).** `ClassPortrait` (UI kit) shows `portrait_<class>` in a framed tile in
+  the class accent colour, cropped to the head and shoulders (`object-fit: cover`). It replaces the
+  SVG emblem on the four character-select cards (88 px selected, 72 px otherwise; the emblems were
+  76 / 60) and in the hub's chosen-hero panel (96 px; was 84). The equipment screen, the talents
+  header and the small hero chips keep the emblem, as the spec asks. The portrait falls back to
+  the emblem while the manifest loads, when the pack has no portrait for the class, or if the image
+  fails, so the layout never depends on the pack. The manifest is fetched once per page and shared
+  with the in-run loader (`artManifestStore` for React). Portraits are decorative (`alt=""`): the
+  class name is always next to them.
+  - **Mobile.** The 844×390 phone hub and character select still fit (screenshots; the
+    `english-screens` clipped-text / no-scroll check and `mobile-browser` pass).
+  - **Tests.** `tests/art-browser.mjs` checks the four portraits on character select and the hub
+    portrait load real images on desktop and phone with no horizontal scroll, and that the four
+    emblems + the hub emblem come back without the manifest.
+  - **Test race fixed (not this task's change).** `mobile-browser.mjs` measured the Task 22
+    «Equip» button 150 ms after the tap, while the equipment preview's `panel-in` slide was still
+    running: a sub-pixel transform made the box 43.99998 px high and failed the 44 px rule on a
+    slower run (it passed on others). The test now waits for that panel's animations to finish
+    before measuring; the 44 px rule itself is unchanged.
