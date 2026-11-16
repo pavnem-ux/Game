@@ -22,7 +22,8 @@ import {
   skillDamageReadout,
   synergyOverview,
 } from '../skills';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { uiSettings } from './ui-settings';
 import { uiSound } from './sound';
 import { clock } from './campaign-format';
 import { alphaBridge } from './store';
@@ -697,11 +698,13 @@ function PetHudIcon({ pet, time }: { pet: PetSnapshot; time: number }) {
  * the pause menu.
  */
 export function ActiveSkills({ world }: { world: GameplaySnapshot }) {
+  // Left-handed touch layout: the dash button takes the bottom-left corner (CSS moves the row).
+  const leftHanded = useSyncExternalStore(uiSettings.subscribe, uiSettings.get).leftHanded;
   const autos = world.skills.owned.filter((s) => s.kind === 'auto');
   if (autos.length === 0) return null;
   const { cooldowns } = world.skillCombat;
   return (
-    <ul className="active-skills" aria-label="Active skills">
+    <ul className={`active-skills${leftHanded ? ' left-handed' : ''}`} aria-label="Active skills">
       {autos.map((s) => {
         const left = cooldowns[s.skillId] ?? 0;
         const cooling = left > 0.05;
