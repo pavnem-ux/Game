@@ -96,6 +96,27 @@ export function nextFacing(current: Facing, dx: number, threshold: number): Faci
 export const ENEMY_FACING_THRESHOLD = 8;
 /** The player turns with the movement input once |input.x| exceeds this (input is −1…1). */
 export const PLAYER_FACING_THRESHOLD = 0.2;
+/**
+ * Loading bar geometry in **canvas pixels** (the graphic is pinned to screen space with
+ * `pinToScreen`, which cancels the DPR camera zoom): centred, near the bottom edge, sized in CSS px
+ * × zoom so it looks the same at any DPR. `track` is the background, `fill` the progress (0–1).
+ */
+export function loadingBarRects(
+  canvasWidth: number,
+  canvasHeight: number,
+  zoom: number,
+  p: number,
+) {
+  const width = Math.min(320 * zoom, canvasWidth * 0.4);
+  const x = (canvasWidth - width) / 2;
+  const y = canvasHeight - 14 * zoom;
+  const h = 4 * zoom;
+  const pad = 2 * zoom;
+  return {
+    track: { x: x - pad, y: y - pad, width: width + pad * 2, height: h + pad * 2 },
+    fill: { x, y, width: Math.max(h, width * Math.min(1, Math.max(0, p))), height: h },
+  };
+}
 /** Horizontal mirror sign of the drawn image for a facing (an image facing left is mirrored). */
 export const flipSign = (facing: Facing, tuning: ArtDisplayTuning): 1 | -1 =>
   !tuning.flip ? 1 : ((tuning.facesLeft ? -facing : facing) as 1 | -1);

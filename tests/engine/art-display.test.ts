@@ -7,10 +7,13 @@ import {
   artLayout,
   artTuning,
   flipSign,
+  loadingBarRects,
   nextFacing,
   visibleBounds,
 } from '../../src/engine/visuals/art-display';
 import type { Facing } from '../../src/engine/visuals/art-display';
+import { pinToScreen } from '../../src/engine/screen-space';
+import type { CameraLike } from '../../src/engine/screen-space';
 
 /** Task 25 Phase 2: size, anchor and facing of owner art (pure presentation maths). */
 function rgba(width: number, height: number, opaque: (x: number, y: number) => boolean) {
@@ -110,5 +113,45 @@ describe('Task 25 — facing without jitter', () => {
     expect([flipSign(1, right), flipSign(-1, right)]).toEqual([1, -1]);
     expect([flipSign(1, thief), flipSign(-1, thief)]).toEqual([-1, 1]);
     expect([flipSign(1, nest), flipSign(-1, nest)]).toEqual([1, 1]);
+  });
+});
+
+describe('Task 25 review — the loading bar stays on screen under the DPR camera zoom', () => {
+  /** Canvas-pixel y of a local y on a scrollFactor-0 object (Phaser zooms around the origin). */
+  const toCanvas = (cam: CameraLike, pos: number, scale: number, local: number) =>
+    (pos + local * scale - cam.height * cam.originY) * cam.zoom + cam.height * cam.originY;
+  for (const dpr of [1, 1.5, 2]) {
+    it(`DPR ${dpr}: pinned bar is inside the canvas, 14 CSS px above the bottom`, () => {
+      const cam: CameraLike = {
+        zoom: dpr,
+        width: 1280 * dpr,
+        height: 720 * dpr,
+        originX: 0.5,
+        originY: 0.5,
+      };
+      const { track, fill } = loadingBarRects(cam.width, cam.height, cam.zoom, 0.5);
+      const pinned = { x: 0, y: 0, s: 1 };
+      pinToScreen(
+        {
+          setScale: (s: number) => (pinned.s = s),
+          setPosition: (x: number, y: number) => Object.assign(pinned, { x, y }),
+        },
+        cam,
+      );
+      const top = toCanvas(cam, pinned.y, pinned.s, track.y);
+      const bottom = toCanvas(cam, pinned.y, pinned.s, track.y + track.height);
+      expect(top).toBeGreaterThan(0);
+      expect(bottom).toBeLessThanOrEqual(cam.height);
+      expect(toCanvas(cam, pinned.y, pinned.s, fill.y)).toBeCloseTo(cam.height - 14 * dpr, 6);
+      // The pre-fix drawing (scrollFactor 0 only, no pin): pushed below the canvas at DPR > 1.
+      if (dpr > 1) expect(toCanvas(cam, 0, 1, track.y)).toBeGreaterThan(cam.height);
+    });
+  }
+  it('looks the same at any DPR (CSS size × zoom), capped at 40% of the canvas width', () => {
+    const a = loadingBarRects(1280, 720, 1, 1).fill;
+    const b = loadingBarRects(2560, 1440, 2, 1).fill;
+    expect([b.width, b.height]).toEqual([a.width * 2, a.height * 2]);
+    expect(loadingBarRects(600, 400, 1, 1).fill.width).toBe(240);
+    expect(loadingBarRects(1280, 720, 1, 0).fill.width).toBe(4); // a visible stub at 0%
   });
 });
