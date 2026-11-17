@@ -5,7 +5,7 @@ Spec: [task-27-skill-icons.md](task-27-skill-icons.md) (owner's file, kept verba
 `art-pack-3.zip` (37 skill icons, `manifest-pack3.json`, `ART_PROVENANCE-pack3.md`). UI only:
 skills, balance and simulation are unchanged.
 
-Current: Phase 3 — delivery
+Current: done — PR ready for review (owner merges)
 
 PR: https://github.com/pavnem-ux/Game/pull/25
 
@@ -16,7 +16,7 @@ PR: https://github.com/pavnem-ux/Game/pull/25
 - [x] 1 Pipeline: files, manifest merge, provenance, registry kind `skill-icon`; tests (every
       catalog skill id resolves, unknown id falls back)
 - [x] 2 Screens: offer cards, HUD cooldowns, pause list + synergy displays, results
-- [ ] 3 Delivery: full checks, e2e desktop/mobile, `test:production`, "after" screenshots, README, PR
+- [x] 3 Delivery: full checks, e2e desktop/mobile, `test:production`, "after" screenshots, README, PR
 
 ## Pack contents (checked in Phase 0)
 
@@ -73,6 +73,18 @@ PR: https://github.com/pavnem-ux/Game/pull/25
   overlay share / pair ids / damage-source mapping), `tests/skills/combat.test.ts`
   (`cooldownTotals`). `mobile-browser`, `alpha-browser`, `skills-ui-browser` pass (left-handed
   44 px skill row still clear of the dash button).
+
+## Phase 3 — delivery
+
+- Checks (all pass): `npm run typecheck`, `npm test` (142 files, 1508 tests),
+  `npm run format:check`, `npm run build`, `npm run test:e2e` (all seven browser suites, incl. the
+  extended `art-browser.mjs`: icons on the HUD / offer / pause list on desktop 1280×720 and phone
+  844×390 with the expected sizes, glyph fallback without the manifest), `npm run test:production`.
+- "After" screenshots: `docs/art-pack-3/after-*.jpg` (same script and build as "before").
+- Docs: `docs/ART_PACK.md` (skill icons section, manifest rules, verification, limits),
+  `docs/IN_RUN_SKILLS.md` (read-only `cooldownTotals`, pair ids), README section.
+- Not verified: real phones / GPUs, Safari / Firefox; the Cloudflare Preview is for the owner to
+  check (the sandbox cannot open `*.workers.dev`).
 
 ## "Before" screenshots
 
