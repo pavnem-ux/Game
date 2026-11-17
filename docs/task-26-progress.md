@@ -5,14 +5,14 @@ Spec: [task-26-art-pack-2.md](task-26-art-pack-2.md) (owner's file, kept verbati
 (4 ground textures, 5 pickups, `manifest-pack2.json`, `ART_PROVENANCE-pack2.md`). Rendering only:
 hitboxes, pickup radii, simulation and balance are unchanged.
 
-Current: Phase 0 done — next: Phase 1 (pipeline)
+Current: Phase 1 done — next: Phase 2 (ground)
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/24
 
 ## Checklist
 
 - [x] 0 Setup: branch, spec, progress file, draft PR, "before" screenshots
-- [ ] 1 Pipeline: files, manifest merge, provenance, registry kinds `ground` / `pickup`; tests
+- [x] 1 Pipeline: files, manifest merge, provenance, registry kinds `ground` / `pickup`; tests
 - [ ] 2 Ground: tiling per act, tint, layering; tests (act → texture, same seed with art on/off)
 - [ ] 3 Pickups, chests, currency icons
 - [ ] 4 Delivery: full checks, e2e desktop/mobile, `test:production`, FPS at 120 enemies, "after"
@@ -43,3 +43,20 @@ With pack 1 (≈ 0.76 MB) the whole art set is ≈ 1.5 MB, under the 2 MB budget
   crystals and coin piles from the normal reward pipeline (kills in view, a caught treasure thief),
   a wooden and an enchanted chest and a bombard telegraph — full view and a close-up — plus the hub
   and a results screen. The same script produces the "after" set in Phase 4.
+- **Pipeline (Phase 1).** The 9 images are under `public/assets/ground/` and `public/assets/pickups/`
+  (byte-identical); `manifest-pack2.json` is merged into `public/assets/manifest.json` in the
+  owner's format (1-space JSON, pack-1 entries first, no key collisions: 17 + 9 = 26 entries); the
+  pack-2 row is appended to `docs/ART_PROVENANCE.md`.
+  - **Parser:** anchor `tile` (allowed only together with `kind: "ground"`), optional `kind`
+    (`unit` / `portrait` / `ground` / `pickup`); pack-1 entries without `kind` stay valid.
+  - **Registry:** `PICKUP_ART` (crystal, coin, both chests: the same per-look slots as units, so
+    the same procedural fallback), `GROUND_ART` (act I–IV → texture; `ground(act)` returns null
+    until loaded) and `CURRENCY_ART` (Gold → `coin`, Ore → `ore`, for the UI badges). The scene
+    loads units + pickups + grounds (`sceneEntries`, 21 images); portraits and the UI-only `ore`
+    are DOM images.
+  - **Tests:** every pack-2 key resolves and its declared kind matches its use; act → ground;
+    pickup looks; missing ground / pickup → procedural; `tile` / `kind` validation; art set
+    < 2 MB; existing Task 25 tests updated for the larger pack (26 entries, 17 looks).
+  - One unit-test run failed a single test while the dev server and a build were running; three
+    later runs (one with a parallel build) passed, and the failing name was not captured. Watching
+    CI for a repeat.

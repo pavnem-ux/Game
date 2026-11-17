@@ -22,7 +22,7 @@ export function startArtLoad(scene: Phaser.Scene, onRegistry: (registry: ArtRegi
     if (!alive || !manifest) return;
     const registry = new ArtRegistry(manifest);
     const queue = [];
-    for (const entry of registry.unitEntries()) {
+    for (const entry of registry.sceneEntries()) {
       const key = artTextureKey(entry.key);
       if (scene.textures.exists(key)) registry.markLoaded(entry.key);
       else queue.push(entry);

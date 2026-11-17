@@ -59,7 +59,8 @@ async function scenario(withArt) {
     }),
   );
   if (withArt) {
-    await page.waitForFunction(() => window.__alpha.presentation().artLooks === 13, null, {
+    // Task 26: 13 unit looks + 4 pickup looks.
+    await page.waitForFunction(() => window.__alpha.presentation().artLooks === 17, null, {
       timeout: 15_000,
     });
   }
@@ -167,7 +168,7 @@ assert.deepEqual(shots.fallback.select.portraits, [], 'fallback: no portrait wit
 assert.equal(shots.fallback.select.emblems, 4, 'fallback: the four emblems are back');
 assert.equal(shots.fallback.hub.emblems, 1, 'fallback: hub emblem');
 
-assert.equal(art.artLooks, 13, 'all 13 unit looks drawn with the owner art');
+assert.equal(art.artLooks, 17, 'all 13 unit + 4 pickup looks drawn with the owner art');
 assert.equal(procedural.artLooks, 0, 'no manifest: every look stays procedural');
 assert.equal(art.digests.length, 24);
 assert.ok(
@@ -188,5 +189,5 @@ assert.deepEqual(
   'the fallback only logs its one "manifest unavailable" warning',
 );
 console.log(
-  'PASS art: same seed ⇒ identical simulation with art on / off (24 steps, map 25, every enemy type, thief, nest); 13 looks from the pack; no missing-texture warnings; procedural fallback without the manifest; class portraits on character select + hub (desktop and phone, no horizontal scroll), emblems as the fallback.',
+  'PASS art: same seed ⇒ identical simulation with art on / off (24 steps, map 25, every enemy type, thief, nest); 13 unit + 4 pickup looks from the packs; no missing-texture warnings; procedural fallback without the manifest; class portraits on character select + hub (desktop and phone, no horizontal scroll), emblems as the fallback.',
 );
