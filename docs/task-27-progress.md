@@ -7,7 +7,7 @@ skills, balance and simulation are unchanged.
 
 Current: Phase 1 — pipeline
 
-PR: (draft, opened in Phase 0)
+PR: https://github.com/pavnem-ux/Game/pull/25
 
 ## Checklist
 
