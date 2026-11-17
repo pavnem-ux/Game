@@ -232,6 +232,8 @@ export class AlphaScene extends Phaser.Scene {
               Object.freeze({
                 // Task 25: looks currently drawn with the owner's art (13 once the pack loaded).
                 artLooks: this.art.loadedLooks(),
+                // Task 26: the ground texture in use (null = procedural ground).
+                artGround: this.biome.artGround,
                 stunIndicators: Object.freeze(
                   this.stunLabels
                     .filter((label) => label.visible)
@@ -762,6 +764,9 @@ export class AlphaScene extends Phaser.Scene {
     this.units.item(petTextureKey(pet.id), x, y, (acting ? 1.1 : 0.9) / ART_SCALE, 1, bob);
   }
   private draw(s: GameplaySnapshot) {
+    // Task 26: the act's ground art replaces the procedural ground once it has loaded.
+    const look = this.biome.look;
+    if (look) this.biome.applyArtGround(this.art.ground(look.act));
     const g = this.graphics;
     g.clear();
     const o = this.overlay.clear();

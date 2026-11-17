@@ -5,7 +5,7 @@ Spec: [task-26-art-pack-2.md](task-26-art-pack-2.md) (owner's file, kept verbati
 (4 ground textures, 5 pickups, `manifest-pack2.json`, `ART_PROVENANCE-pack2.md`). Rendering only:
 hitboxes, pickup radii, simulation and balance are unchanged.
 
-Current: Phase 1 done — next: Phase 2 (ground)
+Current: Phase 2 done — next: Phase 3 (pickups, chests, icons)
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/24
 
@@ -13,7 +13,7 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/24
 
 - [x] 0 Setup: branch, spec, progress file, draft PR, "before" screenshots
 - [x] 1 Pipeline: files, manifest merge, provenance, registry kinds `ground` / `pickup`; tests
-- [ ] 2 Ground: tiling per act, tint, layering; tests (act → texture, same seed with art on/off)
+- [x] 2 Ground: tiling per act, tint, layering; tests (act → texture, same seed with art on/off)
 - [ ] 3 Pickups, chests, currency icons
 - [ ] 4 Delivery: full checks, e2e desktop/mobile, `test:production`, FPS at 120 enemies, "after"
       screenshots (crystals, coins, telegraphs on all four grounds), README, PR
@@ -60,3 +60,21 @@ With pack 1 (≈ 0.76 MB) the whole art set is ≈ 1.5 MB, under the 2 MB budget
   - One unit-test run failed a single test while the dev server and a build were running; three
     later runs (one with a parallel build) passed, and the failing name was not captured. Watching
     CI for a repeat.
+- **Ground (Phase 2).** `art-ground.ts` (pure): `GROUND_TILE_WORLD = 512` (one repetition of the
+  1024 px texture covers 512 world units, so it is sharp at DPR 2; provisional), act → texture
+  (`ground_forest` / `ground_marsh` / `ground_ashlands` / `ground_frost`) and `groundTint(look)`:
+  the map's Task 18 variation (hue shift ±14°, brightness 0.92–1.08) as per-channel factors = the
+  map's ground base colour ÷ its act's base colour, each clamped to 1 ± 0.08.
+  - `BiomeRenderer.applyArtGround` swaps the existing ground `tileSprite` (depth −10, under
+    everything) to the act texture once it has loaded; a run started earlier switches over. The
+    tint is baked once per map into a canvas copy (Canvas ignores `setTint`): multiply by
+    tint / max(tint), then add the copy onto itself at alpha max(tint) − 1, which gives an exact
+    per-channel multiply in [0.92, 1.08]. The copy is freed when the map changes. Paths, signature
+    features, decor, particles and the light / darkness overlay are untouched and stay on top.
+  - Called from `draw()` (every rendered frame and every `__alpha.advance`); after the swap it is a
+    null check. Without the image the procedural ground stays.
+  - **Tests:** `tests/engine/art-ground.test.ts` — act → texture for maps 1/11/21/31 and
+    10/20/30/40 (and the sandbox), tile size, tint within ±8% on all 40 maps, variation kept and
+    stable per map, brightness direction. `tests/art-browser.mjs`: the seeded map-25 run is
+    identical with the art (now including the ashlands ground) and with the manifest blocked;
+    `artGround` = `art:ground_ashlands~map25` with art, `null` without.

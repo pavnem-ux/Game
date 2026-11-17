@@ -97,9 +97,9 @@ async function scenario(withArt) {
       }),
     );
   }
-  const artLooks = await page.evaluate(() => window.__alpha.presentation().artLooks);
+  const { artLooks, artGround } = await page.evaluate(() => window.__alpha.presentation());
   await context.close();
-  return { digests, logs, artLooks };
+  return { digests, logs, artLooks, artGround };
 }
 
 /**
@@ -170,6 +170,9 @@ assert.equal(shots.fallback.hub.emblems, 1, 'fallback: hub emblem');
 
 assert.equal(art.artLooks, 17, 'all 13 unit + 4 pickup looks drawn with the owner art');
 assert.equal(procedural.artLooks, 0, 'no manifest: every look stays procedural');
+// Task 26: map 25 (act III) tiles the ashlands ground (tinted per map); procedural without art.
+assert.equal(art.artGround, 'art:ground_ashlands~map25', 'act III ground art in use');
+assert.equal(procedural.artGround, null, 'no manifest: procedural ground');
 assert.equal(art.digests.length, 24);
 assert.ok(
   JSON.parse(art.digests.at(-1)).e.length > 0,
@@ -189,5 +192,5 @@ assert.deepEqual(
   'the fallback only logs its one "manifest unavailable" warning',
 );
 console.log(
-  'PASS art: same seed ⇒ identical simulation with art on / off (24 steps, map 25, every enemy type, thief, nest); 13 unit + 4 pickup looks from the packs; no missing-texture warnings; procedural fallback without the manifest; class portraits on character select + hub (desktop and phone, no horizontal scroll), emblems as the fallback.',
+  'PASS art: same seed ⇒ identical simulation with art on / off (24 steps, map 25, every enemy type, thief, nest); 13 unit + 4 pickup looks from the packs; no missing-texture warnings; procedural fallback without the manifest; act ground art (identical simulation with it); class portraits on character select + hub (desktop and phone, no horizontal scroll), emblems as the fallback.',
 );
