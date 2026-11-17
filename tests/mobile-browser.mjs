@@ -166,7 +166,10 @@ async function noHorizontalScroll(page, where) {
 }
 async function tapTarget(locator, what) {
   const box = await locator.boundingBox();
-  assert.ok(box && box.height >= 44 && box.width >= 44, `${what} is a ≥ 44 px tap target`);
+  assert.ok(
+    box && box.height >= 44 && box.width >= 44,
+    `${what} is a ≥ 44 px tap target (${JSON.stringify(box)})`,
+  );
   return box;
 }
 for (const viewport of [
@@ -277,7 +280,16 @@ for (const viewport of [
   const equipBtn = page
     .getByRole('group', { name: 'Equipment preview' })
     .getByRole('button', { name: 'Equip' });
-  await page.waitForTimeout(150);
+  // Measure the settled layout: the preview panel slides in (`panel-in`); measuring mid-animation
+  // gives a sub-pixel box (e.g. 43.99998 px high) that depends on timing.
+  await equipBtn.evaluate((el) =>
+    Promise.all(
+      el
+        .closest('.equipment-preview')
+        .getAnimations()
+        .map((a) => a.finished),
+    ),
+  );
   const eb = await equipBtn.boundingBox();
   const vp = page.viewportSize();
   assert.ok(

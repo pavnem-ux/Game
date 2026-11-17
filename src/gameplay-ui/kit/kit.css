@@ -521,6 +521,34 @@
   filter: drop-shadow(0 0 10px var(--accent));
   filter: drop-shadow(0 0 10px color-mix(in srgb, var(--accent) 70%, transparent));
 }
+/* Task 25: class portrait from the owner's art pack (the emblem is its fallback). */
+.class-portrait {
+  --accent: var(--gold-400);
+  display: inline-block;
+  flex: none;
+  overflow: hidden;
+  border-radius: var(--radius-l);
+  border: 2px solid var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+  background:
+    radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.08), transparent 60%),
+    color-mix(in srgb, var(--accent) 18%, var(--night-800));
+  box-shadow: inset 0 -18px 24px rgba(0, 0, 0, 0.35);
+  transition: box-shadow var(--dur) var(--ease);
+}
+.class-portrait img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 18%;
+  user-select: none;
+}
+.class-portrait.glow {
+  box-shadow:
+    inset 0 -18px 24px rgba(0, 0, 0, 0.35),
+    0 0 18px color-mix(in srgb, var(--accent) 55%, transparent);
+}
 /* Content of a meta screen sits above its backdrop. */
 .meta-ui > :not(.meta-backdrop):not(.kit-modal-backdrop) {
   position: relative;

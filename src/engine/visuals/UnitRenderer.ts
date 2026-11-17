@@ -7,6 +7,8 @@ import { TintCache } from './tint-cache';
 /** Task 18 render depths (ground graphics 5, darkness 9.5, overlay HP bars/marks 9.7, labels ≥ 10). */
 export const DEPTH = Object.freeze({
   items: 3,
+  /** Task 25: ground shadows of owner-art units (procedural textures bake theirs in). */
+  shadows: 5.4,
   glows: 5.5,
   /** Units keep the simulation order (no per-frame y-sort: a depth change re-sorts the list). */
   bodies: 6,
@@ -25,6 +27,7 @@ const tex = (img: Img, key: string): Img => (img.texture.key === key ? img : img
  */
 export class UnitRenderer {
   private readonly bodies: Pool<Img>;
+  private readonly shadows: Pool<Img>;
   private readonly glows: Pool<Img>;
   private readonly items: Pool<Img>;
   private readonly projectiles: Pool<Img>;
@@ -45,6 +48,7 @@ export class UnitRenderer {
       if (img.visible) img.setVisible(false);
     };
     this.bodies = new Pool(make('enemy-melee', DEPTH.bodies), hide);
+    this.shadows = new Pool(make('shadow', DEPTH.shadows), hide);
     this.glows = new Pool(make('glow', DEPTH.glows, true), hide);
     this.items = new Pool(make('crystal', DEPTH.items), hide);
     this.projectiles = new Pool(make('proj-bolt', DEPTH.projectiles), hide);
@@ -67,12 +71,14 @@ export class UnitRenderer {
   begin(): void {
     this.freeGlows = 0;
     this.bodies.begin();
+    this.shadows.begin();
     this.glows.begin();
     this.items.begin();
     this.projectiles.begin();
   }
   end(): void {
     this.bodies.end();
+    this.shadows.end();
     this.glows.end();
     this.items.end();
     this.projectiles.end();
@@ -121,17 +127,77 @@ export class UnitRenderer {
     // (one sprite per unit; a second overlay sprite costs a save/restore + drawImage on Canvas).
     const body = flash > 0.45 ? this.tints.get(key, 0xffffff, 'fill') : key;
     tex(this.bodies.next(), body)
+      .setOrigin(0.5, 0.5)
       .setPosition(x, y + bob - squash * 6)
       .setScale(scale * (1 + squash * 0.6), scale * (1 - squash))
       .setAlpha(alpha)
       .setVisible(true);
   }
+  /**
+   * Task 25: a unit drawn with owner art, pinned at its feet (`feetY` = position.y + radius):
+   * separate ground shadow, optional glow around the body, body with idle bob, squash on hit
+   * (the feet stay planted), white hit-flash silhouette and a horizontal mirror (`flip` = −1).
+   * `scale` / `originX` / `originY` / `height` come from `artLayout` (scale already divided by the
+   * baked copy's factor); `radius` sizes the shadow. Same feedback as `unit`, different anchor.
+   */
+  artUnit(
+    id: string,
+    texture: string,
+    x: number,
+    feetY: number,
+    scale: number,
+    originX: number,
+    originY: number,
+    height: number,
+    radius: number,
+    flip: 1 | -1,
+    time: number,
+    flash: number,
+    options: { alpha?: number; glow?: number; glowScale?: number } = {},
+  ): void {
+    const span = Math.max(height, radius * 2.4);
+    if (this.outside(x, feetY - height / 2, span * 0.6)) return;
+    const bob = Math.sin(time * 5 + this.phase(id)) * 1.4;
+    const squash = flash > 0 ? flash * 0.16 : 0;
+    const alpha = options.alpha ?? 1;
+    // The shadow texture's ellipse is 38 px wide: ≈ 2.2 × radius under the feet.
+    tex(this.shadows.next(), 'shadow')
+      .setPosition(x, feetY)
+      .setScale((radius * 2.2) / 38)
+      .setAlpha(alpha)
+      .setVisible(true);
+    if (options.glow !== undefined && this.glowEnabled) {
+      const pulse = 1 + Math.sin(time * 3 + this.phase(id)) * 0.06;
+      const gs = ((options.glowScale ?? 0.9) * span * pulse) / 64;
+      tex(this.glows.next(), this.tints.get('glow', options.glow))
+        .setPosition(x, feetY - height / 2)
+        .setScale(gs)
+        .setAlpha(0.75 * alpha)
+        .setVisible(true);
+    }
+    const body = flash > 0.45 ? this.tints.get(texture, 0xffffff, 'fill') : texture;
+    // The idle bob lifts the body slightly off the ground (never below the feet).
+    tex(this.bodies.next(), body)
+      .setOrigin(originX, originY)
+      .setPosition(x, feetY - Math.abs(bob))
+      .setScale(scale * (1 + squash * 0.6) * flip, scale * (1 - squash))
+      .setAlpha(alpha)
+      .setVisible(true);
+  }
   /** A ground item (crystal, coin, chest) with an optional gentle hover. */
-  item(key: TextureKey, x: number, y: number, scale: number, alpha = 1, hover = 0): void {
+  item(
+    key: string,
+    x: number,
+    y: number,
+    scale: number,
+    alpha = 1,
+    hover = 0,
+    flipX: 1 | -1 = 1,
+  ): void {
     if (this.outside(x, y, 40)) return;
     tex(this.items.next(), key)
       .setPosition(x, y - hover)
-      .setScale(scale)
+      .setScale(scale * flipX, scale)
       .setAlpha(alpha)
       .setVisible(true);
   }

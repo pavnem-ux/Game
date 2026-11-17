@@ -96,7 +96,8 @@ Detailed contracts live in `docs/`; read the relevant document before changing a
     `npm run test:production`, `test:build-policy` and `test:qa` enforce the separation.
 11. **Bounded work.** Respect existing caps (alpha: 120 enemies, 512 crystal piles; prototype pools)
     and allocation-free hot loops in Phaser `update`.
-12. **Original content.** Procedural/original art only. No assets from other games, no CDN assets.
+12. **Original content.** Procedural art or art created/commissioned by the project owner, listed in
+    `docs/ART_PROVENANCE.md`. No assets from other games, no CDN assets.
 
 All numbers in `src/gameplay/config.ts`, `experience.ts` and `spawning.ts` are **provisional** but
 still owner-controlled: do not change balance, mechanics or existing behaviour unless the approved

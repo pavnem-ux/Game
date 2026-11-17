@@ -7,7 +7,7 @@ import { xpToNextLevel } from '../../profile';
 import { availableTalentPoints } from '../../talents';
 import { campaignStore } from '../campaign-state';
 import { displayHp } from '../format';
-import { Button, ClassEmblem, ProgressBar } from '../kit';
+import { Button, ClassPortrait, ProgressBar } from '../kit';
 import { EN } from '../strings-en';
 
 const C = EN.meta.character;
@@ -57,7 +57,7 @@ export function CharacterSelectPage() {
               aria-label={C.cardLabel(CLASS_LABELS[c], p.level)}
             >
               <header className="character-card-head">
-                <ClassEmblem characterClass={c} size={selected ? 76 : 60} glow={selected} />
+                <ClassPortrait characterClass={c} size={selected ? 88 : 72} glow={selected} />
                 <div>
                   <strong className={`class-text-${c}`}>{CLASS_LABELS[c]}</strong>
                   <ul className="role-tags">

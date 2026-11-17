@@ -83,7 +83,19 @@ try {
   const before = (await state()).world.time;
   await command({ type: 'spawn', kind: 'melee', distance: 300 });
   await page.evaluate(() => window.__alpha.advance(0.2));
-  assert.ok((await state()).world.time >= before + 0.2, 'simulation runs');
+  const ran = await state();
+  assert.ok(
+    ran.world.time >= before + 0.2,
+    // State in the message: this failed once in CI (Task 25 PR, not reproduced locally).
+    `simulation runs ${JSON.stringify({
+      before,
+      time: ran.world.time,
+      screen: ran.screen,
+      paused: ran.world.paused,
+      pendingChoices: ran.world.skills.pendingChoices,
+      offer: !!ran.world.skills.offer,
+    })}`,
+  );
   assert.ok(
     (await state()).world.skillCombat.cooldowns.fireball > 0,
     'automatic skill starts its cooldown',

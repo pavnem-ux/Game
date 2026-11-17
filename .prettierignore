@@ -6,3 +6,9 @@ docs/synergies-v3.md
 
 # Task 23: verbatim save files written by the pre-Task-23 code (byte-exact round-trip test)
 tests/fixtures/pre-task23-*.json
+
+# Task 25: the owner's art packs (manifest, provenance, spec) are kept byte-identical; future packs
+# add files with the same manifest format.
+public/assets/
+docs/ART_PROVENANCE.md
+docs/task-25-art-pack-1.md
