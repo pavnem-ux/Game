@@ -5,7 +5,7 @@ Spec: [task-27-skill-icons.md](task-27-skill-icons.md) (owner's file, kept verba
 `art-pack-3.zip` (37 skill icons, `manifest-pack3.json`, `ART_PROVENANCE-pack3.md`). UI only:
 skills, balance and simulation are unchanged.
 
-Current: Phase 1 — pipeline
+Current: Phase 2 — screens
 
 PR: https://github.com/pavnem-ux/Game/pull/25
 
@@ -13,7 +13,7 @@ PR: https://github.com/pavnem-ux/Game/pull/25
 
 - [x] 0 Setup: branch, spec, progress file, draft PR, "before" screenshots (offer screen, HUD with
       4 actives, pause skill list, results; phone HUD and offer)
-- [ ] 1 Pipeline: files, manifest merge, provenance, registry kind `skill-icon`; tests (every
+- [x] 1 Pipeline: files, manifest merge, provenance, registry kind `skill-icon`; tests (every
       catalog skill id resolves, unknown id falls back)
 - [ ] 2 Screens: offer cards, HUD cooldowns, pause list + synergy displays, results
 - [ ] 3 Delivery: full checks, e2e desktop/mobile, `test:production`, "after" screenshots, README, PR
@@ -31,6 +31,21 @@ PR: https://github.com/pavnem-ux/Game/pull/25
   the extra `skillId` field. As in Task 26, the merge lands in Phase 1 together with the parser
   change, so the live manifest never fails to parse.
 - With packs 1 and 2 (≈ 1.5 MB) the art set is ≈ 1.85 MB, still under the 2 MB budget.
+
+## Phase 1 — pipeline
+
+- The 37 icons are copied byte-identical to `public/assets/icons/skills/`; the manifest has 63
+  entries (pack 1: 17, pack 2: 9, pack 3: 37), same 1-space format; provenance row 3 appended.
+- Parser: `kind: "skill-icon"` accepted. Skill icons are keyed `skill_<id>` for the file
+  `<id>.webp`; the optional `skillId` field must equal the file name. Other kinds keep the
+  key = file-name rule.
+- Registry: `skillIconArtKey(id)`, `skillIconEntry(manifest, id)` (null → the glyph: no manifest,
+  unknown id, missing icon or an entry of another kind) and `skillIconEntries(manifest)`;
+  `artUsage` returns `skill-icon` only for catalogue skill ids. Icons are DOM images, so the
+  in-run scene does not load them.
+- Tests (`tests/engine/art-pack.test.ts`): every one of the 37 catalogue ids resolves to its
+  128 px icon; unknown / missing / no-manifest fall back; key / `skillId` validation; files and
+  sizes match; the art set (1.77 MB) stays under 2 MB.
 
 ## "Before" screenshots
 

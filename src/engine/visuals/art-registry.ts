@@ -1,4 +1,6 @@
 import type { CharacterClass } from '../../character-stats';
+import { SKILL_CATALOG } from '../../skills';
+import { SKILL_ICON_KEY_PREFIX } from './art-manifest';
 import type { ArtEntry, ArtKind, ArtManifest } from './art-manifest';
 import type { ActId } from './biomes';
 import type { TextureKey } from './keys';
@@ -49,6 +51,29 @@ export const CURRENCY_ART: Readonly<Record<'gold' | 'ore', string>> = Object.fre
 });
 /** Character select / hub portrait of a class (DOM `<img>`, not a Phaser texture). */
 export const portraitArtKey = (c: CharacterClass): string => `portrait_${c}`;
+/**
+ * Task 27: the art key of a skill's icon (`skill_<id>`, one per catalogue skill: 28 class skills +
+ * 9 universal passives). Icons are DOM `<img>` in the React screens; the catalogue glyph
+ * (`SkillDefinition.icon`) stays the fallback.
+ */
+export const skillIconArtKey = (skillId: string): string => `${SKILL_ICON_KEY_PREFIX}${skillId}`;
+const SKILL_ICON_KEYS: ReadonlySet<string> = new Set(
+  SKILL_CATALOG.map((d) => skillIconArtKey(d.id)),
+);
+/**
+ * The icon entry of a skill, or null (no manifest yet, no icon for the id, or an entry of another
+ * kind): callers then show the glyph.
+ */
+export function skillIconEntry(manifest: ArtManifest | null, skillId: string): ArtEntry | null {
+  const entry = manifest?.get(skillIconArtKey(skillId));
+  return entry && entry.kind === 'skill-icon' ? entry : null;
+}
+/** Every skill icon in the manifest (for preloading; catalogue skills only). */
+export function skillIconEntries(manifest: ArtManifest | null): ArtEntry[] {
+  return SKILL_CATALOG.map((d) => skillIconEntry(manifest, d.id)).filter(
+    (e): e is ArtEntry => e !== null,
+  );
+}
 /** Phaser texture key of an art image (prefixed: never collides with a procedural key). */
 export const artTextureKey = (artKey: string): string => `art:${artKey}`;
 
@@ -62,6 +87,7 @@ export function artUsage(artKey: string): ArtKind | null {
     (Object.values(CURRENCY_ART) as string[]).includes(artKey)
   )
     return 'pickup';
+  if (SKILL_ICON_KEYS.has(artKey)) return 'skill-icon';
   return null;
 }
 

@@ -16,7 +16,11 @@ import {
   artTextureKey,
   artUsage,
   portraitArtKey,
+  skillIconArtKey,
+  skillIconEntries,
+  skillIconEntry,
 } from '../../src/engine/visuals/art-registry';
+import { SKILL_CATALOG } from '../../src/skills';
 import { TEXTURE_KEYS } from '../../src/engine/visuals/keys';
 
 /** Task 25 Phase 1: the owner's art pack, its manifest and the registry with procedural fallback. */
@@ -45,8 +49,8 @@ const entry = (key: string, extra: Record<string, unknown> = {}) => ({
 });
 
 describe('Task 25 — art pack 1 files and manifest', () => {
-  it('26 entries (pack 1: 17, pack 2: 9); every file exists and has the manifest size', () => {
-    expect(manifest.size).toBe(26);
+  it('63 entries (pack 1: 17, pack 2: 9, pack 3: 37); every file exists and has the manifest size', () => {
+    expect(manifest.size).toBe(63);
     for (const e of manifest.values()) {
       const buf = readFileSync(join(PUBLIC, e.file));
       expect(webpSize(buf), e.key).toEqual([e.width, e.height]);
@@ -187,7 +191,7 @@ describe('Task 26 — pack 2 kinds: ground and pickup', () => {
       declared++;
       expect(artUsage(e.key), e.key).toBe(e.kind);
     }
-    expect(declared).toBe(9);
+    expect(declared).toBe(9 + 37); // pack 2 + pack 3 (Task 27)
     for (const art of [...Object.values(PICKUP_ART), ...Object.values(GROUND_ART)])
       expect(manifest.has(art!), art).toBe(true);
     for (const art of Object.values(CURRENCY_ART)) expect(manifest.has(art), art).toBe(true);
@@ -235,5 +239,64 @@ describe('Task 26 — pack 2 kinds: ground and pickup', () => {
     expect(() => parseArtManifest(ground({ anchor: 'tile' }))).toThrow(/tile/);
     expect(() => parseArtManifest(ground({ anchor: 'center', kind: 'ground' }))).toThrow(/tile/);
     expect(() => parseArtManifest(ground({ anchor: 'tile', kind: 'decal' }))).toThrow(/kind/);
+  });
+});
+
+describe('Task 27 — pack 3: skill icons', () => {
+  it('every catalogue skill id (37) has a 128 px round icon, keyed skill_<id>', () => {
+    expect(SKILL_CATALOG).toHaveLength(37);
+    for (const d of SKILL_CATALOG) {
+      const e = skillIconEntry(manifest, d.id);
+      expect(e, d.id).not.toBeNull();
+      expect(e!.key).toBe(`skill_${d.id}`);
+      expect(e!.file).toBe(`assets/icons/skills/${d.id}.webp`);
+      expect([e!.width, e!.height, e!.anchor, e!.kind]).toEqual([128, 128, 'center', 'skill-icon']);
+    }
+    expect(skillIconEntries(manifest).map((e) => e.key)).toEqual(
+      SKILL_CATALOG.map((d) => skillIconArtKey(d.id)),
+    );
+    // Every icon in the manifest belongs to a catalogue skill.
+    const icons = [...manifest.values()].filter((e) => e.kind === 'skill-icon');
+    expect(icons).toHaveLength(37);
+  });
+  it('an unknown id, a missing icon or no manifest falls back (null → the glyph)', () => {
+    expect(skillIconEntry(manifest, 'no_such_skill')).toBeNull();
+    expect(skillIconEntry(null, 'fireball')).toBeNull();
+    const partial = new Map(manifest);
+    partial.delete('skill_fireball');
+    expect(skillIconEntry(partial, 'fireball')).toBeNull();
+    expect(skillIconEntry(partial, 'blizzard')?.key).toBe('skill_blizzard');
+    expect(skillIconEntries(partial)).toHaveLength(36);
+    // An entry of another kind under a skill key is not used as an icon.
+    const wrong = parseArtManifest(
+      JSON.stringify({
+        skill_x: { file: 'assets/x/skill_x.webp', size: [8, 8], anchor: 'center' },
+      }),
+    );
+    expect(skillIconEntry(wrong, 'x')).toBeNull();
+    expect(artUsage('skill_no_such_skill')).toBeNull();
+  });
+  it('icons are UI images: the in-run scene does not load them', () => {
+    const r = new ArtRegistry(manifest);
+    expect(r.sceneEntries().some((e) => e.kind === 'skill-icon')).toBe(false);
+  });
+  it('validation: key skill_<file>, skillId must match the file name', () => {
+    const icon = (key: string, extra: Record<string, unknown> = {}) =>
+      JSON.stringify({
+        [key]: {
+          file: 'assets/icons/skills/fireball.webp',
+          size: [128, 128],
+          anchor: 'center',
+          kind: 'skill-icon',
+          ...extra,
+        },
+      });
+    expect(parseArtManifest(icon('skill_fireball', { skillId: 'fireball' })).size).toBe(1);
+    expect(parseArtManifest(icon('skill_fireball')).size).toBe(1); // skillId is optional
+    expect(() => parseArtManifest(icon('fireball'))).toThrow(/key must be "skill_fireball"/);
+    expect(() => parseArtManifest(icon('skill_fireball', { skillId: 'inferno' }))).toThrow(
+      /skillId "inferno"/,
+    );
+    expect(() => parseArtManifest(icon('skill_fireball', { anchor: 'tile' }))).toThrow(/tile/);
   });
 });

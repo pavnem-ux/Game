@@ -5,9 +5,11 @@
  * (`bottom-center` for units: the feet, `center` for portraits and pickups, `tile` for seamless
  * ground textures — Task 26). `kind` (optional, Task 26 packs) says what the image is for. Extra
  * fields (e.g. `source`) are ignored. Future packs add entries in the same format.
+ * Task 27 (pack 3): `kind: "skill-icon"` entries are keyed `skill_<skill id>` (file `<skill id>`)
+ * and may repeat the id in a `skillId` field, which must then match the file name.
  */
 export type ArtAnchor = 'bottom-center' | 'center' | 'tile';
-export type ArtKind = 'unit' | 'portrait' | 'ground' | 'pickup';
+export type ArtKind = 'unit' | 'portrait' | 'ground' | 'pickup' | 'skill-icon';
 export interface ArtEntry {
   readonly key: string;
   readonly file: string;
@@ -29,7 +31,9 @@ export class ArtManifestError extends Error {
 const KEY = /^[a-z0-9_]+$/;
 const FILE = /^assets\/(?:[a-z0-9_-]+\/)*([a-z0-9_]+)\.(?:webp|png)$/;
 const ANCHORS: readonly string[] = ['bottom-center', 'center', 'tile'];
-const KINDS: readonly string[] = ['unit', 'portrait', 'ground', 'pickup'];
+const KINDS: readonly string[] = ['unit', 'portrait', 'ground', 'pickup', 'skill-icon'];
+/** Key prefix of skill icons (Task 27): key `skill_<id>`, file `…/<id>.webp`. */
+export const SKILL_ICON_KEY_PREFIX = 'skill_';
 /** Largest accepted image side (px): keeps a broken entry from asking for a huge texture. */
 export const MAX_ART_SIZE = 2048;
 
@@ -93,9 +97,19 @@ export function parseArtManifest(text: string): ArtManifest {
     const v = value as Record<string, unknown>;
     const file = typeof v.file === 'string' ? v.file : '';
     const m = FILE.exec(file);
+    const icon = v.kind === 'skill-icon';
+    // Skill icons are named after the skill (`<id>.webp`) and keyed `skill_<id>`.
+    const stem = icon ? `${SKILL_ICON_KEY_PREFIX}${m?.[1] ?? ''}` : m?.[1];
     if (!m) bad(`file "${file}" must be assets/…/<key>.webp or .png`);
-    else if (m[1] !== key) bad(`file name "${m[1]}" does not match the key`);
+    else if (stem !== key)
+      bad(
+        icon
+          ? `skill icon key must be "${stem}" for file "${m[1]}"`
+          : `file name "${m[1]}" does not match the key`,
+      );
     else if (files.has(file)) bad(`file "${file}" is used twice`);
+    const okSkillId = !icon || v.skillId === undefined || (!!m && v.skillId === m[1]);
+    if (!okSkillId) bad(`skillId "${String(v.skillId)}" does not match the file name`);
     const size = v.size;
     const okSize =
       Array.isArray(size) &&
@@ -112,7 +126,8 @@ export function parseArtManifest(text: string): ArtManifest {
     if (okKind && ANCHORS.includes(anchor) && !okPair) bad('anchor "tile" goes with kind "ground"');
     if (
       !m ||
-      m[1] !== key ||
+      stem !== key ||
+      !okSkillId ||
       files.has(file) ||
       !okSize ||
       !ANCHORS.includes(anchor) ||
