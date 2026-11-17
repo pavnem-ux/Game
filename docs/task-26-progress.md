@@ -5,9 +5,9 @@ Spec: [task-26-art-pack-2.md](task-26-art-pack-2.md) (owner's file, kept verbati
 (4 ground textures, 5 pickups, `manifest-pack2.json`, `ART_PROVENANCE-pack2.md`). Rendering only:
 hitboxes, pickup radii, simulation and balance are unchanged.
 
-Current: Phase 3 done — next: Phase 4 (delivery)
+Current: done — PR ready for review (not merged)
 
-Draft PR: https://github.com/pavnem-ux/Game/pull/24
+PR: https://github.com/pavnem-ux/Game/pull/24
 
 ## Checklist
 
@@ -15,7 +15,7 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/24
 - [x] 1 Pipeline: files, manifest merge, provenance, registry kinds `ground` / `pickup`; tests
 - [x] 2 Ground: tiling per act, tint, layering; tests (act → texture, same seed with art on/off)
 - [x] 3 Pickups, chests, currency icons
-- [ ] 4 Delivery: full checks, e2e desktop/mobile, `test:production`, FPS at 120 enemies, "after"
+- [x] 4 Delivery: full checks, e2e desktop/mobile, `test:production`, FPS at 120 enemies, "after"
       screenshots (crystals, coins, telegraphs on all four grounds), README, PR
 
 ## Pack contents (checked in Phase 0)
@@ -104,3 +104,23 @@ With pack 1 (≈ 0.76 MB) the whole art set is ≈ 1.5 MB, under the 2 MB budget
   - **Tests:** pickup sizes from the radii and the coin scaling (`art-display.test.ts`); the art
     e2e checks the Gold / Ore badges show the pack icons on desktop and phone and the SVGs without
     the manifest; the full e2e suite passes.
+- **Delivery (Phase 4).** "After" screenshots in `docs/art-pack-2/after-*.jpg` (same scenes as
+  "before"). Readability on the four grounds: XP crystals, chests and bombard telegraphs read
+  clearly everywhere.
+  - **Chest glow restored.** The first "after" set showed the art chests without the soft glow
+    disc the procedural chest texture had (gold / violet, radius 26): lower contrast on the dark
+    ashlands and the brown marsh. The same baked halo as the crystal now restores it in the old
+    colours (render code only; no image edited).
+  - **Reported, not changed:** small coin piles (11 px for a 1-coin pile, the Task 11 scale) are
+    dimmer than the old bright-gold discs on the act I forest ground
+    (`docs/art-pack-2/after-map1.jpg`, left of the bombard). Visible; the owner may want a larger
+    `coin` factor in `PICKUP_SIZE_PER_RADIUS` or a brighter coin image.
+  - **FPS at 120 enemies** (`tests/art-fps.mjs`, sandbox = act I forest ground, all art vs the
+    manifest blocked, two alternating rounds): DPR 1 procedural 51.5 / 51.4 fps vs art
+    52.0 / 49.9; DPR 2 procedural 43.8 / 44.6 vs art 43.8 / 44.7. No measurable difference.
+    Lower absolute numbers than in the Task 25 session: different container load, so only rows of
+    one session are compared.
+  - **Docs:** `docs/ART_PACK.md` (manifest `tile` / `kind`, ground, pickups, mapping table,
+    verification, FPS, limits), README section.
+  - **Checks:** typecheck, `npm test` (141 files, 1,493 tests), format, build, `test:production`,
+    QA build + `test:qa`, `test:build-policy`, full `test:e2e` (7 suites).

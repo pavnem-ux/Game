@@ -915,7 +915,12 @@ export class AlphaScene extends Phaser.Scene {
       const look = chestTextureKey(chest.type);
       const chestArt = this.art.art(look);
       if (chestArt) {
-        const d = this.artSprites.pickup(chestArt.key, pickupArtSize('chest', CHEST_RULES.radius));
+        // The procedural chest had its glow disc baked in: keep it under the art (same colours).
+        const d = this.artSprites.pickup(
+          chestArt.key,
+          pickupArtSize('chest', CHEST_RULES.radius),
+          chest.type === 'enchanted' ? 0xb68cff : 0xf0c862,
+        );
         this.units.item(d.texture, chest.x, chest.y, d.scale, alpha);
       } else this.units.item(look, chest.x, chest.y, 1 / ART_SCALE, alpha);
     }

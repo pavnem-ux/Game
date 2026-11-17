@@ -74,7 +74,7 @@ export class ArtSprites {
    */
   pickup(artKey: string, size: number, halo: number | null = null): PickupDraw {
     const px = Math.max(4, Math.round(size));
-    const cacheKey = halo === null ? artKey : `${artKey}+halo`;
+    const cacheKey = halo === null ? artKey : `${artKey}+halo${halo}`;
     let bySize = this.pickups.get(cacheKey);
     if (!bySize) {
       bySize = new Map();
