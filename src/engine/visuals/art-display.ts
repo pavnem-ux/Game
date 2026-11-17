@@ -120,3 +120,18 @@ export function loadingBarRects(
 /** Horizontal mirror sign of the drawn image for a facing (an image facing left is mirrored). */
 export const flipSign = (facing: Facing, tuning: ArtDisplayTuning): 1 | -1 =>
   !tuning.flip ? 1 : ((tuning.facesLeft ? -facing : facing) as 1 | -1);
+
+/**
+ * Task 26: pickup art sizes from the existing pickup radii (world px, largest visible side; a
+ * config table for tuning, provisional). Hit / pickup radii themselves never change.
+ *  - XP crystal: 3.6 × the crystal radius (5) = 18;
+ *  - coin pile: 2.2 × the pile's drawn radius, which keeps the Task 11 value scaling of merged
+ *    piles (`coinPileRadius`, 4–9);
+ *  - chest (closed): 2.4 × the chest radius (16) ≈ 38.
+ */
+export const PICKUP_SIZE_PER_RADIUS = Object.freeze({ crystal: 3.6, coin: 2.2, chest: 2.4 });
+/** Drawn radius of a coin pile by value (Task 11 scaling: bigger piles a little larger). */
+export const coinPileRadius = (value: number): number => Math.min(9, 4 + Math.log2(value + 1));
+export function pickupArtSize(kind: keyof typeof PICKUP_SIZE_PER_RADIUS, radius: number): number {
+  return PICKUP_SIZE_PER_RADIUS[kind] * radius;
+}

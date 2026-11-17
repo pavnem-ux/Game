@@ -447,7 +447,7 @@ try {
   );
   await slots.getByRole('button', { name: 'Armor' }).click();
   const plate = page.getByRole('listitem', { name: /^Common Plate Armor:/ });
-  await plate.getByRole('button', { name: /Buy · ◎ 80/ }).click();
+  await plate.getByRole('button', { name: /Buy · Gold 80/ }).click();
   // Task 13 keyboard: the confirm dialog focuses «Confirm»; Enter confirms.
   await page.getByRole('dialog', { name: /Buy “Common Plate Armor” for 80 Gold\?/ }).waitFor();
   assert.equal(await page.evaluate(() => document.activeElement?.textContent), 'Confirm');

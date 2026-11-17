@@ -43,4 +43,6 @@ export const artManifestStore = {
     };
   },
   getSnapshot: artManifest,
+  /** Server / static rendering: no manifest yet, so components render their fallback. */
+  getServerSnapshot: (): ArtManifest | null => null,
 };

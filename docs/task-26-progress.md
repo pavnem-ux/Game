@@ -5,7 +5,7 @@ Spec: [task-26-art-pack-2.md](task-26-art-pack-2.md) (owner's file, kept verbati
 (4 ground textures, 5 pickups, `manifest-pack2.json`, `ART_PROVENANCE-pack2.md`). Rendering only:
 hitboxes, pickup radii, simulation and balance are unchanged.
 
-Current: Phase 2 done — next: Phase 3 (pickups, chests, icons)
+Current: Phase 3 done — next: Phase 4 (delivery)
 
 Draft PR: https://github.com/pavnem-ux/Game/pull/24
 
@@ -14,7 +14,7 @@ Draft PR: https://github.com/pavnem-ux/Game/pull/24
 - [x] 0 Setup: branch, spec, progress file, draft PR, "before" screenshots
 - [x] 1 Pipeline: files, manifest merge, provenance, registry kinds `ground` / `pickup`; tests
 - [x] 2 Ground: tiling per act, tint, layering; tests (act → texture, same seed with art on/off)
-- [ ] 3 Pickups, chests, currency icons
+- [x] 3 Pickups, chests, currency icons
 - [ ] 4 Delivery: full checks, e2e desktop/mobile, `test:production`, FPS at 120 enemies, "after"
       screenshots (crystals, coins, telegraphs on all four grounds), README, PR
 
@@ -78,3 +78,29 @@ With pack 1 (≈ 0.76 MB) the whole art set is ≈ 1.5 MB, under the 2 MB budget
     stable per map, brightness direction. `tests/art-browser.mjs`: the seeded map-25 run is
     identical with the art (now including the ashlands ground) and with the manifest blocked;
     `artGround` = `art:ground_ashlands~map25` with art, `null` without.
+- **Pickups, chests, icons (Phase 3).**
+  - **Sizes from the pickup radii** (`PICKUP_SIZE_PER_RADIUS` in `art-display.ts`, provisional):
+    XP crystal 3.6 × the crystal radius 5 = 18 px; coin piles 2.2 × the pile's drawn radius, which
+    keeps the Task 11 value scaling (`coinPileRadius`, 4–9, now shared by both paths); closed
+    chests 2.4 × the chest radius 16 ≈ 38 px. Largest visible side, centre anchor, baked once per
+    size like the units (coin sizes rounded to whole px). Pickup radii and magnet pull are
+    simulation and unchanged.
+  - **Kept:** the crystal hover, chest blinking before expiry (alpha), the opening puff and the
+    Task 18 lights (all unchanged code paths). Without an image the procedural pickup is drawn.
+  - **Crystal halo.** The art crystal is a thin green shard and almost vanished on the forest
+    grass; the procedural crystal sat on a soft glow. A soft green halo is baked into the crystal's
+    display texture (one sprite per crystal; additive glows are capped at 32 per frame), so
+    crystals read on all four grounds.
+  - **Currency icons.** `CurrencyIcon` (UI kit) shows the pack's `coin` / `ore`, with the former
+    inline SVGs as the fallback. Used by the Gold / Ore badges (hub header, forge, quests), the
+    shop's «Buy · <icon> N» buttons (pets too; there the icon is labelled «Gold», so the button
+    reads «Buy · Gold 80» — `campaign-browser.mjs` matched the old «◎» glyph and now matches the
+    new name) and the results screen's Gold / Ore rows. The in-run HUD coin counter keeps its «◎»
+    (not in the spec's list).
+  - **Fix found by the existing tests.** The kit test server-renders the badges; the icon's
+    `useSyncExternalStore` lacked a server snapshot and React threw. The manifest store now has
+    `getServerSnapshot` (no manifest → fallback), used by `CurrencyIcon` and Task 25's
+    `ClassPortrait`.
+  - **Tests:** pickup sizes from the radii and the coin scaling (`art-display.test.ts`); the art
+    e2e checks the Gold / Ore badges show the pack icons on desktop and phone and the SVGs without
+    the manifest; the full e2e suite passes.

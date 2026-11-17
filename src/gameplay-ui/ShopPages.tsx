@@ -23,7 +23,7 @@ import { PET_CONFIG, PET_IDS, checkPetPurchase, petLevel } from '../pets';
 import type { PetId } from '../pets';
 import { PetCard } from './meta/PetsScreen';
 import { TierRows } from './meta/TierRows';
-import { Button, ConfirmModal, Tabs, TierFrame, disabledReason } from './kit';
+import { Button, ConfirmModal, CurrencyIcon, Tabs, TierFrame, disabledReason } from './kit';
 import { EN, formatNumber } from './strings-en';
 
 /**
@@ -178,7 +178,10 @@ export function ShopPage() {
                           setMessage('');
                         }}
                       >
-                        Buy · <span className="price-badge">◎ {formatNumber(item.price)}</span>
+                        Buy ·{' '}
+                        <span className="price-badge">
+                          <CurrencyIcon kind="gold" label="Gold" /> {formatNumber(item.price)}
+                        </span>
                       </Button>
                     ) : (
                       <div className="shop-locked-overlay" aria-hidden="true">
@@ -269,7 +272,10 @@ function PetShop() {
                         setMessage('');
                       }}
                     >
-                      {P.buy} · <span className="price-badge">◎ {def.source.price}</span>
+                      {P.buy} ·{' '}
+                      <span className="price-badge">
+                        <CurrencyIcon kind="gold" label="Gold" /> {def.source.price}
+                      </span>
                     </Button>
                   ) : null
                 }

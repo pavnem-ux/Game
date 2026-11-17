@@ -554,3 +554,15 @@
   position: relative;
   z-index: 1;
 }
+/* Task 26: Gold / Ore icons from the art pack (the inline SVGs are the fallback). */
+.currency-icon {
+  display: inline-block;
+  width: 1.15em;
+  height: 1.15em;
+  vertical-align: -0.2em;
+  object-fit: contain;
+  flex: none;
+}
+img.currency-icon {
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45));
+}
