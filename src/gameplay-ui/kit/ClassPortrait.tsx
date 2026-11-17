@@ -19,7 +19,11 @@ export function ClassPortrait({
   size?: number;
   glow?: boolean;
 }) {
-  const manifest = useSyncExternalStore(artManifestStore.subscribe, artManifestStore.getSnapshot);
+  const manifest = useSyncExternalStore(
+    artManifestStore.subscribe,
+    artManifestStore.getSnapshot,
+    artManifestStore.getServerSnapshot,
+  );
   const [failed, setFailed] = useState(false);
   const entry = manifest?.get(portraitArtKey(characterClass));
   if (!entry || failed)

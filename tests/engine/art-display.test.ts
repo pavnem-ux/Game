@@ -6,13 +6,18 @@ import {
   PLAYER_FACING_THRESHOLD,
   artLayout,
   artTuning,
+  coinPileRadius,
   flipSign,
   loadingBarRects,
   nextFacing,
+  PICKUP_SIZE_PER_RADIUS,
+  pickupArtSize,
   visibleBounds,
 } from '../../src/engine/visuals/art-display';
 import type { Facing } from '../../src/engine/visuals/art-display';
 import { pinToScreen } from '../../src/engine/screen-space';
+import { XP_RULES } from '../../src/gameplay';
+import { CHEST_RULES } from '../../src/gameplay/chests';
 import type { CameraLike } from '../../src/engine/screen-space';
 
 /** Task 25 Phase 2: size, anchor and facing of owner art (pure presentation maths). */
@@ -153,5 +158,21 @@ describe('Task 25 review — the loading bar stays on screen under the DPR camer
     expect([b.width, b.height]).toEqual([a.width * 2, a.height * 2]);
     expect(loadingBarRects(600, 400, 1, 1).fill.width).toBe(240);
     expect(loadingBarRects(1280, 720, 1, 0).fill.width).toBe(4); // a visible stub at 0%
+  });
+});
+
+describe('Task 26 — pickup art sizes from the pickup radii', () => {
+  it('crystal 3.6 × crystal radius, chest 2.4 × chest radius (config table)', () => {
+    expect(PICKUP_SIZE_PER_RADIUS).toEqual({ crystal: 3.6, coin: 2.2, chest: 2.4 });
+    expect(pickupArtSize('crystal', XP_RULES.crystalRadius)).toBeCloseTo(18, 9);
+    expect(pickupArtSize('chest', CHEST_RULES.radius)).toBeCloseTo(38.4, 9);
+  });
+  it('coin piles keep the Task 11 value scaling (4 → 9, growing, capped)', () => {
+    const values = [1, 3, 7, 15, 31, 63, 1000];
+    const radii = values.map(coinPileRadius);
+    expect(radii[0]).toBeCloseTo(5, 9);
+    for (let i = 1; i < radii.length; i++) expect(radii[i]).toBeGreaterThanOrEqual(radii[i - 1]);
+    expect(Math.max(...radii)).toBe(9);
+    expect(pickupArtSize('coin', coinPileRadius(1))).toBeCloseTo(11, 9);
   });
 });

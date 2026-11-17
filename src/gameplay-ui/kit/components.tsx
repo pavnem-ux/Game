@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef } from 'react';
+import { CurrencyIcon } from './CurrencyIcon';
 import type { ReactNode } from 'react';
 import { EN } from '../strings-en';
 import { formatGold, progressFraction } from './logic';
@@ -288,10 +289,7 @@ export function ProgressBar({
 export function CurrencyBadge({ amount, size = 'm' }: { amount: number; size?: 's' | 'm' | 'l' }) {
   return (
     <span className={`kit-currency kit-currency-${size}`} aria-label={EN.meta.gold(String(amount))}>
-      <svg viewBox="0 0 20 20" width="1em" height="1em" aria-hidden="true">
-        <circle cx="10" cy="10" r="8.5" className="coin-outer" />
-        <circle cx="10" cy="10" r="5.5" className="coin-inner" />
-      </svg>
+      <CurrencyIcon kind="gold" />
       {formatGold(amount)}
     </span>
   );
@@ -304,10 +302,7 @@ export function OreBadge({ amount, size = 'm' }: { amount: number; size?: 's' | 
       className={`kit-currency kit-ore kit-currency-${size}`}
       aria-label={EN.meta.ore(String(amount))}
     >
-      <svg viewBox="0 0 20 20" width="1em" height="1em" aria-hidden="true">
-        <path d="M10 1.5 L17 7 L14.5 17.5 L5.5 17.5 L3 7 Z" className="ore-outer" />
-        <path d="M10 1.5 L10 17.5 M3 7 L10 10 L17 7" className="ore-facet" />
-      </svg>
+      <CurrencyIcon kind="ore" />
       {formatGold(amount)}
     </span>
   );

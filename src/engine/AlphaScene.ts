@@ -29,9 +29,13 @@ import { ArtSprites } from './visuals/art-sprites';
 import {
   ENEMY_FACING_THRESHOLD,
   PLAYER_FACING_THRESHOLD,
+  coinPileRadius,
   flipSign,
   nextFacing,
+  pickupArtSize,
 } from './visuals/art-display';
+import { XP_RULES } from '../gameplay';
+import { CHEST_RULES } from '../gameplay/chests';
 import type { Facing } from './visuals/art-display';
 import type { TextureKey } from './visuals/keys';
 import { BiomeRenderer } from './visuals/BiomeRenderer';
@@ -58,6 +62,8 @@ const FLOAT_STYLES: Record<FloatingKind, { color: string; size: number }> = {
   player: { color: '#ff6b6b', size: 14 },
   dodge: { color: '#b9c7c0', size: 11 },
 };
+/** Task 26: soft halo baked under the XP crystal art (it reads on every ground, like Task 18's). */
+const CRYSTAL_HALO = 0x8cf5a8;
 /** Seconds the red edge vignette stays after the player loses HP. */
 const PLAYER_HIT_VIGNETTE = 0.3;
 
@@ -232,6 +238,8 @@ export class AlphaScene extends Phaser.Scene {
               Object.freeze({
                 // Task 25: looks currently drawn with the owner's art (13 once the pack loaded).
                 artLooks: this.art.loadedLooks(),
+                // Task 26: the ground texture in use (null = procedural ground).
+                artGround: this.biome.artGround,
                 stunIndicators: Object.freeze(
                   this.stunLabels
                     .filter((label) => label.visible)
@@ -762,6 +770,9 @@ export class AlphaScene extends Phaser.Scene {
     this.units.item(petTextureKey(pet.id), x, y, (acting ? 1.1 : 0.9) / ART_SCALE, 1, bob);
   }
   private draw(s: GameplaySnapshot) {
+    // Task 26: the act's ground art replaces the procedural ground once it has loaded.
+    const look = this.biome.look;
+    if (look) this.biome.applyArtGround(this.art.ground(look.act));
     const g = this.graphics;
     g.clear();
     const o = this.overlay.clear();
@@ -869,26 +880,49 @@ export class AlphaScene extends Phaser.Scene {
     }
     this.drawPet(s);
     this.drawActivities(s);
-    // Task 18: pickups and chests are pooled sprites (textures baked once).
+    // Task 18: pickups and chests are pooled sprites (textures baked once). Task 26: the owner's
+    // pickup art once loaded (sizes from the pickup radii), else the procedural looks.
+    const crystalArt = this.art.art('crystal');
+    const crystalDraw = crystalArt
+      ? this.artSprites.pickup(
+          crystalArt.key,
+          pickupArtSize('crystal', XP_RULES.crystalRadius),
+          CRYSTAL_HALO,
+        )
+      : null;
     for (const crystal of s.crystals)
       this.units.item(
-        'crystal',
+        crystalDraw ? crystalDraw.texture : 'crystal',
         crystal.x,
         crystal.y,
-        0.85 / ART_SCALE,
+        crystalDraw ? crystalDraw.scale : 0.85 / ART_SCALE,
         1,
         1.5 + Math.sin(s.time * 3 + crystal.x * 0.05) * 1.5,
       );
     // Task 11: Gold coin piles (bigger piles drawn slightly larger).
+    const coinArt = this.art.art('coin');
     for (const pile of s.coins.piles) {
-      const r = Math.min(9, 4 + Math.log2(pile.value + 1));
-      this.units.item('coin', pile.x, pile.y, r / 6 / ART_SCALE);
+      const r = coinPileRadius(pile.value);
+      if (coinArt) {
+        const d = this.artSprites.pickup(coinArt.key, pickupArtSize('coin', r));
+        this.units.item(d.texture, pile.x, pile.y, d.scale);
+      } else this.units.item('coin', pile.x, pile.y, r / 6 / ART_SCALE);
     }
     // Task 12: chests (original shapes): wooden — brown box with an iron band; enchanted — violet
     // box with a glowing rune. Blinking (alpha flicker) in the last 5 s of their life.
     for (const chest of s.chests?.items ?? []) {
       const alpha = chest.blinking ? (Math.floor(s.time * 6) % 2 === 0 ? 0.35 : 1) : 1;
-      this.units.item(chestTextureKey(chest.type), chest.x, chest.y, 1 / ART_SCALE, alpha);
+      const look = chestTextureKey(chest.type);
+      const chestArt = this.art.art(look);
+      if (chestArt) {
+        // The procedural chest had its glow disc baked in: keep it under the art (same colours).
+        const d = this.artSprites.pickup(
+          chestArt.key,
+          pickupArtSize('chest', CHEST_RULES.radius),
+          chest.type === 'enchanted' ? 0xb68cff : 0xf0c862,
+        );
+        this.units.item(d.texture, chest.x, chest.y, d.scale, alpha);
+      } else this.units.item(look, chest.x, chest.y, 1 / ART_SCALE, alpha);
     }
     // Task 12: bombard telegraphs — a red ground circle that fills up until the strike lands.
     for (const strike of s.artilleryStrikes) {

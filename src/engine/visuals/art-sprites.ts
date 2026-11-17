@@ -3,6 +3,11 @@ import { ART_BODY_WIDTH_PER_RADIUS, artLayout, artTuning, visibleBounds } from '
 import type { ArtBounds, ArtDisplayTuning } from './art-display';
 import { artTextureKey } from './art-registry';
 
+/** Task 26: a pickup's texture and display scale (centre anchor). */
+export interface PickupDraw {
+  readonly texture: string;
+  readonly scale: number;
+}
 /** Everything needed to draw one art key at one collision radius (cached; never rebuilt). */
 export interface ArtDraw {
   readonly texture: string;
@@ -61,6 +66,56 @@ export class ArtSprites {
     });
     byRadius.set(radius, made);
     return made;
+  }
+  private readonly pickups = new Map<string, Map<number, PickupDraw>>();
+  /**
+   * Task 26: a pickup image (anchor centre) whose largest visible side is `size` world px (rounded
+   * to whole px: coin piles vary with their value, so the cache stays small). Baked like units.
+   */
+  pickup(artKey: string, size: number, halo: number | null = null): PickupDraw {
+    const px = Math.max(4, Math.round(size));
+    const cacheKey = halo === null ? artKey : `${artKey}+halo${halo}`;
+    let bySize = this.pickups.get(cacheKey);
+    if (!bySize) {
+      bySize = new Map();
+      this.pickups.set(cacheKey, bySize);
+    }
+    const known = bySize.get(px);
+    if (known) return known;
+    const b = this.boundsOf(artKey);
+    const visW = b.right - b.left + 1,
+      visH = b.bottom - b.top + 1;
+    const scale = px / Math.max(visW, visH);
+    const baked = this.get(artKey, visW * scale);
+    const texture = halo === null ? baked.texture : this.withHalo(baked.texture, halo);
+    const made: PickupDraw = Object.freeze({ texture, scale: scale / baked.factor });
+    bySize.set(px, made);
+    return made;
+  }
+  /**
+   * The baked image centred on a soft round halo (one sprite: Canvas draws each sprite with a
+   * save/restore, and additive glows are capped). The halo canvas is larger than the image, so
+   * the image keeps its scale and centre; the halo spans ~1.5 × its largest side.
+   */
+  private withHalo(texture: string, color: number): string {
+    const key = `${texture}+halo${color.toString(16)}`;
+    if (this.scene.textures.exists(key)) return key;
+    const src = this.scene.textures.get(texture).getSourceImage() as Source;
+    const side = Math.ceil(Math.max(src.width, src.height) * 1.5);
+    const tex = this.scene.textures.createCanvas(key, side, side);
+    if (!tex) return texture;
+    const ctx = tex.getContext();
+    const r = side / 2;
+    const rgb = `${(color >> 16) & 255}, ${(color >> 8) & 255}, ${color & 255}`;
+    const g = ctx.createRadialGradient(r, r, 0, r, r, r);
+    g.addColorStop(0, `rgba(${rgb}, 0.42)`);
+    g.addColorStop(0.55, `rgba(${rgb}, 0.18)`);
+    g.addColorStop(1, `rgba(${rgb}, 0)`);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, side, side);
+    ctx.drawImage(src, Math.round((side - src.width) / 2), Math.round((side - src.height) / 2));
+    tex.refresh();
+    return key;
   }
   private source(artKey: string): Source {
     return this.scene.textures.get(artTextureKey(artKey)).getSourceImage() as Source;

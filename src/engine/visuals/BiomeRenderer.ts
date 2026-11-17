@@ -7,6 +7,7 @@ import { QUALITY_PRESETS } from './quality';
 import type { GraphicsQuality } from './quality';
 import { renderRandom } from './render-rng';
 import { TintCache } from './tint-cache';
+import { GROUND_TILE_WORLD, groundTint } from './art-ground';
 
 /** Task 18 biome layers (all below units except the falling particles). */
 export const BIOME_DEPTH = Object.freeze({
@@ -34,6 +35,9 @@ export class BiomeRenderer {
   private built: { mapId: number | null; quality: GraphicsQuality } | null = null;
   look: MapLook | null = null;
   private readonly tints: TintCache;
+  /** Task 26: the ground tile sprite of the current map and the art texture baked for it. */
+  private ground: Phaser.GameObjects.TileSprite | null = null;
+  private groundArt: string | null = null;
   constructor(private readonly scene: Phaser.Scene) {
     this.tints = new TintCache(scene);
     for (const key of DECOR_KEYS) this.bake(key, DECOR_SIZE, (g) => DECOR_ART[key](pen(g)));
@@ -59,12 +63,11 @@ export class BiomeRenderer {
     // Ground: a tiled procedural texture (noise patches) baked once per map.
     const groundKey = `ground-map-${mapId ?? 0}`;
     this.bake(groundKey, TILE, (g) => this.drawGroundTile(g, look));
-    this.keep(
-      scene.add
-        .tileSprite(0, 0, ARENA.size, ARENA.size, groundKey)
-        .setOrigin(0)
-        .setDepth(BIOME_DEPTH.ground),
-    );
+    this.ground = scene.add
+      .tileSprite(0, 0, ARENA.size, ARENA.size, groundKey)
+      .setOrigin(0)
+      .setDepth(BIOME_DEPTH.ground);
+    this.keep(this.ground);
     // Large features drawn once: paths, the map's signature, arena wall and the start ring.
     const f = scene.add.graphics().setDepth(BIOME_DEPTH.features);
     this.keep(f);
@@ -269,9 +272,65 @@ export class BiomeRenderer {
       else if (kind === 'fog') img.setAlpha(0.14 + 0.06 * Math.sin(time * 0.3 + v * 9));
     }
   }
+  /**
+   * Task 26: once the act's ground texture has loaded (`texture` = its Phaser key, null while it
+   * is missing), tiles it under everything instead of the procedural ground, tinted with the map's
+   * variation (within ±8%). Called every frame; after the first swap it is a single null check.
+   */
+  /** The art ground texture shown for this map, or null while the procedural ground is used. */
+  get artGround(): string | null {
+    return this.groundArt;
+  }
+  applyArtGround(texture: string | null): void {
+    if (this.groundArt !== null || texture === null || !this.ground || !this.look) return;
+    const tint = groundTint(this.look);
+    const key = `${texture}~map${this.built?.mapId ?? 0}`;
+    if (!this.scene.textures.exists(key) && !this.bakeTinted(texture, key, tint)) return;
+    const src = this.scene.textures.get(key).getSourceImage() as { width: number };
+    this.ground.setTexture(key).setTileScale(GROUND_TILE_WORLD / src.width);
+    this.groundArt = key;
+  }
+  /**
+   * A copy of `texture` multiplied per channel by `tint` (each 0.92–1.08). The Canvas renderer
+   * ignores setTint, so the tint is baked: multiply by tint / max(tint) (darkens), then add the
+   * copy onto itself at alpha max(tint) − 1 (brightens multiplicatively). Ground is opaque.
+   */
+  private bakeTinted(texture: string, key: string, tint: readonly [number, number, number]) {
+    const src = this.scene.textures.get(texture).getSourceImage() as CanvasImageSource & {
+      width: number;
+      height: number;
+    };
+    const tex = this.scene.textures.createCanvas(key, src.width, src.height);
+    if (!tex) return false;
+    const ctx = tex.getContext();
+    const top = Math.max(1, ...tint);
+    const c = (v: number) => Math.round((v / top) * 255);
+    ctx.drawImage(src, 0, 0);
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.fillStyle = `rgb(${c(tint[0])}, ${c(tint[1])}, ${c(tint[2])})`;
+    ctx.fillRect(0, 0, src.width, src.height);
+    if (top > 1) {
+      const copy = document.createElement('canvas');
+      copy.width = src.width;
+      copy.height = src.height;
+      copy.getContext('2d')!.drawImage(tex.getSourceImage() as HTMLCanvasElement, 0, 0);
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = top - 1;
+      ctx.drawImage(copy, 0, 0);
+      ctx.globalAlpha = 1;
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    tex.refresh();
+    return true;
+  }
   destroy(): void {
     for (const o of this.objects) o.destroy();
     this.objects = [];
+    this.ground = null;
+    // The baked ground copy belongs to this map (1024² canvas): free it with the map.
+    if (this.groundArt && this.scene.textures.exists(this.groundArt))
+      this.scene.textures.remove(this.groundArt);
+    this.groundArt = null;
     this.decor = [];
     this.particles = [];
     this.built = null;

@@ -16,6 +16,7 @@ export {
 } from './components';
 export { ClassEmblem } from './ClassEmblem';
 export { ClassPortrait } from './ClassPortrait';
+export { CurrencyIcon } from './CurrencyIcon';
 export {
   STAT_ROWS,
   compareStats,

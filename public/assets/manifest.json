@@ -151,5 +151,95 @@
   ],
   "anchor": "center",
   "source": "owner-generated (ChatGPT image), processed: alpha fix, trim, resize, WebP q90"
+ },
+ "ground_ashlands": {
+  "file": "assets/ground/ground_ashlands.webp",
+  "size": [
+   1024,
+   1024
+  ],
+  "kind": "ground",
+  "source": "owner-generated (ChatGPT image)",
+  "anchor": "tile"
+ },
+ "ground_forest": {
+  "file": "assets/ground/ground_forest.webp",
+  "size": [
+   1024,
+   1024
+  ],
+  "kind": "ground",
+  "source": "owner-generated (ChatGPT image)",
+  "anchor": "tile"
+ },
+ "ground_frost": {
+  "file": "assets/ground/ground_frost.webp",
+  "size": [
+   1024,
+   1024
+  ],
+  "kind": "ground",
+  "source": "owner-generated (ChatGPT image)",
+  "anchor": "tile"
+ },
+ "ground_marsh": {
+  "file": "assets/ground/ground_marsh.webp",
+  "size": [
+   1024,
+   1024
+  ],
+  "kind": "ground",
+  "source": "owner-generated (ChatGPT image)",
+  "anchor": "tile"
+ },
+ "chest_enchanted": {
+  "file": "assets/pickups/chest_enchanted.webp",
+  "size": [
+   192,
+   192
+  ],
+  "kind": "pickup",
+  "source": "owner-generated (ChatGPT image)",
+  "anchor": "center"
+ },
+ "chest_wooden": {
+  "file": "assets/pickups/chest_wooden.webp",
+  "size": [
+   192,
+   192
+  ],
+  "kind": "pickup",
+  "source": "owner-generated (ChatGPT image)",
+  "anchor": "center"
+ },
+ "coin": {
+  "file": "assets/pickups/coin.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "pickup",
+  "source": "owner-generated (ChatGPT image)",
+  "anchor": "center"
+ },
+ "ore": {
+  "file": "assets/pickups/ore.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "pickup",
+  "source": "owner-generated (ChatGPT image)",
+  "anchor": "center"
+ },
+ "xp_crystal": {
+  "file": "assets/pickups/xp_crystal.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "pickup",
+  "source": "owner-generated (ChatGPT image)",
+  "anchor": "center"
  }
 }

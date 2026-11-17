@@ -1,12 +1,14 @@
-# Art packs — Task 25
+# Art packs — Tasks 25 and 26
 
 The owner's art (created / commissioned by the owner, listed in
 [ART_PROVENANCE.md](ART_PROVENANCE.md); AGENTS.md §4.12) replaces the procedural looks of the
 player, the enemies, the elites, the treasure thief and the blight nest in a run, and adds class
-portraits to the menus. **Rendering only**: hitboxes, simulation, balance and saves are unchanged,
+portraits to the menus (pack 1, Task 25). Pack 2 (Task 26) adds a tiling ground per act, art for XP
+crystals, coin piles and chests, and the Gold / Ore icons in the menus. **Rendering only**: hitboxes, simulation, balance and saves are unchanged,
 and every look falls back to its Task 18 procedural texture whenever its image is missing or not
-loaded (yet). Spec: [task-25-art-pack-1.md](task-25-art-pack-1.md); journal:
-[task-25-progress.md](task-25-progress.md).
+loaded (yet). Specs: [task-25-art-pack-1.md](task-25-art-pack-1.md),
+[task-26-art-pack-2.md](task-26-art-pack-2.md); journals: [task-25-progress.md](task-25-progress.md),
+[task-26-progress.md](task-26-progress.md).
 
 ## Files and manifest
 
@@ -15,6 +17,8 @@ public/assets/manifest.json           # one entry per image (owner's file, kept 
 public/assets/characters/player_*.webp    # 256 px, anchor bottom-center
 public/assets/enemies/*.webp              # 256 / 384 px, anchor bottom-center
 public/assets/portraits/portrait_*.webp   # 768 px, anchor center
+public/assets/ground/ground_*.webp        # 1024 px seamless, anchor tile, kind ground (pack 2)
+public/assets/pickups/*.webp              # 128 / 192 px, anchor center, kind pickup (pack 2)
 docs/ART_PROVENANCE.md                # origin and processing of every batch
 ```
 
@@ -32,51 +36,83 @@ Rules enforced by `parseArtManifest` (`src/engine/visuals/art-manifest.ts`, pure
 
 - key = file name without extension (lowercase letters, digits, `_`);
 - `file` is `assets/…/<key>.webp` or `.png` — no URLs, no `..`, no CDN;
-- `size` is `[width, height]`, 1–2048 px; `anchor` is `bottom-center` or `center`;
+- `size` is `[width, height]`, 1–2048 px; `anchor` is `bottom-center`, `center` or `tile`
+  (`tile` only together with `kind: "ground"`);
+- `kind` (optional, pack 2): `unit`, `portrait`, `ground` or `pickup`; it must match how the build
+  uses the key (tested);
 - no duplicate keys (checked on the raw text: `JSON.parse` silently keeps the last one) and no
   file used twice. All problems are reported at once.
 
 `public/assets/`, `docs/ART_PROVENANCE.md` and the spec are in `.prettierignore`: the owner's
-files stay byte-identical. Pack 1 is 17 images, about 0.76 MB (budget < 1 MB, tested).
+files stay byte-identical (the pack-2 entries were merged in the owner's 1-space JSON format). Pack
+1 is 17 images (≈ 0.76 MB), pack 2 9 images (≈ 0.75 MB); the whole set stays < 2 MB (tested).
 
 ### Adding a pack
 
 1. Copy the new images under `public/assets/…` and merge their entries into `manifest.json`;
    add a batch row to `docs/ART_PROVENANCE.md`.
-2. If a key replaces a look, add it to `UNIT_ART` (`art-registry.ts`) — one line per look.
-   Portrait keys `portrait_<class>` are picked up automatically.
+2. If a key replaces a look, add it to `UNIT_ART` / `PICKUP_ART` (`art-registry.ts`) — one line
+   per look; grounds per act are in `GROUND_ART`, menu icons in `CURRENCY_ART`. Portrait keys
+   `portrait_<class>` are picked up automatically.
 3. Tune its size / facing in `ART_DISPLAY` (`art-display.ts`) if the defaults do not fit.
 4. `npm test` checks every file exists, matches its manifest size (read from the WebP header),
-   is listed, the pack stays under 1 MB and every key is used.
+   is listed, the art set stays under 2 MB and every key is used with its declared kind.
 
 A key the code does not use yet is accepted by the parser but fails the "every key is used"
 test — map it, or remove it from the pack.
 
 ## Which art replaces which look
 
-| Look (procedural key)                    | Art key                                      | Notes                                |
-| ---------------------------------------- | -------------------------------------------- | ------------------------------------ |
-| `player-<class>`                         | `player_<class>`                             | faces its movement                   |
-| `enemy-melee` / `enemy-ranged`           | `enemy_melee` / `enemy_ranged`               | face the player                      |
-| `enemy-swift`                            | `enemy_swift_imp`                            |                                      |
-| `enemy-brute`                            | `enemy_stone_troll`                          |                                      |
-| `enemy-bombard`                          | `enemy_bombard_warlock`                      |                                      |
-| `elite-melee` / `elite-ranged`           | `elite_savage_brute` / `elite_dark_conjurer` | elite profiles' split                |
-| `activity-thief`                         | `enemy_treasure_thief`                       | faces away (flees); image faces left |
-| `activity-nest`                          | `nest_blight`                                | never flipped                        |
-| `boss`, items, projectiles, pets, chests | —                                            | keep the procedural art              |
-| Character select, hub panel              | `portrait_<class>`                           | DOM image, emblem fallback           |
+| Look (procedural key)              | Art key                                             | Notes                                |
+| ---------------------------------- | --------------------------------------------------- | ------------------------------------ |
+| `player-<class>`                   | `player_<class>`                                    | faces its movement                   |
+| `enemy-melee` / `enemy-ranged`     | `enemy_melee` / `enemy_ranged`                      | face the player                      |
+| `enemy-swift`                      | `enemy_swift_imp`                                   |                                      |
+| `enemy-brute`                      | `enemy_stone_troll`                                 |                                      |
+| `enemy-bombard`                    | `enemy_bombard_warlock`                             |                                      |
+| `elite-melee` / `elite-ranged`     | `elite_savage_brute` / `elite_dark_conjurer`        | elite profiles' split                |
+| `activity-thief`                   | `enemy_treasure_thief`                              | faces away (flees); image faces left |
+| `activity-nest`                    | `nest_blight`                                       | never flipped                        |
+| `crystal`                          | `xp_crystal`                                        | 18 px, baked soft green halo         |
+| `coin`                             | `coin`                                              | 2.2 × pile radius (value scaling)    |
+| `chest-wooden` / `chest-enchanted` | `chest_wooden` / `chest_enchanted`                  | closed; baked glow as before         |
+| map ground (act I–IV)              | `ground_forest` / `_marsh` / `_ashlands` / `_frost` | tiling, per-map tint ±8%             |
+| Gold / Ore badges, shop, results   | `coin` / `ore`                                      | DOM image, SVG fallback              |
+| `boss`, projectiles, pets, decor   | —                                                   | keep the procedural art              |
+| Character select, hub panel        | `portrait_<class>`                                  | DOM image, emblem fallback           |
 
 ## Loading
 
 The Phaser game exists from the menu on, so the scene does **not** block in `preload()` (its
 command bridge subscribes in `create()`; a "Start run" sent during a blocking preload would be
 lost). `startArtLoad` (`art-loader.ts`) fetches the manifest once per page (`art-pack.ts`,
-shared with the portraits) and loads the 13 unit images in the background with a thin progress
+shared with the portraits) and loads the 13 unit images, 4 pickups and 4 grounds in the background with a thin progress
 bar at the bottom of the canvas. `ArtRegistry.texture(look)` returns `art:<key>` only once that
 image has loaded; until then (or if it fails, or the manifest is missing / invalid — one warning
 in the console) the procedural texture is drawn. A run started mid-load simply switches look.
-Portraits (433 KB) are not loaded by the scene; the menus load them as `<img>`.
+Portraits (433 KB) and the menu-only `ore` icon are not loaded by the scene; the menus load them
+as `<img>`. The progress bar is pinned to screen space (Task 25 review), so it stays visible under
+the DPR camera zoom.
+
+## Ground (Task 26)
+
+`art-ground.ts` (pure): `GROUND_TILE_WORLD = 512` world units per repetition of the 1024 px
+texture (sharp at DPR 2; provisional) and `groundTint(look)`: the map's Task 18 variation (hue
+shift, brightness) as per-channel factors = the map's ground base colour ÷ its act's base colour,
+clamped to 1 ± 0.08. `BiomeRenderer.applyArtGround` swaps the existing ground tile sprite (under
+everything) to the act's texture once it has loaded, with the tint baked once per map (Canvas has
+no `setTint`; the copy is freed with the map). Paths, signature features, decor, particles and the
+light / darkness overlay are unchanged on top; without the image the procedural ground stays.
+
+## Pickups and chests (Task 26)
+
+Sizes come from the pickup radii in one table (`PICKUP_SIZE_PER_RADIUS`, `art-display.ts`,
+provisional): XP crystal 3.6 × 5 = 18 px; coin piles 2.2 × the pile's drawn radius (the Task 11
+value scaling, `coinPileRadius`, 4–9); closed chests 2.4 × 16 ≈ 38 px. Largest visible side,
+centre anchor, baked per size like the units. The crystal and the chests get a soft halo baked
+into their display copy: the procedural looks had one (the chest's glow disc in its texture), and
+the thin crystal shard nearly vanished on the forest grass without it. Hover, chest blinking,
+opening puff, magnet pull and the Task 18 lights are unchanged.
 
 ## Drawing (one tuning table)
 
@@ -117,18 +153,26 @@ is always next to it.
 
 ## Verification
 
-- `tests/engine/art-pack.test.ts` — the real pack (sizes from WebP headers, nothing unlisted,
-  under 1 MB, every key used), manifest validation, registry fallback, key collisions.
+- `tests/engine/art-pack.test.ts` — the real packs (sizes from WebP headers, nothing unlisted,
+  under 2 MB, every key used with its declared kind), manifest validation (incl. `tile` / `kind`),
+  registry fallback for units, pickups and grounds, key collisions.
 - `tests/engine/art-display.test.ts` — bounds, 2.4 × radius width, anchors, tuning table, facing
-  threshold (no flicker), mirror signs.
+  threshold (no flicker), mirror signs, loading bar on screen at DPR 1 / 1.5 / 2, pickup sizes
+  from the radii and the coin-pile scaling.
+- `tests/engine/art-ground.test.ts` — act → ground for maps 1/11/21/31 and 10/20/30/40, tile
+  size, per-map tint within ±8% on all 40 maps.
 - `tests/art-browser.mjs` (in `test:e2e`) — the same seeded map-25 run (every enemy type, thief,
   nest, a turning player) advanced 24 × 0.25 s with the page clock paused gives an identical world
-  after every step with the art loaded and with the manifest blocked; all 13 looks load; no
-  missing-texture warnings or errors; portraits on character select + hub on desktop and phone
-  (no horizontal scroll); emblems as the fallback.
+  after every step with the art loaded (incl. the ashlands ground) and with the manifest blocked;
+  all 17 looks (13 units + 4 pickups) load and the act ground is applied; no missing-texture
+  warnings or errors; portraits on character select + hub and the Gold / Ore badge icons on
+  desktop and phone (no horizontal scroll); emblems and SVG icons as the fallback.
 - `tests/art-screens.mjs <tag>` — before / after screenshots in `docs/art-pack-1/` (hub,
   character select, map 1, map 25 with elites / thief / nest, and 2× close-ups of every enemy
   type on the four biome grounds: maps 1, 11, 21, 31).
+- `tests/art2-screens.mjs <tag>` — pack-2 before / after screenshots in `docs/art-pack-2/` (maps 1,
+  15, 25, 35 with crystals, coins, both chests and a bombard telegraph — full and close-up — plus
+  the hub and a results screen).
 - `tests/art-fps.mjs [rounds] [dpr]` — FPS with 120 enemies, procedural vs art.
 
 ### FPS with 120 enemies
@@ -137,17 +181,26 @@ Sandbox run (no reserved elite / boss slots, so all 120 slots are filled; topped
 player kills, ≈ 117 alive on average), 1280×720, headless Chromium on a 4-core cloud container
 (software rendering, no GPU), debug-overlay FPS averaged over 8 s, two alternating rounds:
 
-| DPR | Procedural (before) | Owner art (after) |
-| --- | ------------------- | ----------------- |
-| 1   | 54.6 / 55.6 fps     | 55.8 / 53.6 fps   |
-| 2   | 54.0 / 51.3 fps     | 53.2 / 50.1 fps   |
+| DPR | Procedural (before) | Owner art (after) | Measured with                          |
+| --- | ------------------- | ----------------- | -------------------------------------- |
+| 1   | 54.6 / 55.6 fps     | 55.8 / 53.6 fps   | Task 25 (pack 1)                       |
+| 2   | 54.0 / 51.3 fps     | 53.2 / 50.1 fps   | Task 25 (pack 1)                       |
+| 1   | 51.5 / 51.4 fps     | 52.0 / 49.9 fps   | Task 26 (packs 1 + 2: ground, pickups) |
+| 2   | 43.8 / 44.6 fps     | 43.8 / 44.7 fps   | Task 26 (packs 1 + 2: ground, pickups) |
 
-The difference is within the run-to-run noise. Not measured: real phones and GPUs.
+"Procedural" blocks the manifest (no art at all); compare rows of the same task only — the
+container load differed between the two sessions. Within each session the difference is within
+the run-to-run noise. Not measured: real phones and GPUs.
 
 ## Limits / not verified
 
 - Only Chromium (desktop and phone emulation); no real phones.
 - Sizes and facings are provisional, for the owner to tune after a playtest (one table).
 - The elite ground ring and mark rings stay at the hitbox (centre), as before.
+- Readability (Task 26 "after" screenshots): XP crystals, chests and bombard telegraphs read on
+  all four grounds. Small coin piles (11 px for a 1-coin pile, the Task 11 scale) are dimmer than
+  the old bright-gold discs on the act I forest ground (`docs/art-pack-2/after-map1.jpg`, left of
+  the bombard): visible, but the owner may want a larger `coin` factor or a brighter coin image.
+- Ore is not a world pickup (activity Ore is banked), so `ore` is used for the menu icon only.
 - `ART_PROVENANCE.md` refers to `docs/art-assets-list.md` and a future `docs/art-prompts.txt`,
   which are the owner's to add.

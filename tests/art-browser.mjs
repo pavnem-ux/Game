@@ -59,7 +59,8 @@ async function scenario(withArt) {
     }),
   );
   if (withArt) {
-    await page.waitForFunction(() => window.__alpha.presentation().artLooks === 13, null, {
+    // Task 26: 13 unit looks + 4 pickup looks.
+    await page.waitForFunction(() => window.__alpha.presentation().artLooks === 17, null, {
       timeout: 15_000,
     });
   }
@@ -96,9 +97,9 @@ async function scenario(withArt) {
       }),
     );
   }
-  const artLooks = await page.evaluate(() => window.__alpha.presentation().artLooks);
+  const { artLooks, artGround } = await page.evaluate(() => window.__alpha.presentation());
   await context.close();
-  return { digests, logs, artLooks };
+  return { digests, logs, artLooks, artGround };
 }
 
 /**
@@ -138,8 +139,20 @@ async function portraits(withArt, viewport, touch) {
   await go('Home');
   if (withArt) await page.locator('.hub-champion .class-portrait img').waitFor();
   const hub = await shown('.hub-champion');
+  // Task 26: the Gold / Ore badges use the pack's coin / ore icons (inline SVGs as the fallback).
+  if (withArt) await page.locator('.kit-ore img.currency-icon').waitFor();
+  const badges = await page.evaluate(() =>
+    [...document.querySelectorAll('.kit-currency')].slice(0, 2).map((b) => {
+      const img = b.querySelector('img.currency-icon');
+      return img && img.naturalWidth > 0
+        ? new URL(img.src).pathname
+        : b.querySelector('svg')
+          ? 'svg'
+          : 'none';
+    }),
+  );
   await context.close();
-  return { select, hub };
+  return { select, hub, badges };
 }
 
 const art = await scenario(true);
@@ -166,9 +179,19 @@ for (const tag of ['desktop', 'phone']) {
 assert.deepEqual(shots.fallback.select.portraits, [], 'fallback: no portrait without the pack');
 assert.equal(shots.fallback.select.emblems, 4, 'fallback: the four emblems are back');
 assert.equal(shots.fallback.hub.emblems, 1, 'fallback: hub emblem');
+for (const tag of ['desktop', 'phone'])
+  assert.deepEqual(
+    shots[tag].badges,
+    ['/assets/pickups/coin.webp', '/assets/pickups/ore.webp'],
+    `${tag}: Gold / Ore badges with the pack icons`,
+  );
+assert.deepEqual(shots.fallback.badges, ['svg', 'svg'], 'fallback: Gold / Ore SVG icons');
 
-assert.equal(art.artLooks, 13, 'all 13 unit looks drawn with the owner art');
+assert.equal(art.artLooks, 17, 'all 13 unit + 4 pickup looks drawn with the owner art');
 assert.equal(procedural.artLooks, 0, 'no manifest: every look stays procedural');
+// Task 26: map 25 (act III) tiles the ashlands ground (tinted per map); procedural without art.
+assert.equal(art.artGround, 'art:ground_ashlands~map25', 'act III ground art in use');
+assert.equal(procedural.artGround, null, 'no manifest: procedural ground');
 assert.equal(art.digests.length, 24);
 assert.ok(
   JSON.parse(art.digests.at(-1)).e.length > 0,
@@ -188,5 +211,5 @@ assert.deepEqual(
   'the fallback only logs its one "manifest unavailable" warning',
 );
 console.log(
-  'PASS art: same seed ⇒ identical simulation with art on / off (24 steps, map 25, every enemy type, thief, nest); 13 looks from the pack; no missing-texture warnings; procedural fallback without the manifest; class portraits on character select + hub (desktop and phone, no horizontal scroll), emblems as the fallback.',
+  'PASS art: same seed ⇒ identical simulation with art on / off (24 steps, map 25, every enemy type, thief, nest); 13 unit + 4 pickup looks from the packs; no missing-texture warnings; procedural fallback without the manifest; act ground art (identical simulation with it); class portraits on character select + hub (desktop and phone, no horizontal scroll), emblems as the fallback; Gold / Ore badge icons (SVG fallback).',
 );

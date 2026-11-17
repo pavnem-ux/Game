@@ -8,6 +8,7 @@ import { SaveWarning } from './SaveManagement';
 import { RunStatsPanel } from './RunStatsPanel';
 import { EN, formatNumber } from './strings-en';
 import { ReportButton } from './ReportButton';
+import { CurrencyIcon } from './kit/CurrencyIcon';
 import { runGold, runOre } from '../equipment';
 import { QUEST_BY_ID } from '../quests';
 
@@ -59,9 +60,13 @@ export function ResultsScreen({ world }: { world: GameplaySnapshot }) {
           </dd>
           <dt>Victory bonus</dt>
           <dd>{victory ? `+${gold.bonus}` : 'none'}</dd>
-          <dt>Gold</dt>
+          <dt>
+            <CurrencyIcon kind="gold" /> Gold
+          </dt>
           <dd>{summary ? `+${formatNumber(summary.goldGained)}` : '…'}</dd>
-          <dt>Ore</dt>
+          <dt>
+            <CurrencyIcon kind="ore" /> Ore
+          </dt>
           <dd>
             {summary
               ? summary.oreGained > 0

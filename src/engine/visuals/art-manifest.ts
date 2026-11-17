@@ -2,16 +2,20 @@
  * Task 25: the owner's art-pack manifest (`public/assets/manifest.json`), parsed and validated
  * (pure; no Phaser, no DOM). Key = file name without extension; `file` is relative to the site root
  * (served from `public/`); `size` is the image size in px; `anchor` is where the image is pinned
- * (`bottom-center` for units: the feet, `center` for portraits). Extra fields (e.g. `source`) are
- * ignored. Future packs add entries in the same format.
+ * (`bottom-center` for units: the feet, `center` for portraits and pickups, `tile` for seamless
+ * ground textures — Task 26). `kind` (optional, Task 26 packs) says what the image is for. Extra
+ * fields (e.g. `source`) are ignored. Future packs add entries in the same format.
  */
-export type ArtAnchor = 'bottom-center' | 'center';
+export type ArtAnchor = 'bottom-center' | 'center' | 'tile';
+export type ArtKind = 'unit' | 'portrait' | 'ground' | 'pickup';
 export interface ArtEntry {
   readonly key: string;
   readonly file: string;
   readonly width: number;
   readonly height: number;
   readonly anchor: ArtAnchor;
+  /** The pack's declared kind, or null when the entry has none (pack 1). */
+  readonly kind: ArtKind | null;
 }
 export type ArtManifest = ReadonlyMap<string, ArtEntry>;
 
@@ -24,7 +28,8 @@ export class ArtManifestError extends Error {
 
 const KEY = /^[a-z0-9_]+$/;
 const FILE = /^assets\/(?:[a-z0-9_-]+\/)*([a-z0-9_]+)\.(?:webp|png)$/;
-const ANCHORS: readonly string[] = ['bottom-center', 'center'];
+const ANCHORS: readonly string[] = ['bottom-center', 'center', 'tile'];
+const KINDS: readonly string[] = ['unit', 'portrait', 'ground', 'pickup'];
 /** Largest accepted image side (px): keeps a broken entry from asking for a huge texture. */
 export const MAX_ART_SIZE = 2048;
 
@@ -99,10 +104,35 @@ export function parseArtManifest(text: string): ArtManifest {
     if (!okSize) bad(`size must be [width, height] in 1–${MAX_ART_SIZE} px`);
     const anchor = typeof v.anchor === 'string' ? v.anchor : '';
     if (!ANCHORS.includes(anchor)) bad(`anchor "${anchor}" must be ${ANCHORS.join(' or ')}`);
-    if (!m || m[1] !== key || files.has(file) || !okSize || !ANCHORS.includes(anchor)) continue;
+    const kind = v.kind === undefined ? null : v.kind;
+    const okKind = kind === null || (typeof kind === 'string' && KINDS.includes(kind));
+    if (!okKind) bad(`kind "${String(kind)}" must be ${KINDS.join(', ')}`);
+    // A tiling ground texture and a pinned sprite are not interchangeable.
+    const okPair = !(kind === 'ground') === !(anchor === 'tile');
+    if (okKind && ANCHORS.includes(anchor) && !okPair) bad('anchor "tile" goes with kind "ground"');
+    if (
+      !m ||
+      m[1] !== key ||
+      files.has(file) ||
+      !okSize ||
+      !ANCHORS.includes(anchor) ||
+      !okKind ||
+      !okPair
+    )
+      continue;
     files.add(file);
     const [width, height] = size as [number, number];
-    out.set(key, Object.freeze({ key, file, width, height, anchor: anchor as ArtAnchor }));
+    out.set(
+      key,
+      Object.freeze({
+        key,
+        file,
+        width,
+        height,
+        anchor: anchor as ArtAnchor,
+        kind: kind as ArtKind | null,
+      }),
+    );
   }
   if (problems.length) throw new ArtManifestError(problems);
   return out;
