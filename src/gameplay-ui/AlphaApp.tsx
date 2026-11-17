@@ -15,6 +15,7 @@ import { ResultsScreen } from './ResultsScreen';
 import { CampaignHud } from './CampaignHud';
 import { displayHp } from './format';
 import { installSound } from './sound';
+import { preloadSkillIcons } from './kit';
 import { SynergyBanners } from './SynergyBanners';
 import { TouchControls } from './TouchControls';
 import { FullscreenButton, OrientationNotice, useBlockGestures } from './DeviceChrome';
@@ -39,6 +40,8 @@ export function AlphaApp() {
   const state = useSyncExternalStore(alphaBridge.subscribe, alphaBridge.getSnapshot);
   const [debugOpen, setDebugOpen] = useState(false);
   useEffect(installSound, []);
+  // Task 27: the skill icons are fetched up front so offers / HUD never wait for them.
+  useEffect(preloadSkillIcons, []);
   useBlockGestures(state.screen !== 'menu');
   const debug =
     (import.meta.env.DEV || __QA_BUILD__) && new URLSearchParams(location.search).has('debug');

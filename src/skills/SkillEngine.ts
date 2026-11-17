@@ -197,6 +197,8 @@ interface Scheduled {
 interface AutoState {
   readyAt: number;
   activationCount: number;
+  /** Task 27: length of the cooldown set at the last activation (snapshot / HUD only). */
+  cooldownTotal: number;
 }
 const BASIC_TAGS: Record<CharacterClass, readonly CombatTag[]> = {
   warrior: ['basic', 'physical', 'melee'],
@@ -567,7 +569,7 @@ export class SkillEngine {
     if (result.type === 'bonus') return this.applyBonus(result.bonusId);
     const definition = getSkill(result.skillId);
     if (definition.kind === 'auto' && !this.autos.has(definition.id))
-      this.autos.set(definition.id, { readyAt: this.clock, activationCount: 0 });
+      this.autos.set(definition.id, { readyAt: this.clock, activationCount: 0, cooldownTotal: 0 });
     this.refreshStats();
   }
   private applyBonus(bonusId: BonusRewardId) {
@@ -1519,10 +1521,11 @@ export class SkillEngine {
     if (!behavior?.activate) throw new Error(`No behavior for ${skillId}.`);
     state.activationCount++;
     // Task 09.1: talent cooldown reductions apply to the already CDR-scaled cooldown.
-    state.readyAt =
-      before +
+    const cooldown =
       scaleCooldown(p.cooldown, this.cooldownReduction()) *
-        this.talentCombat.cooldownMultiplier(skillId);
+      this.talentCombat.cooldownMultiplier(skillId);
+    state.readyAt = before + cooldown;
+    state.cooldownTotal = cooldown;
     this.host.recordSkill([
       Object.freeze({
         type: 'skill-activated',
@@ -1581,7 +1584,11 @@ export class SkillEngine {
   /** Expired-control bookkeeping that must not wait for a separate boundary. */
   snapshot(): SkillCombatSnapshot {
     const cooldowns: Record<string, number> = {};
-    for (const [id, s] of this.autos) cooldowns[id] = Math.max(0, s.readyAt - this.clock);
+    const cooldownTotals: Record<string, number> = {};
+    for (const [id, s] of this.autos) {
+      cooldowns[id] = Math.max(0, s.readyAt - this.clock);
+      cooldownTotals[id] = s.cooldownTotal;
+    }
     return Object.freeze({
       zones: Object.freeze(
         [...this.zones.values()].map((z) =>
@@ -1621,6 +1628,7 @@ export class SkillEngine {
       barrier: this.host.core.getBarrier(this.host.playerId),
       barrierExpiresAt: this.barrierUntil,
       cooldowns: Object.freeze(cooldowns),
+      cooldownTotals: Object.freeze(cooldownTotals),
     });
   }
   /** Status types that matter for synergy snapshots. */

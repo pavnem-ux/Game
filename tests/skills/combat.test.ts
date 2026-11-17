@@ -32,6 +32,24 @@ describe('automatic abilities: timing, pause and movement', () => {
     w.update(30);
     expect(activations(w, 'earthquake')).toHaveLength(2);
   });
+  it('Task 27: the snapshot reports each cooldown with its full length (HUD overlay only)', () => {
+    const w = arena('warrior', { level: 20 });
+    ring(w, 3, 100, { ...stationaryMelee });
+    for (const id of w.getSnapshot().enemies.map((e) => e.entityId))
+      w.core.updateEntityStats(id, { ...w.core.getEntity(id), maxHp: 1e9 });
+    w.grantTestSkill('earthquake', 1);
+    expect(w.getSnapshot().skillCombat.cooldownTotals.earthquake).toBe(0); // never fired yet
+    w.update(0.001);
+    const cooldown = 6 * (1 - w.getSnapshot().stats.cooldownReduction / 100);
+    const fired = w.getSnapshot().skillCombat;
+    expect(fired.cooldownTotals.earthquake).toBeCloseTo(cooldown, 9);
+    expect(fired.cooldowns.earthquake).toBeLessThanOrEqual(fired.cooldownTotals.earthquake);
+    expect(Object.isFrozen(fired.cooldownTotals)).toBe(true);
+    w.update(cooldown / 2);
+    const half = w.getSnapshot().skillCombat;
+    expect(half.cooldownTotals.earthquake).toBeCloseTo(cooldown, 9);
+    expect(half.cooldowns.earthquake / half.cooldownTotals.earthquake).toBeCloseTo(0.5, 2);
+  });
   it('do not move the hero or override WASD input', () => {
     const w = arena('rogue', { level: 10 });
     ring(w, 6, 120);

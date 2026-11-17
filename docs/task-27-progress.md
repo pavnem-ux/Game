@@ -5,7 +5,7 @@ Spec: [task-27-skill-icons.md](task-27-skill-icons.md) (owner's file, kept verba
 `art-pack-3.zip` (37 skill icons, `manifest-pack3.json`, `ART_PROVENANCE-pack3.md`). UI only:
 skills, balance and simulation are unchanged.
 
-Current: Phase 2 — screens
+Current: Phase 3 — delivery
 
 PR: https://github.com/pavnem-ux/Game/pull/25
 
@@ -15,7 +15,7 @@ PR: https://github.com/pavnem-ux/Game/pull/25
       4 actives, pause skill list, results; phone HUD and offer)
 - [x] 1 Pipeline: files, manifest merge, provenance, registry kind `skill-icon`; tests (every
       catalog skill id resolves, unknown id falls back)
-- [ ] 2 Screens: offer cards, HUD cooldowns, pause list + synergy displays, results
+- [x] 2 Screens: offer cards, HUD cooldowns, pause list + synergy displays, results
 - [ ] 3 Delivery: full checks, e2e desktop/mobile, `test:production`, "after" screenshots, README, PR
 
 ## Pack contents (checked in Phase 0)
@@ -46,6 +46,33 @@ PR: https://github.com/pavnem-ux/Game/pull/25
 - Tests (`tests/engine/art-pack.test.ts`): every one of the 37 catalogue ids resolves to its
   128 px icon; unknown / missing / no-manifest fall back; key / `skillId` validation; files and
   sizes match; the art set (1.77 MB) stays under 2 MB.
+
+## Phase 2 — screens
+
+- `SkillIcon` (`src/gameplay-ui/kit/SkillIcon.tsx`): the pack's round icon as a decorative
+  `<img>` (no frame, the art keeps its glow), or the catalogue glyph while the manifest loads, for an
+  id without an icon, for bonus cards, or if the image fails. All icons are preloaded once when the
+  in-run app mounts (`preloadSkillIcons`).
+- One size config, `SKILL_ICON_SIZES` (CSS px, installed as `--skill-icon-*` on `:root`): card 96
+  (64 on short / narrow screens), HUD 44 (touch 44, the Task 16 minimum; was 34 on phones), pause
+  list 32, results 24, inline pair icons 20. All ≤ the 128 px source; at DPR 2 the 96 px card icon
+  is upscaled slightly (128 → 192 device px), the others are sharp.
+- Offer cards and the Mage «Fifth Circle» choice: large icon; «NEW» / «▲ II» as a corner badge off
+  the symbol centre (the card text labels stay).
+- HUD active skills: frameless icon on a soft dark disc, rank badge at the corner, dimmed while
+  cooling, with a radial (conic) overlay = share of the cooldown left. The share needs the full
+  cooldown, so `SkillCombatSnapshot` gained a read-only `cooldownTotals` (set at activation, never
+  read by the simulation; arithmetic of `readyAt` unchanged).
+- Pause: skill list headings (32 px), every synergy pair row shows both skills' icons; card hints
+  («✦ Unlocks …», «▲ Synergy II/III») show the pair's icons. Additive data for that:
+  `cardLevelRaises(...).pair` and `cardSynergyHints(...).unlocks[].withSkillIds`.
+- Results / run stats: `skill:<id>` damage sources get their icon (`damageSourceSkill`); weapons,
+  synergies, statuses, pets keep text only.
+- Not changed: synergy banners (text only), DEV panels (optional in the spec; skipped).
+- Tests: `tests/ui-kit/skill-icons.test.ts` (view / fallback / sizes / CSS reads every size /
+  overlay share / pair ids / damage-source mapping), `tests/skills/combat.test.ts`
+  (`cooldownTotals`). `mobile-browser`, `alpha-browser`, `skills-ui-browser` pass (left-handed
+  44 px skill row still clear of the dash button).
 
 ## "Before" screenshots
 

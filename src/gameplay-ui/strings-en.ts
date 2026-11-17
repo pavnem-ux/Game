@@ -385,6 +385,7 @@ const WEAPON_BY_ID = new Map(
   CHARACTER_CLASSES.map((c) => [ALPHA_WEAPONS[c].id, WEAPON_LABELS[c]] as const),
 );
 const SKILL_NAMES = new Map(SKILL_CATALOG.map((s) => [s.id, s.name] as const));
+const SKILL_BY_ID = new Map(SKILL_CATALOG.map((s) => [s.id, s] as const));
 const SYNERGY_NAMES = new Map(SYNERGY_RULES.map((r) => [r.id as string, r.name] as const));
 
 /** `weapon:<id>` / `skill:<id>` / `synergy:<id>` / `status:<effect>` / `debug` → English label. */
@@ -411,5 +412,11 @@ export function damageSourceLabel(source: string): string {
     default:
       return 'Other';
   }
+}
+/** Task 27: the catalogue skill behind a `skill:<id>` damage source (its icon), else null. */
+export function damageSourceSkill(source: string): { id: string; icon: string } | null {
+  if (!source.startsWith('skill:')) return null;
+  const skill = SKILL_BY_ID.get(source.slice('skill:'.length));
+  return skill ? { id: skill.id, icon: skill.icon } : null;
 }
 export const enemyTypeLabel = (type: EnemyType | 'unknown') => ENEMY_TYPE_LABELS[type];
