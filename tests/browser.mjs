@@ -1,6 +1,7 @@
 import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
+import { EXTENDED, screenshot } from './e2e-options.mjs';
 const base = process.env.GAME_URL || 'http://127.0.0.1:5173';
 await mkdir('artifacts', { recursive: true });
 const browser = await chromium.launch({
@@ -14,7 +15,7 @@ try {
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(base + '/?prototype&debug');
   await page.waitForFunction(() => !!window.__survivors);
-  await page.screenshot({ path: 'artifacts/01-menu.png' });
+  await screenshot(page, { path: 'artifacts/01-menu.png' });
   await page.getByRole('button', { name: 'Enter the ruins' }).click();
   await page.waitForFunction(() => window.__survivors.state().phase === 'playing');
   const state = () => page.evaluate(() => window.__survivors.state());
@@ -88,14 +89,14 @@ try {
     `real crystal collection awards XP: ${JSON.stringify(await state())}`,
   );
   if ((await state()).phase === 'upgrade') await page.locator('.upgrade-card').first().click();
-  await page.screenshot({ path: 'artifacts/02-arena.png' });
+  await screenshot(page, { path: 'artifacts/02-arena.png' });
   await page.evaluate(() => window.__survivors.grantXp(100));
   await page.getByRole('dialog', { name: 'Level up.' }).waitFor();
   assert.equal(await page.locator('.upgrade-card').count(), 3);
   const upgradeTime = (await state()).seconds;
   await page.waitForTimeout(200);
   assert.equal((await state()).seconds, upgradeTime);
-  await page.screenshot({ path: 'artifacts/03-upgrade.png' });
+  await screenshot(page, { path: 'artifacts/03-upgrade.png' });
   let chosen = 0;
   while ((await state()).phase === 'upgrade' && chosen < 10) {
     await page.locator('.upgrade-card').first().click();
@@ -106,7 +107,7 @@ try {
   await page.evaluate(() => window.__survivors.hurt(99999));
   await page.getByRole('heading', { name: 'The spark has faded.' }).waitFor();
   assert.equal((await state()).hp, 0);
-  await page.screenshot({ path: 'artifacts/04-end.png' });
+  await screenshot(page, { path: 'artifacts/04-end.png' });
   const save = await page.evaluate(() =>
     JSON.parse(localStorage.getItem('fantasy-survivors.progression')),
   );
@@ -122,39 +123,42 @@ try {
   await page.reload();
   await page.waitForFunction(() => !!window.__survivors);
   assert.ok(await page.locator('.record').count(), 'record survives reload');
-  const mobile = await browser.newPage({
-    viewport: { width: 390, height: 844 },
-    isMobile: true,
-    hasTouch: true,
-  });
-  mobile.on('pageerror', (e) => errors.push(e.message));
-  await mobile.goto(base + '/?prototype&debug');
-  await mobile.waitForFunction(() => !!window.__survivors);
-  await mobile.screenshot({ path: 'artifacts/05-mobile-menu.png' });
-  assert.equal(
-    await mobile.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
-    true,
-  );
-  await mobile.getByRole('button', { name: 'Enter the ruins' }).click();
-  const x = await mobile.evaluate(() => window.__survivors.state().x);
-  await mobile.mouse.move(60, 500);
-  await mobile.mouse.down();
-  await mobile.mouse.move(120, 500, { steps: 5 });
-  await mobile.waitForTimeout(400);
-  await mobile.mouse.up();
-  assert.ok(
-    await mobile.evaluate((x) => window.__survivors.state().x > x + 15, x),
-    'virtual joystick moves player',
-  );
-  await mobile.evaluate(() => window.__survivors.grantXp(12));
-  await mobile.locator('.upgrade-card').first().waitFor();
-  await mobile.screenshot({ path: 'artifacts/06-mobile-upgrade.png' });
-  assert.equal(
-    await mobile.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
-    true,
-  );
-  await mobile.locator('.upgrade-card').first().click();
-  assert.equal(await mobile.evaluate(() => window.__survivors.state().phase), 'playing');
+  // Mobile prototype check: extended runs only (Task 29 mobile freeze).
+  if (EXTENDED) {
+    const mobile = await browser.newPage({
+      viewport: { width: 390, height: 844 },
+      isMobile: true,
+      hasTouch: true,
+    });
+    mobile.on('pageerror', (e) => errors.push(e.message));
+    await mobile.goto(base + '/?prototype&debug');
+    await mobile.waitForFunction(() => !!window.__survivors);
+    await screenshot(mobile, { path: 'artifacts/05-mobile-menu.png' });
+    assert.equal(
+      await mobile.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+      true,
+    );
+    await mobile.getByRole('button', { name: 'Enter the ruins' }).click();
+    const x = await mobile.evaluate(() => window.__survivors.state().x);
+    await mobile.mouse.move(60, 500);
+    await mobile.mouse.down();
+    await mobile.mouse.move(120, 500, { steps: 5 });
+    await mobile.waitForTimeout(400);
+    await mobile.mouse.up();
+    assert.ok(
+      await mobile.evaluate((x) => window.__survivors.state().x > x + 15, x),
+      'virtual joystick moves player',
+    );
+    await mobile.evaluate(() => window.__survivors.grantXp(12));
+    await mobile.locator('.upgrade-card').first().waitFor();
+    await screenshot(mobile, { path: 'artifacts/06-mobile-upgrade.png' });
+    assert.equal(
+      await mobile.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+      true,
+    );
+    await mobile.locator('.upgrade-card').first().click();
+    assert.equal(await mobile.evaluate(() => window.__survivors.state().phase), 'playing');
+  }
   await page.getByRole('button', { name: 'Enter the ruins' }).click();
   await page.evaluate(() => window.__survivors.spawnEnemies(300));
   assert.ok((await state()).enemies <= 240);
@@ -172,7 +176,7 @@ try {
         requestAnimationFrame(tick);
       }),
   );
-  await page.screenshot({ path: 'artifacts/07-stress.png' });
+  await screenshot(page, { path: 'artifacts/07-stress.png' });
   console.log(
     `Stress: 240-enemy pool; ${frames} animation frames in approximately one second (headless Chromium).`,
   );

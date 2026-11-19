@@ -7,6 +7,7 @@ Do not duplicate or override them here.
 
 ## Claude Code specifics
 
+- Follow docs/TASK_WORKFLOW.md.
 - Claude Code is the primary developer; OpenAI Codex reviews PRs; the project owner approves
   gameplay and merges. Never merge, self-approve or start an unrequested task (e.g. Task 07).
 - Workflow details: [docs/DEVELOPMENT_WORKFLOW.md](docs/DEVELOPMENT_WORKFLOW.md). Deployment is

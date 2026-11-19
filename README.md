@@ -401,3 +401,7 @@ Firefox и Edge; сборка под последние версии брауз�
 одном месте (`ICON_SIZES`); без картинки остаётся прежний вид. Синергии, таланты и баланс не
 меняются. [Подробно](docs/ART_PACK.md#synergy-icons-and-talent-branch-emblems-task-28),
 [журнал](docs/task-28-progress.md), [скриншоты до/после](docs/art-pack-4/).
+
+## Task 29 — облегчённый процесс
+
+Задачи идут по [docs/TASK_WORKFLOW.md](docs/TASK_WORKFLOW.md), карта кода — [docs/CODEMAP.md](docs/CODEMAP.md); `npm run test:e2e` проверяет только основные сценарии на десктопе, мобильные проверки и скриншоты — в `npm run test:e2e:extended` (мобильная версия заморожена до пре-релиза).

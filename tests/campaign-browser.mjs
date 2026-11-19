@@ -1,6 +1,7 @@
 import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
 import { mkdir, readFile } from 'node:fs/promises';
+import { EXTENDED, screenshot } from './e2e-options.mjs';
 
 /** Task 08 campaign UI (dev server): menu, pages, campaign runs, results, persistence. */
 const base = process.env.GAME_URL || 'http://127.0.0.1:5173';
@@ -102,7 +103,7 @@ try {
     await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.profile')).selectedClass),
     'archer',
   );
-  await page.screenshot({ path: 'artifacts/campaign-01-character.png', fullPage: true });
+  await screenshot(page, { path: 'artifacts/campaign-01-character.png', fullPage: true });
 
   // 5.2 Map path (Task 13): 40 nodes in 4 act regions; the side panel shows the lock reason,
   // recommended level, modifiers and the boss (hidden while locked); locked maps cannot start.
@@ -122,10 +123,10 @@ try {
   assert.equal(await play11.isDisabled(), true);
   await openMap(12);
   assert.match(await mapPanel().innerText(), /Swift enemies/);
-  await page.screenshot({ path: 'artifacts/campaign-02b-maps-act2.png', fullPage: true });
+  await screenshot(page, { path: 'artifacts/campaign-02b-maps-act2.png', fullPage: true });
   const play1 = await openMap(1);
   assert.match(await mapPanel().innerText(), /Boss\s+♚ Thornwarden/);
-  await page.screenshot({ path: 'artifacts/campaign-02-maps.png', fullPage: true });
+  await screenshot(page, { path: 'artifacts/campaign-02-maps.png', fullPage: true });
   await play1.click();
   await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
   let s = await state();
@@ -158,7 +159,7 @@ try {
   await page.waitForFunction(() =>
     /Elite in 0:0\d/.test(document.querySelector('.campaign-hud-next')?.textContent ?? ''),
   );
-  await page.screenshot({ path: 'artifacts/campaign-05-hud-elite.png' });
+  await screenshot(page, { path: 'artifacts/campaign-05-hud-elite.png' });
   // Task 08.5 §2.3 debug overlay: live DPS and damage per source (?debug only).
   const overlay = page.getByRole('complementary', { name: 'Debug Overlay' });
   await overlay.waitFor();
@@ -179,7 +180,7 @@ try {
   // Task 22: after the map duration nothing is scheduled — the countdown is hidden (coins stay).
   assert.equal(await page.locator('.campaign-hud-next').count(), 0);
   assert.match(await hud.innerText(), /◎ \d+/);
-  await page.screenshot({ path: 'artifacts/campaign-06-boss.png' });
+  await screenshot(page, { path: 'artifacts/campaign-06-boss.png' });
   s = await state();
   assert.equal(s.world.campaign.durationReached, true);
   assert.ok(s.world.campaign.boss?.alive, 'the boss spawned at 10:00 and is alive');
@@ -215,7 +216,7 @@ try {
   assert.match(statsText, /Top damage sources[\s\S]*Bow[\s\S]*\d+%/i);
   assert.match(statsText, /Damage taken/);
   assert.match(statsText, /Death\s+never fell/);
-  await page.screenshot({ path: 'artifacts/campaign-03-victory.png' });
+  await screenshot(page, { path: 'artifacts/campaign-03-victory.png' });
   const afterWin = await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.profile')));
   const winGold = afterWin.gold;
   assert.ok(winGold >= 30, 'victory pays at least the bonus');
@@ -237,7 +238,7 @@ try {
   await nav.getByRole('button', { name: 'Progress', exact: true }).click();
   assert.match(await page.locator('.progression-page').innerText(), /Maps cleared: 1 \/ 40/);
   assert.match(await page.locator('.recent-runs').innerText(), /Victory · map 1/);
-  await page.screenshot({ path: 'artifacts/campaign-04-progression.png', fullPage: true });
+  await screenshot(page, { path: 'artifacts/campaign-04-progression.png', fullPage: true });
   // Task 09 §1.5: talent screen (selected class = archer, level 2 → 1 point). Task 13: own page;
   // a node opens its ranks in the detail panel, which holds the «Learn» button.
   await nav.getByRole('button', { name: 'Talents', exact: true }).click();
@@ -276,7 +277,7 @@ try {
     .getByRole('button', { name: 'Mage' })
     .click();
   assert.match(await talents.innerText(), /Free points: 0 of 0/);
-  await page.screenshot({ path: 'artifacts/campaign-12-talents.png', fullPage: true });
+  await screenshot(page, { path: 'artifacts/campaign-12-talents.png', fullPage: true });
   await nav.getByRole('button', { name: 'Hero', exact: true }).click();
   await page.getByRole('article', { name: /Mage/ }).getByRole('button', { name: 'Choose' }).click();
   await (await openMap(2)).click();
@@ -388,7 +389,7 @@ try {
   await confirm.getByRole('button', { name: 'Replace save' }).click();
   await page.getByText('Save imported.').waitFor();
   assert.equal(JSON.parse(await stored()).gold, winGold);
-  await page.screenshot({ path: 'artifacts/campaign-07-settings.png', fullPage: true });
+  await screenshot(page, { path: 'artifacts/campaign-07-settings.png', fullPage: true });
   // Write failure: storage refuses writes → visible warning, nothing claimed as saved.
   await page.evaluate(() => {
     const original = Storage.prototype.setItem;
@@ -405,7 +406,7 @@ try {
   const banner = page.locator('.save-banner');
   await banner.waitFor();
   assert.match(await banner.innerText(), /NOT saved[\s\S]*storage is full/);
-  await page.screenshot({ path: 'artifacts/campaign-08-save-warning.png' });
+  await screenshot(page, { path: 'artifacts/campaign-08-save-warning.png' });
   await page.evaluate(() => window.__restoreStorage());
   await nav.getByRole('button', { name: 'Settings', exact: true }).click();
   await page.getByRole('button', { name: 'Retry save' }).click();
@@ -471,7 +472,7 @@ try {
   );
   assert.equal(JSON.parse(await stored()).gold, bought.gold);
   await slots.getByRole('button', { name: 'Armor' }).click();
-  await page.screenshot({ path: 'artifacts/campaign-13-shop.png', fullPage: true });
+  await screenshot(page, { path: 'artifacts/campaign-13-shop.png', fullPage: true });
   await nav.getByRole('button', { name: 'Equipment', exact: true }).click();
   const gear = page.getByRole('region', { name: /^Equipment:/ });
   await gear.getByRole('button', { name: /^Common Plate Armor/ }).click();
@@ -485,7 +486,7 @@ try {
       JSON.parse(localStorage.getItem('skazki.profile')).classes[c].loadout.armor === 'plate-t1',
     bought.selectedClass,
   );
-  await page.screenshot({ path: 'artifacts/campaign-14-equipment.png', fullPage: true });
+  await screenshot(page, { path: 'artifacts/campaign-14-equipment.png', fullPage: true });
   // Task 19: forge from the item preview («To the forge») → «Upgrade» (one save) → +1.
   await gear.getByRole('button', { name: 'Unequip: Armor' }).click();
   await gear.getByRole('button', { name: /^Common Plate Armor/ }).click();
@@ -503,7 +504,7 @@ try {
   assert.equal(forged.gold, preForge.gold - 8);
   assert.equal(forged.ore, preForge.ore - 1);
   assert.match(await forge.innerText(), /Health\s+\+5\.25%\s+\+5\.5%/);
-  await page.screenshot({ path: 'artifacts/campaign-14b-forge.png', fullPage: true });
+  await screenshot(page, { path: 'artifacts/campaign-14b-forge.png', fullPage: true });
   await nav.getByRole('button', { name: 'Equipment', exact: true }).click();
   await gear.getByRole('button', { name: /^Common Plate Armor \+1/ }).click();
   await gear
@@ -566,7 +567,7 @@ try {
   const afterDev = JSON.parse(await stored());
   assert.ok(afterDev.completedMaps.includes(10), 'forced victory completes Map 10');
   assert.ok(afterDev.gold > goldBefore, 'forced victory pays through the normal results pipeline');
-  await page.screenshot({ path: 'artifacts/campaign-10-dev-victory.png' });
+  await screenshot(page, { path: 'artifacts/campaign-10-dev-victory.png' });
   await devResults.getByRole('button', { name: 'To menu' }).click();
   await nav.waitFor();
   page.once('dialog', (d) => d.accept());
@@ -619,7 +620,7 @@ try {
   const crashDialog = page.getByRole('alertdialog', { name: 'Something went wrong.' });
   await crashDialog.waitFor();
   assert.match(await crashDialog.innerText(), /save is unchanged/);
-  await page.screenshot({ path: 'artifacts/campaign-11-crash.png' });
+  await screenshot(page, { path: 'artifacts/campaign-11-crash.png' });
   const errorLog = await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.errors')));
   assert.ok(errorLog.length >= 1 && errorLog.length <= 5);
   assert.match(errorLog.at(-1).message, /Debug crash/);
@@ -750,27 +751,29 @@ try {
     'none',
   );
 
-  // Phone width: every menu page fits without horizontal scrolling.
-  await page.setViewportSize({ width: 390, height: 844 });
-  for (const tab of [
-    'Home',
-    'Hero',
-    'Equipment',
-    'Talents',
-    'Shop',
-    'Campaign map',
-    'Progress',
-    'Settings',
-  ]) {
-    await nav.getByRole('button', { name: tab, exact: true }).click();
-    assert.ok(
-      await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
-      `${tab} fits a phone`,
-    );
+  // Phone width: extended runs only (Task 29 mobile freeze).
+  if (EXTENDED) {
+    // Phone width: every menu page fits without horizontal scrolling.
+    await page.setViewportSize({ width: 390, height: 844 });
+    for (const tab of [
+      'Home',
+      'Hero',
+      'Equipment',
+      'Talents',
+      'Shop',
+      'Campaign map',
+      'Progress',
+      'Settings',
+    ]) {
+      await nav.getByRole('button', { name: tab, exact: true }).click();
+      assert.ok(
+        await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+        `${tab} fits a phone`,
+      );
+    }
+    await nav.getByRole('button', { name: 'Campaign map', exact: true }).click();
+    await screenshot(page, { path: 'artifacts/campaign-09-maps-mobile.png', fullPage: true });
   }
-  await nav.getByRole('button', { name: 'Campaign map', exact: true }).click();
-  await page.screenshot({ path: 'artifacts/campaign-09-maps-mobile.png', fullPage: true });
-
   if (errors.length) throw new Error(errors.join('\n'));
   console.log(
     'PASS campaign: menu/Gold, Character, Maps (lock/boss reveal), Map 1 win → results/rewards/unlock/save, reload keeps progress, Map 2 with another class (separate XP, shared Gold), quit/reload = abandoned without rewards, Save Management (export, invalid/newer import unchanged, confirm/cancel/replace, round-trip), write-failure warning + retry, DEV campaign tools (unlock/level/Gold, boss, forced Map 10 win, reset); 08.5: time scale, kill-all, stats panel, debug overlay, build label, report download, crash recovery (save untouched), report → save import; Task 13: hub «To battle»/Esc, quick links, map path panel, talent detail, paper doll, shop modal (Enter/Esc), widths 1024–1920, reduced motion.',
