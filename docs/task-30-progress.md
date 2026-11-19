@@ -2,12 +2,12 @@
 
 Spec: [task-30-item-icons.md](task-30-item-icons.md). Branch `task-30-items-pets-art`.
 
-PR: (draft, linked after it is opened)
+PR: https://github.com/pavnem-ux/Game/pull/28
 
 ## Checklist
 
 - [x] 0 Setup: branch, spec, progress file, draft PR
-- [ ] 1 Pipeline: files, manifests, provenance, kinds `item-icon` / `pet`, registry, tests
+- [x] 1 Pipeline: files, manifests, provenance, kinds `item-icon` / `pet`, registry, tests
 - [ ] 2 Item icons: shop, equipment slots / owned rows, details, forge, compare tooltip, quest rewards
 - [ ] 3 Pets: in-run follower sprite; pet cards / portraits (selection, shop, forge, quest rewards)
 - [ ] 4 Delivery: final checks, README line, PR

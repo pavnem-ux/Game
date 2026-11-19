@@ -25,7 +25,14 @@ import {
   talentBranchArtKey,
   talentBranchIconEntries,
   talentBranchIconEntry,
+  ITEM_TEMPLATE_IDS,
+  itemIconEntries,
+  itemIconEntry,
+  petArtEntry,
 } from '../../src/engine/visuals/art-registry';
+import { GEAR_TEMPLATES, STARTER_WEAPONS } from '../../src/equipment/config';
+import { SHOP_ITEMS } from '../../src/equipment/items';
+import { PET_IDS } from '../../src/pets/config';
 import { SKILL_CATALOG, SYNERGY_RULES } from '../../src/skills';
 import { TALENT_CATALOG_DATA } from '../../src/talents';
 import { TEXTURE_KEYS } from '../../src/engine/visuals/keys';
@@ -56,8 +63,8 @@ const entry = (key: string, extra: Record<string, unknown> = {}) => ({
 });
 
 describe('Task 25 — art pack 1 files and manifest', () => {
-  it('87 entries (pack 1: 17, pack 2: 9, pack 3: 37, pack 4: 24); every file exists and has the manifest size', () => {
-    expect(manifest.size).toBe(87);
+  it('123 entries (packs 1–6: 17 + 9 + 37 + 24 + 30 + 6); every file exists and has the manifest size', () => {
+    expect(manifest.size).toBe(123);
     for (const e of manifest.values()) {
       const buf = readFileSync(join(PUBLIC, e.file));
       expect(webpSize(buf), e.key).toEqual([e.width, e.height]);
@@ -75,10 +82,10 @@ describe('Task 25 — art pack 1 files and manifest', () => {
     walk(join(PUBLIC, 'assets'));
     expect(files.sort()).toEqual([...manifest.values()].map((e) => e.file).sort());
   });
-  it('the whole art set stays under 2 MB (Task 26 budget; pack 1 alone was < 1 MB)', () => {
+  it('the whole art set stays under 3 MiB (owner budget: 2 MiB in Task 26, 3 MiB from Task 30)', () => {
     let total = statSync(join(PUBLIC, 'assets/manifest.json')).size;
     for (const e of manifest.values()) total += statSync(join(PUBLIC, e.file)).size;
-    expect(total).toBeLessThan(2 * 1024 * 1024);
+    expect(total).toBeLessThan(3 * 1024 * 1024);
   });
   it('no duplicate keys in the manifest text', () => {
     expect(duplicateTopLevelKeys(text)).toEqual([]);
@@ -198,7 +205,7 @@ describe('Task 26 — pack 2 kinds: ground and pickup', () => {
       declared++;
       expect(artUsage(e.key), e.key).toBe(e.kind);
     }
-    expect(declared).toBe(9 + 37 + 24); // pack 2 + pack 3 (Task 27) + pack 4 (Task 28)
+    expect(declared).toBe(9 + 37 + 24 + 30 + 6); // packs 2, 3 (Task 27), 4 (Task 28), 5 + 6 (Task 30)
     for (const art of [...Object.values(PICKUP_ART), ...Object.values(GROUND_ART)])
       expect(manifest.has(art!), art).toBe(true);
     for (const art of Object.values(CURRENCY_ART)) expect(manifest.has(art), art).toBe(true);
@@ -418,5 +425,60 @@ describe('Task 28 — pack 4: synergy icons and talent branch emblems', () => {
     ).toThrow(/second emblem for archer branch 1/);
     // Other kinds carry no talent branch.
     expect('talentBranch' in manifest.get('synergy_wildfire')!).toBe(false);
+  });
+});
+
+describe('Task 30 — packs 5 + 6: item icons and pet sprites', () => {
+  it('every gear template (26) and starter weapon (4) has a 128 px icon keyed item_<template id>', () => {
+    expect(GEAR_TEMPLATES).toHaveLength(26);
+    expect(ITEM_TEMPLATE_IDS).toHaveLength(30);
+    for (const id of [
+      ...GEAR_TEMPLATES.map((t) => t.id),
+      ...Object.values(STARTER_WEAPONS).map((w) => w.id),
+    ]) {
+      const e = itemIconEntry(manifest, id);
+      expect(e?.file, id).toBe(`assets/icons/items/${id}.webp`);
+      expect([e!.width, e!.height, e!.kind]).toEqual([128, 128, 'item-icon']);
+    }
+    expect(itemIconEntries(manifest)).toHaveLength(30);
+    // Every tier of a template shares the template's icon.
+    for (const item of SHOP_ITEMS)
+      expect(itemIconEntry(manifest, item.templateId), item.id).not.toBeNull();
+  });
+  it('every pet id (6) has a 256 px sprite pinned at the feet', () => {
+    expect(PET_IDS).toHaveLength(6);
+    for (const id of PET_IDS) {
+      const e = petArtEntry(manifest, id);
+      expect(e?.file, id).toBe(`assets/pets/${id}.webp`);
+      expect([e!.width, e!.height, e!.anchor, e!.kind]).toEqual([256, 256, 'bottom-center', 'pet']);
+    }
+  });
+  it('unknown ids, a missing key or no manifest fall back (null → the current look)', () => {
+    expect(itemIconEntry(manifest, 'no_such_template')).toBeNull();
+    expect(itemIconEntry(manifest, 'heavy_sword-t3')).toBeNull(); // item ids are not template ids
+    expect(itemIconEntry(null, 'heavy_sword')).toBeNull();
+    expect(petArtEntry(manifest, 'dragon')).toBeNull();
+    expect(petArtEntry(null, 'fox')).toBeNull();
+    const partial = new Map(manifest);
+    partial.delete('item_robe');
+    partial.delete('pet_wolf');
+    expect(itemIconEntry(partial, 'robe')).toBeNull();
+    expect(petArtEntry(partial, 'wolf')).toBeNull();
+    expect(petArtEntry(partial, 'fox')?.key).toBe('pet_fox');
+  });
+  it('validation: prefixed keys and templateId / petId must match the file name', () => {
+    const one = (key: string, extra: Record<string, unknown>) =>
+      JSON.stringify({ [key]: { size: [128, 128], anchor: 'center', ...extra } });
+    const item = { file: 'assets/icons/items/robe.webp', kind: 'item-icon' };
+    expect(parseArtManifest(one('item_robe', { ...item, templateId: 'robe' })).size).toBe(1);
+    expect(() => parseArtManifest(one('robe', item))).toThrow(/key must be "item_robe"/);
+    expect(() => parseArtManifest(one('item_robe', { ...item, templateId: 'plate' }))).toThrow(
+      /templateId "plate"/,
+    );
+    const pet = { file: 'assets/pets/fox.webp', kind: 'pet', anchor: 'bottom-center' };
+    expect(parseArtManifest(one('pet_fox', { ...pet, petId: 'fox' })).size).toBe(1);
+    expect(() => parseArtManifest(one('pet_fox', { ...pet, petId: 'wolf' }))).toThrow(
+      /petId "wolf"/,
+    );
   });
 });

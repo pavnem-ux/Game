@@ -1,10 +1,14 @@
 import type { CharacterClass } from '../../character-stats';
 import { SKILL_CATALOG, SYNERGY_RULES } from '../../skills';
 import { TALENT_CATALOG_DATA } from '../../talents';
+import { GEAR_TEMPLATES, STARTER_WEAPONS } from '../../equipment/config';
+import { PET_IDS } from '../../pets/config';
 import {
   SKILL_ICON_KEY_PREFIX,
   SYNERGY_ICON_KEY_PREFIX,
   TALENT_BRANCH_KEY_PREFIX,
+  ITEM_ICON_KEY_PREFIX,
+  PET_ART_KEY_PREFIX,
 } from './art-manifest';
 import type { ArtEntry, ArtKind, ArtManifest } from './art-manifest';
 import type { ActId } from './biomes';
@@ -132,6 +136,39 @@ export const talentBranchArtKey = (branchName: string): string =>
 const TALENT_BRANCH_KEYS: ReadonlySet<string> = new Set(
   TALENT_CATALOG_DATA.branches.map((b) => talentBranchArtKey(b.name)),
 );
+/**
+ * Task 30: the icon of a gear template (`item_<template id>`: 26 templates + 4 starter weapons).
+ * Every tier of a template shares its icon (`GearItem.templateId`); the tier frame / colour and the
+ * forge badge stay in the UI. Null (no manifest, unknown id, other kind) keeps the current look.
+ */
+export const itemIconArtKey = (templateId: string): string =>
+  `${ITEM_ICON_KEY_PREFIX}${templateId}`;
+/** All template ids that have (or should have) an icon: gear templates, then starter weapons. */
+export const ITEM_TEMPLATE_IDS: readonly string[] = Object.freeze([
+  ...GEAR_TEMPLATES.map((t) => t.id),
+  ...Object.values(STARTER_WEAPONS).map((w) => w.id),
+]);
+const ITEM_ICON_KEYS: ReadonlySet<string> = new Set(ITEM_TEMPLATE_IDS.map(itemIconArtKey));
+export function itemIconEntry(manifest: ArtManifest | null, templateId: string): ArtEntry | null {
+  const entry = manifest?.get(itemIconArtKey(templateId));
+  return entry && entry.kind === 'item-icon' ? entry : null;
+}
+/** Every item icon in the manifest (for preloading; known templates only). */
+export function itemIconEntries(manifest: ArtManifest | null): ArtEntry[] {
+  return ITEM_TEMPLATE_IDS.map((id) => itemIconEntry(manifest, id)).filter(
+    (e): e is ArtEntry => e !== null,
+  );
+}
+/**
+ * Task 30: a pet's sprite (`pet_<pet id>`, 256 px, bottom-centre anchor): the in-run follower and
+ * the pet portraits in the menus. Null keeps the procedural / SVG look.
+ */
+export const petArtKey = (petId: string): string => `${PET_ART_KEY_PREFIX}${petId}`;
+const PET_ART_KEYS: ReadonlySet<string> = new Set(PET_IDS.map(petArtKey));
+export function petArtEntry(manifest: ArtManifest | null, petId: string): ArtEntry | null {
+  const entry = manifest?.get(petArtKey(petId));
+  return entry && entry.kind === 'pet' ? entry : null;
+}
 /** Phaser texture key of an art image (prefixed: never collides with a procedural key). */
 export const artTextureKey = (artKey: string): string => `art:${artKey}`;
 
@@ -148,6 +185,8 @@ export function artUsage(artKey: string): ArtKind | null {
   if (SKILL_ICON_KEYS.has(artKey)) return 'skill-icon';
   if (SYNERGY_ICON_KEYS.has(artKey)) return 'synergy-icon';
   if (TALENT_BRANCH_KEYS.has(artKey)) return 'talent-branch-icon';
+  if (ITEM_ICON_KEYS.has(artKey)) return 'item-icon';
+  if (PET_ART_KEYS.has(artKey)) return 'pet';
   return null;
 }
 

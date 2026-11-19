@@ -10,6 +10,8 @@
  * Task 28 (pack 4): `synergy-icon` entries are keyed `synergy_<synergy id>` (optional `synergyId`
  * = file name, like `skillId`); `talent-branch-icon` entries are keyed `talent_branch_<file name>`
  * and must name their `characterClass` and `branch` (positive integer; one emblem per pair).
+ * Task 30 (packs 5–6): `item-icon` entries are keyed `item_<gear template id>` (optional
+ * `templateId` = file name); `pet` sprites are keyed `pet_<pet id>` (optional `petId` = file name).
  */
 import { CHARACTER_CLASSES } from '../../character-stats';
 import type { CharacterClass } from '../../character-stats';
@@ -22,7 +24,9 @@ export type ArtKind =
   | 'pickup'
   | 'skill-icon'
   | 'synergy-icon'
-  | 'talent-branch-icon';
+  | 'talent-branch-icon'
+  | 'item-icon'
+  | 'pet';
 /** Task 28: the talent branch a `talent-branch-icon` belongs to. */
 export interface ArtTalentBranch {
   readonly characterClass: CharacterClass;
@@ -59,22 +63,31 @@ const KINDS: readonly string[] = [
   'skill-icon',
   'synergy-icon',
   'talent-branch-icon',
+  'item-icon',
+  'pet',
 ];
 /** Key prefix of skill icons (Task 27): key `skill_<id>`, file `…/<id>.webp`. */
 export const SKILL_ICON_KEY_PREFIX = 'skill_';
 /** Task 28: key prefix of synergy icons (`synergy_<id>`) and talent branch emblems. */
 export const SYNERGY_ICON_KEY_PREFIX = 'synergy_';
 export const TALENT_BRANCH_KEY_PREFIX = 'talent_branch_';
+/** Task 30: key prefixes of item icons (`item_<template id>`) and pet sprites (`pet_<pet id>`). */
+export const ITEM_ICON_KEY_PREFIX = 'item_';
+export const PET_ART_KEY_PREFIX = 'pet_';
 /** Kinds whose key is `<prefix><file name>` (all others: key = file name). */
 const KEY_PREFIX: Readonly<Record<string, string>> = {
   'skill-icon': SKILL_ICON_KEY_PREFIX,
   'synergy-icon': SYNERGY_ICON_KEY_PREFIX,
   'talent-branch-icon': TALENT_BRANCH_KEY_PREFIX,
+  'item-icon': ITEM_ICON_KEY_PREFIX,
+  pet: PET_ART_KEY_PREFIX,
 };
 /** Optional id field that, when present, must equal the file name. */
 const ID_FIELD: Readonly<Record<string, string>> = {
   'skill-icon': 'skillId',
   'synergy-icon': 'synergyId',
+  'item-icon': 'templateId',
+  pet: 'petId',
 };
 /** Largest accepted image side (px): keeps a broken entry from asking for a huge texture. */
 export const MAX_ART_SIZE = 2048;
