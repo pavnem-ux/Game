@@ -12,7 +12,17 @@ import {
 } from '../../talents';
 import type { TalentNode } from '../../talents';
 import { campaignStore } from '../campaign-state';
-import { Button, ClassEmblem, Panel, Tabs, romanRank } from '../kit';
+import { talentBranchIconEntry } from '../../engine/visuals/art-registry';
+import {
+  ArtImage,
+  Button,
+  ClassEmblem,
+  Panel,
+  Tabs,
+  TalentBranchIcon,
+  romanRank,
+  useArtManifest,
+} from '../kit';
 import { EN } from '../strings-en';
 
 const T = EN.talents;
@@ -25,6 +35,9 @@ const LEARN_FLASH = 700;
  * node states (locked with reason, available glow, maxed gold), the superpower branch sealed until
  * level 30, free points counter. Selecting a node opens its ranks; buying plays a short glow. All
  * rules (`talentNodeState`, `purchaseTalent`) are the existing pure talent functions.
+ * Task 28: with art pack 4, each branch header shows its emblem and every node of the branch shows
+ * the same emblem with the node number (1–5) as a badge; without the emblem the node keeps its
+ * letter. States, pips, the superpower frame / seal and the tooltips are unchanged.
  */
 export function TalentsPage() {
   const ui = useSyncExternalStore(campaignStore.subscribe, campaignStore.getSnapshot);
@@ -33,6 +46,7 @@ export function TalentsPage() {
   const [nodeId, setNodeId] = useState<string | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
   const [message, setMessage] = useState('');
+  const manifest = useArtManifest();
   useEffect(() => {
     if (!flash) return;
     const t = setTimeout(() => setFlash(null), LEARN_FLASH);
@@ -90,6 +104,7 @@ export function TalentsPage() {
         <div className="talent-columns">
           {branches.map((branch) => {
             const locked = progress.level < branch.requiredLevel;
+            const emblem = talentBranchIconEntry(manifest, cls, branch.branch);
             return (
               <section
                 key={branch.branch}
@@ -99,6 +114,12 @@ export function TalentsPage() {
                 aria-label={`Branch ${branch.branch}. ${branch.name}`}
               >
                 <h3>
+                  <TalentBranchIcon
+                    characterClass={cls}
+                    branch={branch.branch}
+                    size="branch"
+                    className="talent-branch-emblem"
+                  />
                   {branch.name}
                   {branch.superpower && <span className="talent-tag">{T.superpower}</span>}
                 </h3>
@@ -131,14 +152,27 @@ export function TalentsPage() {
                         aria-label={`${n.name}: ${T.rank(state.rank)}`}
                       >
                         <button
-                          className="talent-orb"
+                          className={`talent-orb${emblem ? ' has-art' : ''}`}
                           aria-pressed={current?.id === n.id}
                           title={reason ?? (status === 'maxed' ? M.maxed : n.name)}
                           onClick={() => setNodeId(current?.id === n.id ? null : n.id)}
                         >
-                          <span className="talent-orb-glyph" aria-hidden="true">
-                            {n.name.slice(0, 1)}
-                          </span>
+                          {emblem ? (
+                            <>
+                              <ArtImage
+                                entry={emblem}
+                                size="talentNode"
+                                className="talent-node-emblem"
+                              />
+                              <span className="talent-node-number" aria-hidden="true">
+                                {n.order}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="talent-orb-glyph" aria-hidden="true">
+                              {n.name.slice(0, 1)}
+                            </span>
+                          )}
                           <span className="visually-hidden">{n.name}</span>
                         </button>
                         <span className="talent-node-name">{n.name}</span>

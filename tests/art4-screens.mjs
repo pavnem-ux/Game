@@ -37,16 +37,22 @@ async function open({ viewport, isMobile = false, hasTouch = false }) {
   return { context, page, shot, command, state, advance, nav };
 }
 
-/** Level 30 with a maxed node (B1·1 III), a partly learned one (B1·2 II) and B2·1 I. */
-async function talentProfile(page, cls) {
-  await page.evaluate((c) => {
-    const p = JSON.parse(localStorage.getItem('skazki.profile'));
-    p.selectedClass = c;
-    p.classes[c].level = 30;
-    p.classes[c].xp = 0;
-    p.classes[c].talents = { [`${c}.b1.n01`]: 3, [`${c}.b1.n02`]: 2, [`${c}.b2.n01`]: 1 };
-    localStorage.setItem('skazki.profile', JSON.stringify(p));
-  }, cls);
+/**
+ * Level 30 (default) with a maxed node (B1·1 III), a partly learned one (B1·2 II) and B2·1 I; at a
+ * level below 30 the superpower branch shows its «unlocks at level 30» seal.
+ */
+async function talentProfile(page, cls, level = 30) {
+  await page.evaluate(
+    ([c, lv]) => {
+      const p = JSON.parse(localStorage.getItem('skazki.profile'));
+      p.selectedClass = c;
+      p.classes[c].level = lv;
+      p.classes[c].xp = 0;
+      p.classes[c].talents = { [`${c}.b1.n01`]: 3, [`${c}.b1.n02`]: 2, [`${c}.b2.n01`]: 1 };
+      localStorage.setItem('skazki.profile', JSON.stringify(p));
+    },
+    [cls, level],
+  );
 }
 
 // ── Talent screens ──
@@ -65,6 +71,14 @@ async function talentProfile(page, cls) {
     await page.waitForTimeout(500);
     await shot(`talents-${cls}`, { fullPage: true });
   }
+  // Below level 30: the superpower branch keeps its frame and the level-30 seal.
+  await talentProfile(page, 'mage', 20);
+  await page.goto(base + '/?debug');
+  await nav.waitFor();
+  await nav.getByRole('button', { name: 'Talents', exact: true }).click();
+  await page.locator('.talent-seal').waitFor();
+  await page.waitForTimeout(500);
+  await shot('talents-mage-level20', { fullPage: true });
   await context.close();
 }
 {
@@ -82,6 +96,10 @@ async function talentProfile(page, cls) {
   await page.getByRole('region', { name: 'Talents', exact: true }).waitFor();
   await page.waitForTimeout(500);
   await shot('phone-talents-warrior', { fullPage: true });
+  // The page scrolls inside the app shell on a phone: bring the first nodes into view.
+  await page.locator('.talent-node-cell').nth(1).scrollIntoViewIfNeeded();
+  await page.waitForTimeout(300);
+  await shot('phone-talents-warrior-nodes');
   await context.close();
 }
 

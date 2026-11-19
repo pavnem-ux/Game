@@ -1692,3 +1692,73 @@
 .meta-ui .recent-run.outcome-victory b {
   color: var(--gold-300);
 }
+
+/* ── Task 28: talent branch emblems (art pack 4). Sizes: ICON_SIZES → --icon-* on :root. ── */
+.talent-column h3 .talent-branch-emblem {
+  display: block;
+  margin: 0 auto var(--sp-2);
+}
+.talent-column.locked h3 .talent-branch-emblem {
+  filter: grayscale(0.7) brightness(0.7);
+}
+/* A node with the emblem: the orb is the emblem itself, ringed by the state colour. */
+.talent-orb.has-art {
+  width: var(--icon-talentNode);
+  height: var(--icon-talentNode);
+  padding: 0;
+  overflow: visible;
+  background: var(--night-900);
+}
+.talent-orb.has-art .talent-node-emblem {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.talent-node-number {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  border: 1px solid var(--ink-line-strong);
+  background: var(--night-900);
+  color: var(--parchment-100);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+}
+/* Locked: dimmed and desaturated (the old orb only faded). */
+.status-locked .talent-orb.has-art {
+  opacity: 1;
+}
+.status-locked .talent-orb.has-art .talent-node-emblem {
+  filter: grayscale(0.9) brightness(0.55);
+}
+/* Maxed: gold ring and glow around the emblem (no gold fill over the art). */
+.status-maxed .talent-orb.has-art {
+  background: var(--night-900);
+  border-width: 3px;
+  box-shadow:
+    0 0 0 2px rgba(245, 196, 98, 0.35),
+    0 0 18px var(--gold-glow);
+}
+.status-maxed .talent-orb.has-art .talent-node-number {
+  border-color: var(--gold-300);
+  color: var(--gold-300);
+}
+@media (pointer: coarse) {
+  .talent-orb.has-art {
+    width: var(--icon-talentNodeTouch);
+    height: var(--icon-talentNodeTouch);
+  }
+}
+@media (max-width: 760px), (max-height: 560px) {
+  .talent-column h3 .talent-branch-emblem {
+    width: var(--icon-branchCompact);
+    height: var(--icon-branchCompact);
+  }
+}

@@ -5,7 +5,7 @@ verbatim). Branch `task-28-icons`, created from the latest `main` (Task 27 merge
 owner's `art-pack-4.zip` (12 synergy icons, 12 talent branch emblems, `manifest-pack4.json`,
 `ART_PROVENANCE-pack4.md`). UI only: synergies, talents and balance are unchanged.
 
-Current: Phase 3 — talent UI
+Current: Phase 4 — delivery
 
 PR: https://github.com/pavnem-ux/Game/pull/26
 
@@ -17,7 +17,7 @@ PR: https://github.com/pavnem-ux/Game/pull/26
       `talent-branch-icon`; tests (every synergy id and every class / branch pair resolves)
 - [x] 2 Synergy UI: banners, pause list with pips, card hint, results damage sources, gold ring
       for level III
-- [ ] 3 Talent UI: branch header emblems, node emblems with number badge and rank pips, locked /
+- [x] 3 Talent UI: branch header emblems, node emblems with number badge and rank pips, locked /
       maxed states, superpower frame and level-30 seal kept
 - [ ] 4 Delivery: full checks, e2e desktop / mobile, `test:production`, "after" screenshots,
       README, PR
@@ -88,13 +88,32 @@ PR: https://github.com/pavnem-ux/Game/pull/26
   server) with that script. The two runs' numbers differ slightly, but Seismic Impact is in the
   top five in both.
 
+## Phase 3 — talent UI
+
+- Branch header: the emblem (96 px; 64 on narrow / short screens) above the branch name; dimmed
+  while the branch is locked. The superpower branch keeps its purple frame, «SUPERPOWER» tag and
+  the «unlocks at level 30» seal (`talents-mage-level20`).
+- Nodes: with the emblem, the orb shows the branch emblem (56 px; 48 on touch, still ≥ 44 px) with
+  the node number (1–5 = `order`) as a corner badge; rank pips I–III stay below. States: locked =
+  desaturated and darkened emblem; available = the existing gold pulse; partial = the gold-600
+  ring; maxed = gold ring + glow (no gold fill over the art). Selection ring, the learn flash,
+  titles / tooltips and the detail panel are unchanged.
+- Without an emblem (no manifest, missing key, failed image) the node keeps its letter and no
+  badge: the Task 13 look.
+- Checks: `npm run typecheck`, `npm test` (143 files, 1522 tests), `npm run format:check`;
+  `campaign-browser` (talent purchase flow) and `mobile-browser` (tap targets ≥ 44 px, no
+  horizontal scroll) pass.
+- Screenshot script: `talents-mage-level20` (the seal) and `phone-talents-warrior-nodes` (the
+  phone page scrolled to the nodes) added; the «before» set was re-taken from `main`.
+
 ## "Before" screenshots
 
 `docs/art-pack-4/before-*.jpg`, written by `tests/art4-screens.mjs before` (dev server, `?debug`):
 
-- `talents-<class>` (1280×1000, full page) and `phone-talents-warrior` (844×390): class level 30
-  with B1·1 at rank III (maxed), B1·2 at rank II, B2·1 at rank I; the rest locked; the
-  superpower branch in its own frame.
+- `talents-<class>` (1280×1000, full page) and `phone-talents-warrior` (844×390, plus
+  `-nodes` scrolled to the nodes): class level 30 with B1·1 at rank III (maxed), B1·2 at rank II,
+  B2·1 at rank I; the rest locked; the superpower branch in its own frame.
+  `talents-mage-level20`: the same at level 20, with the superpower seal.
 - `banner-unlock`, `banner-level2`, `banner-awakening`: Thermal Shock I → II → III «Awakening»
   (mage, Fireball + Frost Nova; page clock paused, so the banners stay).
 - `card-hint`: the Frost Nova card with «▲ Thermal Shock II».
