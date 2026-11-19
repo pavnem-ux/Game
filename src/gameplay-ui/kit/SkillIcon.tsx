@@ -4,9 +4,12 @@ import { artManifestStore, artUrl, loadArtManifest } from '../../engine/visuals/
 import {
   skillIconEntries,
   skillIconEntry,
+  itemIconEntries,
+  petArtEntry,
   synergyIconEntries,
   talentBranchIconEntries,
 } from '../../engine/visuals/art-registry';
+import { PET_IDS } from '../../pets/config';
 import { ICON_SIZES, iconSizeVars } from './icon-sizes';
 import type { IconSize } from './icon-sizes';
 
@@ -54,6 +57,8 @@ export function preloadSkillIcons(): void {
       ...skillIconEntries(manifest),
       ...synergyIconEntries(manifest),
       ...talentBranchIconEntries(manifest),
+      ...itemIconEntries(manifest),
+      ...PET_IDS.map((id) => petArtEntry(manifest, id)).filter((e) => e !== null),
     ];
     for (const entry of entries) {
       const img = new Image();

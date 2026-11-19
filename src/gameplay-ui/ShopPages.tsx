@@ -23,7 +23,15 @@ import { PET_CONFIG, PET_IDS, checkPetPurchase, petLevel } from '../pets';
 import type { PetId } from '../pets';
 import { PetCard } from './meta/PetsScreen';
 import { TierRows } from './meta/TierRows';
-import { Button, ConfirmModal, CurrencyIcon, Tabs, TierFrame, disabledReason } from './kit';
+import {
+  Button,
+  ConfirmModal,
+  CurrencyIcon,
+  ItemIcon,
+  Tabs,
+  TierFrame,
+  disabledReason,
+} from './kit';
 import { EN, formatNumber } from './strings-en';
 
 /**
@@ -157,6 +165,7 @@ export function ShopPage() {
                 >
                   <TierFrame tier={item.tier} className="shop-card">
                     <div className="shop-card-head">
+                      <ItemIcon templateId={item.templateId} size="itemCard" level={level} />
                       <strong>{name}</strong>
                       <small style={{ color: TIER_CONFIG[item.tier as Tier].color }}>
                         {tierLabel(item)}

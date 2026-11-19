@@ -2197,6 +2197,18 @@ body {
 .art-icon.icon-talentNodeTouch {
   --size: var(--icon-talentNodeTouch);
 }
+.art-icon.icon-itemCard {
+  --size: var(--icon-itemCard);
+}
+.art-icon.icon-itemSlot {
+  --size: var(--icon-itemSlot);
+}
+.art-icon.icon-itemDetail {
+  --size: var(--icon-itemDetail);
+}
+.art-icon.icon-itemSmall {
+  --size: var(--icon-itemSmall);
+}
 /* Level III «Awakening»: the same icon with a gold ring and glow (no extra art). */
 .synergy-icon.is-awakened {
   border-radius: 50%;
@@ -2230,4 +2242,44 @@ body {
 }
 .card-synergy-level .synergy-icon {
   margin: -2px 3px 0 0;
+}
+
+/* ── Task 30: item icons (art pack 5). Tier frame / colour unchanged; forge level as a badge. ── */
+.item-icon {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  vertical-align: middle;
+}
+.item-upgrade-badge {
+  position: absolute;
+  right: -6px;
+  bottom: -4px;
+  padding: 0 4px;
+  border-radius: 8px;
+  border: 1px solid #f0c862;
+  background: rgba(32, 22, 10, 0.92);
+  color: #ffe7a8;
+  font:
+    700 10px/1.4 system-ui,
+    sans-serif;
+}
+.item-card .item-icon,
+.shop-card-head .item-icon,
+.doll-slot-button .item-icon {
+  align-self: center;
+  margin-bottom: 4px;
+}
+.equipped-detail .item-icon,
+.equipment-preview .item-icon,
+.forge-detail-body .item-icon {
+  display: flex;
+  width: fit-content;
+  margin: 0 auto 6px;
+}
+.compare-title,
+.quest-reward-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }

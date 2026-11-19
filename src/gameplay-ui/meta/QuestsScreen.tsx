@@ -6,7 +6,7 @@ import { QUEST_GROUPS, QUEST_GROUP_LABELS, allQuestProgress, questPayout } from 
 import type { QuestGroup, QuestProgress } from '../../quests';
 import type { PlayerProfile } from '../../profile';
 import { campaignStore } from '../campaign-state';
-import { Button, CurrencyBadge, OreBadge, ProgressBar, Tabs, formatGold } from '../kit';
+import { Button, CurrencyBadge, formatGold, ItemIcon, OreBadge, ProgressBar, Tabs } from '../kit';
 import { EN } from '../strings-en';
 import { PetPortrait } from '../pets/PetPortrait';
 
@@ -127,7 +127,12 @@ function QuestRow({
       <div className="quest-rewards" aria-label={Q.reward}>
         {r.gold ? <CurrencyBadge amount={r.gold} size="s" /> : null}
         {r.ore ? <OreBadge amount={r.ore} size="s" /> : null}
-        {item && <span className="quest-reward-item">{item.name}</span>}
+        {item && (
+          <span className="quest-reward-item">
+            <ItemIcon templateId={item.templateId} size="itemSmall" />
+            {item.name}
+          </span>
+        )}
         {r.pet && isPetId(r.pet) && (
           <span className="quest-reward-pet">
             <PetPortrait id={r.pet} size={22} />

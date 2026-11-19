@@ -25,6 +25,7 @@ import {
   STAT_ROWS,
   Tabs,
   TierFrame,
+  ItemIcon,
   Tooltip,
   compareStats,
   formatStat,
@@ -135,6 +136,9 @@ export function EquipmentPage() {
                     } else setFilter(filter === slot ? 'all' : slot);
                   }}
                 >
+                  {item && (
+                    <ItemIcon templateId={item.templateId} size="itemSlot" level={levelOf(item)} />
+                  )}
                   <small>{SLOT_LABELS[slot]}</small>
                   <strong>{item ? nameOf(item) : E.empty}</strong>
                   {item && <span className="doll-tier">{tierLabel(item)}</span>}
@@ -166,6 +170,11 @@ export function EquipmentPage() {
                   aria-label="Equipped item"
                   title={nameOf(equippedDetail)}
                 >
+                  <ItemIcon
+                    templateId={equippedDetail.templateId}
+                    size="itemDetail"
+                    level={levelOf(equippedDetail)}
+                  />
                   <p className="equipped-detail-meta">
                     {SLOT_LABELS[slotDetail]} ·{' '}
                     <span style={{ color: tierColor(equippedDetail) }}>
@@ -211,6 +220,11 @@ export function EquipmentPage() {
                   aria-label="Equipment preview"
                   title={E.compare(nameOf(chosen.item))}
                 >
+                  <ItemIcon
+                    templateId={chosen.item.templateId}
+                    size="itemDetail"
+                    level={levelOf(chosen.item)}
+                  />
                   <CompareList deltas={chosen.deltas} empty={E.noChange} />
                   <div className="preview-actions">
                     <Button variant="primary" onClick={() => equip(chosen.item.id)}>
@@ -279,6 +293,11 @@ export function EquipmentPage() {
                         onFocus={() => setHovered(item.id)}
                         onBlur={() => setHovered(null)}
                       >
+                        <ItemIcon
+                          templateId={item.templateId}
+                          size="itemCard"
+                          level={levelOf(item)}
+                        />
                         <strong>{nameOf(item)}</strong>
                         <small className="item-tier">
                           {SLOT_LABELS[item.slot]} · {tierLabel(item)}
@@ -289,7 +308,10 @@ export function EquipmentPage() {
                     </TierFrame>
                     {hover?.item.id === item.id && (
                       <Tooltip placement="top">
-                        <strong>{E.compare(nameOf(item))}</strong>
+                        <strong className="compare-title">
+                          <ItemIcon templateId={item.templateId} size="itemSmall" />
+                          {E.compare(nameOf(item))}
+                        </strong>
                         <CompareList deltas={hover.deltas} empty={E.noChange} />
                       </Tooltip>
                     )}
