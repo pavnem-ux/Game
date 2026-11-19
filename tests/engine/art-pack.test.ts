@@ -19,8 +19,15 @@ import {
   skillIconArtKey,
   skillIconEntries,
   skillIconEntry,
+  synergyIconArtKey,
+  synergyIconEntries,
+  synergyIconEntry,
+  talentBranchArtKey,
+  talentBranchIconEntries,
+  talentBranchIconEntry,
 } from '../../src/engine/visuals/art-registry';
-import { SKILL_CATALOG } from '../../src/skills';
+import { SKILL_CATALOG, SYNERGY_RULES } from '../../src/skills';
+import { TALENT_CATALOG_DATA } from '../../src/talents';
 import { TEXTURE_KEYS } from '../../src/engine/visuals/keys';
 
 /** Task 25 Phase 1: the owner's art pack, its manifest and the registry with procedural fallback. */
@@ -49,8 +56,8 @@ const entry = (key: string, extra: Record<string, unknown> = {}) => ({
 });
 
 describe('Task 25 — art pack 1 files and manifest', () => {
-  it('63 entries (pack 1: 17, pack 2: 9, pack 3: 37); every file exists and has the manifest size', () => {
-    expect(manifest.size).toBe(63);
+  it('87 entries (pack 1: 17, pack 2: 9, pack 3: 37, pack 4: 24); every file exists and has the manifest size', () => {
+    expect(manifest.size).toBe(87);
     for (const e of manifest.values()) {
       const buf = readFileSync(join(PUBLIC, e.file));
       expect(webpSize(buf), e.key).toEqual([e.width, e.height]);
@@ -191,7 +198,7 @@ describe('Task 26 — pack 2 kinds: ground and pickup', () => {
       declared++;
       expect(artUsage(e.key), e.key).toBe(e.kind);
     }
-    expect(declared).toBe(9 + 37); // pack 2 + pack 3 (Task 27)
+    expect(declared).toBe(9 + 37 + 24); // pack 2 + pack 3 (Task 27) + pack 4 (Task 28)
     for (const art of [...Object.values(PICKUP_ART), ...Object.values(GROUND_ART)])
       expect(manifest.has(art!), art).toBe(true);
     for (const art of Object.values(CURRENCY_ART)) expect(manifest.has(art), art).toBe(true);
@@ -298,5 +305,118 @@ describe('Task 27 — pack 3: skill icons', () => {
       /skillId "inferno"/,
     );
     expect(() => parseArtManifest(icon('skill_fireball', { anchor: 'tile' }))).toThrow(/tile/);
+  });
+});
+
+describe('Task 28 — pack 4: synergy icons and talent branch emblems', () => {
+  it('every synergy id (12) has a 128 px icon keyed synergy_<id>', () => {
+    expect(SYNERGY_RULES).toHaveLength(12);
+    for (const r of SYNERGY_RULES) {
+      const e = synergyIconEntry(manifest, r.id);
+      expect(e, r.id).not.toBeNull();
+      expect(e!.key).toBe(synergyIconArtKey(r.id));
+      expect(e!.file).toBe(`assets/icons/synergies/${r.id}.webp`);
+      expect([e!.width, e!.height, e!.anchor, e!.kind]).toEqual([
+        128,
+        128,
+        'center',
+        'synergy-icon',
+      ]);
+    }
+    expect(synergyIconEntries(manifest)).toHaveLength(12);
+    expect([...manifest.values()].filter((e) => e.kind === 'synergy-icon')).toHaveLength(12);
+  });
+  it('every class / branch pair of the talent catalog (12) has a 192 px emblem', () => {
+    expect(TALENT_CATALOG_DATA.branches).toHaveLength(12);
+    for (const b of TALENT_CATALOG_DATA.branches) {
+      const e = talentBranchIconEntry(manifest, b.characterClass, b.branch);
+      const tag = `${b.characterClass} ${b.branch}`;
+      expect(e, tag).not.toBeNull();
+      expect(e!.talentBranch, tag).toEqual({ characterClass: b.characterClass, branch: b.branch });
+      // The pack names each emblem after its branch (e.g. «Twin-Blade Master» → twin_blade_master).
+      expect(e!.key, tag).toBe(talentBranchArtKey(b.name));
+      expect([e!.width, e!.height, e!.anchor, e!.kind]).toEqual([
+        192,
+        192,
+        'center',
+        'talent-branch-icon',
+      ]);
+    }
+    expect(talentBranchIconEntries(manifest)).toHaveLength(12);
+    expect([...manifest.values()].filter((e) => e.kind === 'talent-branch-icon')).toHaveLength(12);
+  });
+  it('unknown ids / pairs, a missing icon or no manifest fall back (null → the current look)', () => {
+    expect(synergyIconEntry(manifest, 'no_such_synergy')).toBeNull();
+    expect(synergyIconEntry(null, 'wildfire')).toBeNull();
+    expect(talentBranchIconEntry(manifest, 'mage', 4)).toBeNull();
+    expect(talentBranchIconEntry(null, 'mage', 1)).toBeNull();
+    const partial = new Map(manifest);
+    partial.delete('synergy_wildfire');
+    partial.delete('talent_branch_guardian');
+    expect(synergyIconEntry(partial, 'wildfire')).toBeNull();
+    expect(synergyIconEntry(partial, 'thermal_shock')?.key).toBe('synergy_thermal_shock');
+    expect(talentBranchIconEntry(partial, 'warrior', 2)).toBeNull();
+    expect(talentBranchIconEntry(partial, 'warrior', 1)?.key).toBe('talent_branch_berserker');
+    expect(synergyIconEntries(partial)).toHaveLength(11);
+    expect(talentBranchIconEntries(partial)).toHaveLength(11);
+    expect(artUsage('synergy_no_such_synergy')).toBeNull();
+    expect(artUsage('talent_branch_no_such_branch')).toBeNull();
+  });
+  it('icons are UI images: the in-run scene does not load them', () => {
+    const kinds = new ArtRegistry(manifest).sceneEntries().map((e) => e.kind);
+    expect(kinds).not.toContain('synergy-icon');
+    expect(kinds).not.toContain('talent-branch-icon');
+  });
+  it('validation: prefixed keys, synergyId, and class / branch for emblems', () => {
+    const synergy = (key: string, extra: Record<string, unknown> = {}) =>
+      JSON.stringify({
+        [key]: {
+          file: 'assets/icons/synergies/wildfire.webp',
+          size: [128, 128],
+          anchor: 'center',
+          kind: 'synergy-icon',
+          ...extra,
+        },
+      });
+    expect(parseArtManifest(synergy('synergy_wildfire', { synergyId: 'wildfire' })).size).toBe(1);
+    expect(() => parseArtManifest(synergy('wildfire'))).toThrow(/key must be "synergy_wildfire"/);
+    expect(() => parseArtManifest(synergy('synergy_wildfire', { synergyId: 'final_cut' }))).toThrow(
+      /synergyId "final_cut"/,
+    );
+    const emblem = (name: string, extra: Record<string, unknown>) => ({
+      [`talent_branch_${name}`]: {
+        file: `assets/icons/talents/${name}.webp`,
+        size: [192, 192],
+        anchor: 'center',
+        kind: 'talent-branch-icon',
+        ...extra,
+      },
+    });
+    const ok = parseArtManifest(
+      JSON.stringify(emblem('sniper', { characterClass: 'archer', branch: 1 })),
+    );
+    expect(ok.get('talent_branch_sniper')!.talentBranch).toEqual({
+      characterClass: 'archer',
+      branch: 1,
+    });
+    expect(() =>
+      parseArtManifest(JSON.stringify(emblem('sniper', { characterClass: 'bard', branch: 1 }))),
+    ).toThrow(/characterClass "bard"/);
+    expect(() =>
+      parseArtManifest(JSON.stringify(emblem('sniper', { characterClass: 'archer' }))),
+    ).toThrow(/branch "undefined"/);
+    expect(() =>
+      parseArtManifest(JSON.stringify(emblem('sniper', { characterClass: 'archer', branch: 1.5 }))),
+    ).toThrow(/positive integer/);
+    expect(() =>
+      parseArtManifest(
+        JSON.stringify({
+          ...emblem('sniper', { characterClass: 'archer', branch: 1 }),
+          ...emblem('pathfinder', { characterClass: 'archer', branch: 1 }),
+        }),
+      ),
+    ).toThrow(/second emblem for archer branch 1/);
+    // Other kinds carry no talent branch.
+    expect('talentBranch' in manifest.get('synergy_wildfire')!).toBe(false);
   });
 });

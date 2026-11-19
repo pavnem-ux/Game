@@ -648,5 +648,281 @@
   "skillId": "whirlwind",
   "anchor": "center",
   "source": "owner-generated (ChatGPT image)"
+ },
+ "synergy_battle_momentum": {
+  "file": "assets/icons/synergies/battle_momentum.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "synergy-icon",
+  "synergyId": "battle_momentum",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "synergy_blood_frenzy": {
+  "file": "assets/icons/synergies/blood_frenzy.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "synergy-icon",
+  "synergyId": "blood_frenzy",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "synergy_deadly_precision": {
+  "file": "assets/icons/synergies/deadly_precision.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "synergy-icon",
+  "synergyId": "deadly_precision",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "synergy_deep_wounds": {
+  "file": "assets/icons/synergies/deep_wounds.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "synergy-icon",
+  "synergyId": "deep_wounds",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "synergy_final_cut": {
+  "file": "assets/icons/synergies/final_cut.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "synergy-icon",
+  "synergyId": "final_cut",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "synergy_plague_chain": {
+  "file": "assets/icons/synergies/plague_chain.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "synergy-icon",
+  "synergyId": "plague_chain",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "synergy_seismic_impact": {
+  "file": "assets/icons/synergies/seismic_impact.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "synergy-icon",
+  "synergyId": "seismic_impact",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "synergy_shattered_ice": {
+  "file": "assets/icons/synergies/shattered_ice.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "synergy-icon",
+  "synergyId": "shattered_ice",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "synergy_skull_crusher": {
+  "file": "assets/icons/synergies/skull_crusher.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "synergy-icon",
+  "synergyId": "skull_crusher",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "synergy_thermal_shock": {
+  "file": "assets/icons/synergies/thermal_shock.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "synergy-icon",
+  "synergyId": "thermal_shock",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "synergy_toxic_barrage": {
+  "file": "assets/icons/synergies/toxic_barrage.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "synergy-icon",
+  "synergyId": "toxic_barrage",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "synergy_wildfire": {
+  "file": "assets/icons/synergies/wildfire.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "synergy-icon",
+  "synergyId": "wildfire",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "talent_branch_arcanist": {
+  "file": "assets/icons/talents/arcanist.webp",
+  "size": [
+   192,
+   192
+  ],
+  "kind": "talent-branch-icon",
+  "characterClass": "mage",
+  "branch": 2,
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "talent_branch_archmage": {
+  "file": "assets/icons/talents/archmage.webp",
+  "size": [
+   192,
+   192
+  ],
+  "kind": "talent-branch-icon",
+  "characterClass": "mage",
+  "branch": 3,
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "talent_branch_assassin": {
+  "file": "assets/icons/talents/assassin.webp",
+  "size": [
+   192,
+   192
+  ],
+  "kind": "talent-branch-icon",
+  "characterClass": "rogue",
+  "branch": 1,
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "talent_branch_berserker": {
+  "file": "assets/icons/talents/berserker.webp",
+  "size": [
+   192,
+   192
+  ],
+  "kind": "talent-branch-icon",
+  "characterClass": "warrior",
+  "branch": 1,
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "talent_branch_death_alchemist": {
+  "file": "assets/icons/talents/death_alchemist.webp",
+  "size": [
+   192,
+   192
+  ],
+  "kind": "talent-branch-icon",
+  "characterClass": "rogue",
+  "branch": 3,
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "talent_branch_elementalist": {
+  "file": "assets/icons/talents/elementalist.webp",
+  "size": [
+   192,
+   192
+  ],
+  "kind": "talent-branch-icon",
+  "characterClass": "mage",
+  "branch": 1,
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "talent_branch_guardian": {
+  "file": "assets/icons/talents/guardian.webp",
+  "size": [
+   192,
+   192
+  ],
+  "kind": "talent-branch-icon",
+  "characterClass": "warrior",
+  "branch": 2,
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "talent_branch_pathfinder": {
+  "file": "assets/icons/talents/pathfinder.webp",
+  "size": [
+   192,
+   192
+  ],
+  "kind": "talent-branch-icon",
+  "characterClass": "archer",
+  "branch": 2,
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "talent_branch_shadow_hunter": {
+  "file": "assets/icons/talents/shadow_hunter.webp",
+  "size": [
+   192,
+   192
+  ],
+  "kind": "talent-branch-icon",
+  "characterClass": "rogue",
+  "branch": 2,
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "talent_branch_siege_engineer": {
+  "file": "assets/icons/talents/siege_engineer.webp",
+  "size": [
+   192,
+   192
+  ],
+  "kind": "talent-branch-icon",
+  "characterClass": "archer",
+  "branch": 3,
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "talent_branch_sniper": {
+  "file": "assets/icons/talents/sniper.webp",
+  "size": [
+   192,
+   192
+  ],
+  "kind": "talent-branch-icon",
+  "characterClass": "archer",
+  "branch": 1,
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "talent_branch_twin_blade_master": {
+  "file": "assets/icons/talents/twin_blade_master.webp",
+  "size": [
+   192,
+   192
+  ],
+  "kind": "talent-branch-icon",
+  "characterClass": "warrior",
+  "branch": 3,
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
  }
 }

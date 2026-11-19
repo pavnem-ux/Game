@@ -5,7 +5,7 @@ verbatim). Branch `task-28-icons`, created from the latest `main` (Task 27 merge
 owner's `art-pack-4.zip` (12 synergy icons, 12 talent branch emblems, `manifest-pack4.json`,
 `ART_PROVENANCE-pack4.md`). UI only: synergies, talents and balance are unchanged.
 
-Current: Phase 1 — pipeline
+Current: Phase 2 — synergy UI
 
 PR: https://github.com/pavnem-ux/Game/pull/26
 
@@ -13,7 +13,7 @@ PR: https://github.com/pavnem-ux/Game/pull/26
 
 - [x] 0 Setup: branch, spec, progress file, draft PR, "before" screenshots (talent screen of each
       class + phone, synergy banners I / II / III, card hint, pause synergy list, results)
-- [ ] 1 Pipeline: files, manifest merge, provenance, registry kinds `synergy-icon` and
+- [x] 1 Pipeline: files, manifest merge, provenance, registry kinds `synergy-icon` and
       `talent-branch-icon`; tests (every synergy id and every class / branch pair resolves)
 - [ ] 2 Synergy UI: banners, pause list with pips, card hint, results damage sources, gold ring
       for level III
@@ -40,6 +40,27 @@ PR: https://github.com/pavnem-ux/Game/pull/26
   `characterClass`, `branch`.
 - Budget: the art set is 1.77 MB today; with pack 4 (≈ 0.24 MB of images + the merged manifest)
   it is ≈ 2.01 MB, under the 2 MiB (2,097,152 bytes) test limit with ≈ 80 KB to spare.
+
+## Phase 1 — pipeline
+
+- The 24 images are copied byte-identical to `public/assets/icons/synergies/` and
+  `public/assets/icons/talents/`; the manifest has 87 entries (packs 1–4: 17 + 9 + 37 + 24), same
+  1-space format; provenance row 4 appended.
+- Parser: kinds `synergy-icon` (key `synergy_<file>`, optional `synergyId` = file name) and
+  `talent-branch-icon` (key `talent_branch_<file>`, required `characterClass` from the four
+  classes and `branch` as a positive integer, one emblem per class / branch). Emblem entries keep
+  `talentBranch: { characterClass, branch }`; other entries have no such field.
+- Registry: `synergyIconEntry(manifest, id)` / `synergyIconEntries`, and
+  `talentBranchIconEntry(manifest, class, branch)` / `talentBranchIconEntries`. Emblems are looked
+  up by the class / branch fields, not by the key. Null (no manifest, unknown id or pair, missing
+  icon, other kind) means "keep the current look". `artUsage` knows the 12 synergy keys and the 12
+  branch keys (`talent_branch_` + the catalog branch name as a slug). The in-run scene loads
+  neither.
+- Tests (`tests/engine/art-pack.test.ts`): every synergy id and every catalog class / branch pair
+  resolves (sizes, kinds, files); fallbacks; validation of keys, `synergyId`, class, branch and
+  duplicates. Art set: 2,016,237 bytes, under the 2,097,152-byte test limit.
+- Checks: `npm run typecheck`, `npm test` (142 files, 1513 tests), `npm run format:check`,
+  `npm run build` pass.
 
 ## "Before" screenshots
 
