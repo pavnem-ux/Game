@@ -155,6 +155,71 @@ async function portraits(withArt, viewport, touch) {
   return { select, hub, badges };
 }
 
+/**
+ * Task 27: skill icons from art pack 3 on the HUD (active skills), the level-up offer cards and the
+ * pause skill list; the catalogue glyphs are the fallback without the manifest.
+ */
+async function skillIcons(withArt, viewport, touch) {
+  const context = await browser.newContext({ viewport, hasTouch: touch, isMobile: touch });
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  if (!withArt)
+    await page.route('**/assets/manifest.json', (route) => route.fulfill({ status: 404 }));
+  await page.goto(base + '/?debug');
+  await page.waitForFunction(() => !!window.__alpha);
+  const command = (a) => page.evaluate((x) => window.__alpha.command(x), a);
+  await command({
+    type: 'restart',
+    options: { characterClass: 'warrior', level: 5, seed: 99, initialEnemies: false },
+  });
+  await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
+  await command({ type: 'protection', enabled: true });
+  await command({ type: 'spawning', settings: { enabled: false } });
+  for (const skillId of ['ground_slam', 'whirlwind'])
+    await command({ type: 'grant-skill', skillId, rank: 2 });
+  await page.locator('.active-skill').nth(1).waitFor();
+  /** Loaded icon images (pathnames) and glyph fallbacks inside `selector`. */
+  const shown = (selector) =>
+    page.evaluate(async (sel) => {
+      const imgs = [...document.querySelectorAll(`${sel} img.skill-icon`)];
+      await Promise.all(imgs.map((i) => (i.complete ? null : i.decode().catch(() => null))));
+      return {
+        icons: imgs.filter((i) => i.naturalWidth > 0).map((i) => new URL(i.src).pathname),
+        glyphs: document.querySelectorAll(`${sel} .skill-icon.is-glyph`).length,
+        size: Math.round(
+          document.querySelector(`${sel} .skill-icon`)?.getBoundingClientRect().width ?? 0,
+        ),
+        scroll: document.documentElement.scrollWidth > window.innerWidth + 1,
+      };
+    }, selector);
+  if (withArt) await page.locator('.active-skill img.skill-icon').nth(1).waitFor();
+  else await page.waitForTimeout(500);
+  const hud = await shown('.active-skills');
+  // A level-up offer: its skill cards show icons (bonus cards keep their glyph).
+  await command({ type: 'grant-xp', amount: 200 });
+  await page.locator('.skill-card').first().waitFor();
+  if (withArt) await page.locator('.skill-card-icon img.skill-icon').first().waitFor();
+  const offer = await shown('.upgrade-grid .skill-card-icon');
+  const cards = await page.evaluate(() => window.__alpha.state().world.skills.offer.cards.length);
+  for (
+    let i = 0;
+    i < 20 && (await page.evaluate(() => !!window.__alpha.state().world.skills.offer));
+    i++
+  ) {
+    const c = await page.evaluate(() => window.__alpha.state().world.skills.offer.cards[0]);
+    await command({
+      type: 'choose-skill',
+      card: c.kind === 'skill' ? c.skillId : `bonus:${c.bonusId}`,
+    });
+  }
+  await page.keyboard.press('p');
+  await page.locator('.pause-skills').waitFor();
+  const pause = await shown('.pause-skills .skill-overview-groups');
+  await context.close();
+  return { hud, offer, cards, pause, errors };
+}
+
 const art = await scenario(true);
 const procedural = await scenario(false);
 const shots = {
@@ -162,7 +227,40 @@ const shots = {
   phone: await portraits(true, { width: 844, height: 390 }, true),
   fallback: await portraits(false, { width: 1280, height: 720 }, false),
 };
+const icons = {
+  desktop: await skillIcons(true, { width: 1280, height: 720 }, false),
+  phone: await skillIcons(true, { width: 844, height: 390 }, true),
+  fallback: await skillIcons(false, { width: 1280, height: 720 }, false),
+};
 await browser.close();
+
+for (const tag of ['desktop', 'phone']) {
+  const { hud, offer, cards, pause, errors } = icons[tag];
+  assert.deepEqual(errors, [], `${tag}: no page errors`);
+  assert.deepEqual(
+    hud.icons,
+    ['ground_slam', 'whirlwind'].map((id) => `/assets/icons/skills/${id}.webp`),
+    `${tag}: HUD active skills use the pack icons`,
+  );
+  assert.equal(hud.glyphs, 0, `${tag}: no glyph left on the HUD`);
+  assert.equal(hud.size, 44, `${tag}: HUD icon size (desktop 44 / Task 16 touch 44)`);
+  assert.ok(
+    offer.icons.length >= 1 && offer.icons.length + offer.glyphs === cards,
+    `${tag}: offer cards`,
+  );
+  assert.ok(
+    offer.icons.every((p) => p.startsWith('/assets/icons/skills/')),
+    `${tag}: offer icons`,
+  );
+  assert.equal(offer.size, tag === 'phone' ? 64 : 96, `${tag}: card icon size (compact on phones)`);
+  assert.ok(pause.icons.length >= 2 && pause.glyphs === 0, `${tag}: pause skill list icons`);
+  assert.equal(pause.size, 32, `${tag}: pause list icon size`);
+  assert.equal(hud.scroll || offer.scroll || pause.scroll, false, `${tag}: no horizontal scroll`);
+}
+assert.deepEqual(icons.fallback.hud.icons, [], 'fallback: no skill icon without the pack');
+assert.equal(icons.fallback.hud.glyphs, 2, 'fallback: the HUD glyphs are back');
+assert.equal(icons.fallback.offer.glyphs, icons.fallback.cards, 'fallback: offer glyphs');
+assert.deepEqual(icons.fallback.errors, [], 'fallback: no page errors');
 
 const CLASSES = ['archer', 'mage', 'rogue', 'warrior'];
 for (const tag of ['desktop', 'phone']) {
@@ -211,5 +309,5 @@ assert.deepEqual(
   'the fallback only logs its one "manifest unavailable" warning',
 );
 console.log(
-  'PASS art: same seed ⇒ identical simulation with art on / off (24 steps, map 25, every enemy type, thief, nest); 13 unit + 4 pickup looks from the packs; no missing-texture warnings; procedural fallback without the manifest; act ground art (identical simulation with it); class portraits on character select + hub (desktop and phone, no horizontal scroll), emblems as the fallback; Gold / Ore badge icons (SVG fallback).',
+  'PASS art: same seed ⇒ identical simulation with art on / off (24 steps, map 25, every enemy type, thief, nest); 13 unit + 4 pickup looks from the packs; no missing-texture warnings; procedural fallback without the manifest; act ground art (identical simulation with it); class portraits on character select + hub (desktop and phone, no horizontal scroll), emblems as the fallback; Gold / Ore badge icons (SVG fallback); skill icons on the HUD, offer cards and pause list (desktop and phone sizes, glyph fallback).',
 );

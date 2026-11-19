@@ -96,16 +96,28 @@ export function cardLevelRaises(
   characterClass: CharacterClass,
   ranks: ReadonlyMap<string, number>,
   skillId: string,
-): readonly { readonly synergy: SynergyRef; readonly level: 2 | 3 }[] {
+): readonly {
+  readonly synergy: SynergyRef;
+  readonly level: 2 | 3;
+  /** Task 27: the two skill ids of the pair that reaches the level (UI icons). */
+  readonly pair: readonly [string, string];
+}[] {
   const next = new Map(ranks);
   next.set(skillId, (ranks.get(skillId) ?? 0) + 1);
-  const raises: { synergy: SynergyRef; level: 2 | 3 }[] = [];
+  const raises: { synergy: SynergyRef; level: 2 | 3; pair: readonly [string, string] }[] = [];
   for (const rule of rulesForClass(characterClass)) {
     if (!rule.unlockPairs.some((pair) => pair.includes(skillId))) continue;
     const before = bestSynergyPair(rule, ranks).level;
-    const after = bestSynergyPair(rule, next).level;
-    if (after > before && after >= 2)
-      raises.push(Object.freeze({ synergy: ref(rule), level: after as 2 | 3 }));
+    const best = bestSynergyPair(rule, next);
+    const after = best.level;
+    if (after > before && after >= 2 && best.pair)
+      raises.push(
+        Object.freeze({
+          synergy: ref(rule),
+          level: after as 2 | 3,
+          pair: Object.freeze([best.pair[0], best.pair[1]] as const),
+        }),
+      );
   }
   return Object.freeze(raises);
 }
@@ -154,6 +166,8 @@ export interface CardSynergyHints {
   readonly unlocks: readonly {
     readonly synergy: SynergyRef;
     readonly withSkills: readonly string[];
+    /** Task 27: ids of `withSkills` (same order; UI icons). */
+    readonly withSkillIds: readonly string[];
   }[];
   /** Locked rules where this card is one half of a pair whose partner is not acquired yet. */
   readonly halfPairs: readonly {
@@ -259,9 +273,15 @@ export function cardSynergyHints(
     const partners = rule.unlockPairs
       .filter((pair) => pair.includes(skillId))
       .map((pair) => (pair[0] === skillId ? pair[1] : pair[0]));
-    const ownedPartners = partners.filter((id) => owned.has(id)).map(nameOf);
-    if (ownedPartners.length > 0)
-      unlocks.push(Object.freeze({ synergy: ref(rule), withSkills: unique(ownedPartners) }));
+    const ownedPartnerIds = unique(partners.filter((id) => owned.has(id)));
+    if (ownedPartnerIds.length > 0)
+      unlocks.push(
+        Object.freeze({
+          synergy: ref(rule),
+          withSkills: unique(ownedPartnerIds.map(nameOf)),
+          withSkillIds: ownedPartnerIds,
+        }),
+      );
     else
       halfPairs.push(Object.freeze({ synergy: ref(rule), partners: unique(partners.map(nameOf)) }));
   }

@@ -1,6 +1,7 @@
 import type { RunStatsSnapshot } from '../gameplay';
 import { clock } from './campaign-format';
-import { EN, damageSourceLabel, enemyTypeLabel } from './strings-en';
+import { SkillIcon } from './kit';
+import { EN, damageSourceLabel, damageSourceSkill, enemyTypeLabel } from './strings-en';
 
 const whole = (n: number) => Math.round(n).toLocaleString('en-US');
 
@@ -20,9 +21,13 @@ export function RunStatsPanel({ stats }: { stats: RunStatsSnapshot }) {
           <ol>
             {top.map((s) => {
               const share = stats.damageDealt > 0 ? (s.damage / stats.damageDealt) * 100 : 0;
+              const skill = damageSourceSkill(s.source);
               return (
                 <li key={s.source}>
-                  <span className="run-stats-name">{damageSourceLabel(s.source)}</span>
+                  <span className="run-stats-name">
+                    {skill && <SkillIcon skillId={skill.id} glyph={skill.icon} size="stats" />}
+                    <span className="run-stats-label">{damageSourceLabel(s.source)}</span>
+                  </span>
                   <span className="run-stats-bar" aria-hidden="true">
                     <i style={{ width: `${share}%` }} />
                   </span>

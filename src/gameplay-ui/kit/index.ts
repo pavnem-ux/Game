@@ -18,6 +18,17 @@ export { ClassEmblem } from './ClassEmblem';
 export { ClassPortrait } from './ClassPortrait';
 export { CurrencyIcon } from './CurrencyIcon';
 export {
+  SKILL_ICON_SIZES,
+  SkillIcon,
+  SkillIconView,
+  cooldownLeftFraction,
+  preloadSkillIcons,
+  skillIconSizeVars,
+  skillIconView,
+  textGlyph,
+} from './SkillIcon';
+export type { SkillIconSize } from './SkillIcon';
+export {
   STAT_ROWS,
   compareStats,
   disabledReason,

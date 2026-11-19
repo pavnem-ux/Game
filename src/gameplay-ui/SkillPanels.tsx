@@ -30,13 +30,11 @@ import { alphaBridge } from './store';
 import { BuildLabel } from './BuildLabel';
 import { ReportButton } from './ReportButton';
 import { campaignStore } from './campaign-state';
-import { Button } from './kit';
+import { Button, SkillIcon, cooldownLeftFraction } from './kit';
 import { EN } from './strings-en';
 import { skipCoins } from '../equipment/economy';
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
-/** Force monochrome text presentation so symbols never render as colour emoji. */
-const textGlyph = (icon: string) => `${icon}\uFE0E`;
 const cardKey = (c: OfferCard) => (c.kind === 'skill' ? c.skillId : `bonus:${c.bonusId}`);
 
 /** Level-up choice: up to three cards, exactly one pick, three rerolls per run. */
@@ -142,7 +140,21 @@ export function LevelUpDialog({ world }: { world: GameplaySnapshot }) {
                   </span>
                   <small>0{i + 1}</small>
                 </div>
-                <div className="upgrade-icon">{textGlyph(card.icon)}</div>
+                <div className="upgrade-icon skill-card-icon">
+                  <SkillIcon
+                    skillId={card.kind === 'skill' ? card.skillId : null}
+                    glyph={card.icon}
+                    size="card"
+                  />
+                  {card.kind === 'skill' && (
+                    <span
+                      className={`skill-icon-badge${card.isNew ? ' is-new' : ''}`}
+                      aria-hidden="true"
+                    >
+                      {card.isNew ? 'NEW' : `▲ ${ROMAN[card.nextRank]}`}
+                    </span>
+                  )}
+                </div>
                 <h3>
                   {card.name}
                   {card.kind === 'skill' && <em> {ROMAN[card.nextRank]}</em>}
@@ -155,7 +167,9 @@ export function LevelUpDialog({ world }: { world: GameplaySnapshot }) {
                     compact
                   />
                 )}
-                {hints && <CardSynergyHint hints={hints} />}
+                {hints && card.kind === 'skill' && (
+                  <CardSynergyHint hints={hints} skillId={card.skillId} />
+                )}
                 <CardLevelHint raises={raises} />
                 <div className="card-bottom">
                   <span>
@@ -260,7 +274,9 @@ export function EnhancedSkillDialog({ world }: { world: GameplaySnapshot }) {
                   <span>{current ? 'DEFAULT' : 'ACTIVE'}</span>
                   <small>0{i + 1}</small>
                 </div>
-                <div className="upgrade-icon">{textGlyph(skill?.icon ?? '✶')}</div>
+                <div className="upgrade-icon skill-card-icon">
+                  <SkillIcon skillId={id} glyph={skill?.icon ?? '✶'} size="card" />
+                </div>
                 <h3>
                   {skill?.name ?? id}
                   {skill && <em> {ROMAN[skill.rank]}</em>}
@@ -357,13 +373,29 @@ function CardLevelHint({ raises }: { raises: ReturnType<typeof cardLevelRaises> 
               : `Level II: ${SYNERGY_LEVEL_TEXT[r.synergy.id as SynergyId].levelTwo}`
           }
         >
-          ▲ {r.synergy.name} {LEVEL_ROMAN[r.level]}
+          <PairIcons ids={r.pair} />▲ {r.synergy.name} {LEVEL_ROMAN[r.level]}
         </span>
       ))}
     </div>
   );
 }
-function CardSynergyHint({ hints }: { hints: ReturnType<typeof cardSynergyHints> }) {
+/** Task 27: the small icons of a synergy pair («[A][B] ▲ Synergy II»), decorative. */
+function PairIcons({ ids }: { ids: readonly string[] }) {
+  return (
+    <span className="pair-icons" aria-hidden="true">
+      {ids.map((id) => (
+        <SkillIcon key={id} skillId={id} glyph={getSkill(id).icon} size="pair" />
+      ))}
+    </span>
+  );
+}
+function CardSynergyHint({
+  hints,
+  skillId,
+}: {
+  hints: ReturnType<typeof cardSynergyHints>;
+  skillId: string;
+}) {
   const unlocks = hints.unlocks.map((u) => u.synergy.name);
   const unlockWith = [...new Set(hints.unlocks.flatMap((u) => u.withSkills))];
   const halves = hints.halfPairs.map((h) => h.synergy.name);
@@ -376,7 +408,8 @@ function CardSynergyHint({ hints }: { hints: ReturnType<typeof cardSynergyHints>
           className="card-synergy-unlock"
           title={`Unlocks: ${hints.unlocks.map((u) => `${u.synergy.name} (pairs with: ${u.withSkills.join(' / ')})`).join('; ')}`}
         >
-          ✦ Unlocks: {short(unlocks)} · with {short(unlockWith)}
+          <PairIcons ids={[skillId, ...new Set(hints.unlocks.flatMap((u) => u.withSkillIds))]} />✦
+          Unlocks: {short(unlocks)} · with {short(unlockWith)}
         </span>
       )}
       {halves.length > 0 && (
@@ -494,8 +527,8 @@ export function SkillsOverviewBody({ world }: { world: GameplaySnapshot }) {
                   return (
                     <li key={skill.skillId}>
                       <strong className="skill-entry-heading">
-                        <i aria-hidden="true">{textGlyph(skill.icon)}</i> {skill.name} ·{' '}
-                        {ROMAN[skill.rank]}
+                        <SkillIcon skillId={skill.skillId} glyph={skill.icon} size="list" />{' '}
+                        {skill.name} · {ROMAN[skill.rank]}
                       </strong>
                       <p className="skill-entry-description">{definition.description}</p>
                       <p>{definition.rankSummaries[skill.rank - 1]}</p>
@@ -574,6 +607,7 @@ function SynergySection({ world }: { world: GameplaySnapshot }) {
                     {pair.skills.map((k, i) => (
                       <span key={k.skillId} className={k.owned ? 'synergy-skill-owned' : undefined}>
                         {i > 0 && ' + '}
+                        <SkillIcon skillId={k.skillId} glyph={k.icon} size="pair" />
                         {k.name}
                         {k.owned ? ' ✓' : ''}
                       </span>
@@ -702,7 +736,7 @@ export function ActiveSkills({ world }: { world: GameplaySnapshot }) {
   const leftHanded = useSyncExternalStore(uiSettings.subscribe, uiSettings.get).leftHanded;
   const autos = world.skills.owned.filter((s) => s.kind === 'auto');
   if (autos.length === 0) return null;
-  const { cooldowns } = world.skillCombat;
+  const { cooldowns, cooldownTotals } = world.skillCombat;
   return (
     <ul className={`active-skills${leftHanded ? ' left-handed' : ''}`} aria-label="Active skills">
       {autos.map((s) => {
@@ -718,8 +752,14 @@ export function ActiveSkills({ world }: { world: GameplaySnapshot }) {
             aria-label={`${s.name} ${ROMAN[s.rank]}: ${
               cooling ? `cooldown ${left.toFixed(1)} s` : 'ready'
             }`}
+            // Task 27: radial overlay — the dark sector is the part of the cooldown still left.
+            style={{
+              ['--cooldown-left' as string]: String(
+                cooling ? cooldownLeftFraction(left, cooldownTotals[s.skillId] ?? 0) : 0,
+              ),
+            }}
           >
-            <i aria-hidden="true">{textGlyph(s.icon)}</i>
+            <SkillIcon skillId={s.skillId} glyph={s.icon} size="hud" />
             <b aria-hidden="true">{ROMAN[s.rank]}</b>
             {cooling && (
               <small className="active-skill-cd" aria-hidden="true">

@@ -1,14 +1,16 @@
-# Art packs — Tasks 25 and 26
+# Art packs — Tasks 25, 26 and 27
 
 The owner's art (created / commissioned by the owner, listed in
 [ART_PROVENANCE.md](ART_PROVENANCE.md); AGENTS.md §4.12) replaces the procedural looks of the
 player, the enemies, the elites, the treasure thief and the blight nest in a run, and adds class
 portraits to the menus (pack 1, Task 25). Pack 2 (Task 26) adds a tiling ground per act, art for XP
-crystals, coin piles and chests, and the Gold / Ore icons in the menus. **Rendering only**: hitboxes, simulation, balance and saves are unchanged,
+crystals, coin piles and chests, and the Gold / Ore icons in the menus. Pack 3 (Task 27) adds the
+37 skill icons used wherever a skill is shown in the run UI. **Rendering only**: hitboxes, simulation, balance and saves are unchanged,
 and every look falls back to its Task 18 procedural texture whenever its image is missing or not
 loaded (yet). Specs: [task-25-art-pack-1.md](task-25-art-pack-1.md),
-[task-26-art-pack-2.md](task-26-art-pack-2.md); journals: [task-25-progress.md](task-25-progress.md),
-[task-26-progress.md](task-26-progress.md).
+[task-26-art-pack-2.md](task-26-art-pack-2.md), [task-27-skill-icons.md](task-27-skill-icons.md);
+journals: [task-25-progress.md](task-25-progress.md), [task-26-progress.md](task-26-progress.md),
+[task-27-progress.md](task-27-progress.md).
 
 ## Files and manifest
 
@@ -19,6 +21,7 @@ public/assets/enemies/*.webp              # 256 / 384 px, anchor bottom-center
 public/assets/portraits/portrait_*.webp   # 768 px, anchor center
 public/assets/ground/ground_*.webp        # 1024 px seamless, anchor tile, kind ground (pack 2)
 public/assets/pickups/*.webp              # 128 / 192 px, anchor center, kind pickup (pack 2)
+public/assets/icons/skills/<id>.webp      # 128 px round icons, kind skill-icon, key skill_<id> (pack 3)
 docs/ART_PROVENANCE.md                # origin and processing of every batch
 ```
 
@@ -34,18 +37,20 @@ Manifest entry (extra fields such as `source` are allowed and ignored):
 
 Rules enforced by `parseArtManifest` (`src/engine/visuals/art-manifest.ts`, pure):
 
-- key = file name without extension (lowercase letters, digits, `_`);
+- key = file name without extension (lowercase letters, digits, `_`); for `kind: "skill-icon"` the
+  key is `skill_<file name>` and an optional `skillId` field must equal the file name;
 - `file` is `assets/…/<key>.webp` or `.png` — no URLs, no `..`, no CDN;
 - `size` is `[width, height]`, 1–2048 px; `anchor` is `bottom-center`, `center` or `tile`
   (`tile` only together with `kind: "ground"`);
-- `kind` (optional, pack 2): `unit`, `portrait`, `ground` or `pickup`; it must match how the build
-  uses the key (tested);
+- `kind` (optional, pack 2): `unit`, `portrait`, `ground`, `pickup` or `skill-icon` (pack 3); it
+  must match how the build uses the key (tested);
 - no duplicate keys (checked on the raw text: `JSON.parse` silently keeps the last one) and no
   file used twice. All problems are reported at once.
 
 `public/assets/`, `docs/ART_PROVENANCE.md` and the spec are in `.prettierignore`: the owner's
 files stay byte-identical (the pack-2 entries were merged in the owner's 1-space JSON format). Pack
-1 is 17 images (≈ 0.76 MB), pack 2 9 images (≈ 0.75 MB); the whole set stays < 2 MB (tested).
+1 is 17 images (≈ 0.76 MB), pack 2 9 images (≈ 0.75 MB), pack 3 37 icons (≈ 0.32 MB); the whole
+set (≈ 1.77 MB with the manifest) stays < 2 MB (tested).
 
 ### Adding a pack
 
@@ -151,6 +156,32 @@ header and the hero chips keep the SVG emblem. Fallback to the emblem while the 
 without a portrait for the class, or if the image fails. Decorative (`alt=""`): the class name
 is always next to it.
 
+## Skill icons (Task 27)
+
+`SkillIcon` (UI kit, `src/gameplay-ui/kit/SkillIcon.tsx`) shows the icon of a skill id
+(`skillIconEntry(manifest, id)` in `art-registry.ts`) as a decorative `<img>`, with no frame
+because the round art carries its own soft glow. Fallback: the catalogue glyph
+(`SkillDefinition.icon`) while the manifest loads, for an id without an icon (and for bonus cards),
+or if the image fails. All icons are preloaded once when the in-run app mounts
+(`preloadSkillIcons`); the Phaser scene does not load them.
+
+Sizes, one config `SKILL_ICON_SIZES` (CSS px, provisional), installed as `--skill-icon-*` on
+`:root`:
+
+| Where                                              | Size                             |
+| -------------------------------------------------- | -------------------------------- |
+| Level-up offer cards, Mage «Fifth Circle» choice   | 96 (`cardCompact` 64 on phones)  |
+| HUD active skills                                  | 44 (`hudTouch` 44, Task 16 min.) |
+| Pause skill list                                   | 32                               |
+| Results / run stats damage sources (`skill:<id>`)  | 24                               |
+| Synergy pair rows, card hints (two icons per pair) | 20                               |
+
+- Offer cards: rank / «NEW» as a small corner badge (`NEW`, `▲ II`); the text labels stay.
+- HUD: soft dark disc behind the icon, rank badge in the corner, dimmed while cooling, with a radial
+  overlay showing the share of the cooldown still left. It reads the read-only
+  `SkillCombatSnapshot.cooldownTotals` (Task 27; never read by the simulation).
+- Synergy banners and DEV panels keep text (the spec marks DEV panels optional).
+
 ## Verification
 
 - `tests/engine/art-pack.test.ts` — the real packs (sizes from WebP headers, nothing unlisted,
@@ -166,13 +197,21 @@ is always next to it.
   after every step with the art loaded (incl. the ashlands ground) and with the manifest blocked;
   all 17 looks (13 units + 4 pickups) load and the act ground is applied; no missing-texture
   warnings or errors; portraits on character select + hub and the Gold / Ore badge icons on
-  desktop and phone (no horizontal scroll); emblems and SVG icons as the fallback.
+  desktop and phone (no horizontal scroll); emblems and SVG icons as the fallback. Task 27: skill
+  icons load on the HUD (44 px), offer cards (96 px desktop / 64 px phone) and pause list (32 px)
+  on desktop and phone; glyphs without the manifest.
+- `tests/ui-kit/skill-icons.test.ts` — icon view and glyph fallback (no manifest, unknown id, bonus
+  card), rendered markup, the size config and that the stylesheet reads every size, the radial
+  overlay share, pair ids for synergy hints, which damage sources get an icon.
 - `tests/art-screens.mjs <tag>` — before / after screenshots in `docs/art-pack-1/` (hub,
   character select, map 1, map 25 with elites / thief / nest, and 2× close-ups of every enemy
   type on the four biome grounds: maps 1, 11, 21, 31).
 - `tests/art2-screens.mjs <tag>` — pack-2 before / after screenshots in `docs/art-pack-2/` (maps 1,
   15, 25, 35 with crystals, coins, both chests and a bombard telegraph — full and close-up — plus
   the hub and a results screen).
+- `tests/art3-screens.mjs <tag>` — pack-3 before / after screenshots in `docs/art-pack-3/` (offer
+  screen, HUD with four actives + a close-up of the skill row, pause skill list and synergy pairs,
+  results; phone HUD and offer).
 - `tests/art-fps.mjs [rounds] [dpr]` — FPS with 120 enemies, procedural vs art.
 
 ### FPS with 120 enemies
@@ -201,6 +240,8 @@ the run-to-run noise. Not measured: real phones and GPUs.
   all four grounds. Small coin piles (11 px for a 1-coin pile, the Task 11 scale) are dimmer than
   the old bright-gold discs on the act I forest ground (`docs/art-pack-2/after-map1.jpg`, left of
   the bombard): visible, but the owner may want a larger `coin` factor or a brighter coin image.
+- Skill icons at DPR 2: the 96 px card icon is drawn from the 128 px source (192 device px needed),
+  so it is slightly soft; HUD (44 → 88), list and pair sizes are sharp. Not changed: image files.
 - Ore is not a world pickup (activity Ore is banked), so `ore` is used for the menu icon only.
 - `ART_PROVENANCE.md` refers to `docs/art-assets-list.md` and a future `docs/art-prompts.txt`,
   which are the owner's to add.

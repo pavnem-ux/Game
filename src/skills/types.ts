@@ -260,4 +260,10 @@ export interface SkillCombatSnapshot {
   readonly barrier: number;
   readonly barrierExpiresAt: number | null;
   readonly cooldowns: Readonly<Record<string, number>>;
+  /**
+   * Task 27 (read-only, for the HUD's radial overlay): the full length of each automatic skill's
+   * current cooldown, as set at its last activation (0 before the first). Never read by the
+   * simulation.
+   */
+  readonly cooldownTotals: Readonly<Record<string, number>>;
 }

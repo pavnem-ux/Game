@@ -241,5 +241,412 @@
   "kind": "pickup",
   "source": "owner-generated (ChatGPT image)",
   "anchor": "center"
+ },
+ "skill_arrow_rain": {
+  "file": "assets/icons/skills/arrow_rain.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "arrow_rain",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "skill_battle_fury": {
+  "file": "assets/icons/skills/battle_fury.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "battle_fury",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "skill_blade_flurry": {
+  "file": "assets/icons/skills/blade_flurry.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "blade_flurry",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "skill_blizzard": {
+  "file": "assets/icons/skills/blizzard.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "blizzard",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "skill_blood_blades": {
+  "file": "assets/icons/skills/blood_blades.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "blood_blades",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "skill_cleave": {
+  "file": "assets/icons/skills/cleave.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "cleave",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "skill_deadly_strikes": {
+  "file": "assets/icons/skills/deadly_strikes.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "deadly_strikes",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "skill_death_mark": {
+  "file": "assets/icons/skills/death_mark.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "death_mark",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "skill_earthquake": {
+  "file": "assets/icons/skills/earthquake.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "earthquake",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "skill_elemental_mastery": {
+  "file": "assets/icons/skills/elemental_mastery.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "elemental_mastery",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "skill_fan_of_knives": {
+  "file": "assets/icons/skills/fan_of_knives.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "fan_of_knives",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "skill_fireball": {
+  "file": "assets/icons/skills/fireball.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "fireball",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "skill_flame_burst": {
+  "file": "assets/icons/skills/flame_burst.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "flame_burst",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "skill_fortitude": {
+  "file": "assets/icons/skills/fortitude.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "fortitude",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "skill_frost_nova": {
+  "file": "assets/icons/skills/frost_nova.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "frost_nova",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "skill_ground_slam": {
+  "file": "assets/icons/skills/ground_slam.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "ground_slam",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "skill_haste": {
+  "file": "assets/icons/skills/haste.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "haste",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "skill_hunters_mark": {
+  "file": "assets/icons/skills/hunters_mark.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "hunters_mark",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "skill_ice_shards": {
+  "file": "assets/icons/skills/ice_shards.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "ice_shards",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "skill_inferno": {
+  "file": "assets/icons/skills/inferno.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "inferno",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "skill_lacerate": {
+  "file": "assets/icons/skills/lacerate.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "lacerate",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "skill_lingering_effects": {
+  "file": "assets/icons/skills/lingering_effects.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "lingering_effects",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "skill_multishot": {
+  "file": "assets/icons/skills/multishot.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "multishot",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "skill_piercing_arrow": {
+  "file": "assets/icons/skills/piercing_arrow.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "piercing_arrow",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "skill_poison_trap": {
+  "file": "assets/icons/skills/poison_trap.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "poison_trap",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "skill_power": {
+  "file": "assets/icons/skills/power.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "power",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "skill_precision": {
+  "file": "assets/icons/skills/precision.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "precision",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "skill_serrated_blades": {
+  "file": "assets/icons/skills/serrated_blades.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "serrated_blades",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "skill_shadow_strike": {
+  "file": "assets/icons/skills/shadow_strike.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "shadow_strike",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "skill_shield_bash": {
+  "file": "assets/icons/skills/shield_bash.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "shield_bash",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "skill_split_shot": {
+  "file": "assets/icons/skills/split_shot.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "split_shot",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "skill_swiftness": {
+  "file": "assets/icons/skills/swiftness.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "swiftness",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "skill_toxic_mastery": {
+  "file": "assets/icons/skills/toxic_mastery.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "toxic_mastery",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "skill_toxic_volley": {
+  "file": "assets/icons/skills/toxic_volley.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "toxic_volley",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "skill_vitality": {
+  "file": "assets/icons/skills/vitality.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "vitality",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "skill_war_cry": {
+  "file": "assets/icons/skills/war_cry.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "war_cry",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "skill_whirlwind": {
+  "file": "assets/icons/skills/whirlwind.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "skill-icon",
+  "skillId": "whirlwind",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
  }
 }

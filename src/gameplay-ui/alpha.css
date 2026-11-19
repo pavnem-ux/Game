@@ -913,6 +913,13 @@ p.damage-note {
   align-items: center;
 }
 .run-stats-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.run-stats-label {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1573,37 +1580,59 @@ p.damage-note {
   pointer-events: none;
   z-index: 4;
 }
+/* Task 27: round skill icons without a frame; radial overlay = share of the cooldown left. */
 .active-skill {
+  --cooldown-left: 0;
   position: relative;
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
+  width: var(--skill-icon-hud);
+  height: var(--skill-icon-hud);
+  border-radius: 50%;
+  color: #e5e6cf;
+  /* A soft dark disc (not a frame) keeps the art readable over bright ground. */
+  background: radial-gradient(circle, rgba(6, 10, 8, 0.55) 0 58%, transparent 71%);
+}
+.active-skill .skill-icon {
+  width: 100%;
+  height: 100%;
+}
+.active-skill .skill-icon.is-glyph {
+  border-radius: 50%;
   border: 1px solid #9db68777;
   background: #14201ae6;
-  color: #e5e6cf;
-  overflow: hidden;
+  font-size: 18px;
 }
 .active-skill.enhanced {
-  border-color: #f0c862;
-}
-.active-skill i {
-  font-style: normal;
-  font-size: 18px;
+  box-shadow: 0 0 0 2px #f0c862cc;
 }
 .active-skill b {
   position: absolute;
-  right: 3px;
-  bottom: 1px;
+  z-index: 2;
+  right: -4px;
+  bottom: -3px;
+  min-width: 14px;
+  padding: 1px 3px;
+  border-radius: 7px;
+  border: 1px solid #9db68799;
+  background: #0d1712e6;
   font-size: 9px;
-  color: #c9ddb1;
+  line-height: 1.2;
+  text-align: center;
+  color: #e5e6cf;
+}
+.active-skill.cooling .skill-icon {
+  filter: saturate(0.45) brightness(0.72);
 }
 .active-skill.cooling::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: rgba(5, 9, 8, 0.62);
+  border-radius: 50%;
+  background: conic-gradient(
+    rgba(5, 9, 8, 0.66) calc(var(--cooldown-left) * 360deg),
+    transparent 0
+  );
 }
 .active-skill-cd {
   position: absolute;
@@ -1630,8 +1659,14 @@ p.damage-note {
     left: calc(max(16px, env(safe-area-inset-left)) + 84px + 12px);
   }
   .active-skill {
-    width: 34px;
-    height: 34px;
+    width: var(--skill-icon-hudTouch);
+    height: var(--skill-icon-hudTouch);
+  }
+}
+@media (pointer: coarse) {
+  .active-skill {
+    width: var(--skill-icon-hudTouch);
+    height: var(--skill-icon-hudTouch);
   }
 }
 
@@ -2004,4 +2039,109 @@ body {
     order: 3;
     flex: 1 1 100%;
   }
+}
+
+/* ── Task 27: skill icons (art pack 3). Sizes: SKILL_ICON_SIZES → --skill-icon-* on :root. ── */
+.skill-icon {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: var(--size);
+  height: var(--size);
+  vertical-align: middle;
+  font-style: normal;
+  line-height: 1;
+}
+.skill-icon.has-art {
+  object-fit: contain;
+  /* The round art carries its own soft glow: no frame, no clipping. */
+}
+.skill-icon.is-glyph {
+  font-size: calc(var(--size) * 0.45);
+}
+.skill-icon-card {
+  --size: var(--skill-icon-card);
+}
+.skill-icon-cardCompact {
+  --size: var(--skill-icon-cardCompact);
+}
+.skill-icon-hud {
+  --size: var(--skill-icon-hud);
+}
+.skill-icon-hudTouch {
+  --size: var(--skill-icon-hudTouch);
+}
+.skill-icon-list {
+  --size: var(--skill-icon-list);
+}
+.skill-icon-pair {
+  --size: var(--skill-icon-pair);
+}
+.skill-icon-stats {
+  --size: var(--skill-icon-stats);
+}
+.run-stats-name .skill-icon {
+  margin: -3px 0;
+}
+/* Offer / enhanced-skill cards: the icon replaces the large glyph; rank / «NEW» as a corner badge. */
+.upgrade-icon.skill-card-icon {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  margin: 10px 0 8px;
+  font-size: inherit;
+}
+.upgrade-icon.skill-card-icon .skill-icon.is-glyph {
+  color: #c2d8a5;
+}
+.skill-icon-badge {
+  position: absolute;
+  right: -10px;
+  bottom: 2px;
+  padding: 2px 6px;
+  border-radius: 9px;
+  border: 1px solid #9db68799;
+  background: #0d1712eb;
+  color: #e5e6cf;
+  font:
+    600 10px/1.2 system-ui,
+    sans-serif;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+.skill-icon-badge.is-new {
+  border-color: #f0c862cc;
+  color: #f6dc9c;
+}
+@media (max-height: 560px), (max-width: 760px) {
+  .upgrade-icon.skill-card-icon .skill-icon-card {
+    --size: var(--skill-icon-cardCompact);
+  }
+  .upgrade-icon.skill-card-icon {
+    margin: 4px 0 4px;
+  }
+}
+@media (max-width: 760px) {
+  .upgrade-card.skill-card {
+    padding-left: calc(var(--skill-icon-cardCompact) + 30px);
+  }
+  .upgrade-icon.skill-card-icon {
+    position: absolute;
+    left: 14px;
+    top: 30px;
+    margin: 0;
+  }
+}
+/* Pause list, synergy pairs and card hints. */
+.skill-entry-heading .skill-icon {
+  margin: -4px 4px -4px 0;
+}
+.pair-icons {
+  display: inline-flex;
+  gap: 1px;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+.synergy-pair-row .skill-icon {
+  margin: -2px 3px 0 0;
 }
