@@ -1586,8 +1586,8 @@ p.damage-note {
   position: relative;
   display: grid;
   place-items: center;
-  width: var(--skill-icon-hud);
-  height: var(--skill-icon-hud);
+  width: var(--icon-hud);
+  height: var(--icon-hud);
   border-radius: 50%;
   color: #e5e6cf;
   /* A soft dark disc (not a frame) keeps the art readable over bright ground. */
@@ -1659,14 +1659,14 @@ p.damage-note {
     left: calc(max(16px, env(safe-area-inset-left)) + 84px + 12px);
   }
   .active-skill {
-    width: var(--skill-icon-hudTouch);
-    height: var(--skill-icon-hudTouch);
+    width: var(--icon-hudTouch);
+    height: var(--icon-hudTouch);
   }
 }
 @media (pointer: coarse) {
   .active-skill {
-    width: var(--skill-icon-hudTouch);
-    height: var(--skill-icon-hudTouch);
+    width: var(--icon-hudTouch);
+    height: var(--icon-hudTouch);
   }
 }
 
@@ -1723,8 +1723,11 @@ p.damage-note {
   pointer-events: none;
 }
 .synergy-banner {
-  display: grid;
-  gap: 2px;
+  /* Task 28: icon on the left (when the pack has it), text block centred beside it. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
   padding: 10px 16px;
   border: 1px solid rgba(159, 220, 255, 0.55);
   border-radius: 10px;
@@ -2041,7 +2044,7 @@ body {
   }
 }
 
-/* ── Task 27: skill icons (art pack 3). Sizes: SKILL_ICON_SIZES → --skill-icon-* on :root. ── */
+/* ── Task 27: skill icons (art pack 3). Sizes: ICON_SIZES (kit/icon-sizes.ts) → --icon-* on :root. ── */
 .skill-icon {
   flex: none;
   display: inline-grid;
@@ -2060,27 +2063,28 @@ body {
   font-size: calc(var(--size) * 0.45);
 }
 .skill-icon-card {
-  --size: var(--skill-icon-card);
+  --size: var(--icon-card);
 }
 .skill-icon-cardCompact {
-  --size: var(--skill-icon-cardCompact);
+  --size: var(--icon-cardCompact);
 }
 .skill-icon-hud {
-  --size: var(--skill-icon-hud);
+  --size: var(--icon-hud);
 }
 .skill-icon-hudTouch {
-  --size: var(--skill-icon-hudTouch);
+  --size: var(--icon-hudTouch);
 }
 .skill-icon-list {
-  --size: var(--skill-icon-list);
+  --size: var(--icon-list);
 }
 .skill-icon-pair {
-  --size: var(--skill-icon-pair);
+  --size: var(--icon-pair);
 }
 .skill-icon-stats {
-  --size: var(--skill-icon-stats);
+  --size: var(--icon-stats);
 }
-.run-stats-name .skill-icon {
+.run-stats-name .skill-icon,
+.run-stats-name .art-icon {
   margin: -3px 0;
 }
 /* Offer / enhanced-skill cards: the icon replaces the large glyph; rank / «NEW» as a corner badge. */
@@ -2115,7 +2119,7 @@ body {
 }
 @media (max-height: 560px), (max-width: 760px) {
   .upgrade-icon.skill-card-icon .skill-icon-card {
-    --size: var(--skill-icon-cardCompact);
+    --size: var(--icon-cardCompact);
   }
   .upgrade-icon.skill-card-icon {
     margin: 4px 0 4px;
@@ -2123,7 +2127,7 @@ body {
 }
 @media (max-width: 760px) {
   .upgrade-card.skill-card {
-    padding-left: calc(var(--skill-icon-cardCompact) + 30px);
+    padding-left: calc(var(--icon-cardCompact) + 30px);
   }
   .upgrade-icon.skill-card-icon {
     position: absolute;
@@ -2143,5 +2147,87 @@ body {
   vertical-align: middle;
 }
 .synergy-pair-row .skill-icon {
+  margin: -2px 3px 0 0;
+}
+
+/* ── Task 28: synergy icons and talent branch emblems (art pack 4). Sizes: ICON_SIZES. ── */
+.art-icon {
+  flex: none;
+  width: var(--size);
+  height: var(--size);
+  object-fit: contain;
+  vertical-align: middle;
+}
+.art-icon.icon-card {
+  --size: var(--icon-card);
+}
+.art-icon.icon-cardCompact {
+  --size: var(--icon-cardCompact);
+}
+.art-icon.icon-hud {
+  --size: var(--icon-hud);
+}
+.art-icon.icon-hudTouch {
+  --size: var(--icon-hudTouch);
+}
+.art-icon.icon-list {
+  --size: var(--icon-list);
+}
+.art-icon.icon-stats {
+  --size: var(--icon-stats);
+}
+.art-icon.icon-pair {
+  --size: var(--icon-pair);
+}
+.art-icon.icon-banner {
+  --size: var(--icon-banner);
+}
+.art-icon.icon-bannerCompact {
+  --size: var(--icon-bannerCompact);
+}
+.art-icon.icon-branch {
+  --size: var(--icon-branch);
+}
+.art-icon.icon-branchCompact {
+  --size: var(--icon-branchCompact);
+}
+.art-icon.icon-talentNode {
+  --size: var(--icon-talentNode);
+}
+.art-icon.icon-talentNodeTouch {
+  --size: var(--icon-talentNodeTouch);
+}
+/* Level III «Awakening»: the same icon with a gold ring and glow (no extra art). */
+.synergy-icon.is-awakened {
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 2px #e8c36a,
+    0 0 12px 3px rgba(232, 195, 106, 0.65);
+}
+.synergy-icon.icon-pair.is-awakened,
+.synergy-icon.icon-stats.is-awakened {
+  box-shadow:
+    0 0 0 1px #e8c36a,
+    0 0 6px 1px rgba(232, 195, 106, 0.6);
+}
+.synergy-banner-text {
+  display: grid;
+  gap: 2px;
+}
+@media (max-height: 560px) {
+  .synergy-banner .synergy-icon.icon-banner {
+    --size: var(--icon-bannerCompact);
+  }
+}
+.synergy-entry-heading .synergy-icon {
+  margin: -6px 2px -6px 0;
+  align-self: center;
+}
+/* With the icon, the name takes the free space (pips and status stay on the right). */
+.synergy-entry-heading .synergy-icon + strong {
+  flex: 1;
+  align-self: center;
+}
+.card-synergy-level .synergy-icon {
   margin: -2px 3px 0 0;
 }

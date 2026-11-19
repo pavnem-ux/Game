@@ -28,6 +28,16 @@ export {
   textGlyph,
 } from './SkillIcon';
 export type { SkillIconSize } from './SkillIcon';
+export { ICON_SIZES, iconSizeVars } from './icon-sizes';
+export type { IconSize } from './icon-sizes';
+export {
+  ArtImage,
+  SynergyIcon,
+  SynergyIconView,
+  TalentBranchIcon,
+  TalentBranchIconView,
+  useArtManifest,
+} from './ArtIcon';
 export {
   STAT_ROWS,
   compareStats,

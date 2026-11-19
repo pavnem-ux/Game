@@ -1,39 +1,19 @@
 import { useState, useSyncExternalStore } from 'react';
 import type { ArtManifest } from '../../engine/visuals/art-manifest';
 import { artManifestStore, artUrl, loadArtManifest } from '../../engine/visuals/art-pack';
-import { skillIconEntries, skillIconEntry } from '../../engine/visuals/art-registry';
+import {
+  skillIconEntries,
+  skillIconEntry,
+  synergyIconEntries,
+  talentBranchIconEntries,
+} from '../../engine/visuals/art-registry';
+import { ICON_SIZES, iconSizeVars } from './icon-sizes';
+import type { IconSize } from './icon-sizes';
 
-/**
- * Task 27: displayed skill icon sizes in CSS px, all set here. The art is 128 px, so even the
- * 96 px card icon is sharp at DPR 1 and close to sharp at DPR 2. `hudTouch` keeps the Task 16
- * minimum touch size (44 px) on coarse pointers and short landscape phones.
- */
-export const SKILL_ICON_SIZES = Object.freeze({
-  /** Level-up offer card. */
-  card: 96,
-  /** Level-up offer card on short landscape phones / narrow screens (cards stay compact). */
-  cardCompact: 64,
-  /** In-run HUD active skills (desktop). */
-  hud: 44,
-  /** In-run HUD active skills on touch / short landscape screens (Task 16 minimum). */
-  hudTouch: 44,
-  /** Pause skill list. */
-  list: 32,
-  /** Results / run stats damage sources (keeps the rows as tight as the text rows). */
-  stats: 24,
-  /** Inline icons inside synergy pair rows and card hints. */
-  pair: 20,
-});
-export type SkillIconSize = keyof typeof SKILL_ICON_SIZES;
-/** The size config as CSS custom properties (`--skill-icon-<size>`), read by `alpha.css`. */
-export const skillIconSizeVars = (): Record<string, string> =>
-  Object.fromEntries(
-    Object.entries(SKILL_ICON_SIZES).map(([k, px]) => [`--skill-icon-${k}`, `${px}px`]),
-  );
-// Installed once on the document root, so every screen (and its media queries) reads this config.
-if (typeof document !== 'undefined')
-  for (const [name, value] of Object.entries(skillIconSizeVars()))
-    document.documentElement.style.setProperty(name, value);
+/** Task 27 names for the shared icon size config (Task 28 moved it to `icon-sizes.ts`). */
+export const SKILL_ICON_SIZES = ICON_SIZES;
+export type SkillIconSize = IconSize;
+export const skillIconSizeVars = iconSizeVars;
 
 /** Force monochrome text presentation so fallback glyphs never render as colour emoji. */
 export const textGlyph = (icon: string) => `${icon}︎`;
@@ -62,14 +42,20 @@ export function skillIconView(
 const kept: HTMLImageElement[] = [];
 let preloading = false;
 /**
- * Starts loading every skill icon as soon as the manifest is known (the in-run screens then draw
- * them without a blank frame). Called once per page; images that fail simply keep the glyph.
+ * Starts loading every skill icon (Task 27), synergy icon and talent branch emblem (Task 28) as
+ * soon as the manifest is known, so the screens draw them without a blank frame. Called once per
+ * page; images that fail simply keep the current look.
  */
 export function preloadSkillIcons(): void {
   if (preloading || typeof Image === 'undefined') return;
   preloading = true;
   void loadArtManifest().then((manifest) => {
-    for (const entry of skillIconEntries(manifest)) {
+    const entries = [
+      ...skillIconEntries(manifest),
+      ...synergyIconEntries(manifest),
+      ...talentBranchIconEntries(manifest),
+    ];
+    for (const entry of entries) {
       const img = new Image();
       img.decoding = 'async';
       img.src = artUrl(entry.file);
@@ -104,8 +90,8 @@ export function SkillIconView({
         src={view.src}
         alt=""
         aria-hidden="true"
-        width={SKILL_ICON_SIZES[size]}
-        height={SKILL_ICON_SIZES[size]}
+        width={ICON_SIZES[size]}
+        height={ICON_SIZES[size]}
         decoding="async"
         draggable={false}
         onError={() => setFailedSrc(view.src)}

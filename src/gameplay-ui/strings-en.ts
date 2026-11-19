@@ -419,4 +419,10 @@ export function damageSourceSkill(source: string): { id: string; icon: string } 
   const skill = SKILL_BY_ID.get(source.slice('skill:'.length));
   return skill ? { id: skill.id, icon: skill.icon } : null;
 }
+/** Task 28: the synergy behind a `synergy:<id>` damage source (its icon), else null. */
+export function damageSourceSynergy(source: string): string | null {
+  if (!source.startsWith('synergy:')) return null;
+  const id = source.slice('synergy:'.length);
+  return SYNERGY_NAMES.has(id) ? id : null;
+}
 export const enemyTypeLabel = (type: EnemyType | 'unknown') => ENEMY_TYPE_LABELS[type];

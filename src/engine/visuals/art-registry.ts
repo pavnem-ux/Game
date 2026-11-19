@@ -1,6 +1,11 @@
 import type { CharacterClass } from '../../character-stats';
-import { SKILL_CATALOG } from '../../skills';
-import { SKILL_ICON_KEY_PREFIX } from './art-manifest';
+import { SKILL_CATALOG, SYNERGY_RULES } from '../../skills';
+import { TALENT_CATALOG_DATA } from '../../talents';
+import {
+  SKILL_ICON_KEY_PREFIX,
+  SYNERGY_ICON_KEY_PREFIX,
+  TALENT_BRANCH_KEY_PREFIX,
+} from './art-manifest';
 import type { ArtEntry, ArtKind, ArtManifest } from './art-manifest';
 import type { ActId } from './biomes';
 import type { TextureKey } from './keys';
@@ -74,6 +79,59 @@ export function skillIconEntries(manifest: ArtManifest | null): ArtEntry[] {
     (e): e is ArtEntry => e !== null,
   );
 }
+/**
+ * Task 28: the icon of a synergy (`synergy_<id>`, one per rule in `SYNERGY_RULES`). Null (no
+ * manifest, unknown id, missing icon or an entry of another kind) keeps the current look.
+ */
+export const synergyIconArtKey = (synergyId: string): string =>
+  `${SYNERGY_ICON_KEY_PREFIX}${synergyId}`;
+const SYNERGY_ICON_KEYS: ReadonlySet<string> = new Set(
+  SYNERGY_RULES.map((r) => synergyIconArtKey(r.id)),
+);
+export function synergyIconEntry(manifest: ArtManifest | null, synergyId: string): ArtEntry | null {
+  const entry = manifest?.get(synergyIconArtKey(synergyId));
+  return entry && entry.kind === 'synergy-icon' ? entry : null;
+}
+/** Every synergy icon in the manifest (for preloading; known synergies only). */
+export function synergyIconEntries(manifest: ArtManifest | null): ArtEntry[] {
+  return SYNERGY_RULES.map((r) => synergyIconEntry(manifest, r.id)).filter(
+    (e): e is ArtEntry => e !== null,
+  );
+}
+/**
+ * Task 28: the emblem of a talent branch, looked up by class + branch number (the manifest's
+ * `characterClass` / `branch` fields), not by its key. Null keeps the current look.
+ */
+export function talentBranchIconEntry(
+  manifest: ArtManifest | null,
+  characterClass: CharacterClass,
+  branch: number,
+): ArtEntry | null {
+  if (!manifest) return null;
+  for (const entry of manifest.values())
+    if (
+      entry.kind === 'talent-branch-icon' &&
+      entry.talentBranch?.characterClass === characterClass &&
+      entry.talentBranch.branch === branch
+    )
+      return entry;
+  return null;
+}
+/** Every talent branch emblem in the manifest that matches a catalog branch (for preloading). */
+export function talentBranchIconEntries(manifest: ArtManifest | null): ArtEntry[] {
+  return TALENT_CATALOG_DATA.branches
+    .map((b) => talentBranchIconEntry(manifest, b.characterClass, b.branch))
+    .filter((e): e is ArtEntry => e !== null);
+}
+/** Key a pack uses for a branch emblem: `talent_branch_` + the branch name as a slug. */
+export const talentBranchArtKey = (branchName: string): string =>
+  `${TALENT_BRANCH_KEY_PREFIX}${branchName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_|_$/g, '')}`;
+const TALENT_BRANCH_KEYS: ReadonlySet<string> = new Set(
+  TALENT_CATALOG_DATA.branches.map((b) => talentBranchArtKey(b.name)),
+);
 /** Phaser texture key of an art image (prefixed: never collides with a procedural key). */
 export const artTextureKey = (artKey: string): string => `art:${artKey}`;
 
@@ -88,6 +146,8 @@ export function artUsage(artKey: string): ArtKind | null {
   )
     return 'pickup';
   if (SKILL_ICON_KEYS.has(artKey)) return 'skill-icon';
+  if (SYNERGY_ICON_KEYS.has(artKey)) return 'synergy-icon';
+  if (TALENT_BRANCH_KEYS.has(artKey)) return 'talent-branch-icon';
   return null;
 }
 

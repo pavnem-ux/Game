@@ -30,7 +30,7 @@ import { alphaBridge } from './store';
 import { BuildLabel } from './BuildLabel';
 import { ReportButton } from './ReportButton';
 import { campaignStore } from './campaign-state';
-import { Button, SkillIcon, cooldownLeftFraction } from './kit';
+import { Button, SkillIcon, SynergyIcon, cooldownLeftFraction } from './kit';
 import { EN } from './strings-en';
 import { skipCoins } from '../equipment/economy';
 
@@ -373,7 +373,9 @@ function CardLevelHint({ raises }: { raises: ReturnType<typeof cardLevelRaises> 
               : `Level II: ${SYNERGY_LEVEL_TEXT[r.synergy.id as SynergyId].levelTwo}`
           }
         >
-          <PairIcons ids={r.pair} />▲ {r.synergy.name} {LEVEL_ROMAN[r.level]}
+          <PairIcons ids={r.pair} />▲{' '}
+          <SynergyIcon synergyId={r.synergy.id} size="pair" level={r.level} />
+          {r.synergy.name} {LEVEL_ROMAN[r.level]}
         </span>
       ))}
     </div>
@@ -584,6 +586,7 @@ function SynergySection({ world }: { world: GameplaySnapshot }) {
             aria-label={`${s.name}: ${s.status === 'available' ? 'available' : 'locked'}`}
           >
             <div className="synergy-entry-heading">
+              <SynergyIcon synergyId={s.id} size="list" level={effective.get(s.id) ?? s.level} />
               <strong>{s.name}</strong>
               <SynergyPips level={effective.get(s.id) ?? s.level} />
               <span className="synergy-status">
