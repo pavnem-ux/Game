@@ -120,20 +120,25 @@ task explicitly requires it, and call out every such change in the PR descriptio
 
 ## 6. Tests and verification
 
-- Every behaviour change ships with Vitest tests next to the existing suite in `tests/<module>/`.
-  Bug fixes include a regression test that fails before the fix.
-- Before pushing, run at least: `npm run typecheck`, `npm test`, `npm run format:check`,
-  `npm run build`. Run `npm run test:production` for anything touching build, routing, DEV gating
-  or `src/main.tsx`; run `npm run test:e2e` for UI, input, scene or GameplayWorld integration changes.
+Verification scope (which tests to write, which commands to run, how to report) follows
+[`docs/TASK_WORKFLOW.md`](docs/TASK_WORKFLOW.md) (owner decision, Task 29: the owner tests manually).
+These rules always hold:
+
 - Never skip, disable, weaken or delete a test to get green. Report test results truthfully in the PR.
+- Bug fixes include a regression test that fails before the fix.
+- Logic changes (gameplay rules, formulas, rewards, saves, determinism) ship with focused Vitest tests
+  next to the existing suite in `tests/<module>/`.
 - A green CI is necessary but not sufficient: playable features also need a Cloudflare Preview check
   (see `docs/DEVELOPMENT_WORKFLOW.md`).
+- **Mobile is frozen until pre-release:** don't break touch controls or small-screen layouts, but don't
+  design, tune or test specifically for mobile (opt-in checks: `npm run test:e2e:extended`).
 
 ## 7. Documentation
 
-- Each task gets `docs/<FEATURE>.md` (API, rules, provisional values, limits, verification) and a
-  short section in `README.md`. Update existing module docs when a contract changes.
-- Mark provisional numbers as provisional. State what was _not_ verified.
+Docs scope follows [`docs/TASK_WORKFLOW.md`](docs/TASK_WORKFLOW.md): update an existing module doc
+only when its contract changes, one short README line per feature, no new `docs/<FEATURE>.md` unless
+the task asks. Mark provisional numbers as provisional; state what was _not_ verified. The current code
+map is [`docs/CODEMAP.md`](docs/CODEMAP.md).
 
 ## 8. Git, branches and Pull Requests
 
