@@ -60,7 +60,8 @@ workflow: [TASK_WORKFLOW.md](TASK_WORKFLOW.md).
   `TalentsScreen.tsx`, `ForgeScreen.tsx`, `PetsScreen.tsx`, `QuestsScreen.tsx`, `MapPath.tsx`;
   styles `meta.css`. Shop: `ShopPages.tsx`; settings / saves: `SaveManagement.tsx`.
 - `src/gameplay-ui/kit/` — design tokens and components (`components.tsx`, `logic.ts`), art icons
-  (`SkillIcon.tsx`, `ArtIcon.tsx`, `CurrencyIcon.tsx`, `ClassPortrait.tsx`), sizes `icon-sizes.ts`
+  (`SkillIcon.tsx`, `ArtIcon.tsx` incl. `ItemIcon`, `CurrencyIcon.tsx`, `ClassPortrait.tsx`),
+  pet portraits `src/gameplay-ui/pets/PetPortrait.tsx` (pack sprite, SVG fallback), sizes `icon-sizes.ts`
   (`ICON_SIZES` → `--icon-*`).
 - Text: `src/gameplay-ui/strings-en.ts` (player text), `strings-en-debug.ts`; no Cyrillic in `src/`.
 - DEV / QA only: `DeveloperPanel.tsx`, `DebugOverlay.tsx`, `campaign-debug.ts` (behind
@@ -74,7 +75,7 @@ workflow: [TASK_WORKFLOW.md](TASK_WORKFLOW.md).
 - `src/engine/AlphaScene.ts` — input, drawing, scene commands.
 - `src/engine/visuals/` — procedural textures (`keys.ts`, `art.ts`, `texture-factory.ts`),
   `UnitRenderer.ts`, `BiomeRenderer.ts` + `biomes.ts`, `LightRenderer.ts`, `quality.ts`; art packs:
-  `art-manifest.ts` (parser), `art-registry.ts` (key → look, icon lookups), `art-pack.ts`
+  `art-manifest.ts` (parser), `art-registry.ts` (key → look incl. pet followers, icon / item / pet lookups), `art-pack.ts`
   (manifest store), `art-loader.ts`, `art-display.ts`, `art-ground.ts`.
 - Art files: `public/assets/` + `public/assets/manifest.json`; provenance `docs/ART_PROVENANCE.md`.
 

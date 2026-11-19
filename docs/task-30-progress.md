@@ -10,7 +10,7 @@ PR: https://github.com/pavnem-ux/Game/pull/28
 - [x] 1 Pipeline: files, manifests, provenance, kinds `item-icon` / `pet`, registry, tests
 - [x] 2 Item icons: shop, equipment slots / owned rows, details, forge, compare tooltip, quest rewards
 - [x] 3 Pets: in-run follower sprite; pet cards / portraits (selection, shop, forge, quest rewards)
-- [ ] 4 Delivery: final checks, README line, PR
+- [x] 4 Delivery: final checks, README line, PR
 
 ## Decisions / blockers
 
