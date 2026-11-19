@@ -1,5 +1,6 @@
 import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
+import { EXTENDED, screenshot } from './e2e-options.mjs';
 
 /**
  * Task 24 e2e (desktop 1280×720 and a landscape phone 844×390 with touch): a campaign run with
@@ -13,9 +14,10 @@ const browser = await chromium.launch({
 });
 const errors = [];
 
+// The landscape phone pass runs in extended runs only (Task 29 mobile freeze).
 for (const [tag, viewport, touch] of [
   ['desktop', { width: 1280, height: 720 }, false],
-  ['mobile', { width: 844, height: 390 }, true],
+  ...(EXTENDED ? [['mobile', { width: 844, height: 390 }, true]] : []),
 ]) {
   const context = await browser.newContext({ viewport, hasTouch: touch, isMobile: touch });
   const page = await context.newPage();
@@ -129,7 +131,7 @@ for (const [tag, viewport, touch] of [
   );
 
   // Off-screen pointer: a fresh shrine far away is drawn at the screen edge (canvas pixels).
-  await page.screenshot({ path: `artifacts/activities-${tag}.png` }).catch(() => {});
+  await screenshot(page, { path: `artifacts/activities-${tag}.png` }).catch(() => {});
 
   // Win the run: the results show the banked activity Ore.
   await command({ type: 'campaign-force', outcome: 'victory' });

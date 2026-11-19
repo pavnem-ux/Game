@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright-core';
+import { EXTENDED } from './e2e-options.mjs';
 
 /**
  * Task 25 e2e: the art pack is rendering only.
@@ -266,27 +267,29 @@ async function talentEmblems(withArt, viewport, touch) {
   return { ...result, errors };
 }
 
+/** Phone checks run in extended runs only (Task 29 mobile freeze). */
+const VIEWPORTS = EXTENDED ? ['desktop', 'phone'] : ['desktop'];
 const art = await scenario(true);
 const procedural = await scenario(false);
 const shots = {
   desktop: await portraits(true, { width: 1280, height: 720 }, false),
-  phone: await portraits(true, { width: 844, height: 390 }, true),
+  ...(EXTENDED ? { phone: await portraits(true, { width: 844, height: 390 }, true) } : {}),
   fallback: await portraits(false, { width: 1280, height: 720 }, false),
 };
 const icons = {
   desktop: await skillIcons(true, { width: 1280, height: 720 }, false),
-  phone: await skillIcons(true, { width: 844, height: 390 }, true),
+  ...(EXTENDED ? { phone: await skillIcons(true, { width: 844, height: 390 }, true) } : {}),
   fallback: await skillIcons(false, { width: 1280, height: 720 }, false),
 };
 const talents = {
   desktop: await talentEmblems(true, { width: 1280, height: 720 }, false),
-  phone: await talentEmblems(true, { width: 844, height: 390 }, true),
+  ...(EXTENDED ? { phone: await talentEmblems(true, { width: 844, height: 390 }, true) } : {}),
   fallback: await talentEmblems(false, { width: 1280, height: 720 }, false),
 };
 await browser.close();
 
 // Task 28: synergy icons in the pause list, talent branch emblems on the talent screen.
-for (const tag of ['desktop', 'phone']) {
+for (const tag of VIEWPORTS) {
   assert.deepEqual(
     [...icons[tag].synergies].sort(),
     ['battle_momentum', 'seismic_impact', 'skull_crusher'].map(
@@ -317,7 +320,7 @@ assert.equal(talents.fallback.letters, 14, 'fallback: the node letters are back'
 assert.deepEqual(talents.fallback.badges, [], 'fallback: no number badges without the pack');
 assert.deepEqual(talents.fallback.errors, [], 'fallback: talent screen without page errors');
 
-for (const tag of ['desktop', 'phone']) {
+for (const tag of VIEWPORTS) {
   const { hud, offer, cards, pause, errors } = icons[tag];
   assert.deepEqual(errors, [], `${tag}: no page errors`);
   assert.deepEqual(
@@ -346,7 +349,7 @@ assert.equal(icons.fallback.offer.glyphs, icons.fallback.cards, 'fallback: offer
 assert.deepEqual(icons.fallback.errors, [], 'fallback: no page errors');
 
 const CLASSES = ['archer', 'mage', 'rogue', 'warrior'];
-for (const tag of ['desktop', 'phone']) {
+for (const tag of VIEWPORTS) {
   const { select, hub } = shots[tag];
   assert.deepEqual(
     select.portraits,
@@ -360,7 +363,7 @@ for (const tag of ['desktop', 'phone']) {
 assert.deepEqual(shots.fallback.select.portraits, [], 'fallback: no portrait without the pack');
 assert.equal(shots.fallback.select.emblems, 4, 'fallback: the four emblems are back');
 assert.equal(shots.fallback.hub.emblems, 1, 'fallback: hub emblem');
-for (const tag of ['desktop', 'phone'])
+for (const tag of VIEWPORTS)
   assert.deepEqual(
     shots[tag].badges,
     ['/assets/pickups/coin.webp', '/assets/pickups/ore.webp'],

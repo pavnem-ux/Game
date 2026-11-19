@@ -33,7 +33,8 @@ npm test                # prototype Node tests + all Vitest suites
 npm run format:check    # Prettier check (config: .prettierrc.json)
 npm run build           # typecheck + production build into dist/
 npm run test:production # builds must exist; serves dist/ on :4179 and checks prod behaviour
-npm run test:e2e        # needs a running dev server; Chromium via CHROMIUM_PATH
+npm run test:e2e        # desktop core flows; needs a running dev server; Chromium via CHROMIUM_PATH
+npm run test:e2e:extended # opt-in: + phone viewports, screenshots, mobile / English-screen suites
 ```
 
 Per-module suites: `test:stats`, `test:combat`, `test:weapons`, `test:status`, `test:enemies`,

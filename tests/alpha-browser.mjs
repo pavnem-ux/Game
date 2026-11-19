@@ -1,6 +1,7 @@
 import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
+import { EXTENDED, screenshot } from './e2e-options.mjs';
 const base = process.env.GAME_URL || 'http://127.0.0.1:5173';
 await mkdir('artifacts', { recursive: true });
 const browser = await chromium.launch({
@@ -15,7 +16,7 @@ try {
   await page.goto(base + '/?debug');
   await page.waitForFunction(() => !!window.__alpha);
   await page.getByRole('heading', { name: 'The Last Light', level: 1 }).waitFor(); // Task 13 hub
-  await page.screenshot({ path: 'artifacts/alpha-01-selection.png' });
+  await screenshot(page, { path: 'artifacts/alpha-01-selection.png' });
   await page.getByRole('button', { name: 'Warrior Sword', exact: false }).click();
   await page.getByRole('button', { name: 'Start run' }).click();
   await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
@@ -78,7 +79,7 @@ try {
     ),
     'actual sword damage',
   );
-  await page.screenshot({ path: 'artifacts/alpha-02-warrior.png' });
+  await screenshot(page, { path: 'artifacts/alpha-02-warrior.png' });
   // Test the interactive panel, not only the automation bridge.
   await page.getByRole('button', { name: 'DEV · Testing' }).click();
   await page.getByRole('complementary', { name: 'Developer Testing Mode' }).waitFor();
@@ -92,7 +93,7 @@ try {
   await command({ type: 'protection', enabled: true });
   await page.waitForFunction(() => window.__alpha.state().world.playerProjectiles.length > 0);
   assert.equal((await state()).world.weapon.weapon.category, 'staff');
-  await page.screenshot({ path: 'artifacts/alpha-03-developer.png' });
+  await screenshot(page, { path: 'artifacts/alpha-03-developer.png' });
   await page.getByRole('button', { name: 'DEV · Close' }).click();
   // Measured status cap/timers in the real loop; ordinary test protection disabled for effects.
   await command({ type: 'protection', enabled: false });
@@ -116,7 +117,7 @@ try {
   await page.waitForTimeout(250);
   assert.equal((await state()).world.time, dead.world.time);
   assert.deepEqual((await state()).world.enemyProjectiles, projectiles);
-  await page.screenshot({ path: 'artifacts/alpha-04-death-choice.png' });
+  await screenshot(page, { path: 'artifacts/alpha-04-death-choice.png' });
   await page.getByRole('button', { name: 'Revive' }).click();
   s = await state();
   assert.equal(s.runId, runId);
@@ -137,11 +138,11 @@ try {
       );
   }
   assert.ok(s.world.statuses.every((g) => g.targetId !== 'player'));
-  await page.screenshot({ path: 'artifacts/alpha-05-revival.png' });
+  await screenshot(page, { path: 'artifacts/alpha-05-revival.png' });
   await command({ type: 'death' });
   await page.getByRole('heading', { name: 'The spark has faded.' }).waitFor();
   assert.equal((await state()).world.survival.runState, 'ended');
-  await page.screenshot({ path: 'artifacts/alpha-06-ended.png' });
+  await screenshot(page, { path: 'artifacts/alpha-06-ended.png' });
   for (const [characterClass, category] of [
     ['archer', 'bow'],
     ['rogue', 'dual_daggers'],
@@ -207,7 +208,7 @@ try {
   assert.equal(s.world.character.permanentLevel, permanent);
   assert.equal(s.world.player.maxHp, maxHp);
   await page.getByRole('progressbar', { name: 'Run XP' }).waitFor();
-  await page.screenshot({ path: 'artifacts/alpha-10-xp.png' });
+  await screenshot(page, { path: 'artifacts/alpha-10-xp.png' });
   await page.getByRole('button', { name: 'DEV · Testing' }).click();
   await page.getByLabel('DEV XP').fill('20');
   const totalBefore = (await state()).world.progression.totalXp;
@@ -240,7 +241,7 @@ try {
   s = await state();
   assert.equal(s.world.spawning.waves, 3);
   assert.ok(s.world.enemies.length <= 6);
-  await page.screenshot({ path: 'artifacts/alpha-11-waves.png' });
+  await screenshot(page, { path: 'artifacts/alpha-11-waves.png' });
   // Task 07: real level-up dialog, reroll and skill choice for every class.
   for (const characterClass of ['warrior', 'mage', 'archer', 'rogue']) {
     await command({
@@ -251,7 +252,7 @@ try {
     await command({ type: 'grant-xp', amount: 20 });
     await page.getByRole('dialog', { name: /Run level 2/ }).waitFor();
     if (characterClass === 'warrior')
-      await page.screenshot({ path: 'artifacts/alpha-12-level-up.png' });
+      await screenshot(page, { path: 'artifacts/alpha-12-level-up.png' });
     s = await state();
     assert.equal(s.screen, 'level-up');
     assert.equal(s.world.paused, true, 'level-up pauses the world');
@@ -278,7 +279,7 @@ try {
         s.events.some((e) => e.channel === 'skill' && e.event.type === 'skill-activated'),
         'automatic skill activates without input',
       );
-      await page.screenshot({ path: 'artifacts/alpha-12-skills.png' });
+      await screenshot(page, { path: 'artifacts/alpha-12-skills.png' });
     }
   }
   // Task 14: «Banish» and «Skip» with counters; disabled with a reason.
@@ -457,44 +458,47 @@ try {
     };
   });
   console.log('Alpha performance:', JSON.stringify(perf));
-  await page.screenshot({ path: 'artifacts/alpha-07-group.png' });
-  const mobile = await browser.newPage({
-    viewport: { width: 390, height: 844 },
-    isMobile: true,
-    hasTouch: true,
-  });
-  mobile.on('pageerror', (e) => errors.push(e.message));
-  await mobile.goto(base + '/?debug');
-  await mobile.waitForFunction(() => !!window.__alpha);
-  await mobile.getByRole('button', { name: 'Start run' }).click();
-  // Task 16: in portrait a phone shows «Rotate your device» and the run pauses.
-  await mobile.getByText('Rotate your device').first().waitFor();
-  await mobile.waitForFunction(() => window.__alpha.state().screen === 'paused');
-  // Rotate to landscape (the play orientation), resume, collapse the debug overlay.
-  await mobile.setViewportSize({ width: 844, height: 390 });
-  await mobile.getByText('Rotate your device').first().waitFor({ state: 'detached' });
-  await mobile.evaluate(() =>
-    window.__alpha.command({ type: 'restart', options: { characterClass: 'warrior' } }),
-  );
-  await mobile.waitForFunction(() => window.__alpha.state().screen === 'playing');
-  await mobile.getByRole('button', { name: 'Hide' }).click();
-  const x0 = await mobile.evaluate(() => window.__alpha.state().world.playerBody.x);
-  const canvas = await mobile.locator('canvas').boundingBox();
-  const client = await mobile.context().newCDPSession(mobile);
-  const x = canvas.x + 60,
-    y = canvas.y + canvas.height * 0.65;
-  await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
-  await client.send('Input.dispatchTouchEvent', {
-    type: 'touchMove',
-    touchPoints: [{ x: x + 65, y }],
-  });
-  await mobile.waitForTimeout(300);
-  await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-  assert.ok(
-    await mobile.evaluate((before) => window.__alpha.state().world.playerBody.x > before, x0),
-    'integrated touchscreen joystick',
-  );
-  await mobile.screenshot({ path: 'artifacts/alpha-08-mobile.png' });
+  await screenshot(page, { path: 'artifacts/alpha-07-group.png' });
+  // Phone portrait notice + touch joystick: extended runs only (Task 29 mobile freeze).
+  if (EXTENDED) {
+    const mobile = await browser.newPage({
+      viewport: { width: 390, height: 844 },
+      isMobile: true,
+      hasTouch: true,
+    });
+    mobile.on('pageerror', (e) => errors.push(e.message));
+    await mobile.goto(base + '/?debug');
+    await mobile.waitForFunction(() => !!window.__alpha);
+    await mobile.getByRole('button', { name: 'Start run' }).click();
+    // Task 16: in portrait a phone shows «Rotate your device» and the run pauses.
+    await mobile.getByText('Rotate your device').first().waitFor();
+    await mobile.waitForFunction(() => window.__alpha.state().screen === 'paused');
+    // Rotate to landscape (the play orientation), resume, collapse the debug overlay.
+    await mobile.setViewportSize({ width: 844, height: 390 });
+    await mobile.getByText('Rotate your device').first().waitFor({ state: 'detached' });
+    await mobile.evaluate(() =>
+      window.__alpha.command({ type: 'restart', options: { characterClass: 'warrior' } }),
+    );
+    await mobile.waitForFunction(() => window.__alpha.state().screen === 'playing');
+    await mobile.getByRole('button', { name: 'Hide' }).click();
+    const x0 = await mobile.evaluate(() => window.__alpha.state().world.playerBody.x);
+    const canvas = await mobile.locator('canvas').boundingBox();
+    const client = await mobile.context().newCDPSession(mobile);
+    const x = canvas.x + 60,
+      y = canvas.y + canvas.height * 0.65;
+    await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+    await client.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [{ x: x + 65, y }],
+    });
+    await mobile.waitForTimeout(300);
+    await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    assert.ok(
+      await mobile.evaluate((before) => window.__alpha.state().world.playerBody.x > before, x0),
+      'integrated touchscreen joystick',
+    );
+    await screenshot(mobile, { path: 'artifacts/alpha-08-mobile.png' });
+  }
   assert.deepEqual(errors, []);
   console.log(
     'PASS alpha: class selection, all four weapons, both enemies, actual damage, WASD/joystick, interactive DEV, status cap, pause, same-world revival, second death, bounded enemy group, collectible death XP/run levels, DEV XP, continuous off-screen waves, level-up skill choice/reroll for all classes and automatic skills; no browser exceptions.',
