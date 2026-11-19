@@ -60,8 +60,8 @@ async function scenario(withArt) {
     }),
   );
   if (withArt) {
-    // Task 26: 13 unit looks + 4 pickup looks.
-    await page.waitForFunction(() => window.__alpha.presentation().artLooks === 17, null, {
+    // Task 26: 13 unit looks + 4 pickup looks; Task 30: + 6 pet followers.
+    await page.waitForFunction(() => window.__alpha.presentation().artLooks === 23, null, {
       timeout: 15_000,
     });
   }
@@ -371,7 +371,7 @@ for (const tag of VIEWPORTS)
   );
 assert.deepEqual(shots.fallback.badges, ['svg', 'svg'], 'fallback: Gold / Ore SVG icons');
 
-assert.equal(art.artLooks, 17, 'all 13 unit + 4 pickup looks drawn with the owner art');
+assert.equal(art.artLooks, 23, 'all 13 unit + 4 pickup + 6 pet looks loaded with the owner art');
 assert.equal(procedural.artLooks, 0, 'no manifest: every look stays procedural');
 // Task 26: map 25 (act III) tiles the ashlands ground (tinted per map); procedural without art.
 assert.equal(art.artGround, 'art:ground_ashlands~map25', 'act III ground art in use');
@@ -395,5 +395,5 @@ assert.deepEqual(
   'the fallback only logs its one "manifest unavailable" warning',
 );
 console.log(
-  'PASS art: same seed ⇒ identical simulation with art on / off (24 steps, map 25, every enemy type, thief, nest); 13 unit + 4 pickup looks from the packs; no missing-texture warnings; procedural fallback without the manifest; act ground art (identical simulation with it); class portraits on character select + hub (desktop and phone, no horizontal scroll), emblems as the fallback; Gold / Ore badge icons (SVG fallback); skill icons on the HUD, offer cards and pause list (desktop and phone sizes, glyph fallback); synergy icons in the pause list and talent branch emblems on headers and nodes (desktop and phone, current look without the pack).',
+  'PASS art: same seed ⇒ identical simulation with art on / off (24 steps, map 25, every enemy type, thief, nest); 13 unit + 4 pickup + 6 pet looks from the packs; no missing-texture warnings; procedural fallback without the manifest; act ground art (identical simulation with it); class portraits on character select + hub (desktop and phone, no horizontal scroll), emblems as the fallback; Gold / Ore badge icons (SVG fallback); skill icons on the HUD, offer cards and pause list (desktop and phone sizes, glyph fallback); synergy icons in the pause list and talent branch emblems on headers and nodes (desktop and phone, current look without the pack).',
 );

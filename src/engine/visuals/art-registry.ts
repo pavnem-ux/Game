@@ -46,6 +46,13 @@ export const PICKUP_ART: Readonly<Partial<Record<TextureKey, string>>> = Object.
   'chest-wooden': 'chest_wooden',
   'chest-enchanted': 'chest_enchanted',
 });
+/**
+ * Task 30: the in-run pet follower (one look per pet). Same per-look slots as the units and pickups,
+ * so the same loader and procedural fallback; the menus use `petArtEntry` for portraits.
+ */
+export const PET_ART: Readonly<Partial<Record<TextureKey, string>>> = Object.freeze(
+  Object.fromEntries(PET_IDS.map((id) => [`pet-${id}`, `pet_${id}`])),
+);
 /** Task 26: the tiling ground texture of each act (I forest, II marsh, III ashlands, IV frost). */
 export const GROUND_ART: Readonly<Record<ActId, string>> = Object.freeze({
   1: 'ground_forest',
@@ -206,10 +213,11 @@ export class ArtRegistry {
   private readonly byArt = new Map<string, Slot>();
   private readonly grounds = new Map<ActId, Slot>();
   constructor(manifest: ArtManifest) {
-    const looks = [...Object.entries(UNIT_ART), ...Object.entries(PICKUP_ART)] as [
-      TextureKey,
-      string,
-    ][];
+    const looks = [
+      ...Object.entries(UNIT_ART),
+      ...Object.entries(PICKUP_ART),
+      ...Object.entries(PET_ART),
+    ] as [TextureKey, string][];
     for (const [look, artKey] of looks) {
       const entry = manifest.get(artKey);
       if (!entry) continue;

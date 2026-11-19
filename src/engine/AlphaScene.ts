@@ -52,6 +52,7 @@ import {
   petTextureKey,
   playerProjectileKey,
   playerTextureKey,
+  textureSize,
   unitScale,
 } from './visuals/keys';
 
@@ -95,7 +96,7 @@ export class AlphaScene extends Phaser.Scene {
    * Task 20: drawn pet position — smoothly follows the simulation anchor (rendering only; the
    * simulation uses the anchor). Reset when the pet appears.
    */
-  private petDraw: { x: number; y: number; id: string } | null = null;
+  private petDraw: { x: number; y: number; id: string; flip: 1 | -1 } | null = null;
   private frameSeconds = 1 / 60;
   /** Task 18: additive glows on projectiles / light sources (High only). */
   private accentGlow = true;
@@ -742,10 +743,14 @@ export class AlphaScene extends Phaser.Scene {
       return;
     }
     if (!this.petDraw || this.petDraw.id !== pet.id)
-      this.petDraw = { x: pet.x, y: pet.y, id: pet.id };
+      this.petDraw = { x: pet.x, y: pet.y, id: pet.id, flip: 1 };
     const k = 1 - Math.exp(-PET_FOLLOW.rate * this.frameSeconds);
     const d = this.petDraw;
-    d.x += (pet.x - d.x) * k;
+    // Task 30: the art faces right; flip when the follower moves left (small dead zone, no flicker).
+    const step = (pet.x - d.x) * k;
+    if (step < -0.15) d.flip = -1;
+    else if (step > 0.15) d.flip = 1;
+    d.x += step;
     d.y += (pet.y - d.y) * k;
     const g = this.graphics;
     const last = pet.lastAction;
@@ -767,7 +772,16 @@ export class AlphaScene extends Phaser.Scene {
       g.lineStyle(2, c, 0.8 * (1 - age / 0.35)).strokeCircle(s.playerBody.x, s.playerBody.y, r);
     }
     const bob = 2 + Math.sin(s.time * 4) * 2;
-    this.units.item(petTextureKey(pet.id), x, y, (acting ? 1.1 : 0.9) / ART_SCALE, 1, bob);
+    const look = petTextureKey(pet.id);
+    const grow = acting ? 1.1 : 0.9;
+    const art = this.art.art(look);
+    if (art) {
+      // Task 30: the owner's sprite at the procedural pet's display size, feet at the bottom of the
+      // same box (bottom-centre anchor), flipped by movement; bob and action effects unchanged.
+      const box = textureSize(look) / ART_SCALE;
+      const scale = (box * grow) / Math.max(art.width, art.height);
+      this.units.item(this.art.texture(look), x, y + (box * 0.9) / 2, scale, 1, bob, d.flip, 1);
+    } else this.units.item(look, x, y, grow / ART_SCALE, 1, bob);
   }
   private draw(s: GameplaySnapshot) {
     // Task 26: the act's ground art replaces the procedural ground once it has loaded.

@@ -166,8 +166,11 @@ describe('Task 25 — registry with procedural fallback', () => {
     const r = new ArtRegistry(manifest);
     for (const art of manifest.keys()) r.markLoaded(art);
     // Task 26 gives crystals, coins and chests art; these still have none.
-    for (const key of ['boss', 'proj-bolt', 'proj-arrow', 'shadow', 'glow', 'pet-fox'] as const)
+    for (const key of ['boss', 'proj-bolt', 'proj-arrow', 'shadow', 'glow'] as const)
       expect(r.texture(key)).toBe(key);
+    // Task 30: pet followers now use the pack sprites once loaded (procedural before).
+    expect(r.texture('pet-fox')).toBe('art:pet_fox');
+    expect(new ArtRegistry(manifest).texture('pet-fox')).toBe('pet-fox');
   });
   it('maps every class, enemy kind, elite profile and the Task 24 thief / nest', () => {
     const r = new ArtRegistry(manifest);
@@ -225,11 +228,11 @@ describe('Task 26 — pack 2 kinds: ground and pickup', () => {
     expect(r.texture('coin')).toBe('art:coin');
     expect(r.texture('chest-wooden')).toBe('art:chest_wooden');
     expect(r.texture('chest-enchanted')).toBe('art:chest_enchanted');
-    expect(r.loadedLooks()).toBe(17);
+    expect(r.loadedLooks()).toBe(17 + 6); // + Task 30 pet followers
     expect(r.loadedGrounds()).toBe(4);
     // The scene loads units, pickups and grounds; portraits and the UI-only ore stay DOM images.
     const scene = r.sceneEntries().map((e) => e.key);
-    expect(scene).toHaveLength(21);
+    expect(scene).toHaveLength(21 + 6); // + Task 30 pet sprites
     expect(scene).not.toContain('ore');
     expect(scene.some((k) => k.startsWith('portrait_'))).toBe(false);
   });

@@ -184,7 +184,11 @@ export class UnitRenderer {
       .setAlpha(alpha)
       .setVisible(true);
   }
-  /** A ground item (crystal, coin, chest) with an optional gentle hover. */
+  /**
+   * A ground item (crystal, coin, chest, pet) with an optional gentle hover. `originY` 1 pins the
+   * image at its bottom edge (Task 30 pet art, bottom-centre anchor); pooled images always get their
+   * origin set, so a pinned pet never leaks its origin to the next item.
+   */
   item(
     key: string,
     x: number,
@@ -193,9 +197,11 @@ export class UnitRenderer {
     alpha = 1,
     hover = 0,
     flipX: 1 | -1 = 1,
+    originY = 0.5,
   ): void {
     if (this.outside(x, y, 40)) return;
     tex(this.items.next(), key)
+      .setOrigin(0.5, originY)
       .setPosition(x, y - hover)
       .setScale(scale * flipX, scale)
       .setAlpha(alpha)

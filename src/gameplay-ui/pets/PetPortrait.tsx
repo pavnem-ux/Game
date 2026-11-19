@@ -1,8 +1,12 @@
+import { useState } from 'react';
 import type { ReactElement } from 'react';
 import type { PetId } from '../../pets';
+import { artUrl } from '../../engine/visuals/art-pack';
+import { petArtEntry } from '../../engine/visuals/art-registry';
+import { useArtManifest } from '../kit/ArtIcon';
 
 /**
- * Task 20: original procedural pet portraits (inline SVG, no assets). Simple round shapes in the
+ * Task 20: original procedural pet portraits (inline SVG, no assets); Task 30: the pack sprite first. Simple round shapes in the
  * pet's colours; `animated` adds a gentle idle bob (disabled by prefers-reduced-motion in CSS).
  */
 export function PetPortrait({
@@ -14,6 +18,24 @@ export function PetPortrait({
   size?: number;
   animated?: boolean;
 }) {
+  // Task 30: the owner's pet sprite (art pack 6) when available; this SVG stays the fallback
+  // (manifest loading, missing key, failed image).
+  const entry = petArtEntry(useArtManifest(), id);
+  const [failed, setFailed] = useState<string | null>(null);
+  if (entry && failed !== entry.file)
+    return (
+      <img
+        className={`pet-portrait pet-art pet-${id} ${animated ? 'bob' : ''}`}
+        src={artUrl(entry.file)}
+        alt=""
+        aria-hidden="true"
+        width={size}
+        height={size}
+        decoding="async"
+        draggable={false}
+        onError={() => setFailed(entry.file)}
+      />
+    );
   return (
     <svg
       className={`pet-portrait pet-${id} ${animated ? 'bob' : ''}`}
