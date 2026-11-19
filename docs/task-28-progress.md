@@ -7,7 +7,7 @@ owner's `art-pack-4.zip` (12 synergy icons, 12 talent branch emblems, `manifest-
 
 Current: Phase 1 — pipeline
 
-PR: (draft, linked after it is opened)
+PR: https://github.com/pavnem-ux/Game/pull/26
 
 ## Checklist
 
