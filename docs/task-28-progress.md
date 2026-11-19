@@ -5,7 +5,7 @@ verbatim). Branch `task-28-icons`, created from the latest `main` (Task 27 merge
 owner's `art-pack-4.zip` (12 synergy icons, 12 talent branch emblems, `manifest-pack4.json`,
 `ART_PROVENANCE-pack4.md`). UI only: synergies, talents and balance are unchanged.
 
-Current: Phase 4 — delivery
+Current: done — PR ready for review (owner merges)
 
 PR: https://github.com/pavnem-ux/Game/pull/26
 
@@ -19,7 +19,7 @@ PR: https://github.com/pavnem-ux/Game/pull/26
       for level III
 - [x] 3 Talent UI: branch header emblems, node emblems with number badge and rank pips, locked /
       maxed states, superpower frame and level-30 seal kept
-- [ ] 4 Delivery: full checks, e2e desktop / mobile, `test:production`, "after" screenshots,
+- [x] 4 Delivery: full checks, e2e desktop / mobile, `test:production`, "after" screenshots,
       README, PR
 
 ## Pack contents (checked in Phase 0)
@@ -105,6 +105,21 @@ PR: https://github.com/pavnem-ux/Game/pull/26
   horizontal scroll) pass.
 - Screenshot script: `talents-mage-level20` (the seal) and `phone-talents-warrior-nodes` (the
   phone page scrolled to the nodes) added; the «before» set was re-taken from `main`.
+
+## Phase 4 — delivery
+
+- Checks (all pass): `npm run typecheck`, `npm test` (143 files, 1522 tests),
+  `npm run format:check`, `npm run build`, `npm run test:e2e` (all seven browser suites, incl.
+  the extended `art-browser.mjs`: the warrior's three synergy icons in the pause list; talent
+  screen with 3 header emblems, 14 node emblems with badges 1–5, node 56 px desktop / 48 px phone,
+  no horizontal scroll; letters and no badges without the manifest), `npm run test:production`.
+- "After" screenshots: `docs/art-pack-4/after-*.jpg` (same script and scenarios as "before"; the
+  build label in them is the dev server's start commit).
+- Docs: `docs/ART_PACK.md` (Task 28 section, manifest rules, budget, verification, limits),
+  README section.
+- Not verified: real phones / GPUs, Safari / Firefox; the Cloudflare Preview is for the owner to
+  check (the sandbox cannot open `*.workers.dev`). The synergy banner icon (72 px) is slightly
+  upscaled at DPR 2 (128 px source).
 
 ## "Before" screenshots
 

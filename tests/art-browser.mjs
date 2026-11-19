@@ -216,8 +216,54 @@ async function skillIcons(withArt, viewport, touch) {
   await page.keyboard.press('p');
   await page.locator('.pause-skills').waitFor();
   const pause = await shown('.pause-skills .skill-overview-groups');
+  // Task 28: the pause synergy list shows each of the class's three synergy icons.
+  const synergies = await page.evaluate(async () => {
+    const imgs = [...document.querySelectorAll('.synergy-overview img.synergy-icon')];
+    await Promise.all(imgs.map((i) => (i.complete ? null : i.decode().catch(() => null))));
+    return imgs.filter((i) => i.naturalWidth > 0).map((i) => new URL(i.src).pathname);
+  });
   await context.close();
-  return { hud, offer, cards, pause, errors };
+  return { hud, offer, cards, pause, synergies, errors };
+}
+
+/**
+ * Task 28: the talent screen — the three branch headers show their emblems, every node shows its
+ * branch emblem with a number badge; letters and no badges without the pack.
+ */
+async function talentEmblems(withArt, viewport, touch) {
+  const context = await browser.newContext({ viewport, hasTouch: touch, isMobile: touch });
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  if (!withArt)
+    await page.route('**/assets/manifest.json', (route) => route.fulfill({ status: 404 }));
+  await page.goto(base + '/');
+  const nav = page.getByRole('navigation', { name: 'Main menu' });
+  await nav.waitFor();
+  // The default profile's selected class is the warrior (branches 5 + 5 + 4 nodes).
+  await nav.getByRole('button', { name: 'Talents', exact: true }).evaluate((el) => el.click());
+  await page.locator('.talent-column').nth(2).waitFor();
+  if (withArt) await page.locator('.talent-orb.has-art img').nth(13).waitFor();
+  else await page.waitForTimeout(500);
+  const result = await page.evaluate(async () => {
+    const all = [...document.querySelectorAll('.talent-column img')];
+    await Promise.all(all.map((i) => (i.complete ? null : i.decode().catch(() => null))));
+    const loaded = (sel) =>
+      [...document.querySelectorAll(sel)]
+        .filter((i) => i.naturalWidth > 0)
+        .map((i) => new URL(i.src).pathname);
+    const orb = document.querySelector('.talent-orb');
+    return {
+      headers: loaded('.talent-column h3 img.talent-branch-icon'),
+      nodes: loaded('.talent-orb.has-art img').length,
+      badges: [...document.querySelectorAll('.talent-node-number')].map((b) => b.textContent),
+      letters: document.querySelectorAll('.talent-orb-glyph').length,
+      orb: Math.round(orb.getBoundingClientRect().width),
+      scroll: document.documentElement.scrollWidth > window.innerWidth + 1,
+    };
+  });
+  await context.close();
+  return { ...result, errors };
 }
 
 const art = await scenario(true);
@@ -232,7 +278,44 @@ const icons = {
   phone: await skillIcons(true, { width: 844, height: 390 }, true),
   fallback: await skillIcons(false, { width: 1280, height: 720 }, false),
 };
+const talents = {
+  desktop: await talentEmblems(true, { width: 1280, height: 720 }, false),
+  phone: await talentEmblems(true, { width: 844, height: 390 }, true),
+  fallback: await talentEmblems(false, { width: 1280, height: 720 }, false),
+};
 await browser.close();
+
+// Task 28: synergy icons in the pause list, talent branch emblems on the talent screen.
+for (const tag of ['desktop', 'phone']) {
+  assert.deepEqual(
+    [...icons[tag].synergies].sort(),
+    ['battle_momentum', 'seismic_impact', 'skull_crusher'].map(
+      (id) => `/assets/icons/synergies/${id}.webp`,
+    ),
+    `${tag}: the warrior's three synergy icons in the pause list`,
+  );
+  const t = talents[tag];
+  assert.deepEqual(t.errors, [], `${tag}: talent screen without page errors`);
+  assert.deepEqual(
+    t.headers,
+    ['berserker', 'guardian', 'twin_blade_master'].map((n) => `/assets/icons/talents/${n}.webp`),
+    `${tag}: branch header emblems`,
+  );
+  assert.equal(t.nodes, 14, `${tag}: every node shows its branch emblem`);
+  assert.deepEqual(
+    t.badges,
+    ['1', '2', '3', '4', '5', '1', '2', '3', '4', '5', '1', '2', '3', '4'],
+    `${tag}: node number badges`,
+  );
+  assert.equal(t.letters, 0, `${tag}: no letter left on the nodes`);
+  assert.equal(t.orb, tag === 'phone' ? 48 : 56, `${tag}: talent node size (touch on the phone)`);
+  assert.equal(t.scroll, false, `${tag}: talent screen without horizontal scroll`);
+}
+assert.deepEqual(icons.fallback.synergies, [], 'fallback: no synergy icon without the pack');
+assert.deepEqual(talents.fallback.headers, [], 'fallback: no branch emblem without the pack');
+assert.equal(talents.fallback.letters, 14, 'fallback: the node letters are back');
+assert.deepEqual(talents.fallback.badges, [], 'fallback: no number badges without the pack');
+assert.deepEqual(talents.fallback.errors, [], 'fallback: talent screen without page errors');
 
 for (const tag of ['desktop', 'phone']) {
   const { hud, offer, cards, pause, errors } = icons[tag];
@@ -309,5 +392,5 @@ assert.deepEqual(
   'the fallback only logs its one "manifest unavailable" warning',
 );
 console.log(
-  'PASS art: same seed ⇒ identical simulation with art on / off (24 steps, map 25, every enemy type, thief, nest); 13 unit + 4 pickup looks from the packs; no missing-texture warnings; procedural fallback without the manifest; act ground art (identical simulation with it); class portraits on character select + hub (desktop and phone, no horizontal scroll), emblems as the fallback; Gold / Ore badge icons (SVG fallback); skill icons on the HUD, offer cards and pause list (desktop and phone sizes, glyph fallback).',
+  'PASS art: same seed ⇒ identical simulation with art on / off (24 steps, map 25, every enemy type, thief, nest); 13 unit + 4 pickup looks from the packs; no missing-texture warnings; procedural fallback without the manifest; act ground art (identical simulation with it); class portraits on character select + hub (desktop and phone, no horizontal scroll), emblems as the fallback; Gold / Ore badge icons (SVG fallback); skill icons on the HUD, offer cards and pause list (desktop and phone sizes, glyph fallback); synergy icons in the pause list and talent branch emblems on headers and nodes (desktop and phone, current look without the pack).',
 );
