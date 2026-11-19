@@ -153,7 +153,16 @@ async function talentProfile(page, cls) {
   await page.clock.install();
   await page.goto(base + '/?debug');
   await nav.waitFor();
-  await page.getByRole('button', { name: /^Start run · map 1\b/ }).click();
+  await page.waitForFunction(() => !!window.__alpha);
+  // Seeded campaign run, so «before» and «after» get the same damage sources.
+  await command({
+    type: 'restart',
+    options: {
+      characterClass: 'warrior',
+      seed: 2801,
+      campaign: { mapId: 1, runId: `art4-${tag}` },
+    },
+  });
   await page.waitForFunction(() => window.__alpha?.state().screen === 'playing');
   await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 500);
   await command({ type: 'protection', enabled: true });

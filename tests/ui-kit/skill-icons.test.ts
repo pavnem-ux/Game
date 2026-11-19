@@ -67,9 +67,9 @@ describe('Task 27 — one size config', () => {
     // The art is 128 px: no size is drawn larger than the source.
     for (const px of Object.values(SKILL_ICON_SIZES)) expect(px).toBeLessThanOrEqual(128);
   });
-  it('is exposed to the stylesheet as --skill-icon-<size>, and the CSS reads every size', () => {
+  it('is exposed to the stylesheet as --icon-<size> (Task 28: one config for every icon), and the CSS reads every size', () => {
     const vars = skillIconSizeVars();
-    expect(vars['--skill-icon-card']).toBe('96px');
+    expect(vars['--icon-card']).toBe('96px');
     const css = readFileSync('src/gameplay-ui/alpha.css', 'utf8');
     for (const name of Object.keys(vars)) expect(css, name).toContain(`var(${name})`);
     // No pixel size for the icons is hard-coded in the stylesheet.

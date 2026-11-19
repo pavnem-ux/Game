@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { WorldEvent } from '../gameplay';
 import { LEVEL_ROMAN, SYNERGY_LEVEL_TEXT, SYNERGY_RULES } from '../skills';
 import type { SynergyId } from '../skills';
+import { SynergyIcon } from './kit';
 
 /**
  * Task 15 feedback: banners for a synergy unlock (I) and level-ups (II, III «Awakening» in gold).
@@ -9,6 +10,8 @@ import type { SynergyId } from '../skills';
  */
 interface Banner {
   readonly key: number;
+  /** Task 28: the synergy, for its icon. */
+  readonly synergyId: string;
   readonly level: 1 | 2 | 3;
   readonly title: string;
   readonly detail: string;
@@ -23,6 +26,7 @@ export function bannerFor(entry: WorldEvent): Banner | null {
   if (e.type === 'synergy-unlocked')
     return {
       key: entry.sequence,
+      synergyId: e.synergyId,
       level: 1,
       title: `✦ Synergy unlocked: ${nameOf(e.synergyId)} · I`,
       detail: 'Triggers in combat when its condition is met.',
@@ -32,12 +36,14 @@ export function bannerFor(entry: WorldEvent): Banner | null {
     return e.level === 3
       ? {
           key: entry.sequence,
+          synergyId: e.synergyId,
           level: 3,
           title: `✦ Awakening: ${nameOf(e.synergyId)} · III`,
           detail: `“${text.awakened}”: ${text.awakenedEffect}.`,
         }
       : {
           key: entry.sequence,
+          synergyId: e.synergyId,
           level: 2,
           title: `▲ ${nameOf(e.synergyId)} · level ${LEVEL_ROMAN[e.level]}`,
           detail: `${text.levelTwo[0].toUpperCase()}${text.levelTwo.slice(1)}.`,
@@ -85,8 +91,12 @@ export function SynergyBanners({
     <div className="synergy-banners" role="status" aria-live="polite" data-testid="synergy-banners">
       {banners.slice(0, VISIBLE).map((b) => (
         <div key={b.key} className={`synergy-banner level-${b.level}`} data-level={b.level}>
-          <strong>{b.title}</strong>
-          <span>{b.detail}</span>
+          {/* Task 28: the synergy's icon (gold ring at III); without art the text stands alone. */}
+          <SynergyIcon synergyId={b.synergyId} size="banner" level={b.level} />
+          <div className="synergy-banner-text">
+            <strong>{b.title}</strong>
+            <span>{b.detail}</span>
+          </div>
         </div>
       ))}
     </div>

@@ -5,7 +5,7 @@ verbatim). Branch `task-28-icons`, created from the latest `main` (Task 27 merge
 owner's `art-pack-4.zip` (12 synergy icons, 12 talent branch emblems, `manifest-pack4.json`,
 `ART_PROVENANCE-pack4.md`). UI only: synergies, talents and balance are unchanged.
 
-Current: Phase 2 — synergy UI
+Current: Phase 3 — talent UI
 
 PR: https://github.com/pavnem-ux/Game/pull/26
 
@@ -15,7 +15,7 @@ PR: https://github.com/pavnem-ux/Game/pull/26
       class + phone, synergy banners I / II / III, card hint, pause synergy list, results)
 - [x] 1 Pipeline: files, manifest merge, provenance, registry kinds `synergy-icon` and
       `talent-branch-icon`; tests (every synergy id and every class / branch pair resolves)
-- [ ] 2 Synergy UI: banners, pause list with pips, card hint, results damage sources, gold ring
+- [x] 2 Synergy UI: banners, pause list with pips, card hint, results damage sources, gold ring
       for level III
 - [ ] 3 Talent UI: branch header emblems, node emblems with number badge and rank pips, locked /
       maxed states, superpower frame and level-30 seal kept
@@ -62,6 +62,32 @@ PR: https://github.com/pavnem-ux/Game/pull/26
 - Checks: `npm run typecheck`, `npm test` (142 files, 1513 tests), `npm run format:check`,
   `npm run build` pass.
 
+## Phase 2 — synergy UI
+
+- One size config for every pack icon: `ICON_SIZES` (`src/gameplay-ui/kit/icon-sizes.ts`,
+  installed as `--icon-<size>` on `:root`). Task 27's `SKILL_ICON_SIZES` / `skillIconSizeVars`
+  are the same object / function (the CSS variables were renamed from `--skill-icon-*` to
+  `--icon-*`; the Task 27 test now checks the new name). New sizes (provisional): banner 72
+  (44 on short phones), branch header 96 (64 compact), talent node 56 (48 on touch, ≥ the
+  Task 16 44 px minimum); synergy list reuses `list` 32, the card hint `pair` 20, results
+  `stats` 24.
+- `ArtImage` / `SynergyIcon` / `TalentBranchIcon` (`kit/ArtIcon.tsx`): a decorative `<img>`, or
+  nothing when the manifest is still loading, the id has no icon or the image fails, so the
+  screen keeps its current (text) look. `preloadSkillIcons` now also preloads the synergy icons
+  and talent emblems.
+- Banners (unlock I, level II, awakening III): the synergy icon left of the text; `Banner` gained
+  `synergyId`. Level III draws a gold ring + glow around the same icon (`.is-awakened`, CSS only).
+- Pause synergy list: icon before each name, level III ringed (effective level, so a DEV override
+  shows too). Card hint «▲ Synergy II/III»: small synergy icon after the ▲ (the two skill icons
+  from Task 27 stay). Results: `synergy:<id>` damage sources get the icon (`damageSourceSynergy`).
+- Tests: `tests/ui-kit/art-icons.test.ts` (sizes, CSS reads every size, icon markup for all 12
+  synergies, gold ring only at III, fallbacks, banner ids, damage-source mapping, emblem view).
+  `alpha-browser`, `skills-ui-browser`, `art-browser` pass.
+- Screenshot script: the results run is now a seeded campaign run (seed 2801), so «before» and
+  «after» show the same sources; the «before» set was re-taken from `main` (a worktree dev
+  server) with that script. The two runs' numbers differ slightly, but Seismic Impact is in the
+  top five in both.
+
 ## "Before" screenshots
 
 `docs/art-pack-4/before-*.jpg`, written by `tests/art4-screens.mjs before` (dev server, `?debug`):
@@ -73,4 +99,5 @@ PR: https://github.com/pavnem-ux/Game/pull/26
   (mage, Fireball + Frost Nova; page clock paused, so the banners stay).
 - `card-hint`: the Frost Nova card with «▲ Thermal Shock II».
 - `pause-synergies`: the pause menu's synergy list with level pips.
-- `results`: warrior map-1 victory with «Synergy “Seismic Impact”» among the top damage sources.
+- `results`: seeded warrior map-1 victory (seed 2801) with «Synergy “Seismic Impact”» among the
+  top damage sources.
