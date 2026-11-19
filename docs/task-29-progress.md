@@ -13,7 +13,7 @@ PR: https://github.com/pavnem-ux/Game/pull/27
 - [x] 2.2 AGENTS.md / CLAUDE.md point to the workflow; mobile freeze line
 - [x] 2.3 Default e2e / CI: desktop core flows only; mobile and screenshot specs opt-in
 - [x] 2.4 Short PR template
-- [ ] 3 Delivery: final checks once, PR
+- [x] 3 Delivery: final checks once, PR
 
 ## Decisions / blockers
 
