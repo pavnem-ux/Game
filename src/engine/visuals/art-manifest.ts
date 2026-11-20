@@ -16,6 +16,8 @@
  * are loaded lazily (one per run / map panel), never by the boot or scene preload.
  * Task 33: `vfx` textures keep their procedural key (`vfx_<name>`, file `vfx_<name>`): an owner pack
  * replaces a generated effect texture by listing the same key.
+ * Task 37 (pack 10): `class-emblem` shields are keyed `class_<class>` and name their
+ * `characterClass` (one per class; DOM `<img>` in the menus, 4:5).
  * Task 34 (pack 9): `summon` sprites (talent-spawned objects) are keyed `summon_<id>` (optional
  * `summonId` = file name); bottom-centre anchor, preloaded with the scene.
  */
@@ -43,7 +45,8 @@ export type ArtKind =
   | 'activity'
   | 'boss'
   | 'vfx'
-  | 'summon';
+  | 'summon'
+  | 'class-emblem';
 /** Task 31: the biome (act) a decor prop belongs to, and whether it is tall (trees, columns …). */
 export type ArtDecorBiome = 'forest' | 'marsh' | 'ashlands' | 'frost';
 export interface ArtDecor {
@@ -67,6 +70,8 @@ export interface ArtEntry {
   readonly talentBranch?: ArtTalentBranch;
   /** Task 31: present only on `decor` entries. */
   readonly decor?: ArtDecor;
+  /** Task 37: present only on `class-emblem` entries (the class the shield belongs to). */
+  readonly characterClass?: CharacterClass;
 }
 export type ArtManifest = ReadonlyMap<string, ArtEntry>;
 
@@ -100,6 +105,7 @@ const KINDS: readonly string[] = [
   'boss',
   'vfx',
   'summon',
+  'class-emblem',
 ];
 const DECOR_BIOMES: readonly string[] = ['forest', 'marsh', 'ashlands', 'frost'];
 /** Key prefix of skill icons (Task 27): key `skill_<id>`, file `…/<id>.webp`. */
@@ -245,6 +251,17 @@ export function parseArtManifest(text: string): ArtManifest {
       okDecor = okAct && okTall;
       if (okDecor) decor = Object.freeze({ act: v.act as ArtDecorBiome, tall: v.tall as boolean });
     }
+    // Class emblems (Task 37) are keyed `class_<class>` and name a known class.
+    let emblemClass: CharacterClass | undefined;
+    let okEmblem = true;
+    if (v.kind === 'class-emblem') {
+      const c = v.characterClass;
+      const okClass = typeof c === 'string' && (CHARACTER_CLASSES as readonly string[]).includes(c);
+      if (!okClass) bad(`characterClass "${String(c)}" must be ${CHARACTER_CLASSES.join(', ')}`);
+      else if (key !== `class_${c}`) bad(`class-emblem key must be "class_${c}"`);
+      okEmblem = okClass && key === `class_${String(c)}`;
+      if (okEmblem) emblemClass = c as CharacterClass;
+    }
     const size = v.size;
     const okSize =
       Array.isArray(size) &&
@@ -269,6 +286,7 @@ export function parseArtManifest(text: string): ArtManifest {
       !okSkillId ||
       !okBranch ||
       !okDecor ||
+      !okEmblem ||
       files.has(file) ||
       !okSize ||
       !ANCHORS.includes(anchor) ||
@@ -289,6 +307,7 @@ export function parseArtManifest(text: string): ArtManifest {
         kind: kind as ArtKind | null,
         ...(talentBranch ? { talentBranch } : {}),
         ...(decor ? { decor } : {}),
+        ...(emblemClass ? { characterClass: emblemClass } : {}),
       }),
     );
   }

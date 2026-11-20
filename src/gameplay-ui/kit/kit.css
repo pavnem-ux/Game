@@ -566,3 +566,10 @@
 img.currency-icon {
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45));
 }
+/* Task 37: the owner's class shield (4:5, no extra frame); the SVG above is its fallback. */
+.class-emblem-art {
+  display: inline-block;
+  flex: none;
+  object-fit: contain;
+  vertical-align: middle;
+}

@@ -1,11 +1,55 @@
+import { useState } from 'react';
 import type { CharacterClass } from '../../character-stats';
+import type { ArtManifest } from '../../engine/visuals/art-manifest';
+import { artUrl } from '../../engine/visuals/art-pack';
+import { classEmblemEntry } from '../../engine/visuals/art-registry';
+import { useArtManifest } from './ArtIcon';
+
+interface EmblemProps {
+  characterClass: CharacterClass;
+  /** Width (px); the art is 4:5, so its height is `size × 1.25` (the SVG stays square). */
+  size?: number;
+  glow?: boolean;
+}
+/**
+ * Task 37: the class emblem — the owner's shield art (art pack 10) once the manifest has it, with
+ * no extra frame and its 4:5 aspect; else (loading, missing key, failed image) the Task 13
+ * procedural SVG. Used everywhere a class emblem shows (hub, equipment, talents, portrait fallback).
+ */
+export function ClassEmblem(props: EmblemProps) {
+  return <ClassEmblemView manifest={useArtManifest()} {...props} />;
+}
+/** The same for a given manifest (server-render tests use this). */
+export function ClassEmblemView({
+  manifest,
+  ...props
+}: EmblemProps & { manifest: ArtManifest | null }) {
+  const [failed, setFailed] = useState<string | null>(null);
+  const entry = classEmblemEntry(manifest, props.characterClass);
+  const src = entry ? artUrl(entry.file) : null;
+  if (!src || src === failed) return <ClassEmblemSvg {...props} />;
+  const size = props.size ?? 64;
+  return (
+    <img
+      className={`class-emblem class-emblem-art emblem-${props.characterClass} ${props.glow ? 'glow' : ''}`}
+      src={src}
+      alt=""
+      aria-hidden="true"
+      width={size}
+      height={Math.round(size * 1.25)}
+      decoding="async"
+      draggable={false}
+      onError={() => setFailed(src)}
+    />
+  );
+}
 
 /**
  * Task 13: original procedural class emblems (inline SVG, no external art). A shield-shaped crest
  * in the class accent colour with a simple mark: crossed swords (Warrior), staff with a star (Mage),
  * bow and arrow (Archer), twin daggers under a crescent (Rogue).
  */
-export function ClassEmblem({
+export function ClassEmblemSvg({
   characterClass,
   size = 64,
   glow = false,

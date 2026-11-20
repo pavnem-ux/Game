@@ -2523,5 +2523,49 @@
   "summonId": "ballista",
   "anchor": "bottom-center",
   "source": "owner-generated (ChatGPT image)"
+ },
+ "class_rogue": {
+  "file": "assets/ui/classes/class_rogue.webp",
+  "size": [
+   256,
+   320
+  ],
+  "kind": "class-emblem",
+  "characterClass": "rogue",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "class_archer": {
+  "file": "assets/ui/classes/class_archer.webp",
+  "size": [
+   256,
+   320
+  ],
+  "kind": "class-emblem",
+  "characterClass": "archer",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "class_mage": {
+  "file": "assets/ui/classes/class_mage.webp",
+  "size": [
+   256,
+   320
+  ],
+  "kind": "class-emblem",
+  "characterClass": "mage",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "class_warrior": {
+  "file": "assets/ui/classes/class_warrior.webp",
+  "size": [
+   256,
+   320
+  ],
+  "kind": "class-emblem",
+  "characterClass": "warrior",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
  }
 }

@@ -8,7 +8,7 @@ PR: https://github.com/pavnem-ux/Game/pull/35
 
 - [x] 0 Setup: branch, spec, progress file, draft PR
 - [x] 1 Top bar removed (QA corner badge kept, production none), unused styles removed
-- [ ] 2 Class emblems: files, manifest, provenance, kind `class-emblem`, `ClassEmblem` art + SVG fallback, tests
+- [x] 2 Class emblems: files, manifest, provenance, kind `class-emblem`, `ClassEmblem` art + SVG fallback, tests
 - [ ] 3 Synergy banners: compact toasts, ≤ 2 visible, ~2.5 s, queue, tests
 - [ ] 4 Delivery: final checks, README line, PR
 
@@ -21,3 +21,8 @@ PR: https://github.com/pavnem-ux/Game/pull/35
   PREVIEW» (`__QA_BUILD__` only; eliminated from production JS). Removed the alpha's `.topbar` media
   rules; the shared `.topbar` / `.brand` / `.build-badge` styles in `src/ui/styles.css` stay — the
   preserved prototype (`src/ui/App.tsx`) still uses them.
+- Class emblems: kind `class-emblem` (key `class_<class>`, `characterClass` validated);
+  `classEmblemEntry`; `ClassEmblem` now renders the shield `<img>` (width = size, height = size × 1.25,
+  no frame) once the manifest has it, else the Task 13 SVG (`ClassEmblemSvg`), also when the image
+  fails. Every usage goes through it (hub chips, equipment doll, talents header, `ClassPortrait`'s
+  fallback). DOM images only — not in the scene preload.

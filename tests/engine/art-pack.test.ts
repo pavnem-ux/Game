@@ -10,6 +10,7 @@ import {
 import {
   ArtRegistry,
   bossArtEntry,
+  classEmblemEntry,
   summonArtEntry,
   CURRENCY_ART,
   GROUND_ART,
@@ -81,8 +82,8 @@ const entry = (key: string, extra: Record<string, unknown> = {}) => ({
 });
 
 describe('Task 25 — art pack 1 files and manifest', () => {
-  it('227 entries (packs 1–9 + VFX: 17 + 9 + 37 + 24 + 30 + 6 + 49 + 40 + 1 + 14); every file exists and has the manifest size', () => {
-    expect(manifest.size).toBe(227);
+  it('231 entries (packs 1–10 + VFX: 17 + 9 + 37 + 24 + 30 + 6 + 49 + 40 + 1 + 4 + 14); every file exists and has the manifest size', () => {
+    expect(manifest.size).toBe(231);
     for (const e of manifest.values()) {
       const buf = readFileSync(join(PUBLIC, e.file));
       expect(webpSize(buf), e.key).toEqual([e.width, e.height]);
@@ -236,7 +237,7 @@ describe('Task 26 — pack 2 kinds: ground and pickup', () => {
       declared++;
       expect(artUsage(e.key), e.key).toBe(e.kind);
     }
-    expect(declared).toBe(9 + 37 + 24 + 30 + 6 + 49 + 40 + 1 + 14); // packs 2–9 + VFX (Tasks 26–34)
+    expect(declared).toBe(9 + 37 + 24 + 30 + 6 + 49 + 40 + 1 + 4 + 14); // packs 2–10 + VFX (Tasks 26–37)
     for (const art of [...Object.values(PICKUP_ART), ...Object.values(GROUND_ART)])
       expect(manifest.has(art!), art).toBe(true);
     for (const art of Object.values(CURRENCY_ART)) expect(manifest.has(art), art).toBe(true);
@@ -653,7 +654,7 @@ describe('Task 32 — pack 8: boss sprites', () => {
   });
 });
 
-describe('Task 33 — VFX texture pack (provenance row 10)', () => {
+describe('Task 33 — VFX texture pack (provenance row 11)', () => {
   it('replaces every generated vfx_* texture by key (kind vfx), preloaded with the scene', () => {
     const r = new ArtRegistry(manifest);
     const scene = new Set(r.sceneEntries().map((e) => e.key));
@@ -728,5 +729,46 @@ describe('Task 34 — pack 9: ballista sprite', () => {
     expect(parseArtManifest(one('summon_ballista', { summonId: 'ballista' })).size).toBe(1);
     expect(() => parseArtManifest(one('ballista', {}))).toThrow(/key must be "summon_ballista"/);
     expect(() => parseArtManifest(one('summon_ballista', { summonId: 'x' }))).toThrow(/summonId/);
+  });
+});
+
+describe('Task 37 — pack 10: class emblems', () => {
+  it('every class resolves to its 256×320 shield; menus only (not in the scene preload)', () => {
+    const scene = new ArtRegistry(manifest).sceneEntries().map((e) => e.key);
+    for (const c of CHARACTER_CLASSES) {
+      const e = classEmblemEntry(manifest, c);
+      expect(e?.key, c).toBe(`class_${c}`);
+      expect([e!.file, e!.width, e!.height, e!.characterClass]).toEqual([
+        `assets/ui/classes/class_${c}.webp`,
+        256,
+        320,
+        c,
+      ]);
+      expect(scene).not.toContain(`class_${c}`);
+    }
+  });
+  it('missing key or no manifest → null (the procedural SVG emblem stays)', () => {
+    const partial = new Map(manifest);
+    partial.delete('class_mage');
+    expect(classEmblemEntry(partial, 'mage')).toBeNull();
+    expect(classEmblemEntry(partial, 'rogue')?.key).toBe('class_rogue');
+    expect(classEmblemEntry(null, 'warrior')).toBeNull();
+  });
+  it('validation: a known class, keyed class_<class>', () => {
+    const one = (key: string, characterClass: unknown) =>
+      JSON.stringify({
+        [key]: {
+          file: `assets/ui/classes/${key}.webp`,
+          kind: 'class-emblem',
+          characterClass,
+          size: [256, 320],
+          anchor: 'center',
+        },
+      });
+    expect(parseArtManifest(one('class_mage', 'mage')).get('class_mage')?.characterClass).toBe(
+      'mage',
+    );
+    expect(() => parseArtManifest(one('class_mage', 'druid'))).toThrow(/characterClass "druid"/);
+    expect(() => parseArtManifest(one('class_mage', 'rogue'))).toThrow(/class_rogue/);
   });
 });

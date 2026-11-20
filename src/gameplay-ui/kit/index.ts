@@ -14,7 +14,7 @@ export {
   TierFrame,
   Tooltip,
 } from './components';
-export { ClassEmblem } from './ClassEmblem';
+export { ClassEmblem, ClassEmblemSvg, ClassEmblemView } from './ClassEmblem';
 export { ClassPortrait } from './ClassPortrait';
 export { CurrencyIcon } from './CurrencyIcon';
 export {
