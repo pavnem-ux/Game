@@ -1,7 +1,7 @@
 # Code map
 
 One current map of the code (Task 29; merged from the Task 08–18 progress files and updated to
-Task 32). Update it when you add or move important files. Rules: [AGENTS.md](../AGENTS.md),
+Task 34). Update it when you add or move important files. Rules: [AGENTS.md](../AGENTS.md),
 workflow: [TASK_WORKFLOW.md](TASK_WORKFLOW.md).
 
 ## Entry points
@@ -76,7 +76,8 @@ workflow: [TASK_WORKFLOW.md](TASK_WORKFLOW.md).
 - `src/engine/visuals/` — procedural textures (`keys.ts`, `art.ts`, `texture-factory.ts`),
   `UnitRenderer.ts`, `BiomeRenderer.ts` + `biomes.ts` (procedural / art decor layout), `LightRenderer.ts`, `quality.ts`; art packs:
   `art-manifest.ts` (parser), `art-registry.ts` (key → look incl. pet followers, icon / item / pet lookups), `art-pack.ts`
-  (manifest store), `art-loader.ts` (incl. lazy `loadBossArt`), `art-display.ts` (incl. `OBJECT_ART_SIZE`, `BOSS_BODY_WIDTH_PER_RADIUS`), `art-ground.ts`.
+  (manifest store), `art-loader.ts` (incl. lazy `loadBossArt`), `art-display.ts` (incl. `OBJECT_ART_SIZE`, `BOSS_BODY_WIDTH_PER_RADIUS`), `art-ground.ts`, `summons.ts`
+  (Task 34: ballista / shadow copy presentation).
 - Art files: `public/assets/` + `public/assets/manifest.json`; provenance `docs/ART_PROVENANCE.md`.
 
 ## Config and build

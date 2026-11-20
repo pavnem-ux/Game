@@ -10,7 +10,7 @@ PR: https://github.com/pavnem-ux/Game/pull/33
 - [x] 1 Pipeline: file, manifest, provenance, kind `summon` (`summon_ballista`), registry, tests
 - [x] 2 Ballista: sprite (feet, 2.4 × radius), flip to target, recoil on shots, pop-in / fade-out, lifetime ring, light
 - [x] 3 Shadow copy: `player_rogue` art, dark violet, ~55 %, glow, afterimage, fade in / out, flip like the player
-- [ ] 4 Delivery: final checks, README line, PR
+- [x] 4 Delivery: final checks, README line, PR
 
 ## Decisions / blockers
 
