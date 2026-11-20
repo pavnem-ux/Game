@@ -14,6 +14,8 @@
  * `templateId` = file name); `pet` sprites are keyed `pet_<pet id>` (optional `petId` = file name).
  * Task 32 (pack 8): `boss` sprites are keyed `boss_<boss id>` (optional `bossId` = file name); they
  * are loaded lazily (one per run / map panel), never by the boot or scene preload.
+ * Task 33: `vfx` textures keep their procedural key (`vfx_<name>`, file `vfx_<name>`): an owner pack
+ * replaces a generated effect texture by listing the same key.
  */
 import { CHARACTER_CLASSES } from '../../character-stats';
 import type { CharacterClass } from '../../character-stats';
@@ -37,7 +39,8 @@ export type ArtKind =
   | 'currency-icon'
   | 'chest-open'
   | 'activity'
-  | 'boss';
+  | 'boss'
+  | 'vfx';
 /** Task 31: the biome (act) a decor prop belongs to, and whether it is tall (trees, columns …). */
 export type ArtDecorBiome = 'forest' | 'marsh' | 'ashlands' | 'frost';
 export interface ArtDecor {
@@ -92,6 +95,7 @@ const KINDS: readonly string[] = [
   'chest-open',
   'activity',
   'boss',
+  'vfx',
 ];
 const DECOR_BIOMES: readonly string[] = ['forest', 'marsh', 'ashlands', 'frost'];
 /** Key prefix of skill icons (Task 27): key `skill_<id>`, file `…/<id>.webp`. */
