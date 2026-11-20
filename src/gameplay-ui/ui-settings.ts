@@ -5,6 +5,8 @@
  */
 import { defaultQuality, isGraphicsQuality } from '../engine/visuals/quality';
 import type { GraphicsQuality } from '../engine/visuals/quality';
+import { DEFAULT_GAME_SPEED, isGameSpeed } from '../engine/time-scale';
+import type { GameSpeed } from '../engine/time-scale';
 export const UI_SETTINGS_KEY = 'skazki.settings';
 export interface UiSettings {
   /** «Screen shake»: camera shake on player hits and boss heavy attacks (default on). */
@@ -20,6 +22,8 @@ export interface UiSettings {
   readonly leftHanded: boolean;
   /** Task 16 «Vibration»: light haptic on dash / level-up where supported. */
   readonly haptics: boolean;
+  /** Task 36 «Game speed» (×1 / ×1.5 / ×2): each run starts at the last choice. */
+  readonly gameSpeed: GameSpeed;
 }
 /** Touch-first devices (coarse pointer) default to Medium; desktops to High. */
 function touchDevice(): boolean {
@@ -38,6 +42,7 @@ export const DEFAULT_UI_SETTINGS: UiSettings = Object.freeze({
   graphicsQuality: defaultQuality(touchDevice()),
   leftHanded: false,
   haptics: true,
+  gameSpeed: DEFAULT_GAME_SPEED,
 });
 const volume = (v: unknown, fallback: number) =>
   typeof v === 'number' && Number.isFinite(v)
@@ -71,6 +76,7 @@ export function parseUiSettings(raw: string | null): UiSettings {
         : DEFAULT_UI_SETTINGS.graphicsQuality,
       leftHanded: typeof s.leftHanded === 'boolean' ? s.leftHanded : DEFAULT_UI_SETTINGS.leftHanded,
       haptics: typeof s.haptics === 'boolean' ? s.haptics : DEFAULT_UI_SETTINGS.haptics,
+      gameSpeed: isGameSpeed(s.gameSpeed) ? s.gameSpeed : DEFAULT_UI_SETTINGS.gameSpeed,
     });
   } catch {
     return DEFAULT_UI_SETTINGS;

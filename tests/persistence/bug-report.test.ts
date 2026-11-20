@@ -94,6 +94,21 @@ describe('Task 08.5 §3.3 bug report', () => {
       ].sort(),
     );
   });
+  it('Task 36: includes the current game speed (×1 when not given)', () => {
+    const w = new GameplayWorld({ characterClass: 'rogue', seed: 9, campaign: { mapId: 1 } });
+    const input = {
+      createdAt: '2026-11-20T10:00:00.000Z',
+      build,
+      userAgent: 'x',
+      world: w.getSnapshot(),
+      screen: 'playing',
+      profile: profile(),
+      errors: [],
+    };
+    expect(buildBugReport({ ...input, gameSpeed: 1.5 }).run?.gameSpeed).toBe(1.5);
+    expect(buildBugReport({ ...input, gameSpeed: 2 }).run?.gameSpeed).toBe(2);
+    expect(buildBugReport(input).run?.gameSpeed).toBe(1);
+  });
   it('an invalid or missing profile is never embedded; no run → run null', () => {
     const broken = { ...profile(), gold: -5 } as PlayerProfile;
     const base = {
