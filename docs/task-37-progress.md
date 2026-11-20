@@ -10,7 +10,7 @@ PR: https://github.com/pavnem-ux/Game/pull/35
 - [x] 1 Top bar removed (QA corner badge kept, production none), unused styles removed
 - [x] 2 Class emblems: files, manifest, provenance, kind `class-emblem`, `ClassEmblem` art + SVG fallback, tests
 - [x] 3 Synergy banners: compact toasts, ≤ 2 visible, ~2.5 s, queue, tests
-- [ ] 4 Delivery: final checks, README line, PR
+- [x] 4 Delivery: final checks, README line, PR
 
 ## Decisions / blockers
 
@@ -32,3 +32,7 @@ PR: https://github.com/pavnem-ux/Game/pull/35
   rest wait; paused / offer screens hide them and restart the visible ones' time on resume. The
   effect text stays in a visually hidden span (screen readers; the existing e2e still reads it).
   `role="status"`, `data-testid="synergy-banners"` and the `.synergy-banner.level-N` classes kept.
+- Delivery: `test:production` (no QA badge, no QA code) and `test:qa` against a fresh
+  `GAME_LOCAL_QA=1 npm run build:qa` of this branch (the «QA PREVIEW» corner badge) both pass. A first
+  `test:qa` run had used a stale `dist-qa/` because `build:qa` refuses without `GAME_LOCAL_QA=1`
+  outside Workers Builds; it was re-run on the fresh build.

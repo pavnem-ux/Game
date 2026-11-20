@@ -1,7 +1,7 @@
 # Code map
 
 One current map of the code (Task 29; merged from the Task 08–18 progress files and updated to
-Task 34). Update it when you add or move important files. Rules: [AGENTS.md](../AGENTS.md),
+Task 37). Update it when you add or move important files. Rules: [AGENTS.md](../AGENTS.md),
 workflow: [TASK_WORKFLOW.md](TASK_WORKFLOW.md).
 
 ## Entry points
@@ -10,7 +10,7 @@ workflow: [TASK_WORKFLOW.md](TASK_WORKFLOW.md).
   prototype (`src/ui/App.tsx`, `src/engine/GameScene.ts`, `src/core/`, `src/progression/`).
 - `src/gameplay-ui/AlphaApp.tsx` — screens: menu (`CampaignMenu.tsx`), run (`AlphaCanvas.tsx` →
   Phaser `src/engine/AlphaScene.ts`), HUD (`CampaignHud.tsx`, `SkillPanels.tsx`), results
-  (`ResultsScreen.tsx`, `RunStatsPanel.tsx`), banners (`SynergyBanners.tsx`).
+  (`ResultsScreen.tsx`, `RunStatsPanel.tsx`), banners (`SynergyBanners.tsx`, compact toast queue since Task 37).
 - `src/gameplay-ui/store.ts` — `alphaBridge`: throttled snapshots (~10 Hz) and commands between React
   and the scene. `campaign-state.ts` — `campaignStore` (progression service, pages, `startRun`,
   purchases, talents, pets, quests).
@@ -60,7 +60,7 @@ workflow: [TASK_WORKFLOW.md](TASK_WORKFLOW.md).
   `TalentsScreen.tsx`, `ForgeScreen.tsx`, `PetsScreen.tsx`, `QuestsScreen.tsx`, `MapPath.tsx`;
   styles `meta.css`. Shop: `ShopPages.tsx`; settings / saves: `SaveManagement.tsx`.
 - `src/gameplay-ui/kit/` — design tokens and components (`components.tsx`, `logic.ts`), art icons
-  (`SkillIcon.tsx`, `ArtIcon.tsx` incl. `ItemIcon`, `BuffIcon`, lazy `BackgroundArt`, `Emblem`, `BossPortrait`, `CurrencyIcon.tsx`, `ClassPortrait.tsx`),
+  (`SkillIcon.tsx`, `ArtIcon.tsx` incl. `ItemIcon`, `BuffIcon`, lazy `BackgroundArt`, `Emblem`, `BossPortrait`, `CurrencyIcon.tsx`, `ClassPortrait.tsx`, `ClassEmblem.tsx` — pack art with the SVG fallback),
   pet portraits `src/gameplay-ui/pets/PetPortrait.tsx` (pack sprite, SVG fallback), sizes `icon-sizes.ts`
   (`ICON_SIZES` → `--icon-*`).
 - Text: `src/gameplay-ui/strings-en.ts` (player text), `strings-en-debug.ts`; no Cyrillic in `src/`.
