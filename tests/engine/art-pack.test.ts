@@ -9,6 +9,7 @@ import {
 } from '../../src/engine/visuals/art-manifest';
 import {
   ArtRegistry,
+  bossArtEntry,
   CURRENCY_ART,
   GROUND_ART,
   PICKUP_ART,
@@ -45,6 +46,7 @@ import { PET_IDS } from '../../src/pets/config';
 import { SKILL_CATALOG, SYNERGY_RULES } from '../../src/skills';
 import { TALENT_CATALOG_DATA } from '../../src/talents';
 import { TEXTURE_KEYS } from '../../src/engine/visuals/keys';
+import { CAMPAIGN_MAPS } from '../../src/campaign';
 
 /** Task 25 Phase 1: the owner's art pack, its manifest and the registry with procedural fallback. */
 const PUBLIC = 'public';
@@ -72,8 +74,8 @@ const entry = (key: string, extra: Record<string, unknown> = {}) => ({
 });
 
 describe('Task 25 — art pack 1 files and manifest', () => {
-  it('172 entries (packs 1–7: 17 + 9 + 37 + 24 + 30 + 6 + 49); every file exists and has the manifest size', () => {
-    expect(manifest.size).toBe(172);
+  it('212 entries (packs 1–8: 17 + 9 + 37 + 24 + 30 + 6 + 49 + 40); every file exists and has the manifest size', () => {
+    expect(manifest.size).toBe(212);
     for (const e of manifest.values()) {
       const buf = readFileSync(join(PUBLIC, e.file));
       expect(webpSize(buf), e.key).toEqual([e.width, e.height]);
@@ -91,13 +93,16 @@ describe('Task 25 — art pack 1 files and manifest', () => {
     walk(join(PUBLIC, 'assets'));
     expect(files.sort()).toEqual([...manifest.values()].map((e) => e.file).sort());
   });
-  it('art budget (owner, Task 31): in-game / preloaded art ≤ 4 MiB, lazy menu backgrounds ≤ 2 MiB', () => {
+  it('art budget (owner, Task 31): in-game / preloaded art ≤ 4 MiB, lazy menu backgrounds ≤ 2 MiB; lazy boss sprites (Task 32) ≤ 128 KiB each', () => {
     // Task 26: 2 MiB in total; Task 30: 3 MiB; Task 31: split, backgrounds load only on their screen.
+    // Task 32: boss sprites load one at a time (the run's boss, the selected map's portrait), so
+    // each file is capped (provisional) and they are kept out of the in-game total.
     let main = statSync(join(PUBLIC, 'assets/manifest.json')).size;
     let backgrounds = 0;
     for (const e of manifest.values()) {
       const size = statSync(join(PUBLIC, e.file)).size;
       if (e.kind === 'background') backgrounds += size;
+      else if (e.kind === 'boss') expect(size, e.key).toBeLessThan(128 * 1024);
       else main += size;
     }
     expect(main).toBeLessThan(4 * 1024 * 1024);
@@ -224,7 +229,7 @@ describe('Task 26 — pack 2 kinds: ground and pickup', () => {
       declared++;
       expect(artUsage(e.key), e.key).toBe(e.kind);
     }
-    expect(declared).toBe(9 + 37 + 24 + 30 + 6 + 49); // packs 2, 3, 4, 5 + 6, 7 (Tasks 26–31)
+    expect(declared).toBe(9 + 37 + 24 + 30 + 6 + 49 + 40); // packs 2, 3, 4, 5 + 6, 7, 8 (Tasks 26–32)
     for (const art of [...Object.values(PICKUP_ART), ...Object.values(GROUND_ART)])
       expect(manifest.has(art!), art).toBe(true);
     for (const art of Object.values(CURRENCY_ART)) expect(manifest.has(art), art).toBe(true);
@@ -589,5 +594,53 @@ describe('Task 31 — pack 7: decor, backgrounds, emblem, objects', () => {
         one('emblem', { file: 'assets/ui/emblem.webp', kind: 'ui', anchor: 'cover' }),
       ),
     ).toThrow(/cover/);
+  });
+});
+
+describe('Task 32 — pack 8: boss sprites', () => {
+  it('every boss of the campaign maps resolves to its 512 px feet-anchored sprite', () => {
+    expect(CAMPAIGN_MAPS).toHaveLength(40);
+    for (const map of CAMPAIGN_MAPS) {
+      const e = bossArtEntry(manifest, map.bossId);
+      expect(e?.key, `map ${map.id}`).toBe(`boss_${map.bossId}`);
+      expect(e!.file).toBe(`assets/bosses/${map.bossId}.webp`);
+      expect([e!.width, e!.height, e!.anchor]).toEqual([512, 512, 'bottom-center']);
+    }
+    expect(new Set(CAMPAIGN_MAPS.map((m) => m.bossId)).size).toBe(40);
+  });
+  it('unknown id, no manifest or a missing entry → null (the procedural boss stays)', () => {
+    expect(bossArtEntry(manifest, 'no_such_boss')).toBeNull();
+    expect(bossArtEntry(null, 'thornwarden')).toBeNull();
+    const partial = new Map(manifest);
+    partial.delete('boss_thornwarden');
+    expect(bossArtEntry(partial, 'thornwarden')).toBeNull();
+    const r = new ArtRegistry(partial);
+    expect(r.bossEntry('thornwarden')).toBeNull();
+    expect(r.boss('thornwarden')).toBeNull();
+    expect(r.bossEntry('no_such_boss')).toBeNull();
+  });
+  it('boss sprites are never in the boot / scene preload; the registry serves one once loaded', () => {
+    const r = new ArtRegistry(manifest);
+    expect(r.sceneEntries().filter((e) => e.kind === 'boss')).toEqual([]);
+    expect(r.bossEntry('marsh_witch')?.key).toBe('boss_marsh_witch');
+    expect(r.boss('marsh_witch')).toBeNull(); // not loaded yet: procedural boss
+    r.markLoaded('boss_marsh_witch');
+    expect(r.boss('marsh_witch')?.texture).toBe('art:boss_marsh_witch');
+    expect(r.boss('thornwarden')).toBeNull();
+  });
+  it('validation: the boss_ prefix and a matching bossId', () => {
+    const one = (key: string, extra: Record<string, unknown>) =>
+      JSON.stringify({
+        [key]: {
+          file: 'assets/bosses/ash_wolf.webp',
+          kind: 'boss',
+          size: [512, 512],
+          anchor: 'bottom-center',
+          ...extra,
+        },
+      });
+    expect(parseArtManifest(one('boss_ash_wolf', { bossId: 'ash_wolf' })).size).toBe(1);
+    expect(() => parseArtManifest(one('ash_wolf', {}))).toThrow(/key must be "boss_ash_wolf"/);
+    expect(() => parseArtManifest(one('boss_ash_wolf', { bossId: 'wolf' }))).toThrow(/bossId/);
   });
 });
