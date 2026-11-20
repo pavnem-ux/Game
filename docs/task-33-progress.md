@@ -14,6 +14,7 @@ PR: https://github.com/pavnem-ux/Game/pull/32
 - [ ] 5 Delivery: VFX on / off ⇒ identical simulation, caps per quality, final checks, README line, PR
 
 ## Decisions / blockers
+
 - Library (`src/engine/vfx/`): every effect is a pooled sprite "particle" (fixed-capacity store,
   swap-remove, no allocation after start; clock = snapshot time, so effects pause with the game).
   Textures are generated white on canvases at boot and tinted by baked copies (the Canvas renderer
