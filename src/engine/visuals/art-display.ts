@@ -23,8 +23,20 @@ export const ART_DISPLAY: Readonly<Record<string, Partial<ArtDisplayTuning>>> = 
   enemy_treasure_thief: { facesLeft: true },
   nest_blight: { flip: false },
 });
+/**
+ * Task 32: a boss sprite's visible body ≈ this × the boss collision radius (one value, provisional;
+ * the boss hitbox never changes). Applied to every `boss_<id>` key through its tuning scale.
+ */
+export const BOSS_BODY_WIDTH_PER_RADIUS = 2.6;
+const BOSS_TUNING: Partial<ArtDisplayTuning> = Object.freeze({
+  scale: BOSS_BODY_WIDTH_PER_RADIUS / ART_BODY_WIDTH_PER_RADIUS,
+});
 export const artTuning = (artKey: string): ArtDisplayTuning =>
-  ({ ...DEFAULT_TUNING, ...ART_DISPLAY[artKey] }) as ArtDisplayTuning;
+  ({
+    ...DEFAULT_TUNING,
+    ...(artKey.startsWith('boss_') ? BOSS_TUNING : null),
+    ...ART_DISPLAY[artKey],
+  }) as ArtDisplayTuning;
 
 /** Opaque bounding box of an image in px (inclusive); the whole image if nothing is opaque. */
 export interface ArtBounds {

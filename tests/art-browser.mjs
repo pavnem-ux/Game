@@ -29,6 +29,11 @@ async function scenario(withArt) {
     if (m.type() === 'error' || m.type() === 'warning') logs.push(`${m.type()}: ${m.text()}`);
   });
   page.on('pageerror', (e) => logs.push(`pageerror: ${e.message}`));
+  // Task 32: boss sprites are lazy — none at boot, only the run's own boss once the run starts.
+  const bossRequests = [];
+  page.on('request', (r) => {
+    if (r.url().includes('/assets/bosses/')) bossRequests.push(new URL(r.url()).pathname);
+  });
   page.on('response', (r) => {
     if (r.status() >= 400 && !r.url().endsWith('/favicon.ico') && withArt)
       logs.push(`HTTP ${r.status()} ${r.url()}`);
@@ -48,6 +53,7 @@ async function scenario(withArt) {
   await page.waitForFunction(() => !!window.__alpha);
   // Real frames must not advance the world: pause the page clock before the run exists.
   await page.clock.pauseAt(Date.now() + 1000);
+  const bootBossRequests = bossRequests.length;
   await page.evaluate(() =>
     window.__alpha.command({
       type: 'restart',
@@ -62,6 +68,10 @@ async function scenario(withArt) {
   if (withArt) {
     // Task 26: 13 unit looks + 4 pickup looks; Task 30: + 6 pet followers.
     await page.waitForFunction(() => window.__alpha.presentation().artLooks === 23, null, {
+      timeout: 15_000,
+    });
+    // Task 32: map 25's boss sprite (requested at run start, long before the boss spawns).
+    await page.waitForFunction(() => window.__alpha.presentation().artBoss !== null, null, {
       timeout: 15_000,
     });
   }
@@ -98,9 +108,9 @@ async function scenario(withArt) {
       }),
     );
   }
-  const { artLooks, artGround } = await page.evaluate(() => window.__alpha.presentation());
+  const { artLooks, artGround, artBoss } = await page.evaluate(() => window.__alpha.presentation());
   await context.close();
-  return { digests, logs, artLooks, artGround };
+  return { digests, logs, artLooks, artGround, artBoss, bootBossRequests, bossRequests };
 }
 
 /**
@@ -377,6 +387,11 @@ assert.equal(procedural.artLooks, 0, 'no manifest: every look stays procedural')
 // Task 26: map 25 (act III) tiles the ashlands ground (tinted per map); procedural without art.
 assert.equal(art.artGround, 'art:ground_ashlands~map25', 'act III ground art in use');
 assert.equal(procedural.artGround, null, 'no manifest: procedural ground');
+assert.equal(art.bootBossRequests, 0, 'no boss sprite in the boot preload');
+assert.equal(art.artBoss, 'art:boss_rusted_gatekeeper', "the run loads its map's boss sprite");
+assert.deepEqual(art.bossRequests, ['/assets/bosses/rusted_gatekeeper.webp'], 'only that one boss');
+assert.equal(procedural.artBoss, null, 'no manifest: procedural boss');
+assert.deepEqual(procedural.bossRequests, [], 'no manifest: no boss request');
 assert.equal(art.digests.length, 24);
 assert.ok(
   JSON.parse(art.digests.at(-1)).e.length > 0,
@@ -396,5 +411,5 @@ assert.deepEqual(
   'the fallback only logs its one "manifest unavailable" warning',
 );
 console.log(
-  'PASS art: same seed ⇒ identical simulation with art on / off (24 steps, map 25, every enemy type, thief, nest); 13 unit + 4 pickup + 6 pet looks from the packs; no missing-texture warnings; procedural fallback without the manifest; act ground art (identical simulation with it); class portraits on character select + hub (desktop and phone, no horizontal scroll), emblems as the fallback; Gold / Ore badge icons (SVG fallback); skill icons on the HUD, offer cards and pause list (desktop and phone sizes, glyph fallback); synergy icons in the pause list and talent branch emblems on headers and nodes (desktop and phone, current look without the pack).',
+  'PASS art: same seed ⇒ identical simulation with art on / off (24 steps, map 25, every enemy type, thief, nest); 13 unit + 4 pickup + 6 pet looks from the packs; no missing-texture warnings; procedural fallback without the manifest; act ground art (identical simulation with it); the run's boss sprite loaded lazily (none at boot, only its own); class portraits on character select + hub (desktop and phone, no horizontal scroll), emblems as the fallback; Gold / Ore badge icons (SVG fallback); skill icons on the HUD, offer cards and pause list (desktop and phone sizes, glyph fallback); synergy icons in the pause list and talent branch emblems on headers and nodes (desktop and phone, current look without the pack).',
 );
