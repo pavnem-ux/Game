@@ -1,7 +1,7 @@
 import { burstCount } from './caps';
 import type { VfxCaps } from './caps';
 import { ParticleStore, VfxRandom } from './particles';
-import type { Particle, ParticleSpec } from './particles';
+import type { Particle } from './particles';
 import { VFX_TEXTURE_SIZE } from './textures';
 import type { VfxTextureKey } from './textures';
 
@@ -42,6 +42,8 @@ export const scaleFor = (tex: VfxTextureKey, px: number): number => px / VFX_TEX
 
 export class VfxEmitter {
   now = 0;
+  /** Alpha multiplier for the next spawns (light / secondary recipes draw fainter). */
+  alpha = 1;
   constructor(
     readonly store: ParticleStore,
     readonly rng = new VfxRandom(),
@@ -49,7 +51,8 @@ export class VfxEmitter {
   get caps(): VfxCaps {
     return this.store.caps;
   }
-  private add(p: ParticleSpec): boolean {
+  private add(p: Particle): boolean {
+    if (this.alpha !== 1) p.a0 *= this.alpha;
     return this.store.spawn(p, this.now);
   }
   private glowy(): boolean {

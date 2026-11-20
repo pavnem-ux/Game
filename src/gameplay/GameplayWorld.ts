@@ -396,6 +396,13 @@ export class GameplayWorld {
   get stats(): CombatAttributes {
     return this.skills.effectiveStats;
   }
+  /**
+   * Task 33 (read-only, for rendering): the damage source of an attack id as run stats attribute
+   * it (`skill:…`, `synergy:…`, `talent:…`, `pet.…`), or undefined. Never changes the world.
+   */
+  attackSource(attackId: string): string | undefined {
+    return this.skills?.attackSource(attackId);
+  }
   getEvents(afterSequence = 0): readonly WorldEvent[] {
     return Object.freeze(this.history.filter((e) => e.sequence > afterSequence));
   }

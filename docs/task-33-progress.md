@@ -9,7 +9,7 @@ PR: https://github.com/pavnem-ux/Game/pull/32
 - [x] 0 Setup: branch, spec, progress file, draft PR
 - [x] 1 Library: procedural `vfx_*` textures (art-pack override by key), element palette, pooled emitters / rings / arcs / flashes / shards / trails, per-quality caps, crowd thinning
 - [x] 2 Recipes: one `skillId → recipe` table (37 skills), basic attacks per class, synergies (III = bigger / brighter), talent secondaries and pet hits (lighter)
-- [ ] 3 Scene: events → recipes; slash arcs, arrow / bolt trails, element impacts, crit flash; player VFX below telegraphs and enemy projectiles
+- [x] 3 Scene: events → recipes; slash arcs, arrow / bolt trails, element impacts, crit flash; player VFX below telegraphs and enemy projectiles
 - [ ] 4 Feel: hero lunge / cast glow / bow squash (≤ 120 ms), render-only hit-stop on crits / boss hits, heavy-hit shake (setting respected)
 - [ ] 5 Delivery: VFX on / off ⇒ identical simulation, caps per quality, final checks, README line, PR
 
@@ -26,3 +26,11 @@ PR: https://github.com/pavnem-ux/Game/pull/32
   `BASIC_VFX` per class, `SECONDARY_VFX` (off-hand, shadow copy, ballista, other talents, pets:
   `light` = ×0.6 size, ×0.7 alpha). `recipeFor(source)` routes `skill:` / `synergy:` / `talent:` /
   `pet.` / off-hand / basic attack; unknown ids fall back to the class's basic attack.
+- Scene: `VfxDirector` (pure) reads this frame's events + the snapshot: weapon `attack-started`
+  (slash arcs, staff glow), `impact` (element sparks / flash / shards; crit = bigger core flash +
+  star), `damage` without a weapon impact (via the new read-only `GameplayWorld.attackSource`),
+  `skill-activated` (cast), `skill-area` (rings, decals, plumes, slashes, bolts),
+  `synergy-triggered` (level III bigger + core flash + extra ring), `pet-action`, projectile trails
+  and zone decals / plumes (per-second rate on the simulation clock). Player VFX depth 6.6; enemy
+  telegraphs (bombard circles, boss cast fills) moved to their own layer at 6.8 (outlines stay on the
+  overlay), enemy projectiles at 7.

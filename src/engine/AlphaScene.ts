@@ -24,6 +24,10 @@ import type { ActivityType } from '../gameplay/activities';
 import { EN } from '../gameplay-ui/strings-en';
 import { buildUnitTextures } from './visuals/texture-factory';
 import { loadBossArt, startArtLoad } from './visuals/art-loader';
+import { VFX_CAPS } from './vfx/caps';
+import { VfxDirector } from './vfx/director';
+import type { DirectorContext } from './vfx/director';
+import { TELEGRAPH_DEPTH, VfxRenderer } from './vfx/VfxRenderer';
 import { ACTIVITY_ART, ArtRegistry, CHEST_OPEN_ART } from './visuals/art-registry';
 import { ArtSprites } from './visuals/art-sprites';
 import {
@@ -129,6 +133,16 @@ export class AlphaScene extends Phaser.Scene {
   private readonly activityLabels: Phaser.GameObjects.Text[] = [];
   private playerHitAt = Number.NEGATIVE_INFINITY;
   private fx: { event: WorldEvent; until: number; x: number; y: number; text?: string }[] = [];
+  /** Task 33: attack / skill VFX (render only) and the telegraph layer above them. */
+  private vfx!: VfxRenderer;
+  private vfxDirector!: VfxDirector;
+  private telegraphs!: Phaser.GameObjects.Graphics;
+  private readonly vfxContext: { -readonly [K in keyof DirectorContext]: DirectorContext[K] } = {
+    characterClass: 'warrior',
+    attackRange: 0,
+    playerId: 'player',
+    attackSource: (attackId) => this.world?.attackSource(attackId),
+  };
   /** Task 32: the boss portrait above the «⚠ Boss» notification (created on first use). */
   private bossPortrait: Phaser.GameObjects.Image | null = null;
   private labels: Phaser.GameObjects.Text[] = [];
@@ -150,6 +164,10 @@ export class AlphaScene extends Phaser.Scene {
     buildUnitTextures(this);
     this.units = new UnitRenderer(this);
     this.artSprites = new ArtSprites(this);
+    this.vfx = new VfxRenderer(this, this.units.tints, VFX_CAPS[this.graphicsQuality()]);
+    this.vfx.textureOf = (key) => this.art.vfxTexture(key);
+    this.vfxDirector = new VfxDirector(this.vfx.emit);
+    this.telegraphs = this.add.graphics().setDepth(TELEGRAPH_DEPTH);
     startArtLoad(this, (registry) => {
       this.art = registry;
       this.requestRunBossArt(); // a run started before the manifest arrived
@@ -294,6 +312,8 @@ export class AlphaScene extends Phaser.Scene {
     this.mapId = options.campaign?.mapId ?? null;
     this.biome.build(this.mapId, this.graphicsQuality());
     this.requestRunBossArt(); // Task 32: the map's boss sprite, long before the boss spawns
+    this.vfx.reset();
+    this.vfxDirector.reset();
     this.resetFeel();
     this.runId++;
     this.lastEvent = 0;
@@ -529,6 +549,7 @@ export class AlphaScene extends Phaser.Scene {
     this.floating.setLimit(QUALITY_PRESETS[q].damageNumbers);
     this.accentGlow = QUALITY_PRESETS[q].accentGlow;
     this.lighting.setQuality(q);
+    this.vfx.setCaps(VFX_CAPS[q]);
     this.biome.build(this.mapId, q);
   }
   /** Task 16: canvas pixels per CSS pixel (set by AlphaCanvas; capped by quality). */
@@ -571,6 +592,9 @@ export class AlphaScene extends Phaser.Scene {
       this.units.begin();
       this.units.end();
       this.lighting.hide();
+      this.telegraphs.clear();
+      this.vfx.reset();
+      this.vfx.draw(0);
     }
     this.hudTimer -= dt;
     if (this.hudTimer <= 0) {
@@ -885,6 +909,12 @@ export class AlphaScene extends Phaser.Scene {
     // Task 14: sound reads the same events (presentation only; nothing flows back).
     soundFrame(frameEvents);
     hapticFrame(frameEvents);
+    // Task 33: attack / skill VFX from the same events (render only; nothing flows back).
+    this.vfx.begin(s.time);
+    const ctx = this.vfxContext;
+    ctx.characterClass = s.character.characterClass;
+    ctx.attackRange = s.weapon.weapon.attackRange;
+    this.vfxDirector.frame(s, frameEvents, ctx);
     for (const event of frameEvents) {
       this.lastEvent = event.sequence;
       const e = event.event;
@@ -1046,13 +1076,15 @@ export class AlphaScene extends Phaser.Scene {
       }
     }
     // Task 12: bombard telegraphs — a red ground circle that fills up until the strike lands.
+    // Task 33: on the telegraph layer, above player VFX (never thinned).
+    const tg = this.telegraphs.clear();
     for (const strike of s.artilleryStrikes) {
       const span = strike.landsAt - strike.markedAt;
       const progress = span > 0 ? Math.min(1, Math.max(0, (s.time - strike.markedAt) / span)) : 1;
       const { x, y } = strike.center;
-      g.fillStyle(0xff3b3b, 0.1 + 0.18 * progress).fillCircle(x, y, strike.radius);
-      g.fillStyle(0xff5a3b, 0.22).fillCircle(x, y, strike.radius * progress);
-      g.lineStyle(2, 0xff4d4d, 0.9).strokeCircle(x, y, strike.radius);
+      tg.fillStyle(0xff3b3b, 0.1 + 0.18 * progress).fillCircle(x, y, strike.radius);
+      tg.fillStyle(0xff5a3b, 0.22).fillCircle(x, y, strike.radius * progress);
+      tg.lineStyle(2, 0xff4d4d, 0.9).strokeCircle(x, y, strike.radius);
     }
     let stunLabel = 0;
     let label = 0,
@@ -1199,14 +1231,14 @@ export class AlphaScene extends Phaser.Scene {
     for (; nameLabel < this.nameLabels.length; nameLabel++)
       this.nameLabels[nameLabel].setVisible(false);
     // Task 08: boss telegraphs (dangerous attacks are announced before they resolve).
-    // Task 32: fills stay on the ground; the outlines go on the overlay so they stay clearly
-    // visible over the (larger) boss sprite.
+    // Task 32: the outlines go on the overlay so they stay clearly visible over the (larger)
+    // boss sprite; Task 33: the fills on the telegraph layer, above player VFX.
     const cast = s.campaign?.bossCast;
     if (cast && cast.center) {
       const span = Math.max(1e-6, cast.executeAt - cast.startedAt);
       const progress = Math.min(1, Math.max(0, (s.time - cast.startedAt) / span));
       if (cast.kind === 'circle_aoe' && cast.radius) {
-        g.fillStyle(0xff4a3d, 0.12 + 0.18 * progress).fillCircle(
+        tg.fillStyle(0xff4a3d, 0.12 + 0.18 * progress).fillCircle(
           cast.center.x,
           cast.center.y,
           cast.radius * progress,
@@ -1216,7 +1248,7 @@ export class AlphaScene extends Phaser.Scene {
         const len = 320;
         const ex = cast.center.x + cast.direction.x * len,
           ey = cast.center.y + cast.direction.y * len;
-        g.lineStyle(14, 0xff5a45, 0.18 + 0.25 * progress).lineBetween(
+        tg.lineStyle(14, 0xff5a45, 0.18 + 0.25 * progress).lineBetween(
           cast.center.x,
           cast.center.y,
           ex,
@@ -1414,6 +1446,7 @@ export class AlphaScene extends Phaser.Scene {
     }
     if (!bossPortrait) this.bossPortrait?.setVisible(false);
     this.drawLights(s);
+    this.vfx.draw(s.time);
     this.units.end();
     this.labels.slice(label).forEach((t) => t.setVisible(false));
     this.damageLabels.slice(damageLabel).forEach((t) => t.setVisible(false));
