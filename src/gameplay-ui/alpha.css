@@ -1720,6 +1720,7 @@ p.damage-note {
   transform: translateX(-50%);
   z-index: 60;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   justify-items: center;
   gap: 6px;
   width: min(360px, calc(100% - 32px));
