@@ -1889,7 +1889,6 @@ body {
 }
 /* Phones and short screens: the arena takes the whole screen during a run. */
 @media (max-height: 560px), (max-width: 760px) {
-  .alpha-shell.in-run .topbar,
   .alpha-shell.in-run .page-footer {
     display: none;
   }
@@ -2005,7 +2004,6 @@ body {
 }
 /* Task 16: menus on phones — no outer page chrome, one scrolling nav row, safe-area padding. */
 @media (max-height: 560px), (max-width: 760px) {
-  .alpha-shell .topbar,
   .alpha-shell .page-footer {
     display: none;
   }
@@ -2373,4 +2371,21 @@ body {
   font-family: var(--font-serif);
   font-size: calc(var(--size) * 0.45);
   filter: none;
+}
+
+/* ── Task 37: QA builds only — a small corner badge instead of the removed top bar. ── */
+.qa-corner-badge {
+  position: fixed;
+  top: max(4px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  padding: 1px 8px;
+  border: 1px solid rgba(255, 196, 110, 0.6);
+  border-radius: 999px;
+  background: rgba(40, 24, 8, 0.75);
+  color: #ffd79a;
+  font: 600 10px/1.5 var(--font-sans, system-ui, sans-serif);
+  letter-spacing: 0.12em;
+  pointer-events: none;
 }

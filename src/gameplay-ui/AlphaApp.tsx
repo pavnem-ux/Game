@@ -49,18 +49,12 @@ export function AlphaApp() {
   const hp = s ? displayHp(s.player.currentHp, s.player.maxHp) : null;
   return (
     <div className={`app-shell alpha-shell${state.screen === 'menu' ? '' : ' in-run'}`}>
-      <header className="topbar">
-        <div className="brand">
-          <span className="brand-mark">✳</span>
-          <span>
-            FANTASY <b>SURVIVORS</b>
-          </span>
-        </div>
-        <span className="header-caption">CHRONICLES OF THE LAST LIGHT</span>
-        <span className="build-badge">
-          {__QA_BUILD__ ? 'QA PREVIEW' : 'COMBAT ALPHA'} <span>08 CAMPAIGN</span>
+      {/* Task 37: no top bar; QA builds keep a small corner badge (never in production). */}
+      {__QA_BUILD__ && (
+        <span className="qa-corner-badge" aria-label="QA preview build">
+          QA PREVIEW
         </span>
-      </header>
+      )}
       <main
         className={`arena alpha-arena screen-${state.screen}`}
         // Task 16: no long-press menu over the arena during play.
