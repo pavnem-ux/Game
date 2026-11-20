@@ -5,7 +5,7 @@ import { VFX_CAPS } from './caps';
 import type { VfxCaps } from './caps';
 import { VfxEmitter } from './emitters';
 import { ParticleStore, alphaAt, progress, scaleAt } from './particles';
-import { buildVfxTextures } from './textures';
+import { PRECOLORED_VFX, buildVfxTextures, vfxFit } from './textures';
 import type { VfxTextureKey } from './textures';
 
 /**
@@ -28,8 +28,10 @@ export class VfxRenderer {
   /** Owner art for a key once loaded (art pack), else the generated texture. */
   textureOf: (key: VfxTextureKey) => string = (key) => key;
   private last = 0;
+  /** Fit factor per drawn texture key (1 for the generated ones; owner art is sized to fit). */
+  private readonly fits = new Map<string, number>();
   constructor(
-    scene: Phaser.Scene,
+    private readonly scene: Phaser.Scene,
     private readonly tints: TintCache,
     caps: VfxCaps = VFX_CAPS.high,
   ) {
@@ -71,7 +73,11 @@ export class VfxRenderer {
       const a = alphaAt(p, t) * alphaScale;
       if (a <= 0.01) continue;
       const base = this.textureOf(p.tex);
-      const key = p.color === 0xffffff ? base : this.tints.get(base, p.color);
+      const art = base !== p.tex;
+      // Owner art that carries its own colours is not tinted (the element tint would muddy it).
+      const tinted = p.color !== 0xffffff && !(art && PRECOLORED_VFX.has(p.tex));
+      const key = tinted ? this.tints.get(base, p.color) : base;
+      const fit = art ? this.fitOf(p.tex, base) : 1;
       const img = this.pool.next();
       if (img.texture.key !== key) img.setTexture(key);
       const s = scaleAt(p, t);
@@ -79,13 +85,25 @@ export class VfxRenderer {
         .setPosition(p.x, p.y)
         .setOrigin(p.originX, 0.5)
         .setRotation(p.rot)
-        .setScale(s * p.scaleX, s)
+        .setScale(s * p.scaleX * fit, s * fit)
         .setAlpha(Math.min(1, a))
         .setVisible(true);
       const mode = p.additive ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL;
       if (img.blendMode !== mode) img.setBlendMode(mode);
     }
     this.pool.end();
+  }
+  private fitOf(key: VfxTextureKey, texture: string): number {
+    let f = this.fits.get(texture);
+    if (f === undefined) {
+      const src = this.scene.textures.get(texture).getSourceImage() as {
+        width: number;
+        height: number;
+      };
+      f = vfxFit(key, src.width, src.height);
+      this.fits.set(texture, f);
+    }
+    return f;
   }
   get live(): number {
     return this.store.count;

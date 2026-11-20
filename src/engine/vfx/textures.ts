@@ -23,6 +23,26 @@ export const VFX_TEXTURE_KEYS = Object.freeze([
 ] as const);
 export type VfxTextureKey = (typeof VFX_TEXTURE_KEYS)[number];
 
+/**
+ * Keys whose owner art (pack 9) already carries its own colours (flame, blood, poison, lightning,
+ * ice): drawn untinted once the art is in use. The generated textures are white and always tinted.
+ */
+export const PRECOLORED_VFX: ReadonlySet<VfxTextureKey> = new Set<VfxTextureKey>([
+  'vfx_flame',
+  'vfx_blood_splash',
+  'vfx_poison_drop',
+  'vfx_lightning',
+  'vfx_ice_shard',
+  'vfx_frost_burst',
+]);
+/**
+ * Display factor that fits a texture of `width × height` into the generated texture's box of the
+ * same key (owner art has its own pixel size; effects are sized for the generated one).
+ */
+export function vfxFit(key: VfxTextureKey, width: number, height: number): number {
+  const [w, h] = VFX_TEXTURE_SIZE[key];
+  return width > 0 && height > 0 ? Math.min(w / width, h / height) : 1;
+}
 /** Generated size (px) per key: [width, height]. */
 export const VFX_TEXTURE_SIZE: Readonly<Record<VfxTextureKey, readonly [number, number]>> =
   Object.freeze({

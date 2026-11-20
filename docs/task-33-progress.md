@@ -43,3 +43,9 @@ PR: https://github.com/pavnem-ux/Game/pull/32
   with the director reading every frame and the world's attack sources: identical digests. FPS
   (`tests/art-fps.mjs`, 117 enemies, DPR 1, one sandbox round): 56.1 procedural / 52.3 art — in line
   with the Task 25–26 table; not measured on real devices.
+- Owner VFX pack (pack 9, owner decisions after review: add to this PR, derive game copies, owner-
+  generated provenance): the 14 PNGs are 1024 px RGB on black; the game copies get alpha from
+  brightness, are framed / rotated to the generated textures' shape (trail / lightning horizontal,
+  shard upright, slash crescent facing +x) and saved ≤ 256 px WebP (172 KB total); originals unchanged
+  and not in the repo. The renderer fits art into the generated box (`vfxFit`); `PRECOLORED_VFX` art
+  is drawn untinted.
