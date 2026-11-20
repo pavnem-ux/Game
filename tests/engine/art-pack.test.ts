@@ -48,6 +48,12 @@ import { SKILL_CATALOG, SYNERGY_RULES } from '../../src/skills';
 import { TALENT_CATALOG_DATA } from '../../src/talents';
 import { TEXTURE_KEYS } from '../../src/engine/visuals/keys';
 import { CAMPAIGN_MAPS } from '../../src/campaign';
+import {
+  PRECOLORED_VFX,
+  VFX_TEXTURE_KEYS,
+  VFX_TEXTURE_SIZE,
+  vfxFit,
+} from '../../src/engine/vfx/textures';
 
 /** Task 25 Phase 1: the owner's art pack, its manifest and the registry with procedural fallback. */
 const PUBLIC = 'public';
@@ -75,8 +81,8 @@ const entry = (key: string, extra: Record<string, unknown> = {}) => ({
 });
 
 describe('Task 25 — art pack 1 files and manifest', () => {
-  it('213 entries (packs 1–9: 17 + 9 + 37 + 24 + 30 + 6 + 49 + 40 + 1); every file exists and has the manifest size', () => {
-    expect(manifest.size).toBe(213);
+  it('227 entries (packs 1–9 + VFX: 17 + 9 + 37 + 24 + 30 + 6 + 49 + 40 + 1 + 14); every file exists and has the manifest size', () => {
+    expect(manifest.size).toBe(227);
     for (const e of manifest.values()) {
       const buf = readFileSync(join(PUBLIC, e.file));
       expect(webpSize(buf), e.key).toEqual([e.width, e.height]);
@@ -230,7 +236,7 @@ describe('Task 26 — pack 2 kinds: ground and pickup', () => {
       declared++;
       expect(artUsage(e.key), e.key).toBe(e.kind);
     }
-    expect(declared).toBe(9 + 37 + 24 + 30 + 6 + 49 + 40 + 1); // packs 2–9 (Tasks 26–34)
+    expect(declared).toBe(9 + 37 + 24 + 30 + 6 + 49 + 40 + 1 + 14); // packs 2–9 + VFX (Tasks 26–34)
     for (const art of [...Object.values(PICKUP_ART), ...Object.values(GROUND_ART)])
       expect(manifest.has(art!), art).toBe(true);
     for (const art of Object.values(CURRENCY_ART)) expect(manifest.has(art), art).toBe(true);
@@ -254,8 +260,8 @@ describe('Task 26 — pack 2 kinds: ground and pickup', () => {
     expect(r.loadedGrounds()).toBe(4);
     // The scene loads units, pickups and grounds; portraits and the UI-only ore stay DOM images.
     const scene = r.sceneEntries().map((e) => e.key);
-    // + pets (Task 30), decor, open chests, activities (Task 31), the ballista (Task 34)
-    expect(scene).toHaveLength(21 + 6 + 32 + 5 + 1);
+    // + pets (Task 30), decor, open chests, activities (Task 31), VFX textures (Task 33), the ballista (Task 34)
+    expect(scene).toHaveLength(21 + 6 + 32 + 5 + 14 + 1);
     expect(scene).not.toContain('ore');
     expect(scene.some((k) => k.startsWith('portrait_'))).toBe(false);
   });
@@ -644,6 +650,43 @@ describe('Task 32 — pack 8: boss sprites', () => {
     expect(parseArtManifest(one('boss_ash_wolf', { bossId: 'ash_wolf' })).size).toBe(1);
     expect(() => parseArtManifest(one('ash_wolf', {}))).toThrow(/key must be "boss_ash_wolf"/);
     expect(() => parseArtManifest(one('boss_ash_wolf', { bossId: 'wolf' }))).toThrow(/bossId/);
+  });
+});
+
+describe('Task 33 — VFX texture pack (provenance row 10)', () => {
+  it('replaces every generated vfx_* texture by key (kind vfx), preloaded with the scene', () => {
+    const r = new ArtRegistry(manifest);
+    const scene = new Set(r.sceneEntries().map((e) => e.key));
+    for (const key of VFX_TEXTURE_KEYS) {
+      const e = manifest.get(key);
+      expect(e?.kind, key).toBe('vfx');
+      expect(e!.file).toBe(`assets/vfx/${key}.webp`);
+      expect(Math.max(e!.width, e!.height), key).toBeLessThanOrEqual(256);
+      expect(scene.has(key), key).toBe(true);
+      expect(r.vfxTexture(key)).toBe(key); // generated until the art has loaded
+      r.markLoaded(key);
+      expect(r.vfxTexture(key)).toBe(`art:${key}`);
+    }
+  });
+  it("art is fitted into the generated texture's box; coloured art keeps its colours", () => {
+    for (const key of VFX_TEXTURE_KEYS) {
+      const e = manifest.get(key)!;
+      const f = vfxFit(key, e.width, e.height);
+      const [w, h] = VFX_TEXTURE_SIZE[key];
+      expect(e.width * f, key).toBeLessThanOrEqual(w + 1e-9);
+      expect(e.height * f, key).toBeLessThanOrEqual(h + 1e-9);
+      expect(Math.max(e.width * f - w, e.height * f - h), key).toBeCloseTo(0, 9);
+    }
+    expect([...PRECOLORED_VFX].sort()).toEqual(
+      [
+        'vfx_blood_splash',
+        'vfx_flame',
+        'vfx_frost_burst',
+        'vfx_ice_shard',
+        'vfx_lightning',
+        'vfx_poison_drop',
+      ].sort(),
+    );
   });
 });
 

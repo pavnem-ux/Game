@@ -4,6 +4,7 @@ import { TALENT_CATALOG_DATA } from '../../talents';
 import { GEAR_TEMPLATES, STARTER_WEAPONS } from '../../equipment/config';
 import { PET_IDS } from '../../pets/config';
 import { BOSS_DEFINITIONS } from '../../campaign/bosses';
+import { VFX_TEXTURE_KEYS } from '../vfx/textures';
 import {
   SKILL_ICON_KEY_PREFIX,
   SYNERGY_ICON_KEY_PREFIX,
@@ -306,6 +307,7 @@ export function artUsage(artKey: string): ArtKind | null {
   if (ITEM_ICON_KEYS.has(artKey)) return 'item-icon';
   if (PET_ART_KEYS.has(artKey)) return 'pet';
   if (BOSS_ART_KEYS.has(artKey)) return 'boss';
+  if ((VFX_TEXTURE_KEYS as readonly string[]).includes(artKey)) return 'vfx';
   if (SUMMON_ART_KEYS.has(artKey)) return 'summon';
   if (artKey.startsWith(DECOR_KEY_PREFIX)) return 'decor';
   return FIXED_KEYS.get(artKey) ?? null;
@@ -366,6 +368,14 @@ export class ArtRegistry {
       this.extras.set(artKey, slot);
       this.byArt.set(artKey, slot);
     }
+    // Task 33: owner VFX textures replace the generated ones by key (preloaded with the scene).
+    for (const artKey of VFX_TEXTURE_KEYS) {
+      const entry = manifest.get(artKey);
+      if (!entry || entry.kind !== 'vfx') continue;
+      const slot: Slot = { texture: artTextureKey(artKey), entry, loaded: false };
+      this.extras.set(artKey, slot);
+      this.byArt.set(artKey, slot);
+    }
     for (const id of SUMMON_IDS) {
       const entry = summonArtEntry(manifest, id);
       if (!entry) continue;
@@ -378,6 +388,11 @@ export class ArtRegistry {
       if (entry)
         this.bosses.set(bossId, { texture: artTextureKey(entry.key), entry, loaded: false });
     }
+  }
+  /** Task 33: the texture to draw for a VFX key: the owner's art once loaded, else the generated one. */
+  vfxTexture(key: string): string {
+    const slot = this.extras.get(key);
+    return slot && slot.loaded ? slot.texture : key;
   }
   /** Task 34: a summon's loaded sprite (ballista), else null (the Task 09.1 shape is drawn). */
   summon(id: string): { readonly texture: string; readonly entry: ArtEntry } | null {

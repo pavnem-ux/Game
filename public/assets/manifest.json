@@ -2373,6 +2373,146 @@
   "lazy": true,
   "source": "owner-generated (ChatGPT image)"
  },
+ "vfx_arrow_trail": {
+  "file": "assets/vfx/vfx_arrow_trail.webp",
+  "size": [
+   256,
+   52
+  ],
+  "kind": "vfx",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "vfx_blood_splash": {
+  "file": "assets/vfx/vfx_blood_splash.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "vfx",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "vfx_cracks_ground": {
+  "file": "assets/vfx/vfx_cracks_ground.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "vfx",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "vfx_flame": {
+  "file": "assets/vfx/vfx_flame.webp",
+  "size": [
+   156,
+   256
+  ],
+  "kind": "vfx",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "vfx_frost_burst": {
+  "file": "assets/vfx/vfx_frost_burst.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "vfx",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "vfx_glow_soft": {
+  "file": "assets/vfx/vfx_glow_soft.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "vfx",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "vfx_ice_shard": {
+  "file": "assets/vfx/vfx_ice_shard.webp",
+  "size": [
+   52,
+   256
+  ],
+  "kind": "vfx",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "vfx_lightning": {
+  "file": "assets/vfx/vfx_lightning.webp",
+  "size": [
+   256,
+   63
+  ],
+  "kind": "vfx",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "vfx_poison_drop": {
+  "file": "assets/vfx/vfx_poison_drop.webp",
+  "size": [
+   169,
+   256
+  ],
+  "kind": "vfx",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "vfx_rune_circle": {
+  "file": "assets/vfx/vfx_rune_circle.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "vfx",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "vfx_shockwave_ring": {
+  "file": "assets/vfx/vfx_shockwave_ring.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "vfx",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "vfx_slash_arc": {
+  "file": "assets/vfx/vfx_slash_arc.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "vfx",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "vfx_smoke_puff": {
+  "file": "assets/vfx/vfx_smoke_puff.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "vfx",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "vfx_spark_star": {
+  "file": "assets/vfx/vfx_spark_star.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "vfx",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
  "summon_ballista": {
   "file": "assets/summons/ballista.webp",
   "size": [

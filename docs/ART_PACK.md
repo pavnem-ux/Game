@@ -61,10 +61,15 @@ files stay byte-identical (the pack-2 entries were merged in the owner's 1-space
 images (≈ 0.24 MB), packs 5 + 6 (Task 30) 30 item icons and 6 pet sprites (≈ 0.35 MB),
 pack 7 (Task 31) 32 decor props, 5 menu backgrounds, the emblem
 and 11 objects (≈ 2.07 MB). Budget (owner decision, Task 31; 2 MiB in Task 26, 3 MiB in Task 30): in-game /
-preloaded art ≤ 4 MiB (now 3,231,514 bytes with the manifest) and the lazily loaded menu backgrounds
+preloaded art ≤ 4 MiB (now 3,405,721 bytes with the manifest) and the lazily loaded menu backgrounds
 ≤ 2 MiB (now 1,249,110 bytes), checked separately. Pack 8 (Task 32): 40 boss sprites (≈ 3.17 MB),
 lazy — a run loads only its map's boss and the map path only the selected map's portrait — so they
 are outside both totals; each file is capped at 128 KiB (provisional; largest 93,958 bytes).
+VFX pack (Task 33, provenance row 10; the owner's pack 9 is the Task 34 ballista): 14 VFX textures (≈ 0.17 MB, in the in-game total), game copies derived from the
+owner's 1024 px RGB-on-black PNGs (alpha from brightness, framed / rotated to the generated texture's
+shape, ≤ 256 px WebP); each replaces the generated `vfx_*` texture of the same key, fitted into its
+box; flame, blood, poison, lightning, ice shard and frost burst keep their own colours (no element
+tint).
 Pack 9 (Task 34): the Archer's ballista (`summon_ballista`, 15,494 bytes, in the in-game total).
 
 ### Adding a pack

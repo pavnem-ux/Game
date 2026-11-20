@@ -17,6 +17,14 @@ export const DEPTH = Object.freeze({
   overlay: 9.7,
 });
 type Img = Phaser.GameObjects.Image;
+/** Per-unit draw options; Task 33 `sx` / `sy`: a render-only pose scale (hero motion). */
+export interface UnitOptions {
+  alpha?: number;
+  glow?: number;
+  glowScale?: number;
+  sx?: number;
+  sy?: number;
+}
 /** setTexture only when it changes (Phaser re-resolves texture + frame on every call). */
 const tex = (img: Img, key: string): Img => (img.texture.key === key ? img : img.setTexture(key));
 
@@ -107,7 +115,7 @@ export class UnitRenderer {
     scale: number,
     time: number,
     flash: number,
-    options: { alpha?: number; glow?: number; glowScale?: number } = {},
+    options: UnitOptions = {},
   ): void {
     if (this.outside(x, y, 64 * scale * ART_SCALE)) return;
     const bob = Math.sin(time * 5 + this.phase(id)) * 1.4;
@@ -129,7 +137,10 @@ export class UnitRenderer {
     tex(this.bodies.next(), body)
       .setOrigin(0.5, 0.5)
       .setPosition(x, y + bob - squash * 6)
-      .setScale(scale * (1 + squash * 0.6), scale * (1 - squash))
+      .setScale(
+        scale * (1 + squash * 0.6) * (options.sx ?? 1),
+        scale * (1 - squash) * (options.sy ?? 1),
+      )
       .setAlpha(alpha)
       .setVisible(true);
   }
@@ -153,7 +164,7 @@ export class UnitRenderer {
     flip: 1 | -1,
     time: number,
     flash: number,
-    options: { alpha?: number; glow?: number; glowScale?: number } = {},
+    options: UnitOptions = {},
   ): void {
     const span = Math.max(height, radius * 2.4);
     if (this.outside(x, feetY - height / 2, span * 0.6)) return;
@@ -180,7 +191,10 @@ export class UnitRenderer {
     tex(this.bodies.next(), body)
       .setOrigin(originX, originY)
       .setPosition(x, feetY - Math.abs(bob))
-      .setScale(scale * (1 + squash * 0.6) * flip, scale * (1 - squash))
+      .setScale(
+        scale * (1 + squash * 0.6) * flip * (options.sx ?? 1),
+        scale * (1 - squash) * (options.sy ?? 1),
+      )
       .setAlpha(alpha)
       .setVisible(true);
   }

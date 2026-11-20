@@ -14,6 +14,8 @@
  * `templateId` = file name); `pet` sprites are keyed `pet_<pet id>` (optional `petId` = file name).
  * Task 32 (pack 8): `boss` sprites are keyed `boss_<boss id>` (optional `bossId` = file name); they
  * are loaded lazily (one per run / map panel), never by the boot or scene preload.
+ * Task 33: `vfx` textures keep their procedural key (`vfx_<name>`, file `vfx_<name>`): an owner pack
+ * replaces a generated effect texture by listing the same key.
  * Task 34 (pack 9): `summon` sprites (talent-spawned objects) are keyed `summon_<id>` (optional
  * `summonId` = file name); bottom-centre anchor, preloaded with the scene.
  */
@@ -40,6 +42,7 @@ export type ArtKind =
   | 'chest-open'
   | 'activity'
   | 'boss'
+  | 'vfx'
   | 'summon';
 /** Task 31: the biome (act) a decor prop belongs to, and whether it is tall (trees, columns …). */
 export type ArtDecorBiome = 'forest' | 'marsh' | 'ashlands' | 'frost';
@@ -95,6 +98,7 @@ const KINDS: readonly string[] = [
   'chest-open',
   'activity',
   'boss',
+  'vfx',
   'summon',
 ];
 const DECOR_BIOMES: readonly string[] = ['forest', 'marsh', 'ashlands', 'frost'];

@@ -26,3 +26,9 @@ PR: https://github.com/pavnem-ux/Game/pull/33
   (`0x5b3c9e`), 55 % opacity with a violet glow, fade in 0.15 s / out 0.3 s, mirrored like the
   player; while it moves (> 30 px/s) two afterimages trail along its last 0.2 s of positions.
 - Without the art (manifest missing / still loading) both keep the Task 09.1 shapes.
+- Merged `main` after Task 33 (PR #32): kept both sides everywhere (VFX textures + the ballista
+  summon); provenance rows 8 → 9 (ballista) → 10 (VFX); manifest 227 entries. The full desktop e2e then
+  timed out once in `art-browser` waiting for the run's boss sprite: it was queued behind the boot art
+  batch, which with 79 files exceeds Phaser's 32 parallel downloads and only advances on frames (the
+  test pauses the clock). `loadBossArt` now fetches the boss as a plain image, independent of the
+  Phaser loader and of frames (one request per texture); `art-browser` passes in the full e2e again.
