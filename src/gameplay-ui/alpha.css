@@ -2209,6 +2209,12 @@ body {
 .art-icon.icon-itemSmall {
   --size: var(--icon-itemSmall);
 }
+.art-icon.icon-buff {
+  --size: var(--icon-buff);
+}
+.art-icon.icon-popup {
+  --size: var(--icon-popup);
+}
 /* Level III «Awakening»: the same icon with a gold ring and glow (no extra art). */
 .synergy-icon.is-awakened {
   border-radius: 50%;
@@ -2282,4 +2288,10 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+
+/* Task 31: buff icons (art pack 7) in the buff bar and the chest pickup popup. */
+.chest-popup .buff-icon {
+  margin-right: 6px;
+  vertical-align: middle;
 }

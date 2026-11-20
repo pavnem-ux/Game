@@ -366,7 +366,8 @@ assert.equal(shots.fallback.hub.emblems, 1, 'fallback: hub emblem');
 for (const tag of VIEWPORTS)
   assert.deepEqual(
     shots[tag].badges,
-    ['/assets/pickups/coin.webp', '/assets/pickups/ore.webp'],
+    // Task 31: the pack-7 badge icons replace the Task 26 pickup art in the UI.
+    ['/assets/objects/icon_gold.webp', '/assets/objects/icon_ore.webp'],
     `${tag}: Gold / Ore badges with the pack icons`,
   );
 assert.deepEqual(shots.fallback.badges, ['svg', 'svg'], 'fallback: Gold / Ore SVG icons');

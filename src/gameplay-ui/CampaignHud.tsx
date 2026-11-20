@@ -2,6 +2,7 @@ import type { GameplaySnapshot } from '../gameplay';
 import { BUFFS } from '../gameplay/chests';
 import type { BuffId, ChestContent } from '../gameplay/chests';
 import { nextEventCountdown } from './next-event';
+import { BuffIcon } from './kit';
 import { EN, formatNumber } from './strings-en';
 
 /** Task 12: seconds a chest pickup popup stays on screen. */
@@ -64,7 +65,7 @@ export function CampaignHud({ world }: { world: GameplaySnapshot }) {
               className={`buff buff-${b.id}`}
               aria-label={`${b.name}: ${Math.ceil(b.remaining)} s`}
             >
-              <span aria-hidden="true">{BUFF_ICONS[b.id]}</span>
+              <BuffIcon id={b.id} glyph={BUFF_ICONS[b.id]} size="buff" />
               <strong>{b.name}</strong>
               <small>{Math.ceil(b.remaining)} s</small>
             </li>
@@ -73,6 +74,14 @@ export function CampaignHud({ world }: { world: GameplaySnapshot }) {
       )}
       {popup && (
         <div className={`chest-popup chest-popup-${popup.chestType}`} role="status">
+          {/* Task 31: buff / magnet icon from art pack 7 (heal and Gold keep text only). */}
+          {(popup.content === 'magnet' || popup.content in BUFF_ICONS) && (
+            <BuffIcon
+              id={popup.content as BuffId | 'magnet'}
+              glyph="" // no icon before Task 31: the fallback adds nothing
+              size="popup"
+            />
+          )}
           {chestPopupText(popup.content, popup.amount)}
         </div>
       )}

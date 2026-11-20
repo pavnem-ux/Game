@@ -3,6 +3,7 @@ import type { CharacterClass } from '../../character-stats';
 import type { ArtEntry, ArtManifest } from '../../engine/visuals/art-manifest';
 import { artManifestStore, artUrl } from '../../engine/visuals/art-pack';
 import {
+  BUFF_ART,
   itemIconEntry,
   synergyIconEntry,
   talentBranchIconEntry,
@@ -139,4 +140,27 @@ export function ItemIconView({
 }
 export function ItemIcon(props: { templateId: string; size: IconSize; level?: number }) {
   return <ItemIconView manifest={useArtManifest()} {...props} />;
+}
+
+/**
+ * Task 31: a chest buff / magnet icon from art pack 7 (HUD buff bar and pickup popup), or the
+ * given glyph (the current look) while the manifest loads, without the icon, or if it fails.
+ */
+export function BuffIconView({
+  manifest,
+  id,
+  glyph,
+  size,
+}: {
+  manifest: ArtManifest | null;
+  id: keyof typeof BUFF_ART;
+  glyph: string;
+  size: IconSize;
+}) {
+  const entry = manifest?.get(BUFF_ART[id]) ?? null;
+  if (!entry || entry.kind !== 'buff-icon') return <span aria-hidden="true">{glyph}</span>;
+  return <ArtImage entry={entry} size={size} className="buff-icon" />;
+}
+export function BuffIcon(props: { id: keyof typeof BUFF_ART; glyph: string; size: IconSize }) {
+  return <BuffIconView manifest={useArtManifest()} {...props} />;
 }

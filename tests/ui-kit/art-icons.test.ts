@@ -9,6 +9,7 @@ import {
   SKILL_ICON_SIZES,
   SynergyIcon,
   SynergyIconView,
+  BuffIconView,
   ItemIconView,
   TalentBranchIconView,
   iconSizeVars,
@@ -147,5 +148,17 @@ describe('Task 30 — item icon', () => {
     expect(html('starter_staff', 0)).not.toContain('item-upgrade-badge');
     expect(html('no_such_template', 2)).toBe('');
     expect(html('heavy_sword', 2, null)).toBe('');
+  });
+});
+
+describe('Task 31 — buff icons', () => {
+  it('buff / magnet icon from the pack; the given glyph (the current look) without it', () => {
+    const html = (id: 'fury' | 'haste' | 'lightStep' | 'magnet', m: typeof manifest | null) =>
+      renderToStaticMarkup(
+        createElement(BuffIconView, { manifest: m, id, glyph: '⚔', size: 'buff' }),
+      );
+    expect(html('haste', manifest)).toContain('/assets/objects/buff_quick_hands.webp');
+    expect(html('magnet', manifest)).toContain('/assets/objects/buff_magnet.webp');
+    expect(html('fury', null)).toBe('<span aria-hidden="true">⚔</span>');
   });
 });

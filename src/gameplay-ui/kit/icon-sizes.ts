@@ -39,6 +39,10 @@ export const ICON_SIZES = Object.freeze({
   itemDetail: 64,
   /** Task 30: item icon inline in compare titles and quest rewards. */
   itemSmall: 24,
+  /** Task 31: buff icon in the HUD buff bar. */
+  buff: 28,
+  /** Task 31: buff / magnet icon in the chest pickup popup. */
+  popup: 32,
 });
 export type IconSize = keyof typeof ICON_SIZES;
 /** The size config as CSS custom properties (`--icon-<size>`). */

@@ -1383,6 +1383,8 @@ export class GameplayWorld {
     content: ChestContent;
     amount: number;
     time: number;
+    x: number;
+    y: number;
   }> | null = null;
   /**
    * Spawns a chest of `type` now (normal placement rules and limit); `content` forces what it
@@ -1929,6 +1931,8 @@ export class GameplayWorld {
       content,
       amount,
       time: this.clock,
+      x: chest.x,
+      y: chest.y,
     });
     if (extra.length) this.syncBuffs();
   }
