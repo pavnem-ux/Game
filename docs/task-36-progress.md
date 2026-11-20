@@ -9,7 +9,7 @@ PR: https://github.com/pavnem-ux/Game/pull/34
 - [x] 0 Setup: branch, spec, progress file, draft PR
 - [x] 1 Core: speeds ×1 / ×1.5 / ×2 on the simulation-time path, persisted setting, same results at every speed (test)
 - [x] 2 UI: HUD button next to the timer (cycles), pause menu and Settings «Game speed»
-- [ ] 3 Bug report includes the speed; QA time scale still absent from production (check)
+- [x] 3 Bug report includes the speed; QA time scale still absent from production (check)
 - [ ] 4 Delivery: final checks, README line, PR
 
 ## Decisions / blockers
@@ -28,3 +28,7 @@ PR: https://github.com/pavnem-ux/Game/pull/34
   0.99 / 1.48 / 1.98 simulation s per real s; the pause stays frozen when the choice changes there;
   the choice survives a reload. On short / narrow screens the Task 16 CSS hides the HUD timer block,
   and with it the button (mobile is frozen); the pause menu and Settings still offer the choice.
+- Bug report: `run.gameSpeed` (the current setting; ×1 when not given; absent in older reports,
+  format version unchanged). Production check (`tests/alpha-production.mjs`): the pause choice and
+  the HUD button exist and cycle in the production build; the QA time-scale message is absent from
+  the production JS (the QA ×2 / ×4 / ×8 scale stays DEV / QA-only).

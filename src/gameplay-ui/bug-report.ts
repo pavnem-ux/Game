@@ -20,6 +20,8 @@ export interface BugReportRun {
   readonly runLevel: number;
   /** Simulation seconds elapsed in the run. */
   readonly time: number;
+  /** Task 36: the player's game speed when the report was made (absent in older reports). */
+  readonly gameSpeed?: number;
   readonly status: string;
   readonly screen: string;
   readonly kills: number;
@@ -58,6 +60,8 @@ export interface ReportInput {
   readonly screen: string;
   readonly profile: PlayerProfile | null;
   readonly errors: readonly ErrorEntry[];
+  /** Task 36: the current game speed (×1 when not given). */
+  readonly gameSpeed?: number;
 }
 
 export function buildBugReport(input: ReportInput): BugReport {
@@ -80,6 +84,7 @@ export function buildBugReport(input: ReportInput): BugReport {
           permanentLevel: w.character.permanentLevel,
           runLevel: w.progression.level,
           time: w.time,
+          gameSpeed: input.gameSpeed ?? 1,
           status: campaign?.status ?? 'sandbox',
           screen: input.screen,
           kills: w.kills,
