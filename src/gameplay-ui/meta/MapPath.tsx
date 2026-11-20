@@ -5,7 +5,7 @@ import { CLASS_LABELS } from '../../gameplay';
 import { isMapUnlocked, recommendedLevel } from '../../profile';
 import { campaignStore } from '../campaign-state';
 import { clock, factor, minutes } from '../campaign-format';
-import { Button, Panel } from '../kit';
+import { BackgroundArt, Button, Panel } from '../kit';
 import { EN } from '../strings-en';
 
 const M = EN.meta.maps;
@@ -64,6 +64,8 @@ export function MapPathPage() {
                 style={{ top, height: bottom - top }}
                 aria-label={M.act(a.roman, a.name)}
               >
+                {/* Task 31: the act's background (lazy: only on the map path). */}
+                <BackgroundArt which={a.id as 1 | 2 | 3 | 4} />
                 <h3 className="act-banner">
                   <small>Act {a.roman}</small>
                   {a.name}

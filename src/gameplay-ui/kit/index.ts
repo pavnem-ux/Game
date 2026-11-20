@@ -32,7 +32,9 @@ export { ICON_SIZES, iconSizeVars } from './icon-sizes';
 export type { IconSize } from './icon-sizes';
 export {
   ArtImage,
+  BackgroundArt,
   BuffIcon,
+  Emblem,
   BuffIconView,
   ItemIcon,
   ItemIconView,

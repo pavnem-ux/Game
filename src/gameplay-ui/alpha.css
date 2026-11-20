@@ -2215,6 +2215,12 @@ body {
 .art-icon.icon-popup {
   --size: var(--icon-popup);
 }
+.art-icon.icon-emblem {
+  --size: var(--icon-emblem);
+}
+.art-icon.icon-emblemCompact {
+  --size: var(--icon-emblemCompact);
+}
 /* Level III «Awakening»: the same icon with a gold ring and glow (no extra art). */
 .synergy-icon.is-awakened {
   border-radius: 50%;
@@ -2294,4 +2300,49 @@ body {
 .chest-popup .buff-icon {
   margin-right: 6px;
   vertical-align: middle;
+}
+
+/* ── Task 31: menu backgrounds (lazy) + emblem. A dark gradient / vignette keeps text readable. ── */
+.art-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.art-bg.is-loaded {
+  opacity: 1;
+}
+.art-bg img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.art-bg-shade {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at center, transparent 40%, rgba(0, 0, 0, 0.6) 100%),
+    linear-gradient(180deg, rgba(8, 10, 18, 0.5), rgba(8, 10, 18, 0.72));
+}
+/* The menu shell lifts its children above the backdrop; the background stays behind them. */
+.meta-ui.campaign-menu > .art-bg.meta-art-bg {
+  position: absolute;
+  z-index: 0;
+}
+.hub-hero .emblem {
+  display: block;
+  margin: 0 0 4px;
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.55));
+}
+@media (max-width: 760px), (max-height: 560px) {
+  .hub-hero .emblem {
+    --size: var(--icon-emblemCompact);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .art-bg {
+    transition: none;
+  }
 }

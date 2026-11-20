@@ -39,6 +39,9 @@ describe('Task 28 — one icon size config', () => {
       expect(ICON_SIZES[k], k).toBeLessThanOrEqual(128);
     for (const k of ['branch', 'branchCompact', 'talentNode', 'talentNodeTouch'] as const)
       expect(ICON_SIZES[k], k).toBeLessThanOrEqual(192);
+    // Task 31: the hub emblem (512 px source).
+    expect(ICON_SIZES.emblemCompact).toBeLessThan(ICON_SIZES.emblem);
+    expect(ICON_SIZES.emblem).toBeLessThanOrEqual(512);
   });
   it('every size reaches the stylesheet as --icon-<size>', () => {
     const css = readFileSync('src/gameplay-ui/alpha.css', 'utf8');

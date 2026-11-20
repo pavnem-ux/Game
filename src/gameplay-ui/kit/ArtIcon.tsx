@@ -4,6 +4,8 @@ import type { ArtEntry, ArtManifest } from '../../engine/visuals/art-manifest';
 import { artManifestStore, artUrl } from '../../engine/visuals/art-pack';
 import {
   BUFF_ART,
+  EMBLEM_ART,
+  backgroundEntry,
   itemIconEntry,
   synergyIconEntry,
   talentBranchIconEntry,
@@ -163,4 +165,45 @@ export function BuffIconView({
 }
 export function BuffIcon(props: { id: keyof typeof BUFF_ART; glyph: string; size: IconSize }) {
   return <BuffIconView manifest={useArtManifest()} {...props} />;
+}
+
+/**
+ * Task 31: a full-size menu background (art pack 7) behind a dark gradient + vignette so text and
+ * buttons stay readable. Lazy by construction: the `<img>` exists only while its screen is shown
+ * (never in the boot / scene preload). Fades in once decoded; nothing without the art.
+ */
+export function BackgroundArt({
+  which,
+  className = '',
+}: {
+  which: 'menu' | 1 | 2 | 3 | 4;
+  className?: string;
+}) {
+  const entry = backgroundEntry(useArtManifest(), which);
+  const [loaded, setLoaded] = useState<string | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
+  if (!entry || failed === entry.file) return null;
+  return (
+    <div
+      className={`art-bg ${loaded === entry.file ? 'is-loaded' : ''} ${className}`}
+      aria-hidden="true"
+    >
+      <img
+        src={artUrl(entry.file)}
+        alt=""
+        decoding="async"
+        draggable={false}
+        onLoad={() => setLoaded(entry.file)}
+        onError={() => setFailed(entry.file)}
+      />
+      <div className="art-bg-shade" />
+    </div>
+  );
+}
+/** Task 31: the game emblem (hub title); nothing without the art (the text title stays). */
+export function Emblem({ size }: { size: IconSize }) {
+  const entry = useArtManifest()?.get(EMBLEM_ART) ?? null;
+  return (
+    <ArtImage entry={entry && entry.kind === 'ui' ? entry : null} size={size} className="emblem" />
+  );
 }
