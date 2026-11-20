@@ -2,7 +2,7 @@ import { FLOATING_LIMITS, FloatingNumbers, HitFlashes, shakeFor } from './game-f
 import type { FloatingKind } from './game-feel';
 import { uiSettings } from '../gameplay-ui/ui-settings';
 import Phaser from 'phaser';
-import { frameStep, isDebugTimeScale } from './time-scale';
+import { SIM_STEP, SimStepper, frameStep, isDebugTimeScale } from './time-scale';
 import type { DebugTimeScale } from './time-scale';
 import { GameplayWorld, ALPHA, CLASS_LABELS } from '../gameplay';
 import type { GameplayOptions, GameplaySnapshot, WorldEvent } from '../gameplay';
@@ -176,6 +176,8 @@ export class AlphaScene extends Phaser.Scene {
   private nameLabels: Phaser.GameObjects.Text[] = [];
   /** Task 08 debug accelerated mode (DEV/QA only): frame time multiplier for the same simulation. */
   private timeScale: DebugTimeScale = 1;
+  /** Task 36: scaled frame time → whole fixed simulation steps. */
+  private readonly simStepper = new SimStepper();
   private testing?: TestingController;
   private testingWorld?: (options: GameplayOptions) => GameplayWorld;
   private testingReady: Promise<void> = Promise.resolve();
@@ -332,6 +334,7 @@ export class AlphaScene extends Phaser.Scene {
         ? this.testingWorld(input)
         : new GameplayWorld(input); // Validate before replacing a session.
     this.world = next;
+    this.simStepper.reset();
     // Task 18: the run's map decides the biome (same map ⇒ same look).
     this.mapId = options.campaign?.mapId ?? null;
     this.biome.build(this.mapId, this.graphicsQuality());
@@ -596,7 +599,11 @@ export class AlphaScene extends Phaser.Scene {
   update(time: number, delta: number) {
     // Task 16: the main camera shows the same world area at any DPR (zoom = DPR).
     if (this.cameras.main.zoom !== this.dpr) this.cameras.main.setZoom(this.dpr);
-    const dt = frameStep(delta, import.meta.env.DEV || __QA_BUILD__ ? this.timeScale : 1);
+    // Task 36: the player's game speed (production) times the QA time scale (DEV / QA only).
+    const dt = frameStep(
+      delta,
+      uiSettings.get().gameSpeed * (import.meta.env.DEV || __QA_BUILD__ ? this.timeScale : 1),
+    );
     this.frameSeconds = Math.min(0.1, Math.max(0, delta / 1000));
     this.biome.update(this.cameras.main.worldView, time / 1000, Math.min(0.05, delta / 1000));
     if (this.world) {
@@ -616,7 +623,8 @@ export class AlphaScene extends Phaser.Scene {
       const viewport = this.cssViewport();
       this.world.setViewport(viewport.width, viewport.height);
       this.world.setMovement(move.x, move.y);
-      this.world.update(dt);
+      // Task 36: whole fixed steps only (identical results at every speed and frame rate).
+      for (let n = this.simStepper.steps(dt); n > 0; n--) this.world.update(SIM_STEP);
       this.draw(this.world.getSnapshot());
     } else if (this.graphics) {
       this.graphics.clear();
