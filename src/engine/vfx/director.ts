@@ -140,7 +140,9 @@ export class VfxDirector {
         const target = e.targetId ? this.enemyAt(s, e.targetId) : null;
         // Marks are cast on their target; everything else at the hero.
         const at = r.cast.kind === 'rune' && target && !r.area ? target : e.origin;
-        this.cast(r, at.x, at.y);
+        // Slashes face the target (or sweep from the hero's right without one).
+        const angle = target ? Math.atan2(target.y - e.origin.y, target.x - e.origin.x) : 0;
+        this.cast(r, at.x, at.y, angle);
         if (r.cast.kind === 'glow') this.motion('cast', 0, 0);
         return;
       }
@@ -191,7 +193,7 @@ export class VfxDirector {
     draw();
     this.fx.alpha = before;
   }
-  private cast(r: VfxRecipe, x: number, y: number) {
+  private cast(r: VfxRecipe, x: number, y: number, angle: number) {
     const cast = r.cast!;
     const c = ELEMENT_PALETTE[r.element];
     if (cast.kind === 'glow') this.fx.flash(x, y, c.core, cast.size, 0.18);
@@ -199,6 +201,7 @@ export class VfxDirector {
       this.fx.decal(x, y, 'vfx_rune_circle', c.color, cast.size / 2, 0.5, 0.85, 2);
       this.fx.flash(x, y, c.color, cast.size * 0.8, 0.2, true);
     } else if (cast.kind === 'ring') this.fx.ring(x, y, c.color, 8, cast.size, 0.4);
+    else if (cast.size > 0) this.fx.arc(x, y, angle, cast.size, c.color, 0.18);
   }
   /** An impact at (x, y): `k` scales the size (light recipes, awakened synergies). */
   private impact(r: VfxRecipe, x: number, y: number, critical: boolean, k: number) {

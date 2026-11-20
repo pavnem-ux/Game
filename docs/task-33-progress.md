@@ -11,7 +11,7 @@ PR: https://github.com/pavnem-ux/Game/pull/32
 - [x] 2 Recipes: one `skillId → recipe` table (37 skills), basic attacks per class, synergies (III = bigger / brighter), talent secondaries and pet hits (lighter)
 - [x] 3 Scene: events → recipes; slash arcs, arrow / bolt trails, element impacts, crit flash; player VFX below telegraphs and enemy projectiles
 - [x] 4 Feel: hero lunge / cast glow / bow squash (≤ 120 ms), render-only hit-stop on crits / boss hits, heavy-hit shake (setting respected)
-- [ ] 5 Delivery: VFX on / off ⇒ identical simulation, caps per quality, final checks, README line, PR
+- [x] 5 Delivery: VFX on / off ⇒ identical simulation, caps per quality, final checks, README line, PR
 
 ## Decisions / blockers
 
@@ -39,3 +39,7 @@ PR: https://github.com/pavnem-ux/Game/pull/32
   (bob / squash) for 40 ms on crits and boss hits (position keeps following the simulation); a crit
   on the boss or a `heavy` area shakes 110 ms × 0.0035 only with the screen-shake setting, at most
   every 0.25 s.
+- Delivery: `tests/engine/vfx-determinism.test.ts` runs each class twice (same seed / steps), once
+  with the director reading every frame and the world's attack sources: identical digests. FPS
+  (`tests/art-fps.mjs`, 117 enemies, DPR 1, one sandbox round): 56.1 procedural / 52.3 art — in line
+  with the Task 25–26 table; not measured on real devices.

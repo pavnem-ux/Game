@@ -138,6 +138,24 @@ describe('Task 33 — director signals (synthetic events)', () => {
     };
     expect(run(20)).toBe(run(120));
   });
+  it('a slash skill cast draws an arc facing its target', () => {
+    const { store, director } = setup();
+    director.frame(
+      snapshot(1),
+      [
+        ev(1, 'skill', {
+          type: 'skill-activated',
+          skillId: 'shield_bash',
+          rank: 1,
+          origin: { x: 100, y: 0 },
+          targetId: 'e1',
+        }),
+      ],
+      ctx,
+    );
+    expect(store.at(0).tex).toBe('vfx_slash_arc');
+    expect(store.at(0).rot).toBeCloseTo(Math.PI / 2, 9); // e1 is straight below (+y)
+  });
   it('passive skills never draw; unknown events draw nothing', () => {
     const { store, director } = setup();
     director.frame(

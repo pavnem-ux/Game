@@ -61,8 +61,9 @@ const DEFAULTS: Omit<Particle, 'tex' | 'x' | 'y' | 'life'> = Object.freeze({
 export class ParticleStore {
   private readonly items: Particle[] = [];
   private n = 0;
-  /** Spawns refused (cap reached or thinned) since construction: diagnostics / tests. */
+  /** Spawns refused (cap reached or thinned) / accepted since construction: diagnostics / tests. */
   dropped = 0;
+  spawned = 0;
   private skip = false;
   constructor(
     readonly capacity: number,
@@ -117,6 +118,7 @@ export class ParticleStore {
     const p = this.items[this.n++];
     Object.assign(p, DEFAULTS, spec);
     p.born = now;
+    this.spawned++;
     return true;
   }
   /** Advances motion by `dt` and removes particles whose life has ended at `now`. */
