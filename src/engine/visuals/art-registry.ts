@@ -351,7 +351,8 @@ export class ArtRegistry {
     }
     for (const bossId of Object.keys(BOSS_DEFINITIONS)) {
       const entry = bossArtEntry(manifest, bossId);
-      if (entry) this.bosses.set(bossId, { texture: artTextureKey(entry.key), entry, loaded: false });
+      if (entry)
+        this.bosses.set(bossId, { texture: artTextureKey(entry.key), entry, loaded: false });
     }
   }
   /** Task 32: the sprite entry to load lazily for a boss, or null (procedural boss). */
