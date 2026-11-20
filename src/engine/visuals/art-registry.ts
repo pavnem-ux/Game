@@ -3,6 +3,7 @@ import { SKILL_CATALOG, SYNERGY_RULES } from '../../skills';
 import { TALENT_CATALOG_DATA } from '../../talents';
 import { GEAR_TEMPLATES, STARTER_WEAPONS } from '../../equipment/config';
 import { PET_IDS } from '../../pets/config';
+import { BOSS_DEFINITIONS } from '../../campaign/bosses';
 import {
   SKILL_ICON_KEY_PREFIX,
   SYNERGY_ICON_KEY_PREFIX,
@@ -10,6 +11,7 @@ import {
   ITEM_ICON_KEY_PREFIX,
   PET_ART_KEY_PREFIX,
   DECOR_KEY_PREFIX,
+  BOSS_ART_KEY_PREFIX,
 } from './art-manifest';
 import type { ArtDecorBiome } from './art-manifest';
 import type { ArtEntry, ArtKind, ArtManifest } from './art-manifest';
@@ -251,6 +253,20 @@ export function itemIconEntries(manifest: ArtManifest | null): ArtEntry[] {
  */
 export const petArtKey = (petId: string): string => `${PET_ART_KEY_PREFIX}${petId}`;
 const PET_ART_KEYS: ReadonlySet<string> = new Set(PET_IDS.map(petArtKey));
+/**
+ * Task 32 (pack 8): the sprite of a campaign boss (`boss_<boss id>`, 512 px, feet anchor, facing
+ * right). Lazy: the run loads only its map's boss, the map-path panel only the selected map's boss;
+ * never part of `sceneEntries` (the boot / scene preload). Missing → the procedural boss stays.
+ */
+export const bossArtKey = (bossId: string): string => `${BOSS_ART_KEY_PREFIX}${bossId}`;
+const BOSS_ART_KEYS: ReadonlySet<string> = new Set(Object.keys(BOSS_DEFINITIONS).map(bossArtKey));
+/** The sprite entry of a campaign boss, or null (unknown id, no manifest, other kind). */
+export function bossArtEntry(manifest: ArtManifest | null, bossId: string): ArtEntry | null {
+  const key = bossArtKey(bossId);
+  if (!BOSS_ART_KEYS.has(key)) return null;
+  const entry = manifest?.get(key);
+  return entry && entry.kind === 'boss' ? entry : null;
+}
 export function petArtEntry(manifest: ArtManifest | null, petId: string): ArtEntry | null {
   const entry = manifest?.get(petArtKey(petId));
   return entry && entry.kind === 'pet' ? entry : null;
@@ -273,6 +289,7 @@ export function artUsage(artKey: string): ArtKind | null {
   if (TALENT_BRANCH_KEYS.has(artKey)) return 'talent-branch-icon';
   if (ITEM_ICON_KEYS.has(artKey)) return 'item-icon';
   if (PET_ART_KEYS.has(artKey)) return 'pet';
+  if (BOSS_ART_KEYS.has(artKey)) return 'boss';
   if (artKey.startsWith(DECOR_KEY_PREFIX)) return 'decor';
   return FIXED_KEYS.get(artKey) ?? null;
 }
@@ -295,6 +312,8 @@ export class ArtRegistry {
   /** Task 31: decor props per act, and scene objects (open chests, activities) by art key. */
   private readonly decor = new Map<ActId, Slot[]>();
   private readonly extras = new Map<string, Slot>();
+  /** Task 32: boss sprites by boss id (lazy: kept out of `byArt`, so out of the scene preload). */
+  private readonly bosses = new Map<string, Slot>();
   constructor(manifest: ArtManifest) {
     const looks = [
       ...Object.entries(UNIT_ART),
@@ -330,6 +349,20 @@ export class ArtRegistry {
       this.extras.set(artKey, slot);
       this.byArt.set(artKey, slot);
     }
+    for (const bossId of Object.keys(BOSS_DEFINITIONS)) {
+      const entry = bossArtEntry(manifest, bossId);
+      if (entry)
+        this.bosses.set(bossId, { texture: artTextureKey(entry.key), entry, loaded: false });
+    }
+  }
+  /** Task 32: the sprite entry to load lazily for a boss, or null (procedural boss). */
+  bossEntry(bossId: string): ArtEntry | null {
+    return this.bosses.get(bossId)?.entry ?? null;
+  }
+  /** Task 32: a boss's loaded sprite, else null (the procedural boss is drawn until it loads). */
+  boss(bossId: string): { readonly texture: string; readonly entry: ArtEntry } | null {
+    const slot = this.bosses.get(bossId);
+    return slot && slot.loaded ? slot : null;
   }
   /**
    * Task 31: the act's decor props once every one of them has loaded (one consistent set: never a
@@ -353,7 +386,8 @@ export class ArtRegistry {
   /**
    * Every manifest entry the in-run scene loads: units, pickups and grounds (Task 26), pets
    * (Task 30), decor, open chests and activity objects (Task 31). Portraits, icons, the emblem and
-   * the menu backgrounds are DOM images loaded by the menus (backgrounds lazily, per screen).
+   * the menu backgrounds are DOM images loaded by the menus (backgrounds lazily, per screen). Boss
+   * sprites (Task 32) are loaded lazily per run (`loadBossArt`), never here.
    */
   sceneEntries(): ArtEntry[] {
     return [...this.byArt.values()].map((s) => s.entry);
@@ -361,6 +395,10 @@ export class ArtRegistry {
   markLoaded(artKey: string): void {
     const slot = this.byArt.get(artKey);
     if (slot) slot.loaded = true;
+    if (artKey.startsWith(BOSS_ART_KEY_PREFIX)) {
+      const boss = this.bosses.get(artKey.slice(BOSS_ART_KEY_PREFIX.length));
+      if (boss) boss.loaded = true;
+    }
   }
   /** The texture to draw for a look: its loaded art, else the procedural texture itself. */
   texture(key: TextureKey): string {

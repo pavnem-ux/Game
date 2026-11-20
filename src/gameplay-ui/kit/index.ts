@@ -33,6 +33,8 @@ export type { IconSize } from './icon-sizes';
 export {
   ArtImage,
   BackgroundArt,
+  BossPortrait,
+  BossPortraitView,
   BuffIcon,
   Emblem,
   BuffIconView,

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ART_BODY_WIDTH_PER_RADIUS,
   ART_DISPLAY,
+  BOSS_BODY_WIDTH_PER_RADIUS,
   ENEMY_FACING_THRESHOLD,
   PLAYER_FACING_THRESHOLD,
   artLayout,
@@ -85,6 +86,21 @@ describe('Task 25 — size and anchor', () => {
     expect(artTuning('enemy_treasure_thief')).toEqual({ scale: 1, facesLeft: true, flip: true });
     expect(artTuning('nest_blight')).toEqual({ scale: 1, facesLeft: false, flip: false });
     expect(artTuning('player_mage')).toEqual({ scale: 1, facesLeft: false, flip: true });
+  });
+});
+
+describe('Task 32 — boss sprite size', () => {
+  const bounds = { width: 512, height: 512, left: 60, right: 451, top: 20, bottom: 511 };
+  it('visible body = 2.6 × the boss collision radius (one value); feet anchored; flips toward the player', () => {
+    expect(BOSS_BODY_WIDTH_PER_RADIUS).toBe(2.6);
+    for (const radius of [30, 36, 44]) {
+      const l = artLayout(bounds, radius, artTuning('boss_thornwarden'));
+      expect(l.scale * (bounds.right - bounds.left + 1)).toBeCloseTo(2.6 * radius, 9);
+      expect(l.originY).toBe(1);
+    }
+    expect(artTuning('boss_ash_wolf')).toMatchObject({ facesLeft: false, flip: true });
+    // Ordinary units keep the 2.4 rule.
+    expect(artTuning('enemy_melee').scale).toBe(1);
   });
 });
 

@@ -1892,5 +1892,485 @@
   "anchor": "center",
   "source": "owner-generated (ChatGPT image)",
   "activity": "shrine"
+ },
+ "boss_ash_wolf": {
+  "file": "assets/bosses/ash_wolf.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "ash_wolf",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_barrow_king": {
+  "file": "assets/bosses/barrow_king.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "barrow_king",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_bone_warden": {
+  "file": "assets/bosses/bone_warden.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "bone_warden",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_copper_serpent": {
+  "file": "assets/bosses/copper_serpent.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "copper_serpent",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_crimson_reaper": {
+  "file": "assets/bosses/crimson_reaper.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "crimson_reaper",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_drowse": {
+  "file": "assets/bosses/drowse.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "drowse",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_dusk_knight": {
+  "file": "assets/bosses/dusk_knight.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "dusk_knight",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_fallen_bellringer": {
+  "file": "assets/bosses/fallen_bellringer.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "fallen_bellringer",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_shadow_ferryman": {
+  "file": "assets/bosses/shadow_ferryman.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "shadow_ferryman",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_fire_rider": {
+  "file": "assets/bosses/fire_rider.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "fire_rider",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_ice_voivode": {
+  "file": "assets/bosses/ice_voivode.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "ice_voivode",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_giant_bear": {
+  "file": "assets/bosses/giant_bear.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "giant_bear",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_gingerbread_giant": {
+  "file": "assets/bosses/gingerbread_giant.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "gingerbread_giant",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_key_keeper": {
+  "file": "assets/bosses/key_keeper.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "key_keeper",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_storm_lord": {
+  "file": "assets/bosses/storm_lord.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "storm_lord",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_last_dark": {
+  "file": "assets/bosses/last_dark.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "last_dark",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_marsh_witch": {
+  "file": "assets/bosses/marsh_witch.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "marsh_witch",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_graveyard_master": {
+  "file": "assets/bosses/graveyard_master.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "graveyard_master",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_mire_serpent": {
+  "file": "assets/bosses/mire_serpent.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "mire_serpent",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_raven_prince": {
+  "file": "assets/bosses/raven_prince.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "raven_prince",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_rusted_gatekeeper": {
+  "file": "assets/bosses/rusted_gatekeeper.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "rusted_gatekeeper",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_sea_serpent": {
+  "file": "assets/bosses/sea_serpent.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "sea_serpent",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_stone_colossus": {
+  "file": "assets/bosses/stone_colossus.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "stone_colossus",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_dark_storyteller": {
+  "file": "assets/bosses/dark_storyteller.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "dark_storyteller",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_faceless_tsar": {
+  "file": "assets/bosses/faceless_tsar.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "faceless_tsar",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_midnight_miller": {
+  "file": "assets/bosses/midnight_miller.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "midnight_miller",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_mirror_kikimora": {
+  "file": "assets/bosses/mirror_kikimora.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "mirror_kikimora",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_mourner": {
+  "file": "assets/bosses/mourner.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "mourner",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_noon_wraith": {
+  "file": "assets/bosses/noon_wraith.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "noon_wraith",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_old_leshy": {
+  "file": "assets/bosses/old_leshy.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "old_leshy",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_renegade_stargazer": {
+  "file": "assets/bosses/renegade_stargazer.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "renegade_stargazer",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_scarlet_knight": {
+  "file": "assets/bosses/scarlet_knight.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "scarlet_knight",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_seer_owl": {
+  "file": "assets/bosses/seer_owl.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "seer_owl",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_water_tsar": {
+  "file": "assets/bosses/water_tsar.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "water_tsar",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_withered_tsarevna": {
+  "file": "assets/bosses/withered_tsarevna.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "withered_tsarevna",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_thornwarden": {
+  "file": "assets/bosses/thornwarden.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "thornwarden",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_thunder_kite": {
+  "file": "assets/bosses/thunder_kite.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "thunder_kite",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_deep_smith": {
+  "file": "assets/bosses/deep_smith.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "deep_smith",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_deathless_guard": {
+  "file": "assets/bosses/deathless_guard.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "deathless_guard",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "boss_edge_warden": {
+  "file": "assets/bosses/edge_warden.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "boss",
+  "bossId": "edge_warden",
+  "anchor": "bottom-center",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
  }
 }

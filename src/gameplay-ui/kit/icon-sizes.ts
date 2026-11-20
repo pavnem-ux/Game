@@ -47,6 +47,8 @@ export const ICON_SIZES = Object.freeze({
   emblem: 168,
   /** Task 31: the emblem on short / narrow screens. */
   emblemCompact: 96,
+  /** Task 32: the boss portrait in the map-path side panel (the source is 512 px). */
+  bossPanel: 72,
 });
 export type IconSize = keyof typeof ICON_SIZES;
 /** The size config as CSS custom properties (`--icon-<size>`). */

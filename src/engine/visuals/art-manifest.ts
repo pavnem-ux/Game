@@ -12,6 +12,8 @@
  * and must name their `characterClass` and `branch` (positive integer; one emblem per pair).
  * Task 30 (packs 5–6): `item-icon` entries are keyed `item_<gear template id>` (optional
  * `templateId` = file name); `pet` sprites are keyed `pet_<pet id>` (optional `petId` = file name).
+ * Task 32 (pack 8): `boss` sprites are keyed `boss_<boss id>` (optional `bossId` = file name); they
+ * are loaded lazily (one per run / map panel), never by the boot or scene preload.
  */
 import { CHARACTER_CLASSES } from '../../character-stats';
 import type { CharacterClass } from '../../character-stats';
@@ -34,7 +36,8 @@ export type ArtKind =
   | 'buff-icon'
   | 'currency-icon'
   | 'chest-open'
-  | 'activity';
+  | 'activity'
+  | 'boss';
 /** Task 31: the biome (act) a decor prop belongs to, and whether it is tall (trees, columns …). */
 export type ArtDecorBiome = 'forest' | 'marsh' | 'ashlands' | 'frost';
 export interface ArtDecor {
@@ -88,6 +91,7 @@ const KINDS: readonly string[] = [
   'currency-icon',
   'chest-open',
   'activity',
+  'boss',
 ];
 const DECOR_BIOMES: readonly string[] = ['forest', 'marsh', 'ashlands', 'frost'];
 /** Key prefix of skill icons (Task 27): key `skill_<id>`, file `…/<id>.webp`. */
@@ -100,6 +104,8 @@ export const ITEM_ICON_KEY_PREFIX = 'item_';
 export const PET_ART_KEY_PREFIX = 'pet_';
 /** Task 31: decor props are keyed `decor_<file name>` (e.g. `decor_forest_bush`). */
 export const DECOR_KEY_PREFIX = 'decor_';
+/** Task 32: boss sprites are keyed `boss_<boss id>` (file `<boss id>`). */
+export const BOSS_ART_KEY_PREFIX = 'boss_';
 /** Kinds whose key is `<prefix><file name>` (all others: key = file name). */
 const KEY_PREFIX: Readonly<Record<string, string>> = {
   'skill-icon': SKILL_ICON_KEY_PREFIX,
@@ -108,6 +114,7 @@ const KEY_PREFIX: Readonly<Record<string, string>> = {
   'item-icon': ITEM_ICON_KEY_PREFIX,
   pet: PET_ART_KEY_PREFIX,
   decor: DECOR_KEY_PREFIX,
+  boss: BOSS_ART_KEY_PREFIX,
 };
 /** Optional id field that, when present, must equal the file name. */
 const ID_FIELD: Readonly<Record<string, string>> = {
@@ -115,6 +122,7 @@ const ID_FIELD: Readonly<Record<string, string>> = {
   'synergy-icon': 'synergyId',
   'item-icon': 'templateId',
   pet: 'petId',
+  boss: 'bossId',
 };
 /** Largest accepted image side (px): keeps a broken entry from asking for a huge texture. */
 export const MAX_ART_SIZE = 2048;

@@ -23,8 +23,20 @@ export const ART_DISPLAY: Readonly<Record<string, Partial<ArtDisplayTuning>>> = 
   enemy_treasure_thief: { facesLeft: true },
   nest_blight: { flip: false },
 });
+/**
+ * Task 32: a boss sprite's visible body ≈ this × the boss collision radius (one value, provisional;
+ * the boss hitbox never changes). Applied to every `boss_<id>` key through its tuning scale.
+ */
+export const BOSS_BODY_WIDTH_PER_RADIUS = 2.6;
+const BOSS_TUNING: Partial<ArtDisplayTuning> = Object.freeze({
+  scale: BOSS_BODY_WIDTH_PER_RADIUS / ART_BODY_WIDTH_PER_RADIUS,
+});
 export const artTuning = (artKey: string): ArtDisplayTuning =>
-  ({ ...DEFAULT_TUNING, ...ART_DISPLAY[artKey] }) as ArtDisplayTuning;
+  ({
+    ...DEFAULT_TUNING,
+    ...(artKey.startsWith('boss_') ? BOSS_TUNING : null),
+    ...ART_DISPLAY[artKey],
+  }) as ArtDisplayTuning;
 
 /** Opaque bounding box of an image in px (inclusive); the whole image if nothing is opaque. */
 export interface ArtBounds {
@@ -142,5 +154,7 @@ export function pickupArtSize(kind: keyof typeof PICKUP_SIZE_PER_RADIUS, radius:
  * lantern's light radius stay drawn in code on top.
  */
 export const OBJECT_ART_SIZE = Object.freeze({ shrine: 96, lantern: 84 });
+/** Task 32: largest side (world px) of the boss portrait above the spawn notification (provisional). */
+export const BOSS_PORTRAIT_SIZE = 64;
 /** Task 31: how long (s) the open chest stays visible after opening, fading over the last third. */
 export const CHEST_OPEN_SHOW = 0.8;

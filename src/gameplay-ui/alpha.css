@@ -2221,6 +2221,9 @@ body {
 .art-icon.icon-emblemCompact {
   --size: var(--icon-emblemCompact);
 }
+.art-icon.icon-bossPanel {
+  --size: var(--icon-bossPanel);
+}
 /* Level III «Awakening»: the same icon with a gold ring and glow (no extra art). */
 .synergy-icon.is-awakened {
   border-radius: 50%;
@@ -2345,4 +2348,29 @@ body {
   .art-bg {
     transition: none;
   }
+}
+
+/* ── Task 32: boss portrait in the map-path side panel (locked maps: a «?» silhouette). ── */
+.map-boss {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.boss-portrait {
+  flex: none;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.6));
+}
+.boss-portrait.is-locked::before {
+  content: '?';
+}
+.boss-portrait.is-locked {
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 40%, rgba(40, 44, 60, 0.9), rgba(8, 10, 18, 0.95));
+  color: rgba(255, 236, 196, 0.45);
+  font-family: var(--font-serif);
+  font-size: calc(var(--size) * 0.45);
+  filter: none;
 }

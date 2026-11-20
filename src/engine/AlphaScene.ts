@@ -23,7 +23,7 @@ import { ACTIVITY_RULES } from '../gameplay/activities';
 import type { ActivityType } from '../gameplay/activities';
 import { EN } from '../gameplay-ui/strings-en';
 import { buildUnitTextures } from './visuals/texture-factory';
-import { startArtLoad } from './visuals/art-loader';
+import { loadBossArt, startArtLoad } from './visuals/art-loader';
 import { ACTIVITY_ART, ArtRegistry, CHEST_OPEN_ART } from './visuals/art-registry';
 import { ArtSprites } from './visuals/art-sprites';
 import {
@@ -35,10 +35,13 @@ import {
   pickupArtSize,
   CHEST_OPEN_SHOW,
   OBJECT_ART_SIZE,
+  BOSS_PORTRAIT_SIZE,
 } from './visuals/art-display';
 import { XP_RULES } from '../gameplay';
 import { CHEST_RULES } from '../gameplay/chests';
 import type { Facing } from './visuals/art-display';
+import type { ArtEntry } from './visuals/art-manifest';
+import { getCampaignMap } from '../campaign/config';
 import type { TextureKey } from './visuals/keys';
 import { BiomeRenderer } from './visuals/BiomeRenderer';
 import { BOSS_DARK, LightRenderer, WARM_DARK } from './visuals/LightRenderer';
@@ -86,6 +89,11 @@ export class AlphaScene extends Phaser.Scene {
    * the background loader swaps in the manifest-backed registry.
    */
   private art = new ArtRegistry(new Map());
+  /** Task 32: which registry / map the run's boss sprite was last requested for. */
+  private readonly bossArtRequest: { registry: ArtRegistry | null; mapId: number } = {
+    registry: null,
+    mapId: 0,
+  };
   private artSprites!: ArtSprites;
   /** Task 25: facing of each art unit (changes only past a threshold: no flip jitter). */
   private readonly facing = new Map<string, Facing>();
@@ -121,6 +129,8 @@ export class AlphaScene extends Phaser.Scene {
   private readonly activityLabels: Phaser.GameObjects.Text[] = [];
   private playerHitAt = Number.NEGATIVE_INFINITY;
   private fx: { event: WorldEvent; until: number; x: number; y: number; text?: string }[] = [];
+  /** Task 32: the boss portrait above the «⚠ Boss» notification (created on first use). */
+  private bossPortrait: Phaser.GameObjects.Image | null = null;
   private labels: Phaser.GameObjects.Text[] = [];
   private damageLabels: Phaser.GameObjects.Text[] = [];
   private stunLabels: Phaser.GameObjects.Text[] = [];
@@ -140,7 +150,10 @@ export class AlphaScene extends Phaser.Scene {
     buildUnitTextures(this);
     this.units = new UnitRenderer(this);
     this.artSprites = new ArtSprites(this);
-    startArtLoad(this, (registry) => (this.art = registry));
+    startArtLoad(this, (registry) => {
+      this.art = registry;
+      this.requestRunBossArt(); // a run started before the manifest arrived
+    });
     this.lighting = new LightRenderer(this);
     // Task 18: quality applies to every visual layer now and whenever the setting changes.
     this.applyQuality();
@@ -244,6 +257,11 @@ export class AlphaScene extends Phaser.Scene {
                 artLooks: this.art.loadedLooks(),
                 // Task 26: the ground texture in use (null = procedural ground).
                 artGround: this.biome.artGround,
+                // Task 32: the run's boss sprite once loaded (null = procedural boss / not yet).
+                artBoss:
+                  this.mapId === null
+                    ? null
+                    : (this.art.boss(getCampaignMap(this.mapId).bossId)?.texture ?? null),
                 stunIndicators: Object.freeze(
                   this.stunLabels
                     .filter((label) => label.visible)
@@ -275,6 +293,7 @@ export class AlphaScene extends Phaser.Scene {
     // Task 18: the run's map decides the biome (same map ⇒ same look).
     this.mapId = options.campaign?.mapId ?? null;
     this.biome.build(this.mapId, this.graphicsQuality());
+    this.requestRunBossArt(); // Task 32: the map's boss sprite, long before the boss spawns
     this.resetFeel();
     this.runId++;
     this.lastEvent = 0;
@@ -584,8 +603,10 @@ export class AlphaScene extends Phaser.Scene {
     time: number,
     flash: number,
     options: { alpha?: number; glow?: number; glowScale?: number },
+    override: ArtEntry | null = null,
   ): number | null {
-    const entry = this.art.art(look);
+    // Task 32: a boss draws its own sprite (lazy) instead of the shared boss look.
+    const entry = override ?? this.art.art(look);
     if (!entry) return null;
     const d = this.artSprites.draw(entry.key, radius);
     const facing = nextFacing(this.facing.get(id) ?? 1, dx, threshold);
@@ -820,7 +841,33 @@ export class AlphaScene extends Phaser.Scene {
       this.units.item(this.art.texture(look), x, y + (box * 0.9) / 2, scale, 1, bob, d.flip, 1);
     } else this.units.item(look, x, y, grow / ART_SCALE, 1, bob);
   }
+  /**
+   * Task 32: the run's boss sprite is requested once the run (and the art manifest) is there —
+   * long before the boss spawns; until it arrives the procedural boss is drawn. One lookup a frame.
+   */
+  private requestRunBossArt() {
+    const mapId = this.mapId;
+    if (mapId === null) return;
+    if (this.bossArtRequest.registry === this.art && this.bossArtRequest.mapId === mapId) return;
+    this.bossArtRequest.registry = this.art;
+    this.bossArtRequest.mapId = mapId;
+    loadBossArt(this, this.art, getCampaignMap(mapId).bossId);
+  }
+  /**
+   * Task 32: the boss's sprite (same file as in the run, baked to ~64 px) above the spawn
+   * notification; nothing without the art (the text stays as before). Returns whether it is shown.
+   */
+  private drawBossPortrait(bossId: string, x: number, y: number, alpha: number): boolean {
+    const art = this.art.boss(bossId);
+    if (!art) return false;
+    const d = this.artSprites.pickup(art.entry.key, BOSS_PORTRAIT_SIZE);
+    const img = (this.bossPortrait ??= this.add.image(0, 0, d.texture).setDepth(13));
+    if (img.texture.key !== d.texture) img.setTexture(d.texture);
+    img.setPosition(x, y).setScale(d.scale).setAlpha(alpha).setVisible(true);
+    return true;
+  }
   private draw(s: GameplaySnapshot) {
+    this.requestRunBossArt();
     // Task 26: the act's ground art replaces the procedural ground once it has loaded.
     const look = this.biome.look;
     if (look) this.biome.applyArtGround(this.art.ground(look.act));
@@ -1064,6 +1111,7 @@ export class AlphaScene extends Phaser.Scene {
         s.time,
         flash,
         glowOptions,
+        isBoss ? (this.art.boss(s.campaign!.boss!.bossId)?.entry ?? null) : null,
       );
       if (artTop !== null) barY = artTop - (eliteName ? 8 : 6);
       else
@@ -1151,6 +1199,8 @@ export class AlphaScene extends Phaser.Scene {
     for (; nameLabel < this.nameLabels.length; nameLabel++)
       this.nameLabels[nameLabel].setVisible(false);
     // Task 08: boss telegraphs (dangerous attacks are announced before they resolve).
+    // Task 32: fills stay on the ground; the outlines go on the overlay so they stay clearly
+    // visible over the (larger) boss sprite.
     const cast = s.campaign?.bossCast;
     if (cast && cast.center) {
       const span = Math.max(1e-6, cast.executeAt - cast.startedAt);
@@ -1161,7 +1211,7 @@ export class AlphaScene extends Phaser.Scene {
           cast.center.y,
           cast.radius * progress,
         );
-        g.lineStyle(3, 0xff5a45, 0.95).strokeCircle(cast.center.x, cast.center.y, cast.radius);
+        o.lineStyle(3, 0xff5a45, 0.95).strokeCircle(cast.center.x, cast.center.y, cast.radius);
       } else if (cast.kind === 'charge' && cast.direction) {
         const len = 320;
         const ex = cast.center.x + cast.direction.x * len,
@@ -1172,15 +1222,15 @@ export class AlphaScene extends Phaser.Scene {
           ex,
           ey,
         );
-        g.lineStyle(2, 0xffb199, 0.9).lineBetween(cast.center.x, cast.center.y, ex, ey);
+        o.lineStyle(2, 0xffb199, 0.9).lineBetween(cast.center.x, cast.center.y, ex, ey);
       } else if (cast.kind === 'radial_burst')
-        g.lineStyle(2, 0xd99bff, 0.4 + 0.5 * progress).strokeCircle(
+        o.lineStyle(2, 0xd99bff, 0.4 + 0.5 * progress).strokeCircle(
           cast.center.x,
           cast.center.y,
           36 + 40 * progress,
         );
       else if (cast.kind === 'summon')
-        g.lineStyle(2, 0x9ad48a, 0.4 + 0.5 * progress).strokeCircle(
+        o.lineStyle(2, 0x9ad48a, 0.4 + 0.5 * progress).strokeCircle(
           cast.center.x,
           cast.center.y,
           60,
@@ -1277,6 +1327,7 @@ export class AlphaScene extends Phaser.Scene {
         Math.max(0.8, p.radius / 5) / ART_SCALE,
         null,
       );
+    let bossPortrait = false;
     for (const f of this.fx) {
       const e = f.event.event;
       if (e.type === 'attack-started' && !e.projectileId) {
@@ -1345,13 +1396,23 @@ export class AlphaScene extends Phaser.Scene {
           g.lineStyle(2, c, 0.7 * life).strokeCircle(f.x, y, 18 + grow * 24);
         } else g.lineStyle(2, c, 0.75 * life).strokeCircle(f.x, y, 12 + grow * 18);
       }
-      if (f.text)
-        this.label(this.damageLabels, damageLabel++)
+      if (f.text) {
+        const text = this.label(this.damageLabels, damageLabel++)
           .setPosition(f.x, f.y - 40 - (0.6 - (f.until - s.time)) * 20)
           .setText(f.text)
           .setColor(f.event.channel === 'skill' ? '#bfe9ff' : '#ffe4ba')
           .setVisible(true);
+        // Task 32: the boss's portrait to the left of «⚠ Boss: …» (same line, clear of the HUD).
+        if (e.type === 'boss-spawned')
+          bossPortrait = this.drawBossPortrait(
+            e.bossId,
+            text.x - text.displayWidth * text.originX - BOSS_PORTRAIT_SIZE / 2 - 4,
+            text.y - text.displayHeight * (text.originY - 0.5),
+            Math.min(1, (f.until - s.time) / 0.5),
+          );
+      }
     }
+    if (!bossPortrait) this.bossPortrait?.setVisible(false);
     this.drawLights(s);
     this.units.end();
     this.labels.slice(label).forEach((t) => t.setVisible(false));
