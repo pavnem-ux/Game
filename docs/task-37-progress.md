@@ -9,7 +9,7 @@ PR: https://github.com/pavnem-ux/Game/pull/35
 - [x] 0 Setup: branch, spec, progress file, draft PR
 - [x] 1 Top bar removed (QA corner badge kept, production none), unused styles removed
 - [x] 2 Class emblems: files, manifest, provenance, kind `class-emblem`, `ClassEmblem` art + SVG fallback, tests
-- [ ] 3 Synergy banners: compact toasts, ≤ 2 visible, ~2.5 s, queue, tests
+- [x] 3 Synergy banners: compact toasts, ≤ 2 visible, ~2.5 s, queue, tests
 - [ ] 4 Delivery: final checks, README line, PR
 
 ## Decisions / blockers
@@ -26,3 +26,9 @@ PR: https://github.com/pavnem-ux/Game/pull/35
   no frame) once the manifest has it, else the Task 13 SVG (`ClassEmblemSvg`), also when the image
   fails. Every usage goes through it (hub chips, equipment doll, talents header, `ClassPortrait`'s
   fallback). DOM images only — not in the scene preload.
+- Synergy banners: one-line toasts (32 px synergy icon, title with level, the pair's two 20 px skill
+  icons), top-centre at 104 px under the timer, ≤ 360 px wide, gold at III. A pure queue
+  (`pushBanners` / `tickBanners` / `holdBanners`): ≤ 2 visible, 2.5 s each (UI time, fade 0.3 s), the
+  rest wait; paused / offer screens hide them and restart the visible ones' time on resume. The
+  effect text stays in a visually hidden span (screen readers; the existing e2e still reads it).
+  `role="status"`, `data-testid="synergy-banners"` and the `.synergy-banner.level-N` classes kept.
