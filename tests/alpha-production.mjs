@@ -103,7 +103,16 @@ try {
     1,
     'bug report is a player feature: present in production',
   );
+  // Task 36: the player's game speed is a production feature (pause choice + HUD button).
+  await page.getByTestId('game-speed-choice').waitFor();
   await page.getByRole('button', { name: 'Continue' }).click();
+  const speed = page.getByTestId('game-speed-button');
+  assert.equal(await speed.innerText(), '×1', 'a fresh profile starts at ×1');
+  await speed.click();
+  assert.equal(await speed.innerText(), '×1.5');
+  await speed.click();
+  await speed.click();
+  assert.equal(await speed.innerText(), '×1', 'the button cycles ×1 → ×1.5 → ×2 → ×1');
   await page.screenshot({ path: 'artifacts/alpha-09-production.png' });
   for (const file of await readdir('dist/assets'))
     if (file.endsWith('.js')) {
@@ -118,6 +127,11 @@ try {
       );
       assert.ok(!source.includes('__alpha'), 'alpha debug bridge eliminated from production JS');
       assert.ok(!source.includes('QA PREVIEW'), 'QA build UI eliminated from production JS');
+      // Task 36: the QA time scale (×2 / ×4 / ×8) stays QA-only; the player speed is separate.
+      assert.ok(
+        !source.includes('Time scale must be'),
+        'QA time-scale control eliminated from production JS',
+      );
       for (const marker of [
         'god-mode',
         'God Mode',

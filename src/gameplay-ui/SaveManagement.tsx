@@ -7,6 +7,7 @@ import { uiSound } from './sound';
 import { GRAPHICS_QUALITIES } from '../engine/visuals/quality';
 import { EN } from './strings-en';
 import { statusText } from './save-messages';
+import { GameSpeedChoice } from './GameSpeed';
 
 const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString('en-US') : 'never yet');
 
@@ -26,6 +27,8 @@ function GameplaySettings() {
         {EN.settings.screenShake}
       </label>
       <p className="faint">{EN.settings.screenShakeHint}</p>
+      <GameSpeedChoice />
+      <p className="faint">{EN.settings.gameSpeedHint}</p>
       <h3>{EN.settings.sound}</h3>
       {(['masterVolume', 'sfxVolume', 'musicVolume'] as const).map((key) => (
         <label key={key} className="settings-slider">

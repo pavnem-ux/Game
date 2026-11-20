@@ -33,6 +33,7 @@ import type { GameplaySnapshot, RunStatsSnapshot } from '../gameplay';
 import type { RunResult, RunStatsSummary } from '../profile';
 import { RUN_STATS_SUMMARY_LIMITS } from '../profile';
 import { alphaBridge } from './store';
+import { uiSettings } from './ui-settings';
 import { BUILD_LABEL } from './build-label';
 import { buildBugReport, reportFilename } from './bug-report';
 import { readErrors } from './error-log';
@@ -368,6 +369,7 @@ export const campaignStore = {
       screen: bridge.screen,
       profile: ensure().progression.profile,
       errors: readErrors(),
+      gameSpeed: uiSettings.get().gameSpeed,
     });
     const filename = reportFilename(now);
     return downloadJson(filename, JSON.stringify(report, null, 2)) ? filename : null;

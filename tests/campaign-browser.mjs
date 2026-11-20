@@ -676,8 +676,17 @@ try {
     graphicsQuality: 'high', // Task 18 default on desktop (fine pointer)
     leftHanded: false, // Task 16
     haptics: true,
+    gameSpeed: 1, // Task 36 default
   });
   assert.equal(await stored(), saveBeforeSetting, 'settings never touch the save');
+  // Task 36: «Game speed» is on the same Settings page, stored in settings (never the save).
+  await page.getByTestId('game-speed-choice').locator('label', { hasText: '×1.5' }).click();
+  assert.equal(
+    await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.settings')).gameSpeed),
+    1.5,
+  );
+  assert.equal(await stored(), saveBeforeSetting, 'the game speed never touches the save');
+  await page.getByTestId('game-speed-choice').locator('label', { hasText: '×1' }).first().click();
   await page.reload();
   await page.waitForFunction(() => !!window.__alpha);
   await nav.getByRole('button', { name: 'Settings', exact: true }).click();

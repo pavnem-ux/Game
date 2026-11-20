@@ -72,7 +72,8 @@ workflow: [TASK_WORKFLOW.md](TASK_WORKFLOW.md).
 
 ## Rendering (Phaser; rendering only)
 
-- `src/engine/AlphaScene.ts` — input, drawing, scene commands.
+- `src/engine/AlphaScene.ts` — input, drawing, scene commands; `time-scale.ts` — frame step, player
+  game speed (Task 36) and fixed simulation steps (`SimStepper`); UI `gameplay-ui/GameSpeed.tsx`.
 - `src/engine/visuals/` — procedural textures (`keys.ts`, `art.ts`, `texture-factory.ts`),
   `UnitRenderer.ts`, `BiomeRenderer.ts` + `biomes.ts` (procedural / art decor layout), `LightRenderer.ts`, `quality.ts`; art packs:
   `art-manifest.ts` (parser), `art-registry.ts` (key → look incl. pet followers, icon / item / pet lookups), `art-pack.ts`
