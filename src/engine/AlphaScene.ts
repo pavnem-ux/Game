@@ -42,6 +42,8 @@ import { CHEST_RULES } from '../gameplay/chests';
 import type { Facing } from './visuals/art-display';
 import type { ArtEntry } from './visuals/art-manifest';
 import { getCampaignMap } from '../campaign/config';
+import { SUMMON_DISPLAY, ballistaPose, shadowCopyAlpha } from './visuals/summons';
+import type { SummonPose } from './visuals/summons';
 import type { TextureKey } from './visuals/keys';
 import { BiomeRenderer } from './visuals/BiomeRenderer';
 import { BOSS_DARK, LightRenderer, WARM_DARK } from './visuals/LightRenderer';
@@ -97,6 +99,16 @@ export class AlphaScene extends Phaser.Scene {
   private artSprites!: ArtSprites;
   /** Task 25: facing of each art unit (changes only past a threshold: no flip jitter). */
   private readonly facing = new Map<string, Facing>();
+  /**
+   * Task 34 (render only): talent entities by id — first seen (pop-in / lifetime ring), last shot
+   * (ballista recoil) and recent positions (shadow-copy afterimage); projectile ids already seen.
+   */
+  private readonly summons = new Map<
+    string,
+    { at: number; life: number; shotAt: number; trail: number[] }
+  >();
+  private readonly summonShots = new Set<string>();
+  private readonly summonPose: SummonPose = { scale: 1, alpha: 1, recoil: 0 };
   /** Task 18: the map's biome (ground, decor, particles), rebuilt when the map changes. */
   private biome!: BiomeRenderer;
   private mapId: number | null = null;
@@ -300,6 +312,8 @@ export class AlphaScene extends Phaser.Scene {
     this.fx = [];
     this.lastEnemyPos.clear();
     this.facing.clear();
+    this.summons.clear();
+    this.summonShots.clear();
     this.revivedAt = Number.NEGATIVE_INFINITY;
     this.error = '';
     this.clearInput();
@@ -497,6 +511,9 @@ export class AlphaScene extends Phaser.Scene {
         );
     }
     for (const z of s.skillCombat.zones) L.add(z.center.x, z.center.y, z.radius * 1.4, 0.8);
+    // Task 34: a ballista carries a small warm light.
+    for (const t of s.talentEntities ?? [])
+      if (t.kind === 'ballista') L.add(t.x, t.y - 16, SUMMON_DISPLAY.ballista.light, 0.55);
     for (const f of this.fx)
       if (f.event.event.type === 'skill-area') {
         const e = f.event.event;
@@ -854,6 +871,165 @@ export class AlphaScene extends Phaser.Scene {
     loadBossArt(this, this.art, getCampaignMap(mapId).bossId);
   }
   /**
+   * Task 09.1 talent entities. Task 34: the Archer's ballista uses the pack sprite (feet at its
+   * position, mirrored toward its target, pop-in / fade-out, recoil per shot, lifetime ring); the
+   * Rogue's shadow copy uses the rogue art, dark violet and translucent, with a glow and an
+   * afterimage while it moves. Without the art: the original Task 09.1 shapes.
+   */
+  private drawSummons(s: GameplaySnapshot) {
+    const entities = s.talentEntities ?? [];
+    // Forget entities that are gone (bounded by the talent limits: a handful at most).
+    for (const id of this.summons.keys())
+      if (!entities.some((t) => t.id === id)) this.summons.delete(id);
+    // A ballista bolt that has just appeared next to a ballista is that ballista's shot.
+    for (const p of s.playerProjectiles) {
+      if (!p.weaponId.startsWith('talent:archer.b3') || this.summonShots.has(p.id)) continue;
+      if (this.summonShots.size > 64) this.summonShots.clear();
+      this.summonShots.add(p.id);
+      for (const t of entities)
+        if (t.kind === 'ballista' && Math.hypot(p.x - t.x, p.y - t.y) < 48) {
+          const st = this.summons.get(t.id);
+          if (st) st.shotAt = s.time;
+        }
+    }
+    for (const t of entities) {
+      let st = this.summons.get(t.id);
+      if (!st) {
+        st = {
+          at: s.time,
+          life: Math.max(0.1, t.expiresAt - s.time),
+          shotAt: -Infinity,
+          trail: [],
+        };
+        this.summons.set(t.id, st);
+      }
+      const age = s.time - st.at,
+        remaining = t.expiresAt - s.time;
+      if (t.kind === 'ballista') this.drawBallista(s, t, st, age, remaining);
+      else this.drawShadowCopy(s, t, st, age, remaining);
+    }
+  }
+  private drawBallista(
+    s: GameplaySnapshot,
+    t: { id: string; x: number; y: number },
+    st: { life: number; shotAt: number },
+    age: number,
+    remaining: number,
+  ) {
+    const g = this.graphics;
+    const art = this.art.summon('ballista');
+    if (!art) {
+      g.fillStyle(0x8a6a3e, 0.9).fillRect(t.x - 10, t.y - 10, 20, 20);
+      g.lineStyle(2, 0xe8c36a, 0.9).strokeRect(t.x - 10, t.y - 10, 20, 20);
+      return;
+    }
+    const c = SUMMON_DISPLAY.ballista;
+    // Facing: toward its nearest living enemy (the ballista shoots the nearest in range).
+    let dx = 0,
+      best = Infinity;
+    for (const e of s.enemies) {
+      if (!e.alive) continue;
+      const d = Math.hypot(e.position.x - t.x, e.position.y - t.y);
+      if (d < best) {
+        best = d;
+        dx = e.position.x - t.x;
+      }
+    }
+    const facing = nextFacing(this.facing.get(t.id) ?? 1, dx, ENEMY_FACING_THRESHOLD);
+    if (this.facing.get(t.id) !== facing) this.facing.set(t.id, facing);
+    const pose = ballistaPose(age, remaining, s.time - st.shotAt, this.summonPose);
+    const d = this.artSprites.draw(art.entry.key, c.radius);
+    this.units.artUnit(
+      t.id,
+      d.texture,
+      t.x - facing * pose.recoil,
+      t.y,
+      d.scale * pose.scale,
+      d.originX,
+      d.originY,
+      d.height * pose.scale,
+      c.radius,
+      flipSign(facing, d.tuning),
+      0,
+      0,
+      { alpha: pose.alpha },
+    );
+    // Lifetime ring at its feet: the remaining share of its time.
+    const share = Math.max(0, Math.min(1, remaining / st.life));
+    g.lineStyle(2, 0x0b1222, 0.45 * pose.alpha).strokeEllipse(
+      t.x,
+      t.y,
+      c.ringRadius * 2,
+      c.ringRadius,
+    );
+    g.lineStyle(2, 0xe8c36a, 0.8 * pose.alpha)
+      .beginPath()
+      .arc(t.x, t.y, c.ringRadius * 0.75, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * share)
+      .strokePath();
+  }
+  private drawShadowCopy(
+    s: GameplaySnapshot,
+    t: { id: string; x: number; y: number },
+    st: { trail: number[] },
+    age: number,
+    remaining: number,
+  ) {
+    const c = SUMMON_DISPLAY.shadowCopy;
+    const entry = this.art.art(playerTextureKey('rogue'));
+    if (!entry) {
+      const g = this.graphics;
+      g.fillStyle(0x9a8cff, 0.35).fillCircle(t.x, t.y, 13);
+      g.lineStyle(1, 0xc9c0ff, 0.6).strokeCircle(t.x, t.y, 13);
+      return;
+    }
+    const alpha = shadowCopyAlpha(age, remaining);
+    const d = this.artSprites.draw(entry.key, ALPHA.playerRadius);
+    const texture = this.units.tints.get(d.texture, c.tint);
+    const flip = flipSign(this.facing.get('player') ?? 1, d.tuning);
+    // Recent positions (x, y, time), newest last; at most ~0.2 s of history.
+    const trail = st.trail;
+    trail.push(t.x, t.y, s.time);
+    while (trail.length > 3 && s.time - trail[2] > 0.2) trail.splice(0, 3);
+    const n = trail.length / 3;
+    const oldest = n > 1 ? s.time - trail[2] : 0;
+    const speed = n > 1 && oldest > 0 ? Math.hypot(t.x - trail[0], t.y - trail[1]) / oldest : 0;
+    if (speed > c.ghostMinSpeed)
+      for (let k = c.ghosts; k >= 1; k--) {
+        // Ghost k sits k/(ghosts+1) of the way back along the recorded path.
+        const i = Math.floor(((n - 1) * (c.ghosts + 1 - k)) / (c.ghosts + 1)) * 3;
+        this.units.artUnit(
+          `${t.id}~${k}`,
+          texture,
+          trail[i],
+          trail[i + 1] + ALPHA.playerRadius,
+          d.scale,
+          d.originX,
+          d.originY,
+          d.height,
+          ALPHA.playerRadius,
+          flip,
+          s.time,
+          0,
+          { alpha: alpha * c.ghostAlpha * (1 - (k - 1) / c.ghosts) },
+        );
+      }
+    this.units.artUnit(
+      t.id,
+      texture,
+      t.x,
+      t.y + ALPHA.playerRadius,
+      d.scale,
+      d.originX,
+      d.originY,
+      d.height,
+      ALPHA.playerRadius,
+      flip,
+      s.time,
+      0,
+      { alpha, glow: c.glow, glowScale: 1.1 },
+    );
+  }
+  /**
    * Task 32: the boss's sprite (same file as in the run, baked to ~64 px) above the spawn
    * notification; nothing without the art (the text stays as before). Returns whether it is shown.
    */
@@ -969,16 +1145,7 @@ export class AlphaScene extends Phaser.Scene {
       g.fillStyle(c, armed ? 0.12 : 0.05).fillCircle(z.center.x, z.center.y, z.radius);
       g.lineStyle(1, c, armed ? 0.55 : 0.3).strokeCircle(z.center.x, z.center.y, z.radius);
     }
-    // Task 09.1: talent entities (Rogue shadow copy, Archer ballistae) — original simple shapes.
-    for (const t of s.talentEntities ?? []) {
-      if (t.kind === 'ballista') {
-        g.fillStyle(0x8a6a3e, 0.9).fillRect(t.x - 10, t.y - 10, 20, 20);
-        g.lineStyle(2, 0xe8c36a, 0.9).strokeRect(t.x - 10, t.y - 10, 20, 20);
-      } else {
-        g.fillStyle(0x9a8cff, 0.35).fillCircle(t.x, t.y, 13);
-        g.lineStyle(1, 0xc9c0ff, 0.6).strokeCircle(t.x, t.y, 13);
-      }
-    }
+    this.drawSummons(s);
     this.drawPet(s);
     this.drawActivities(s);
     // Task 18: pickups and chests are pooled sprites (textures baked once). Task 26: the owner's
