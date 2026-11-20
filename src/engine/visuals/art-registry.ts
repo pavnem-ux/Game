@@ -13,6 +13,7 @@ import {
   PET_ART_KEY_PREFIX,
   DECOR_KEY_PREFIX,
   BOSS_ART_KEY_PREFIX,
+  SUMMON_ART_KEY_PREFIX,
 } from './art-manifest';
 import type { ArtDecorBiome } from './art-manifest';
 import type { ArtEntry, ArtKind, ArtManifest } from './art-manifest';
@@ -272,6 +273,21 @@ export function petArtEntry(manifest: ArtManifest | null, petId: string): ArtEnt
   const entry = manifest?.get(petArtKey(petId));
   return entry && entry.kind === 'pet' ? entry : null;
 }
+/**
+ * Task 34 (pack 9): sprites of talent-spawned objects (`summon_<id>`, feet anchor, facing right),
+ * preloaded with the scene. Missing → the Task 09.1 shape stays.
+ */
+export const SUMMON_IDS = Object.freeze(['ballista'] as const);
+export type SummonId = (typeof SUMMON_IDS)[number];
+export const summonArtKey = (id: string): string => `${SUMMON_ART_KEY_PREFIX}${id}`;
+const SUMMON_ART_KEYS: ReadonlySet<string> = new Set(SUMMON_IDS.map(summonArtKey));
+/** The sprite entry of a summon, or null (unknown id, no manifest, other kind). */
+export function summonArtEntry(manifest: ArtManifest | null, id: string): ArtEntry | null {
+  const key = summonArtKey(id);
+  if (!SUMMON_ART_KEYS.has(key)) return null;
+  const entry = manifest?.get(key);
+  return entry && entry.kind === 'summon' ? entry : null;
+}
 /** Phaser texture key of an art image (prefixed: never collides with a procedural key). */
 export const artTextureKey = (artKey: string): string => `art:${artKey}`;
 
@@ -292,6 +308,7 @@ export function artUsage(artKey: string): ArtKind | null {
   if (PET_ART_KEYS.has(artKey)) return 'pet';
   if (BOSS_ART_KEYS.has(artKey)) return 'boss';
   if ((VFX_TEXTURE_KEYS as readonly string[]).includes(artKey)) return 'vfx';
+  if (SUMMON_ART_KEYS.has(artKey)) return 'summon';
   if (artKey.startsWith(DECOR_KEY_PREFIX)) return 'decor';
   return FIXED_KEYS.get(artKey) ?? null;
 }
@@ -359,6 +376,13 @@ export class ArtRegistry {
       this.extras.set(artKey, slot);
       this.byArt.set(artKey, slot);
     }
+    for (const id of SUMMON_IDS) {
+      const entry = summonArtEntry(manifest, id);
+      if (!entry) continue;
+      const slot: Slot = { texture: artTextureKey(entry.key), entry, loaded: false };
+      this.extras.set(entry.key, slot);
+      this.byArt.set(entry.key, slot);
+    }
     for (const bossId of Object.keys(BOSS_DEFINITIONS)) {
       const entry = bossArtEntry(manifest, bossId);
       if (entry)
@@ -369,6 +393,10 @@ export class ArtRegistry {
   vfxTexture(key: string): string {
     const slot = this.extras.get(key);
     return slot && slot.loaded ? slot.texture : key;
+  }
+  /** Task 34: a summon's loaded sprite (ballista), else null (the Task 09.1 shape is drawn). */
+  summon(id: string): { readonly texture: string; readonly entry: ArtEntry } | null {
+    return this.object(summonArtKey(id));
   }
   /** Task 32: the sprite entry to load lazily for a boss, or null (procedural boss). */
   bossEntry(bossId: string): ArtEntry | null {

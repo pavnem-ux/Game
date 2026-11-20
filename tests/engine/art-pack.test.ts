@@ -10,6 +10,7 @@ import {
 import {
   ArtRegistry,
   bossArtEntry,
+  summonArtEntry,
   CURRENCY_ART,
   GROUND_ART,
   PICKUP_ART,
@@ -80,8 +81,8 @@ const entry = (key: string, extra: Record<string, unknown> = {}) => ({
 });
 
 describe('Task 25 — art pack 1 files and manifest', () => {
-  it('226 entries (packs 1–9: 17 + 9 + 37 + 24 + 30 + 6 + 49 + 40 + 14); every file exists and has the manifest size', () => {
-    expect(manifest.size).toBe(226);
+  it('227 entries (packs 1–9 + VFX: 17 + 9 + 37 + 24 + 30 + 6 + 49 + 40 + 1 + 14); every file exists and has the manifest size', () => {
+    expect(manifest.size).toBe(227);
     for (const e of manifest.values()) {
       const buf = readFileSync(join(PUBLIC, e.file));
       expect(webpSize(buf), e.key).toEqual([e.width, e.height]);
@@ -235,7 +236,7 @@ describe('Task 26 — pack 2 kinds: ground and pickup', () => {
       declared++;
       expect(artUsage(e.key), e.key).toBe(e.kind);
     }
-    expect(declared).toBe(9 + 37 + 24 + 30 + 6 + 49 + 40 + 14); // packs 2–9 (Tasks 26–33)
+    expect(declared).toBe(9 + 37 + 24 + 30 + 6 + 49 + 40 + 1 + 14); // packs 2–9 + VFX (Tasks 26–34)
     for (const art of [...Object.values(PICKUP_ART), ...Object.values(GROUND_ART)])
       expect(manifest.has(art!), art).toBe(true);
     for (const art of Object.values(CURRENCY_ART)) expect(manifest.has(art), art).toBe(true);
@@ -259,8 +260,8 @@ describe('Task 26 — pack 2 kinds: ground and pickup', () => {
     expect(r.loadedGrounds()).toBe(4);
     // The scene loads units, pickups and grounds; portraits and the UI-only ore stay DOM images.
     const scene = r.sceneEntries().map((e) => e.key);
-    // + pets (Task 30), decor, open chests, activities (Task 31), VFX textures (Task 33)
-    expect(scene).toHaveLength(21 + 6 + 32 + 5 + 14);
+    // + pets (Task 30), decor, open chests, activities (Task 31), VFX textures (Task 33), the ballista (Task 34)
+    expect(scene).toHaveLength(21 + 6 + 32 + 5 + 14 + 1);
     expect(scene).not.toContain('ore');
     expect(scene.some((k) => k.startsWith('portrait_'))).toBe(false);
   });
@@ -686,5 +687,46 @@ describe('Task 33 — VFX texture pack (provenance row 10)', () => {
         'vfx_poison_drop',
       ].sort(),
     );
+  });
+});
+
+describe('Task 34 — pack 9: ballista sprite', () => {
+  it('the ballista key resolves (256 px, feet anchor) and is preloaded with the scene', () => {
+    const e = summonArtEntry(manifest, 'ballista');
+    expect(e?.key).toBe('summon_ballista');
+    expect([e!.file, e!.width, e!.height, e!.anchor]).toEqual([
+      'assets/summons/ballista.webp',
+      256,
+      256,
+      'bottom-center',
+    ]);
+    const r = new ArtRegistry(manifest);
+    expect(r.sceneEntries().map((x) => x.key)).toContain('summon_ballista');
+    expect(r.summon('ballista')).toBeNull(); // not loaded yet: the Task 09.1 shape
+    r.markLoaded('summon_ballista');
+    expect(r.summon('ballista')?.texture).toBe('art:summon_ballista');
+  });
+  it('missing key, unknown id or no manifest → fallback (null)', () => {
+    const partial = new Map(manifest);
+    partial.delete('summon_ballista');
+    expect(summonArtEntry(partial, 'ballista')).toBeNull();
+    expect(new ArtRegistry(partial).summon('ballista')).toBeNull();
+    expect(summonArtEntry(manifest, 'catapult')).toBeNull();
+    expect(summonArtEntry(null, 'ballista')).toBeNull();
+  });
+  it('validation: the summon_ prefix and a matching summonId', () => {
+    const one = (key: string, extra: Record<string, unknown>) =>
+      JSON.stringify({
+        [key]: {
+          file: 'assets/summons/ballista.webp',
+          kind: 'summon',
+          size: [256, 256],
+          anchor: 'bottom-center',
+          ...extra,
+        },
+      });
+    expect(parseArtManifest(one('summon_ballista', { summonId: 'ballista' })).size).toBe(1);
+    expect(() => parseArtManifest(one('ballista', {}))).toThrow(/key must be "summon_ballista"/);
+    expect(() => parseArtManifest(one('summon_ballista', { summonId: 'x' }))).toThrow(/summonId/);
   });
 });

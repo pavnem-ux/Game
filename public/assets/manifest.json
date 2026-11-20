@@ -2512,5 +2512,16 @@
   "kind": "vfx",
   "anchor": "center",
   "source": "owner-generated (ChatGPT image)"
+ },
+ "summon_ballista": {
+  "file": "assets/summons/ballista.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "summon",
+  "summonId": "ballista",
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
  }
 }

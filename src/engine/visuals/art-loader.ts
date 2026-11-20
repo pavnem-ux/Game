@@ -72,6 +72,8 @@ export function startArtLoad(scene: Phaser.Scene, onRegistry: (registry: ArtRegi
   });
 }
 
+/** Boss textures being fetched (one request per texture). */
+const pendingBossArt = new Set<string>();
 /**
  * Task 32: loads one boss sprite on demand (the current map's boss, when the run starts), outside the
  * boot / scene preload. No progress bar; until it is ready (or if it fails) the procedural boss is
@@ -86,18 +88,23 @@ export function loadBossArt(scene: Phaser.Scene, registry: ArtRegistry, bossId: 
     registry.markLoaded(entry.key);
     return false;
   }
-  const loader = scene.load;
-  const queue = () => {
-    if (!scene.sys.isActive() || scene.textures.exists(key)) return;
-    loader.once(`${Phaser.Loader.Events.FILE_KEY_COMPLETE}image-${key}`, () =>
-      registry.markLoaded(entry.key),
-    );
-    loader.image(key, artUrl(entry.file));
-    loader.start();
+  if (pendingBossArt.has(key)) return true;
+  // Loaded as a plain image, outside the Phaser loader: the boot batch (> 32 files, Phaser's parallel
+  // limit) only advances on frames, and the run's boss must not wait for it (Task 34 merge: with the
+  // VFX and summon art the batch grew and a paused-clock e2e could wait forever).
+  pendingBossArt.add(key);
+  const img = new Image();
+  img.decoding = 'async';
+  img.onload = () => {
+    pendingBossArt.delete(key);
+    if (!scene.sys.isActive() && !scene.sys.isPaused()) return;
+    if (!scene.textures.exists(key)) scene.textures.addImage(key, img);
+    registry.markLoaded(entry.key);
   };
-  // A file added mid-batch only starts on a later loader update (a frame); queue it as its own
-  // batch once the current one (the boot art) completes instead.
-  if (loader.isLoading()) loader.once(Phaser.Loader.Events.COMPLETE, queue);
-  else queue();
+  img.onerror = () => {
+    pendingBossArt.delete(key);
+    console.warn(`[art] ${key} failed to load; keeping the procedural boss`);
+  };
+  img.src = artUrl(entry.file);
   return true;
 }
