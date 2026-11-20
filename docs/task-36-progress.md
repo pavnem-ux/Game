@@ -10,7 +10,7 @@ PR: https://github.com/pavnem-ux/Game/pull/34
 - [x] 1 Core: speeds ×1 / ×1.5 / ×2 on the simulation-time path, persisted setting, same results at every speed (test)
 - [x] 2 UI: HUD button next to the timer (cycles), pause menu and Settings «Game speed»
 - [x] 3 Bug report includes the speed; QA time scale still absent from production (check)
-- [ ] 4 Delivery: final checks, README line, PR
+- [x] 4 Delivery: final checks, README line, PR
 
 ## Decisions / blockers
 
@@ -32,3 +32,7 @@ PR: https://github.com/pavnem-ux/Game/pull/34
   format version unchanged). Production check (`tests/alpha-production.mjs`): the pause choice and
   the HUD button exist and cycle in the production build; the QA time-scale message is absent from
   the production JS (the QA ×2 / ×4 / ×8 scale stays DEV / QA-only).
+- Delivery: `tests/campaign-browser.mjs` expected the exact settings object; it now includes
+  `gameSpeed: 1` and checks that choosing ×1.5 in Settings is stored in the settings, never the save.
+  One full `npm test` run timed out `tests/gameplay/activities.test.ts` (5 s limit, untouched code)
+  while the e2e dev server shared the CPU; it passes alone and in the next full run.
