@@ -56,6 +56,7 @@ import {
   unitScale,
 } from './visuals/keys';
 
+const NO_POINTS: readonly { x: number; y: number }[] = Object.freeze([]);
 /** Task 08.5 §5.1: floating-number styles (crit larger and gold, player damage red). */
 const FLOAT_STYLES: Record<FloatingKind, { color: string; size: number }> = {
   normal: { color: '#fff3d6', size: 12 },
@@ -787,6 +788,9 @@ export class AlphaScene extends Phaser.Scene {
     // Task 26: the act's ground art replaces the procedural ground once it has loaded.
     const look = this.biome.look;
     if (look) this.biome.applyArtGround(this.art.ground(look.act));
+    // Task 31: the act's art decor once loaded; tall props keep clear of live activities / chests.
+    if (look) this.biome.applyArtDecor(this.art.decorProps(look.act));
+    this.biome.setDecorBlockers(s.activities?.items ?? NO_POINTS, s.chests?.items ?? NO_POINTS);
     const g = this.graphics;
     g.clear();
     const o = this.overlay.clear();

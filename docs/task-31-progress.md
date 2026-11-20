@@ -8,7 +8,7 @@ PR: https://github.com/pavnem-ux/Game/pull/30
 
 - [x] 0 Setup: branch, spec, progress file, draft PR
 - [x] 1 Pipeline: files, manifest, provenance, kinds, registry, split budget, tests
-- [ ] 2 Decor: art props per act, seeded placement, below all gameplay, tall-prop density / exclusion
+- [x] 2 Decor: art props per act, seeded placement, below all gameplay, tall-prop density / exclusion
 - [ ] 3 Objects: shrine, lanterns, open chests, buff icons + popups, Gold / Ore UI icons
 - [ ] 4 Menus: lazy backgrounds (hub, act regions of the map path) + emblem
 - [ ] 5 Delivery: final checks, README line, PR
@@ -16,3 +16,4 @@ PR: https://github.com/pavnem-ux/Game/pull/30
 ## Decisions / blockers
 
 - Art budget split (owner decision, Task 31): in-game / preloaded art ≤ 4 MiB, lazy menu backgrounds ≤ 2 MiB.
+- Decor: no per-map tint on the art props (Canvas ignores setTint; the ground stays tinted). Tall props hidden within 250 of live activities / chests at render time (they spawn after the layout).
