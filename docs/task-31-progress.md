@@ -11,7 +11,7 @@ PR: https://github.com/pavnem-ux/Game/pull/30
 - [x] 2 Decor: art props per act, seeded placement, below all gameplay, tall-prop density / exclusion
 - [x] 3 Objects: shrine, lanterns, open chests, buff icons + popups, Gold / Ore UI icons
 - [x] 4 Menus: lazy backgrounds (hub, act regions of the map path) + emblem
-- [ ] 5 Delivery: final checks, README line, PR
+- [x] 5 Delivery: final checks, README line, PR
 
 ## Decisions / blockers
 
