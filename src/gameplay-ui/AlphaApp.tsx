@@ -18,6 +18,7 @@ import { installSound } from './sound';
 import { preloadSkillIcons } from './kit';
 import { SynergyBanners } from './SynergyBanners';
 import { TouchControls } from './TouchControls';
+import { GameSpeedButton } from './GameSpeed';
 import { FullscreenButton, OrientationNotice, useBlockGestures } from './DeviceChrome';
 import './alpha.css';
 const DeveloperPanel =
@@ -124,6 +125,7 @@ export function AlphaApp() {
               <div className="timer">
                 <span>TIME IN THE RUINS</span>
                 <strong data-testid="alpha-timer">{time(s.time)}</strong>
+                <GameSpeedButton />
               </div>
               <div className="hud-right">
                 <div className="kill-count">

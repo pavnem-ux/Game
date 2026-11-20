@@ -29,6 +29,7 @@ import { clock } from './campaign-format';
 import { alphaBridge } from './store';
 import { BuildLabel } from './BuildLabel';
 import { ReportButton } from './ReportButton';
+import { GameSpeedChoice } from './GameSpeed';
 import { campaignStore } from './campaign-state';
 import { Button, SkillIcon, SynergyIcon, cooldownLeftFraction } from './kit';
 import { EN } from './strings-en';
@@ -668,6 +669,7 @@ export function PauseDialog({ world }: { world: GameplaySnapshot }) {
               : 'Forgotten Grove · '}
             Wave {world.spawning.waves + 1}
           </p>
+          <GameSpeedChoice className="pause-game-speed" />
           <div className="pause-actions">
             <button
               className="button primary"

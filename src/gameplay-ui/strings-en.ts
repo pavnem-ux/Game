@@ -45,6 +45,10 @@ export const EN = Object.freeze({
     title: 'Game',
     screenShake: 'Screen shake',
     screenShakeHint: 'A light shake when you take damage and on heavy boss attacks.',
+    gameSpeed: 'Game speed',
+    gameSpeedHint:
+      'Everything in the run moves faster; rewards stay the same. Paused screens stay frozen.',
+    gameSpeedButton: (label: string) => `Game speed ${label}: change`,
     sound: 'Sound',
     masterVolume: 'Master volume',
     sfxVolume: 'Effects',
