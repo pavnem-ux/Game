@@ -28,6 +28,8 @@ import { VFX_CAPS } from './vfx/caps';
 import { VfxDirector } from './vfx/director';
 import type { DirectorContext } from './vfx/director';
 import { TELEGRAPH_DEPTH, VfxRenderer } from './vfx/VfxRenderer';
+import { HEAVY_SHAKE, heavyShake, heroPose, poseTime } from './vfx/feel';
+import type { HeroMotion, HeroPose } from './vfx/feel';
 import { ACTIVITY_ART, ArtRegistry, CHEST_OPEN_ART } from './visuals/art-registry';
 import { ArtSprites } from './visuals/art-sprites';
 import {
@@ -53,6 +55,7 @@ import { QUALITY_PRESETS } from './visuals/quality';
 import { PET_CONFIG, PET_FOLLOW } from '../pets/config';
 import type { GraphicsQuality } from './visuals/quality';
 import { DEPTH, UnitRenderer } from './visuals/UnitRenderer';
+import type { UnitOptions } from './visuals/UnitRenderer';
 import {
   ART_SCALE,
   chestTextureKey,
@@ -143,6 +146,16 @@ export class AlphaScene extends Phaser.Scene {
     playerId: 'player',
     attackSource: (attackId) => this.world?.attackSource(attackId),
   };
+  /** Task 33 feel (render only): hero motion, hit-stopped sprites (id → stop time), heavy shake. */
+  private readonly heroMotion: { kind: HeroMotion | null; at: number; dx: number; dy: number } = {
+    kind: null,
+    at: 0,
+    dx: 0,
+    dy: 0,
+  };
+  private readonly heroPose: HeroPose = { dx: 0, dy: 0, sx: 1, sy: 1 };
+  private readonly hitStops = new Map<string, number>();
+  private lastHeavyAt = Number.NEGATIVE_INFINITY;
   /** Task 32: the boss portrait above the «⚠ Boss» notification (created on first use). */
   private bossPortrait: Phaser.GameObjects.Image | null = null;
   private labels: Phaser.GameObjects.Text[] = [];
@@ -314,6 +327,9 @@ export class AlphaScene extends Phaser.Scene {
     this.requestRunBossArt(); // Task 32: the map's boss sprite, long before the boss spawns
     this.vfx.reset();
     this.vfxDirector.reset();
+    this.heroMotion.kind = null;
+    this.hitStops.clear();
+    this.lastHeavyAt = Number.NEGATIVE_INFINITY;
     this.resetFeel();
     this.runId++;
     this.lastEvent = 0;
@@ -626,7 +642,7 @@ export class AlphaScene extends Phaser.Scene {
     threshold: number,
     time: number,
     flash: number,
-    options: { alpha?: number; glow?: number; glowScale?: number },
+    options: UnitOptions,
     override: ArtEntry | null = null,
   ): number | null {
     // Task 32: a boss draws its own sprite (lazy) instead of the shared boss look.
@@ -914,7 +930,20 @@ export class AlphaScene extends Phaser.Scene {
     const ctx = this.vfxContext;
     ctx.characterClass = s.character.characterClass;
     ctx.attackRange = s.weapon.weapon.attackRange;
-    this.vfxDirector.frame(s, frameEvents, ctx);
+    const sig = this.vfxDirector.frame(s, frameEvents, ctx);
+    if (sig.motion) {
+      const m = this.heroMotion;
+      m.kind = sig.motion;
+      m.at = s.time;
+      m.dx = sig.dx;
+      m.dy = sig.dy;
+    }
+    if (this.hitStops.size > 64) this.hitStops.clear();
+    for (const id of sig.hitStops) this.hitStops.set(id, s.time);
+    if (sig.heavy && heavyShake(uiSettings.get().screenShake, s.time, this.lastHeavyAt)) {
+      this.lastHeavyAt = s.time;
+      this.cameras.main.shake(HEAVY_SHAKE.duration, HEAVY_SHAKE.intensity);
+    }
     for (const event of frameEvents) {
       this.lastEvent = event.sequence;
       const e = event.event;
@@ -1140,7 +1169,7 @@ export class AlphaScene extends Phaser.Scene {
         enemy.config.radius,
         enemy.config.behavior === 'flee' ? -towardPlayer : towardPlayer,
         ENEMY_FACING_THRESHOLD,
-        s.time,
+        poseTime(s.time, this.hitStops.get(enemy.entityId)),
         flash,
         glowOptions,
         isBoss ? (this.art.boss(s.campaign!.boss!.bossId)?.entry ?? null) : null,
@@ -1157,7 +1186,7 @@ export class AlphaScene extends Phaser.Scene {
             : role === 'normal'
               ? k / ART_SCALE
               : unitScale(role, enemy.config.radius, ranged),
-          s.time,
+          poseTime(s.time, this.hitStops.get(enemy.entityId)),
           flash,
           glowOptions,
         );
@@ -1311,24 +1340,35 @@ export class AlphaScene extends Phaser.Scene {
     const hitAge = s.time - this.playerHitAt;
     const playerFlash = hitAge >= 0 && hitAge < 0.15 ? 1 - hitAge / 0.15 : 0;
     const playerLook = playerTextureKey(s.character.characterClass);
+    // Task 33: hero motion (render only): lunge / cast swell / bow pull, back at rest in ~120 ms.
+    const m = this.heroMotion;
+    const pose = heroPose(m.kind, s.time - m.at, m.dx, m.dy, this.heroPose);
+    const playerOptions = { alpha: s.player.alive ? 1 : 0.4, sx: pose.sx, sy: pose.sy };
     // Task 25: owner art when loaded (faces the movement direction), else the class silhouette.
     if (
       this.drawArtUnit(
         'player',
         playerLook,
-        x,
-        y,
+        x + pose.dx,
+        y + pose.dy,
         ALPHA.playerRadius,
         s.movement.x,
         PLAYER_FACING_THRESHOLD,
         s.time,
         playerFlash,
-        { alpha: s.player.alive ? 1 : 0.4 },
+        playerOptions,
       ) === null
     )
-      this.units.unit('player', playerLook, x, y, 1 / ART_SCALE, s.time, playerFlash, {
-        alpha: s.player.alive ? 1 : 0.4,
-      });
+      this.units.unit(
+        'player',
+        playerLook,
+        x + pose.dx,
+        y + pose.dy,
+        1 / ART_SCALE,
+        s.time,
+        playerFlash,
+        playerOptions,
+      );
     if (s.survival.directProtected)
       g.lineStyle(
         s.survival.fullyProtected ? 3 : 1,
