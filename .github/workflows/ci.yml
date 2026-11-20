@@ -49,12 +49,6 @@ jobs:
         run: npm run build
       - name: Production regression (no DEV code, SPA fallback, playable build)
         run: npm run test:production
-      - name: Upload dist
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: dist/
-          retention-days: 7
 
   e2e:
     name: Browser end-to-end (dev server)
@@ -81,8 +75,9 @@ jobs:
           exit 1
       - name: Prototype and alpha browser tests
         run: npm run test:e2e
-      - name: Upload server log (screenshots only in extended runs)
-        if: always()
+      # Artifacts count against the account's 0.5 GB Actions storage: keep them only to debug a failure.
+      - name: Upload server log and artifacts (on failure only)
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: e2e-artifacts
@@ -90,7 +85,7 @@ jobs:
             artifacts/
             vite.log
           if-no-files-found: ignore
-          retention-days: 7
+          retention-days: 1
 
   qa:
     name: QA preview build and browser regression
@@ -110,11 +105,11 @@ jobs:
       - run: npm ci
       - run: npm run build:qa
       - run: npm run test:qa
-      - name: Upload QA screenshots
-        if: always()
+      - name: Upload QA artifacts (on failure only)
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: qa-artifacts
           path: artifacts/
           if-no-files-found: ignore
-          retention-days: 7
+          retention-days: 1
