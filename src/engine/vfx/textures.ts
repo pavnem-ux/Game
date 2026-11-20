@@ -24,7 +24,7 @@ export const VFX_TEXTURE_KEYS = Object.freeze([
 export type VfxTextureKey = (typeof VFX_TEXTURE_KEYS)[number];
 
 /**
- * Keys whose owner art (pack 9) already carries its own colours (flame, blood, poison, lightning,
+ * Keys whose owner art (Task 33 VFX pack) already carries its own colours (flame, blood, poison, lightning,
  * ice): drawn untinted once the art is in use. The generated textures are white and always tinted.
  */
 export const PRECOLORED_VFX: ReadonlySet<VfxTextureKey> = new Set<VfxTextureKey>([

@@ -652,7 +652,7 @@ describe('Task 32 — pack 8: boss sprites', () => {
   });
 });
 
-describe('Task 33 — pack 9: VFX textures', () => {
+describe('Task 33 — VFX texture pack (provenance row 10)', () => {
   it('replaces every generated vfx_* texture by key (kind vfx), preloaded with the scene', () => {
     const r = new ArtRegistry(manifest);
     const scene = new Set(r.sceneEntries().map((e) => e.key));
