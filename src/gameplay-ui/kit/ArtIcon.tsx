@@ -219,9 +219,8 @@ export function BossPortraitView({
 }) {
   if (locked)
     return (
-      <span className={`art-icon boss-portrait is-locked icon-${size}`} aria-hidden="true">
-        ?
-      </span>
+      // The «?» is drawn in CSS (`::before`): the panel's text stays exactly as before.
+      <span className={`art-icon boss-portrait is-locked icon-${size}`} aria-hidden="true" />
     );
   return <ArtImage entry={bossArtEntry(manifest, bossId)} size={size} className="boss-portrait" />;
 }

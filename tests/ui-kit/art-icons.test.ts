@@ -177,7 +177,7 @@ describe('Task 32 — boss portrait (map-path side panel)', () => {
       `<img class="art-icon boss-portrait icon-bossPanel" src="${base}assets/bosses/thornwarden.webp" alt="" aria-hidden="true" width="72" height="72" decoding="async" draggable="false"/>`,
     );
     expect(html('thornwarden', true)).toBe(
-      '<span class="art-icon boss-portrait is-locked icon-bossPanel" aria-hidden="true">?</span>',
+      '<span class="art-icon boss-portrait is-locked icon-bossPanel" aria-hidden="true"></span>',
     );
   });
   it('nothing (the ♚ text stays) for an unknown boss or without the manifest', () => {

@@ -2361,6 +2361,9 @@ body {
   object-fit: contain;
   filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.6));
 }
+.boss-portrait.is-locked::before {
+  content: '?';
+}
 .boss-portrait.is-locked {
   display: inline-grid;
   place-items: center;

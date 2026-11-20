@@ -11,7 +11,7 @@ PR: https://github.com/pavnem-ux/Game/pull/31
 - [x] 1 Pipeline: files, manifest, provenance, kind `boss`, registry, lazy (not in the preload), budget, tests
 - [x] 2 In run: load the map's boss at run start, scale ≈ 2.6 × collision radius, feet anchor, flip, overlays on top
 - [x] 3 UI: map-path side panel and boss spawn notification portrait (locked maps: «?»)
-- [ ] 4 Delivery: merge latest `task-31-art`, final checks, README line, PR
+- [x] 4 Delivery: merge latest `task-31-art`, final checks, README line, PR
 
 ## Decisions / blockers
 
@@ -22,5 +22,5 @@ PR: https://github.com/pavnem-ux/Game/pull/31
   it loads. Boss telegraph outlines moved from the ground layer to the overlay so they stay visible
   over the larger sprite (fills stay on the ground). DEV `presentation().artBoss` for the e2e.
 - UI: the map-path side panel shows the selected map's boss (`BossPortrait`, 72 px, an `<img>`
-  only while that panel shows it) next to the name; locked maps get a «?» and request no file. The
+  only while that panel shows it) next to the name; locked maps get a «?» (CSS, so the panel text is unchanged) and request no file. The
   in-run «⚠ Boss: …» notification shows the same sprite (baked to 64 px) to the left of its text.
