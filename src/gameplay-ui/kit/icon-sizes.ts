@@ -31,6 +31,14 @@ export const ICON_SIZES = Object.freeze({
   talentNode: 56,
   /** Task 28: talent node on touch screens (stays ≥ the Task 16 44 px minimum). */
   talentNodeTouch: 48,
+  /** Task 30: item icon on shop / owned / forge cards. */
+  itemCard: 48,
+  /** Task 30: item icon in a paper-doll equipment slot. */
+  itemSlot: 40,
+  /** Task 30: item icon in the item details and forge upgrade panels. */
+  itemDetail: 64,
+  /** Task 30: item icon inline in compare titles and quest rewards. */
+  itemSmall: 24,
 });
 export type IconSize = keyof typeof ICON_SIZES;
 /** The size config as CSS custom properties (`--icon-<size>`). */

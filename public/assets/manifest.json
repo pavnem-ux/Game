@@ -924,5 +924,401 @@
   "branch": 3,
   "anchor": "center",
   "source": "owner-generated (ChatGPT image)"
+ },
+ "item_amulet_life": {
+  "file": "assets/icons/items/amulet_life.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "amulet_life",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_amulet_magic": {
+  "file": "assets/icons/items/amulet_magic.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "amulet_magic",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_amulet_power": {
+  "file": "assets/icons/items/amulet_power.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "amulet_power",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_assassin_dagger": {
+  "file": "assets/icons/items/assassin_dagger.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "assassin_dagger",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_guard_helm": {
+  "file": "assets/icons/items/guard_helm.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "guard_helm",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_heavy_sword": {
+  "file": "assets/icons/items/heavy_sword.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "heavy_sword",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_hunter_hood": {
+  "file": "assets/icons/items/hunter_hood.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "hunter_hood",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_leather_armor": {
+  "file": "assets/icons/items/leather_armor.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "leather_armor",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_leather_pants": {
+  "file": "assets/icons/items/leather_pants.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "leather_pants",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_long_bow": {
+  "file": "assets/icons/items/long_bow.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "long_bow",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_mage_circlet": {
+  "file": "assets/icons/items/mage_circlet.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "mage_circlet",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_mystic_trousers": {
+  "file": "assets/icons/items/mystic_trousers.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "mystic_trousers",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_starter_bow": {
+  "file": "assets/icons/items/starter_bow.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "starter_bow",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_starter_daggers": {
+  "file": "assets/icons/items/starter_daggers.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "starter_daggers",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_starter_staff": {
+  "file": "assets/icons/items/starter_staff.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "starter_staff",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_starter_sword": {
+  "file": "assets/icons/items/starter_sword.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "starter_sword",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_plate": {
+  "file": "assets/icons/items/plate.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "plate",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_plate_gauntlets": {
+  "file": "assets/icons/items/plate_gauntlets.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "plate_gauntlets",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_plate_greaves": {
+  "file": "assets/icons/items/plate_greaves.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "plate_greaves",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_quick_sword": {
+  "file": "assets/icons/items/quick_sword.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "quick_sword",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_ring_fury": {
+  "file": "assets/icons/items/ring_fury.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "ring_fury",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_ring_precision": {
+  "file": "assets/icons/items/ring_precision.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "ring_precision",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_ring_speed": {
+  "file": "assets/icons/items/ring_speed.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "ring_speed",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_robe": {
+  "file": "assets/icons/items/robe.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "robe",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_shadow_dagger": {
+  "file": "assets/icons/items/shadow_dagger.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "shadow_dagger",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_short_bow": {
+  "file": "assets/icons/items/short_bow.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "short_bow",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_sorcerer_gloves": {
+  "file": "assets/icons/items/sorcerer_gloves.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "sorcerer_gloves",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_flame_staff": {
+  "file": "assets/icons/items/flame_staff.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "flame_staff",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_wisdom_staff": {
+  "file": "assets/icons/items/wisdom_staff.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "wisdom_staff",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_trickster_gloves": {
+  "file": "assets/icons/items/trickster_gloves.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "trickster_gloves",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "pet_fox": {
+  "file": "assets/pets/fox.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "pet",
+  "petId": "fox",
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "pet_firefly": {
+  "file": "assets/pets/firefly.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "pet",
+  "petId": "firefly",
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "pet_hedgehog": {
+  "file": "assets/pets/hedgehog.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "pet",
+  "petId": "hedgehog",
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "pet_owlet": {
+  "file": "assets/pets/owlet.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "pet",
+  "petId": "owlet",
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "pet_kitten": {
+  "file": "assets/pets/kitten.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "pet",
+  "petId": "kitten",
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "pet_wolf": {
+  "file": "assets/pets/wolf.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "pet",
+  "petId": "wolf",
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
  }
 }

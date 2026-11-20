@@ -2,7 +2,11 @@ import { useState, useSyncExternalStore } from 'react';
 import type { CharacterClass } from '../../character-stats';
 import type { ArtEntry, ArtManifest } from '../../engine/visuals/art-manifest';
 import { artManifestStore, artUrl } from '../../engine/visuals/art-pack';
-import { synergyIconEntry, talentBranchIconEntry } from '../../engine/visuals/art-registry';
+import {
+  itemIconEntry,
+  synergyIconEntry,
+  talentBranchIconEntry,
+} from '../../engine/visuals/art-registry';
 import { ICON_SIZES } from './icon-sizes';
 import type { IconSize } from './icon-sizes';
 
@@ -105,4 +109,34 @@ export function TalentBranchIcon(props: {
   className?: string;
 }) {
   return <TalentBranchIconView manifest={useArtManifest()} {...props} />;
+}
+
+/**
+ * Task 30: an item's icon from art pack 5 (shared by every tier of its gear template), with the
+ * forge level as a small «+N» badge. Nothing without the icon (the text card is the current look).
+ * The tier stays shown by the surrounding tier frame / colour. Decorative.
+ */
+export function ItemIconView({
+  manifest,
+  templateId,
+  size,
+  level = 0,
+}: {
+  manifest: ArtManifest | null;
+  templateId: string;
+  size: IconSize;
+  /** Forge upgrade level; > 0 shows the «+N» badge. */
+  level?: number;
+}) {
+  const entry = itemIconEntry(manifest, templateId);
+  if (!entry) return null;
+  return (
+    <span className={`item-icon item-icon-${size}`} aria-hidden="true">
+      <ArtImage entry={entry} size={size} className="item-art" />
+      {level > 0 && <b className="item-upgrade-badge">+{level}</b>}
+    </span>
+  );
+}
+export function ItemIcon(props: { templateId: string; size: IconSize; level?: number }) {
+  return <ItemIconView manifest={useArtManifest()} {...props} />;
 }

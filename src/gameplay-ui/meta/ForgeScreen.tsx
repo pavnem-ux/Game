@@ -17,7 +17,7 @@ import {
 } from '../../equipment';
 import type { GearItem, GearSlot, GearStat } from '../../equipment';
 import { campaignStore } from '../campaign-state';
-import { Button, CurrencyBadge, OreBadge, Panel, Tabs, TierFrame } from '../kit';
+import { Button, CurrencyBadge, ItemIcon, OreBadge, Panel, Tabs, TierFrame } from '../kit';
 import { EN } from '../strings-en';
 import { tierLabel } from '../ShopPages';
 import {
@@ -167,6 +167,7 @@ export function ForgePage() {
                               setMessage(null);
                             }}
                           >
+                            <ItemIcon templateId={item.templateId} size="itemCard" level={level} />
                             <strong>{itemDisplayName(item, level)}</strong>
                             <small className="item-tier">
                               {SLOT_LABELS[item.slot]} · {tierLabel(item)}
@@ -250,6 +251,7 @@ function ForgeDetail({
   const reason = check.ok ? null : (F.refusals[check.reason] ?? F.failed);
   return (
     <div className="forge-detail-body">
+      <ItemIcon templateId={item.templateId} size="itemDetail" level={level} />
       <p className="forge-level">
         <LevelPips level={level} /> {F.level(level, UPGRADE_RULES.maxLevel)}
       </p>

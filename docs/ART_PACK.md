@@ -58,8 +58,9 @@ Rules enforced by `parseArtManifest` (`src/engine/visuals/art-manifest.ts`, pure
 `public/assets/`, `docs/ART_PROVENANCE.md` and the spec are in `.prettierignore`: the owner's
 files stay byte-identical (the pack-2 entries were merged in the owner's 1-space JSON format). Pack
 1 is 17 images (≈ 0.76 MB), pack 2 9 images (≈ 0.75 MB), pack 3 37 icons (≈ 0.32 MB), pack 4 24
-images (≈ 0.24 MB); the whole set (2,016,237 bytes with the manifest) stays < 2 MiB (tested). Only
-≈ 80 KB is left: a further pack needs smaller files or an owner decision on the budget.
+images (≈ 0.24 MB), packs 5 + 6 (Task 30) 30 item icons and 6 pet sprites (≈ 0.35 MB); the whole set
+(2,375,018 bytes with the manifest) stays < 3 MiB (tested; budget raised from 2 MiB by the owner in
+Task 30).
 
 ### Adding a pack
 
@@ -71,7 +72,7 @@ images (≈ 0.24 MB); the whole set (2,016,237 bytes with the manifest) stays < 
    `synergy_<synergy id>` and `talent_branch_<branch name>` (with `characterClass` / `branch`).
 3. Tune its size / facing in `ART_DISPLAY` (`art-display.ts`) if the defaults do not fit.
 4. `npm test` checks every file exists, matches its manifest size (read from the WebP header),
-   is listed, the art set stays under 2 MB and every key is used with its declared kind.
+   is listed, the art set stays under 3 MiB and every key is used with its declared kind.
 
 A key the code does not use yet is accepted by the parser but fails the "every key is used"
 test — map it, or remove it from the pack.
@@ -223,7 +224,7 @@ Sizes for every pack icon now live in one config, `ICON_SIZES` (`src/gameplay-ui
 ## Verification
 
 - `tests/engine/art-pack.test.ts` — the real packs (sizes from WebP headers, nothing unlisted,
-  under 2 MB, every key used with its declared kind), manifest validation (incl. `tile` / `kind`),
+  under 3 MiB, every key used with its declared kind), manifest validation (incl. `tile` / `kind`),
   registry fallback for units, pickups and grounds, key collisions.
 - `tests/engine/art-display.test.ts` — bounds, 2.4 × radius width, anchors, tuning table, facing
   threshold (no flicker), mirror signs, loading bar on screen at DPR 1 / 1.5 / 2, pickup sizes

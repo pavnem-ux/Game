@@ -38,7 +38,7 @@ async function measure(withArt) {
   );
   await page.waitForFunction(() => window.__alpha?.state().screen === 'playing');
   if (withArt)
-    await page.waitForFunction(() => window.__alpha.presentation().artLooks === 17, null, {
+    await page.waitForFunction(() => window.__alpha.presentation().artLooks === 23, null, {
       timeout: 15_000,
     });
   const command = (a) => page.evaluate((x) => window.__alpha.command(x), a);

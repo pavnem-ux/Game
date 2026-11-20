@@ -340,6 +340,15 @@ try {
   );
 
   // Task 14: Space dashes (140 units, cooldown shown in the skill bar); Shift on cooldown does not.
+  // With no input the dash follows the player's facing. The no-op hotkey check above presses `s`
+  // (also «move down»): when a frame sampled it, the facing was left pointing down and the dash went
+  // down instead of right (the intermittent failure since Task 25). Face right first, deterministically.
+  const beforeFacing = (await state()).world.playerBody.x;
+  await page.keyboard.down('d');
+  // The player has moved right ⇒ the world sampled the input and the facing is right.
+  await page.waitForFunction((x) => window.__alpha.state().world.playerBody.x > x, beforeFacing);
+  await page.keyboard.up('d');
+  await page.waitForFunction(() => window.__alpha.state().world.movement.x === 0);
   const dashStart = (await state()).world.playerBody.x;
   await page.keyboard.press('Space');
   await page.evaluate(() => window.__alpha.advance(0.3));

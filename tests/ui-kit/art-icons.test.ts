@@ -9,6 +9,7 @@ import {
   SKILL_ICON_SIZES,
   SynergyIcon,
   SynergyIconView,
+  ItemIconView,
   TalentBranchIconView,
   iconSizeVars,
 } from '../../src/gameplay-ui/kit';
@@ -132,5 +133,19 @@ describe('Task 28 — talent branch emblem', () => {
         }),
       ),
     ).toBe('');
+  });
+});
+
+describe('Task 30 — item icon', () => {
+  it('template icon with the forge «+N» badge; nothing for an unknown template or no manifest', () => {
+    const html = (templateId: string, level: number, m: typeof manifest | null = manifest) =>
+      renderToStaticMarkup(
+        createElement(ItemIconView, { manifest: m, templateId, size: 'itemCard', level }),
+      );
+    expect(html('heavy_sword', 3)).toContain('/assets/icons/items/heavy_sword.webp');
+    expect(html('heavy_sword', 3)).toContain('<b class="item-upgrade-badge">+3</b>');
+    expect(html('starter_staff', 0)).not.toContain('item-upgrade-badge');
+    expect(html('no_such_template', 2)).toBe('');
+    expect(html('heavy_sword', 2, null)).toBe('');
   });
 });
