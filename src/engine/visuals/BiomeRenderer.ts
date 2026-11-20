@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import type { Pen } from './art';
-import { ARENA, DECOR_KEYS, decorLayout, mapLook } from './biomes';
-import type { MapLook } from './biomes';
+import { ARENA, DECOR_KEYS, TALL_DECOR, artDecorLayout, decorLayout, mapLook } from './biomes';
+import type { ArtDecorProp, MapLook } from './biomes';
 import { DECOR_ART, DECOR_BASE_Y, DECOR_SIZE, FX_ART, FX_SIZE } from './decor-art';
 import { QUALITY_PRESETS } from './quality';
 import type { GraphicsQuality } from './quality';
@@ -19,6 +19,13 @@ export const BIOME_DEPTH = Object.freeze({
   particles: 9.6,
 });
 const TILE = 256;
+/**
+ * Task 31: displayed size (world px, largest side) of the art decor props before the seeded scale
+ * jitter (0.8–1.25). Provisional, for the owner to tune.
+ */
+export const DECOR_ART_DISPLAY = Object.freeze({ low: 96, tall: 176 });
+/** Task 31: at most this many blockers (live activities + chests) hide nearby tall props. */
+const MAX_BLOCKERS = 16;
 const pen = (g: Phaser.GameObjects.Graphics): Pen => g;
 
 /**
@@ -38,6 +45,12 @@ export class BiomeRenderer {
   /** Task 26: the ground tile sprite of the current map and the art texture baked for it. */
   private ground: Phaser.GameObjects.TileSprite | null = null;
   private groundArt: string | null = null;
+  /** Task 31: the act's art decor replaced the procedural props (once per map). */
+  private decorArt = false;
+  /** Tall art props (subset of `decor`) and the blocker points that hide them (x, y pairs). */
+  private tall: Phaser.GameObjects.Image[] = [];
+  private readonly blockers = new Float32Array(MAX_BLOCKERS * 2);
+  private blockerCount = 0;
   constructor(private readonly scene: Phaser.Scene) {
     this.tints = new TintCache(scene);
     for (const key of DECOR_KEYS) this.bake(key, DECOR_SIZE, (g) => DECOR_ART[key](pen(g)));
@@ -239,8 +252,19 @@ export class BiomeRenderer {
       right = view.right + margin,
       top = view.y - margin,
       bottom = view.bottom + margin * 1.6;
+    const clear2 = TALL_DECOR.clearRadius * TALL_DECOR.clearRadius;
     for (const img of this.decor) {
-      const on = img.x > left && img.x < right && img.y > top && img.y < bottom;
+      let on = img.x > left && img.x < right && img.y > top && img.y < bottom;
+      // Task 31: a tall prop never stands over a live activity or chest.
+      if (on && img.getData('tall') === true)
+        for (let b = 0; b < this.blockerCount; b++) {
+          const dx = img.x - this.blockers[b * 2],
+            dy = img.y - this.blockers[b * 2 + 1];
+          if (dx * dx + dy * dy < clear2) {
+            on = false;
+            break;
+          }
+        }
       if (img.visible !== on) img.setVisible(on);
     }
     const kind = this.look?.biome.particles;
@@ -280,6 +304,68 @@ export class BiomeRenderer {
   /** The art ground texture shown for this map, or null while the procedural ground is used. */
   get artGround(): string | null {
     return this.groundArt;
+  }
+  /**
+   * Task 31: replaces the procedural decor with the act's art props once they have all loaded (same
+   * seeded spots, `artDecorLayout`); idempotent per map. Decor stays at `BIOME_DEPTH.decor`, below
+   * every unit, pickup, projectile and telegraph; no prop gets a light or glow.
+   */
+  applyArtDecor(
+    props:
+      | readonly {
+          readonly texture: string;
+          readonly entry: {
+            readonly key: string;
+            readonly width: number;
+            readonly height: number;
+            readonly decor?: { readonly tall: boolean };
+          };
+        }[]
+      | null,
+  ): void {
+    if (this.decorArt || !props || !this.look || !this.built) return;
+    const byKey = new Map(props.map((p) => [p.entry.key, p]));
+    const list: ArtDecorProp[] = props.map((p) => ({
+      key: p.entry.key,
+      tall: p.entry.decor?.tall === true,
+    }));
+    const density = QUALITY_PRESETS[this.built.quality].decorDensity;
+    for (const img of this.decor) img.destroy();
+    this.objects = this.objects.filter((o) => !this.decor.includes(o as Phaser.GameObjects.Image));
+    this.decor = [];
+    this.tall = [];
+    for (const item of artDecorLayout(this.look, density, list)) {
+      const prop = byKey.get(item.key)!;
+      const size = item.tall ? DECOR_ART_DISPLAY.tall : DECOR_ART_DISPLAY.low;
+      const scale = (size * item.scale) / Math.max(prop.entry.width, prop.entry.height);
+      const img = this.scene.add
+        .image(item.x, item.y, prop.texture)
+        .setOrigin(0.5, 1)
+        .setScale(item.flip ? -scale : scale, scale)
+        .setDepth(BIOME_DEPTH.decor)
+        .setData('tall', item.tall);
+      this.keep(img);
+      this.decor.push(img);
+      if (item.tall) this.tall.push(img);
+    }
+    this.decorArt = true;
+  }
+  /** Task 31: the points (live activities, chests) tall props keep clear of; at most 16. */
+  setDecorBlockers(
+    a: readonly { readonly x: number; readonly y: number }[],
+    b: readonly { readonly x: number; readonly y: number }[],
+  ): void {
+    let n = 0;
+    for (const list of [a, b])
+      for (let i = 0; i < list.length && n < MAX_BLOCKERS; i++, n++) {
+        this.blockers[n * 2] = list[i].x;
+        this.blockers[n * 2 + 1] = list[i].y;
+      }
+    this.blockerCount = n;
+  }
+  /** Number of tall art props on the map (diagnostics / tests). */
+  tallDecorCount(): number {
+    return this.tall.length;
   }
   applyArtGround(texture: string | null): void {
     if (this.groundArt !== null || texture === null || !this.ground || !this.look) return;
@@ -332,6 +418,9 @@ export class BiomeRenderer {
       this.scene.textures.remove(this.groundArt);
     this.groundArt = null;
     this.decor = [];
+    this.tall = [];
+    this.decorArt = false;
+    this.blockerCount = 0;
     this.particles = [];
     this.built = null;
   }

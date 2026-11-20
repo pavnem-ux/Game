@@ -1320,5 +1320,577 @@
   "petId": "wolf",
   "anchor": "bottom-center",
   "source": "owner-generated (ChatGPT image)"
+ },
+ "decor_ashlands_ash_pile": {
+  "file": "assets/decor/ashlands_ash_pile.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "decor",
+  "act": "ashlands",
+  "tall": false,
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "decor_ashlands_broken_statue": {
+  "file": "assets/decor/ashlands_broken_statue.webp",
+  "size": [
+   384,
+   384
+  ],
+  "kind": "decor",
+  "act": "ashlands",
+  "tall": true,
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "decor_ashlands_burnt_tree": {
+  "file": "assets/decor/ashlands_burnt_tree.webp",
+  "size": [
+   384,
+   384
+  ],
+  "kind": "decor",
+  "act": "ashlands",
+  "tall": true,
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "decor_ashlands_ember_crack": {
+  "file": "assets/decor/ashlands_ember_crack.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "decor",
+  "act": "ashlands",
+  "tall": false,
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "decor_ashlands_fallen_banner": {
+  "file": "assets/decor/ashlands_fallen_banner.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "decor",
+  "act": "ashlands",
+  "tall": false,
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "decor_ashlands_rubble": {
+  "file": "assets/decor/ashlands_rubble.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "decor",
+  "act": "ashlands",
+  "tall": false,
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "decor_ashlands_ruin_column": {
+  "file": "assets/decor/ashlands_ruin_column.webp",
+  "size": [
+   384,
+   384
+  ],
+  "kind": "decor",
+  "act": "ashlands",
+  "tall": true,
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "decor_ashlands_ruin_wall": {
+  "file": "assets/decor/ashlands_ruin_wall.webp",
+  "size": [
+   384,
+   384
+  ],
+  "kind": "decor",
+  "act": "ashlands",
+  "tall": true,
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "decor_forest_bush": {
+  "file": "assets/decor/forest_bush.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "decor",
+  "act": "forest",
+  "tall": false,
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "decor_forest_fallen_log": {
+  "file": "assets/decor/forest_fallen_log.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "decor",
+  "act": "forest",
+  "tall": false,
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "decor_forest_flowers": {
+  "file": "assets/decor/forest_flowers.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "decor",
+  "act": "forest",
+  "tall": false,
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "decor_forest_mushrooms": {
+  "file": "assets/decor/forest_mushrooms.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "decor",
+  "act": "forest",
+  "tall": false,
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "decor_forest_rock_moss": {
+  "file": "assets/decor/forest_rock_moss.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "decor",
+  "act": "forest",
+  "tall": false,
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "decor_forest_stump": {
+  "file": "assets/decor/forest_stump.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "decor",
+  "act": "forest",
+  "tall": false,
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "decor_forest_tree_oak": {
+  "file": "assets/decor/forest_tree_oak.webp",
+  "size": [
+   384,
+   384
+  ],
+  "kind": "decor",
+  "act": "forest",
+  "tall": true,
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "decor_forest_tree_pine": {
+  "file": "assets/decor/forest_tree_pine.webp",
+  "size": [
+   384,
+   384
+  ],
+  "kind": "decor",
+  "act": "forest",
+  "tall": true,
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "decor_frost_frozen_bones": {
+  "file": "assets/decor/frost_frozen_bones.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "decor",
+  "act": "frost",
+  "tall": false,
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "decor_frost_frozen_statue": {
+  "file": "assets/decor/frost_frozen_statue.webp",
+  "size": [
+   384,
+   384
+  ],
+  "kind": "decor",
+  "act": "frost",
+  "tall": true,
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "decor_frost_frozen_tree": {
+  "file": "assets/decor/frost_frozen_tree.webp",
+  "size": [
+   384,
+   384
+  ],
+  "kind": "decor",
+  "act": "frost",
+  "tall": true,
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "decor_frost_ice_crystal": {
+  "file": "assets/decor/frost_ice_crystal.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "decor",
+  "act": "frost",
+  "tall": false,
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "decor_frost_ice_spikes": {
+  "file": "assets/decor/frost_ice_spikes.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "decor",
+  "act": "frost",
+  "tall": false,
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "decor_frost_icicle_rock": {
+  "file": "assets/decor/frost_icicle_rock.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "decor",
+  "act": "frost",
+  "tall": false,
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "decor_frost_snow_rock": {
+  "file": "assets/decor/frost_snow_rock.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "decor",
+  "act": "frost",
+  "tall": false,
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "decor_frost_snowdrift": {
+  "file": "assets/decor/frost_snowdrift.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "decor",
+  "act": "frost",
+  "tall": false,
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "decor_marsh_barrow_stone": {
+  "file": "assets/decor/marsh_barrow_stone.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "decor",
+  "act": "marsh",
+  "tall": false,
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "decor_marsh_bog_tuft": {
+  "file": "assets/decor/marsh_bog_tuft.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "decor",
+  "act": "marsh",
+  "tall": false,
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "decor_marsh_bones": {
+  "file": "assets/decor/marsh_bones.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "decor",
+  "act": "marsh",
+  "tall": false,
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "decor_marsh_dead_tree": {
+  "file": "assets/decor/marsh_dead_tree.webp",
+  "size": [
+   384,
+   384
+  ],
+  "kind": "decor",
+  "act": "marsh",
+  "tall": true,
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "decor_marsh_lily_pond": {
+  "file": "assets/decor/marsh_lily_pond.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "decor",
+  "act": "marsh",
+  "tall": false,
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "decor_marsh_reeds": {
+  "file": "assets/decor/marsh_reeds.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "decor",
+  "act": "marsh",
+  "tall": false,
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "decor_marsh_rotten_log": {
+  "file": "assets/decor/marsh_rotten_log.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "decor",
+  "act": "marsh",
+  "tall": false,
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "decor_marsh_will_o_wisp_lamp": {
+  "file": "assets/decor/marsh_will_o_wisp_lamp.webp",
+  "size": [
+   384,
+   384
+  ],
+  "kind": "decor",
+  "act": "marsh",
+  "tall": true,
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "bg_act1_forest": {
+  "file": "assets/backgrounds/bg_act1_forest.webp",
+  "size": [
+   1920,
+   1080
+  ],
+  "kind": "background",
+  "anchor": "cover",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "bg_act2_marsh": {
+  "file": "assets/backgrounds/bg_act2_marsh.webp",
+  "size": [
+   1920,
+   1080
+  ],
+  "kind": "background",
+  "anchor": "cover",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "bg_act3_ashlands": {
+  "file": "assets/backgrounds/bg_act3_ashlands.webp",
+  "size": [
+   1920,
+   1080
+  ],
+  "kind": "background",
+  "anchor": "cover",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "bg_act4_frost": {
+  "file": "assets/backgrounds/bg_act4_frost.webp",
+  "size": [
+   1920,
+   1080
+  ],
+  "kind": "background",
+  "anchor": "cover",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "bg_menu": {
+  "file": "assets/backgrounds/bg_menu.webp",
+  "size": [
+   1920,
+   1080
+  ],
+  "kind": "background",
+  "anchor": "cover",
+  "lazy": true,
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "emblem": {
+  "file": "assets/ui/emblem.webp",
+  "size": [
+   512,
+   512
+  ],
+  "kind": "ui",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "buff_fury": {
+  "file": "assets/objects/buff_fury.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "buff-icon",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)",
+  "buffId": "fury"
+ },
+ "buff_quick_hands": {
+  "file": "assets/objects/buff_quick_hands.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "buff-icon",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)",
+  "buffId": "haste"
+ },
+ "buff_light_step": {
+  "file": "assets/objects/buff_light_step.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "buff-icon",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)",
+  "buffId": "lightStep"
+ },
+ "buff_magnet": {
+  "file": "assets/objects/buff_magnet.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "buff-icon",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)",
+  "chestContent": "magnet"
+ },
+ "icon_gold": {
+  "file": "assets/objects/icon_gold.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "currency-icon",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)",
+  "currency": "gold"
+ },
+ "icon_ore": {
+  "file": "assets/objects/icon_ore.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "currency-icon",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)",
+  "currency": "ore"
+ },
+ "chest_wooden_open": {
+  "file": "assets/objects/chest_wooden_open.webp",
+  "size": [
+   192,
+   192
+  ],
+  "kind": "chest-open",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)",
+  "chestType": "wooden"
+ },
+ "chest_enchanted_open": {
+  "file": "assets/objects/chest_enchanted_open.webp",
+  "size": [
+   192,
+   192
+  ],
+  "kind": "chest-open",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)",
+  "chestType": "enchanted"
+ },
+ "lantern_lit": {
+  "file": "assets/objects/lantern_lit.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "activity",
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)",
+  "activity": "lantern",
+  "state": "lit"
+ },
+ "lantern_unlit": {
+  "file": "assets/objects/lantern_unlit.webp",
+  "size": [
+   256,
+   256
+  ],
+  "kind": "activity",
+  "anchor": "bottom-center",
+  "source": "owner-generated (ChatGPT image)",
+  "activity": "lantern",
+  "state": "unlit"
+ },
+ "shrine_embers": {
+  "file": "assets/objects/shrine_embers.webp",
+  "size": [
+   384,
+   384
+  ],
+  "kind": "activity",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)",
+  "activity": "shrine"
  }
 }

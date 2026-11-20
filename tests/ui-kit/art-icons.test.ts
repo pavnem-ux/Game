@@ -9,6 +9,7 @@ import {
   SKILL_ICON_SIZES,
   SynergyIcon,
   SynergyIconView,
+  BuffIconView,
   ItemIconView,
   TalentBranchIconView,
   iconSizeVars,
@@ -38,6 +39,9 @@ describe('Task 28 — one icon size config', () => {
       expect(ICON_SIZES[k], k).toBeLessThanOrEqual(128);
     for (const k of ['branch', 'branchCompact', 'talentNode', 'talentNodeTouch'] as const)
       expect(ICON_SIZES[k], k).toBeLessThanOrEqual(192);
+    // Task 31: the hub emblem (512 px source).
+    expect(ICON_SIZES.emblemCompact).toBeLessThan(ICON_SIZES.emblem);
+    expect(ICON_SIZES.emblem).toBeLessThanOrEqual(512);
   });
   it('every size reaches the stylesheet as --icon-<size>', () => {
     const css = readFileSync('src/gameplay-ui/alpha.css', 'utf8');
@@ -147,5 +151,17 @@ describe('Task 30 — item icon', () => {
     expect(html('starter_staff', 0)).not.toContain('item-upgrade-badge');
     expect(html('no_such_template', 2)).toBe('');
     expect(html('heavy_sword', 2, null)).toBe('');
+  });
+});
+
+describe('Task 31 — buff icons', () => {
+  it('buff / magnet icon from the pack; the given glyph (the current look) without it', () => {
+    const html = (id: 'fury' | 'haste' | 'lightStep' | 'magnet', m: typeof manifest | null) =>
+      renderToStaticMarkup(
+        createElement(BuffIconView, { manifest: m, id, glyph: '⚔', size: 'buff' }),
+      );
+    expect(html('haste', manifest)).toContain('/assets/objects/buff_quick_hands.webp');
+    expect(html('magnet', manifest)).toContain('/assets/objects/buff_magnet.webp');
+    expect(html('fury', null)).toBe('<span aria-hidden="true">⚔</span>');
   });
 });

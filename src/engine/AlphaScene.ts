@@ -24,7 +24,7 @@ import type { ActivityType } from '../gameplay/activities';
 import { EN } from '../gameplay-ui/strings-en';
 import { buildUnitTextures } from './visuals/texture-factory';
 import { startArtLoad } from './visuals/art-loader';
-import { ArtRegistry } from './visuals/art-registry';
+import { ACTIVITY_ART, ArtRegistry, CHEST_OPEN_ART } from './visuals/art-registry';
 import { ArtSprites } from './visuals/art-sprites';
 import {
   ENEMY_FACING_THRESHOLD,
@@ -33,6 +33,8 @@ import {
   flipSign,
   nextFacing,
   pickupArtSize,
+  CHEST_OPEN_SHOW,
+  OBJECT_ART_SIZE,
 } from './visuals/art-display';
 import { XP_RULES } from '../gameplay';
 import { CHEST_RULES } from '../gameplay/chests';
@@ -56,6 +58,7 @@ import {
   unitScale,
 } from './visuals/keys';
 
+const NO_POINTS: readonly { x: number; y: number }[] = Object.freeze([]);
 /** Task 08.5 §5.1: floating-number styles (crit larger and gold, player damage red). */
 const FLOAT_STYLES: Record<FloatingKind, { color: string; size: number }> = {
   normal: { color: '#fff3d6', size: 12 },
@@ -608,6 +611,40 @@ export class AlphaScene extends Phaser.Scene {
     );
     return feetY - d.height;
   }
+  /**
+   * Task 31: the shrine (centred) and the Dying Lantern before / after activation (pinned at the
+   * feet) from art pack 7, else the Task 24 procedural textures at the same spot.
+   */
+  private drawActivityObject(
+    which: 'shrine' | 'lanternUnlit' | 'lanternLit',
+    x: number,
+    y: number,
+  ) {
+    const procedural =
+      which === 'shrine'
+        ? activityTextureKey('shrine')
+        : activityTextureKey('lantern', which === 'lanternLit');
+    const art = this.art.object(ACTIVITY_ART[which]);
+    if (!art) {
+      this.units.item(procedural, x, y, 1.2 / ART_SCALE);
+      return;
+    }
+    const size = which === 'shrine' ? OBJECT_ART_SIZE.shrine : OBJECT_ART_SIZE.lantern;
+    const scale = size / Math.max(art.entry.width, art.entry.height);
+    if (art.entry.anchor === 'bottom-center')
+      // Feet at the bottom of the procedural texture's box (1.2 × 64 px, centred on the spot).
+      this.units.item(
+        art.texture,
+        x,
+        y + (textureSize(procedural) * 0.6) / ART_SCALE,
+        scale,
+        1,
+        0,
+        1,
+        1,
+      );
+    else this.units.item(art.texture, x, y, scale);
+  }
   private drawActivities(s: GameplaySnapshot) {
     const items = s.activities?.items ?? [];
     const g = this.graphics;
@@ -619,7 +656,7 @@ export class AlphaScene extends Phaser.Scene {
       const at = (a.enemyId && enemyPos.get(a.enemyId)) || a;
       const color = ACTIVITY_COLORS[a.type];
       if (a.type === 'shrine' || a.type === 'lantern')
-        this.units.item(activityTextureKey(a.type), at.x, at.y, 1.2 / ART_SCALE);
+        this.drawActivityObject(a.type === 'shrine' ? 'shrine' : 'lanternUnlit', at.x, at.y);
       if (a.type === 'shrine') {
         const r = ACTIVITY_RULES.shrine.radius;
         g.fillStyle(color, a.playerInside ? 0.16 : 0.08).fillCircle(at.x, at.y, r);
@@ -686,7 +723,7 @@ export class AlphaScene extends Phaser.Scene {
     for (let i = label; i < this.activityLabels.length; i++)
       this.activityLabels[i].setVisible(false);
     for (const lit of s.activities?.litLanterns ?? [])
-      this.units.item(activityTextureKey('lantern', true), lit.x, lit.y, 1.2 / ART_SCALE);
+      this.drawActivityObject('lanternLit', lit.x, lit.y);
     // Screen-edge pointers (canvas pixels: view units × DPR).
     const cam = this.cameras.main;
     const layer = this.activityArrows.clear();
@@ -787,6 +824,9 @@ export class AlphaScene extends Phaser.Scene {
     // Task 26: the act's ground art replaces the procedural ground once it has loaded.
     const look = this.biome.look;
     if (look) this.biome.applyArtGround(this.art.ground(look.act));
+    // Task 31: the act's art decor once loaded; tall props keep clear of live activities / chests.
+    if (look) this.biome.applyArtDecor(this.art.decorProps(look.act));
+    this.biome.setDecorBlockers(s.activities?.items ?? NO_POINTS, s.chests?.items ?? NO_POINTS);
     const g = this.graphics;
     g.clear();
     const o = this.overlay.clear();
@@ -937,6 +977,26 @@ export class AlphaScene extends Phaser.Scene {
         );
         this.units.item(d.texture, chest.x, chest.y, d.scale, alpha);
       } else this.units.item(look, chest.x, chest.y, 1 / ART_SCALE, alpha);
+    }
+    // Task 31: the opened chest stays a moment as its open art (fading), else nothing as before.
+    const opened = s.chests?.lastOpened;
+    if (opened) {
+      const age = s.time - opened.time;
+      const art =
+        age >= 0 && age < CHEST_OPEN_SHOW
+          ? this.art.object(CHEST_OPEN_ART[opened.chestType])
+          : null;
+      if (art) {
+        const fade = Math.min(1, (CHEST_OPEN_SHOW - age) / (CHEST_OPEN_SHOW / 3));
+        const size = pickupArtSize('chest', CHEST_RULES.radius);
+        this.units.item(
+          art.texture,
+          opened.x,
+          opened.y,
+          size / Math.max(art.entry.width, art.entry.height),
+          fade,
+        );
+      }
     }
     // Task 12: bombard telegraphs — a red ground circle that fills up until the strike lands.
     for (const strike of s.artilleryStrikes) {

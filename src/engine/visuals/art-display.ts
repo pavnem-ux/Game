@@ -135,3 +135,12 @@ export const coinPileRadius = (value: number): number => Math.min(9, 4 + Math.lo
 export function pickupArtSize(kind: keyof typeof PICKUP_SIZE_PER_RADIUS, radius: number): number {
   return PICKUP_SIZE_PER_RADIUS[kind] * radius;
 }
+
+/**
+ * Task 31: displayed size (world px, largest side) of the pack-7 activity objects; the open chest
+ * uses the closed chest's size. Provisional, for the owner to tune. Rings, progress arcs and the
+ * lantern's light radius stay drawn in code on top.
+ */
+export const OBJECT_ART_SIZE = Object.freeze({ shrine: 96, lantern: 84 });
+/** Task 31: how long (s) the open chest stays visible after opening, fading over the last third. */
+export const CHEST_OPEN_SHOW = 0.8;

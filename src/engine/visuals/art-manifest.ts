@@ -16,7 +16,8 @@
 import { CHARACTER_CLASSES } from '../../character-stats';
 import type { CharacterClass } from '../../character-stats';
 
-export type ArtAnchor = 'bottom-center' | 'center' | 'tile';
+/** `cover` (Task 31): a full-screen background scaled to cover its box (kind `background` only). */
+export type ArtAnchor = 'bottom-center' | 'center' | 'tile' | 'cover';
 export type ArtKind =
   | 'unit'
   | 'portrait'
@@ -26,7 +27,20 @@ export type ArtKind =
   | 'synergy-icon'
   | 'talent-branch-icon'
   | 'item-icon'
-  | 'pet';
+  | 'pet'
+  | 'decor'
+  | 'background'
+  | 'ui'
+  | 'buff-icon'
+  | 'currency-icon'
+  | 'chest-open'
+  | 'activity';
+/** Task 31: the biome (act) a decor prop belongs to, and whether it is tall (trees, columns …). */
+export type ArtDecorBiome = 'forest' | 'marsh' | 'ashlands' | 'frost';
+export interface ArtDecor {
+  readonly act: ArtDecorBiome;
+  readonly tall: boolean;
+}
 /** Task 28: the talent branch a `talent-branch-icon` belongs to. */
 export interface ArtTalentBranch {
   readonly characterClass: CharacterClass;
@@ -42,6 +56,8 @@ export interface ArtEntry {
   readonly kind: ArtKind | null;
   /** Task 28: present only on `talent-branch-icon` entries. */
   readonly talentBranch?: ArtTalentBranch;
+  /** Task 31: present only on `decor` entries. */
+  readonly decor?: ArtDecor;
 }
 export type ArtManifest = ReadonlyMap<string, ArtEntry>;
 
@@ -54,7 +70,7 @@ export class ArtManifestError extends Error {
 
 const KEY = /^[a-z0-9_]+$/;
 const FILE = /^assets\/(?:[a-z0-9_-]+\/)*([a-z0-9_]+)\.(?:webp|png)$/;
-const ANCHORS: readonly string[] = ['bottom-center', 'center', 'tile'];
+const ANCHORS: readonly string[] = ['bottom-center', 'center', 'tile', 'cover'];
 const KINDS: readonly string[] = [
   'unit',
   'portrait',
@@ -65,7 +81,15 @@ const KINDS: readonly string[] = [
   'talent-branch-icon',
   'item-icon',
   'pet',
+  'decor',
+  'background',
+  'ui',
+  'buff-icon',
+  'currency-icon',
+  'chest-open',
+  'activity',
 ];
+const DECOR_BIOMES: readonly string[] = ['forest', 'marsh', 'ashlands', 'frost'];
 /** Key prefix of skill icons (Task 27): key `skill_<id>`, file `…/<id>.webp`. */
 export const SKILL_ICON_KEY_PREFIX = 'skill_';
 /** Task 28: key prefix of synergy icons (`synergy_<id>`) and talent branch emblems. */
@@ -74,6 +98,8 @@ export const TALENT_BRANCH_KEY_PREFIX = 'talent_branch_';
 /** Task 30: key prefixes of item icons (`item_<template id>`) and pet sprites (`pet_<pet id>`). */
 export const ITEM_ICON_KEY_PREFIX = 'item_';
 export const PET_ART_KEY_PREFIX = 'pet_';
+/** Task 31: decor props are keyed `decor_<file name>` (e.g. `decor_forest_bush`). */
+export const DECOR_KEY_PREFIX = 'decor_';
 /** Kinds whose key is `<prefix><file name>` (all others: key = file name). */
 const KEY_PREFIX: Readonly<Record<string, string>> = {
   'skill-icon': SKILL_ICON_KEY_PREFIX,
@@ -81,6 +107,7 @@ const KEY_PREFIX: Readonly<Record<string, string>> = {
   'talent-branch-icon': TALENT_BRANCH_KEY_PREFIX,
   'item-icon': ITEM_ICON_KEY_PREFIX,
   pet: PET_ART_KEY_PREFIX,
+  decor: DECOR_KEY_PREFIX,
 };
 /** Optional id field that, when present, must equal the file name. */
 const ID_FIELD: Readonly<Record<string, string>> = {
@@ -187,6 +214,17 @@ export function parseArtManifest(text: string): ArtManifest {
         talentBranch = Object.freeze({ characterClass: c as CharacterClass, branch: b as number });
       }
     }
+    // Decor props (Task 31) name their biome and whether they are tall.
+    let decor: ArtDecor | undefined;
+    let okDecor = true;
+    if (v.kind === 'decor') {
+      const okAct = typeof v.act === 'string' && DECOR_BIOMES.includes(v.act);
+      const okTall = typeof v.tall === 'boolean';
+      if (!okAct) bad(`act "${String(v.act)}" must be ${DECOR_BIOMES.join(', ')}`);
+      if (!okTall) bad('tall must be true or false');
+      okDecor = okAct && okTall;
+      if (okDecor) decor = Object.freeze({ act: v.act as ArtDecorBiome, tall: v.tall as boolean });
+    }
     const size = v.size;
     const okSize =
       Array.isArray(size) &&
@@ -199,13 +237,18 @@ export function parseArtManifest(text: string): ArtManifest {
     const okKind = kind === null || (typeof kind === 'string' && KINDS.includes(kind));
     if (!okKind) bad(`kind "${String(kind)}" must be ${KINDS.join(', ')}`);
     // A tiling ground texture and a pinned sprite are not interchangeable.
-    const okPair = !(kind === 'ground') === !(anchor === 'tile');
-    if (okKind && ANCHORS.includes(anchor) && !okPair) bad('anchor "tile" goes with kind "ground"');
+    // A tiling ground texture, a covering background and a pinned sprite are not interchangeable.
+    const okPair =
+      !(kind === 'ground') === !(anchor === 'tile') &&
+      !(kind === 'background') === !(anchor === 'cover');
+    if (okKind && ANCHORS.includes(anchor) && !okPair)
+      bad('anchor "tile" goes with kind "ground", "cover" with kind "background"');
     if (
       !m ||
       stem !== key ||
       !okSkillId ||
       !okBranch ||
+      !okDecor ||
       files.has(file) ||
       !okSize ||
       !ANCHORS.includes(anchor) ||
@@ -225,6 +268,7 @@ export function parseArtManifest(text: string): ArtManifest {
         anchor: anchor as ArtAnchor,
         kind: kind as ArtKind | null,
         ...(talentBranch ? { talentBranch } : {}),
+        ...(decor ? { decor } : {}),
       }),
     );
   }

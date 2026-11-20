@@ -9,7 +9,9 @@ import {
   TALENT_BRANCH_KEY_PREFIX,
   ITEM_ICON_KEY_PREFIX,
   PET_ART_KEY_PREFIX,
+  DECOR_KEY_PREFIX,
 } from './art-manifest';
+import type { ArtDecorBiome } from './art-manifest';
 import type { ArtEntry, ArtKind, ArtManifest } from './art-manifest';
 import type { ActId } from './biomes';
 import type { TextureKey } from './keys';
@@ -65,6 +67,83 @@ export const CURRENCY_ART: Readonly<Record<'gold' | 'ore', string>> = Object.fre
   gold: 'coin',
   ore: 'ore',
 });
+/**
+ * Task 31 (pack 7). Decor props come from the manifest (`kind: decor`, `act`, `tall`): each act uses
+ * the props of its biome. Backgrounds and the emblem are DOM images (backgrounds lazy-loaded by
+ * their screen, never by the boot / scene preload). Buff, currency, open-chest and activity art map
+ * to fixed keys; every missing key keeps the current look.
+ */
+export const DECOR_BIOME_ACT: Readonly<Record<ArtDecorBiome, ActId>> = Object.freeze({
+  forest: 1,
+  marsh: 2,
+  ashlands: 3,
+  frost: 4,
+});
+export const BACKGROUND_ART: Readonly<Record<'menu' | ActId, string>> = Object.freeze({
+  menu: 'bg_menu',
+  1: 'bg_act1_forest',
+  2: 'bg_act2_marsh',
+  3: 'bg_act3_ashlands',
+  4: 'bg_act4_frost',
+});
+export const EMBLEM_ART = 'emblem';
+/** HUD buff icons and pickup popups (`magnet` is a chest content, not a timed buff). */
+export const BUFF_ART: Readonly<Record<'fury' | 'haste' | 'lightStep' | 'magnet', string>> =
+  Object.freeze({
+    fury: 'buff_fury',
+    haste: 'buff_quick_hands',
+    lightStep: 'buff_light_step',
+    magnet: 'buff_magnet',
+  });
+/** Task 31: the Gold / Ore UI badges (the in-run pickups keep `coin` / `ore`). */
+export const CURRENCY_ICON_ART: Readonly<Record<'gold' | 'ore', string>> = Object.freeze({
+  gold: 'icon_gold',
+  ore: 'icon_ore',
+});
+/** Open chest frames (scene), keyed by chest type. */
+export const CHEST_OPEN_ART: Readonly<Record<'wooden' | 'enchanted', string>> = Object.freeze({
+  wooden: 'chest_wooden_open',
+  enchanted: 'chest_enchanted_open',
+});
+/** Activity objects (scene): the shrine, the Dying Lantern before / after activation. */
+export const ACTIVITY_ART: Readonly<Record<'shrine' | 'lanternUnlit' | 'lanternLit', string>> =
+  Object.freeze({
+    shrine: 'shrine_embers',
+    lanternUnlit: 'lantern_unlit',
+    lanternLit: 'lantern_lit',
+  });
+/** The UI icon for Gold / Ore: the pack-7 badge icon, else the Task 26 pickup art, else null. */
+export function currencyIconEntry(
+  manifest: ArtManifest | null,
+  kind: 'gold' | 'ore',
+): ArtEntry | null {
+  const icon = manifest?.get(CURRENCY_ICON_ART[kind]);
+  if (icon && icon.kind === 'currency-icon') return icon;
+  return manifest?.get(CURRENCY_ART[kind]) ?? null;
+}
+/** A background (`menu` or act 1–4) for the menus, or null (the current kit backdrop stays). */
+export function backgroundEntry(
+  manifest: ArtManifest | null,
+  which: 'menu' | ActId,
+): ArtEntry | null {
+  const entry = manifest?.get(BACKGROUND_ART[which]);
+  return entry && entry.kind === 'background' ? entry : null;
+}
+/** The decor props of an act from the manifest (manifest order), or [] (procedural decor). */
+export function decorEntriesForAct(manifest: ArtManifest | null, act: ActId): ArtEntry[] {
+  if (!manifest) return [];
+  return [...manifest.values()].filter(
+    (e) => e.kind === 'decor' && e.decor && DECOR_BIOME_ACT[e.decor.act] === act,
+  );
+}
+const FIXED_KEYS: ReadonlyMap<string, ArtKind> = new Map<string, ArtKind>([
+  ...Object.values(BACKGROUND_ART).map((k) => [k, 'background'] as [string, ArtKind]),
+  [EMBLEM_ART, 'ui'],
+  ...Object.values(BUFF_ART).map((k) => [k, 'buff-icon'] as [string, ArtKind]),
+  ...Object.values(CURRENCY_ICON_ART).map((k) => [k, 'currency-icon'] as [string, ArtKind]),
+  ...Object.values(CHEST_OPEN_ART).map((k) => [k, 'chest-open'] as [string, ArtKind]),
+  ...Object.values(ACTIVITY_ART).map((k) => [k, 'activity'] as [string, ArtKind]),
+]);
 /** Character select / hub portrait of a class (DOM `<img>`, not a Phaser texture). */
 export const portraitArtKey = (c: CharacterClass): string => `portrait_${c}`;
 /**
@@ -194,7 +273,8 @@ export function artUsage(artKey: string): ArtKind | null {
   if (TALENT_BRANCH_KEYS.has(artKey)) return 'talent-branch-icon';
   if (ITEM_ICON_KEYS.has(artKey)) return 'item-icon';
   if (PET_ART_KEYS.has(artKey)) return 'pet';
-  return null;
+  if (artKey.startsWith(DECOR_KEY_PREFIX)) return 'decor';
+  return FIXED_KEYS.get(artKey) ?? null;
 }
 
 interface Slot {
@@ -212,6 +292,9 @@ export class ArtRegistry {
   private readonly slots = new Map<string, Slot>();
   private readonly byArt = new Map<string, Slot>();
   private readonly grounds = new Map<ActId, Slot>();
+  /** Task 31: decor props per act, and scene objects (open chests, activities) by art key. */
+  private readonly decor = new Map<ActId, Slot[]>();
+  private readonly extras = new Map<string, Slot>();
   constructor(manifest: ArtManifest) {
     const looks = [
       ...Object.entries(UNIT_ART),
@@ -232,6 +315,35 @@ export class ArtRegistry {
       this.grounds.set(Number(act) as ActId, slot);
       this.byArt.set(artKey, slot);
     }
+    for (const act of [1, 2, 3, 4] as ActId[]) {
+      const slots = decorEntriesForAct(manifest, act).map((entry) => {
+        const slot: Slot = { texture: artTextureKey(entry.key), entry, loaded: false };
+        this.byArt.set(entry.key, slot);
+        return slot;
+      });
+      this.decor.set(act, slots);
+    }
+    for (const artKey of [...Object.values(CHEST_OPEN_ART), ...Object.values(ACTIVITY_ART)]) {
+      const entry = manifest.get(artKey);
+      if (!entry) continue;
+      const slot: Slot = { texture: artTextureKey(artKey), entry, loaded: false };
+      this.extras.set(artKey, slot);
+      this.byArt.set(artKey, slot);
+    }
+  }
+  /**
+   * Task 31: the act's decor props once every one of them has loaded (one consistent set: never a
+   * mix of art and procedural props), else null (the procedural decor stays).
+   */
+  decorProps(act: ActId): readonly { readonly texture: string; readonly entry: ArtEntry }[] | null {
+    const slots = this.decor.get(act);
+    if (!slots || slots.length === 0 || slots.some((s) => !s.loaded)) return null;
+    return slots;
+  }
+  /** Task 31: a loaded scene object (open chest, shrine, lantern) by art key, else null. */
+  object(artKey: string): { readonly texture: string; readonly entry: ArtEntry } | null {
+    const slot = this.extras.get(artKey);
+    return slot && slot.loaded ? slot : null;
   }
   /** Unit art entries (Task 25). */
   unitEntries(): ArtEntry[] {
@@ -239,8 +351,9 @@ export class ArtRegistry {
     return [...this.byArt.values()].filter((s) => units.has(s.entry.key)).map((s) => s.entry);
   }
   /**
-   * Every manifest entry the in-run scene loads: units, pickups and grounds (Task 26). Portraits
-   * and the currency-only `ore` image are DOM images loaded by the menus.
+   * Every manifest entry the in-run scene loads: units, pickups and grounds (Task 26), pets
+   * (Task 30), decor, open chests and activity objects (Task 31). Portraits, icons, the emblem and
+   * the menu backgrounds are DOM images loaded by the menus (backgrounds lazily, per screen).
    */
   sceneEntries(): ArtEntry[] {
     return [...this.byArt.values()].map((s) => s.entry);

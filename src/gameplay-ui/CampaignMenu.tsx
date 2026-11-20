@@ -5,7 +5,7 @@ import { ProgressionPage } from './CampaignPages';
 import { SaveWarning, SettingsPage } from './SaveManagement';
 import { BuildLabel } from './BuildLabel';
 import { ShopPage } from './ShopPages';
-import { Backdrop, CurrencyBadge, OreBadge } from './kit';
+import { Backdrop, BackgroundArt, CurrencyBadge, OreBadge } from './kit';
 import { EN } from './strings-en';
 import { HubPage } from './meta/Hub';
 import { CharacterSelectPage } from './meta/CharacterSelect';
@@ -65,6 +65,8 @@ export function CampaignMenu() {
       aria-labelledby="alpha-title"
     >
       <Backdrop act={ACT_OF_PAGE(ui.page, Math.ceil(ui.selectedMapId / 10))} />
+      {/* Task 31: the menu background behind the hub (lazy: only while the hub is open). */}
+      {ui.page === 'hub' && <BackgroundArt which="menu" className="meta-art-bg" />}
       <header className="meta-topbar">
         <button
           className="meta-brand"

@@ -216,11 +216,18 @@ export interface DecorItem {
  * Decor scattered with the map's render seed (density by quality). Props stay off the spawn
  * centre, off the signature feature and inside the arena edge. Deterministic for (map, density).
  */
-export function decorLayout(look: MapLook, density: number): readonly DecorItem[] {
+interface DecorCandidate {
+  readonly x: number;
+  readonly y: number;
+  readonly pick: number;
+  readonly scale: number;
+  readonly flip: boolean;
+}
+/** The seeded decor spots of a map (shared by the procedural and the art layout, Task 31). */
+function decorCandidates(look: MapLook, density: number): DecorCandidate[] {
   const rand = renderRandom(look.seed ^ 0xdec0);
-  const items: DecorItem[] = [];
+  const items: DecorCandidate[] = [];
   const count = Math.round(DECOR_BASE_COUNT * Math.max(0, density));
-  const { decor } = look.biome;
   // Fixed draw count per candidate keeps layouts of different densities related (prefixes).
   for (let i = 0; i < DECOR_BASE_COUNT * 2 && items.length < count; i++) {
     const x = ARENA.edge + rand() * (ARENA.size - ARENA.edge * 2);
@@ -231,15 +238,79 @@ export function decorLayout(look: MapLook, density: number): readonly DecorItem[
     if (Math.hypot(x - ARENA.centre, y - ARENA.centre) < SPAWN_CLEAR_RADIUS) continue;
     if (Math.hypot(x - look.signature.x, y - look.signature.y) < look.signature.radius * 0.8)
       continue;
-    items.push(
-      Object.freeze({
-        key: decor[Math.floor(pick * decor.length)],
-        x: Math.round(x),
-        y: Math.round(y),
-        scale: Math.round(scale * 100) / 100,
-        flip,
-      }),
-    );
+    items.push({
+      x: Math.round(x),
+      y: Math.round(y),
+      pick,
+      scale: Math.round(scale * 100) / 100,
+      flip,
+    });
   }
-  return Object.freeze(items);
+  return items;
+}
+export function decorLayout(look: MapLook, density: number): readonly DecorItem[] {
+  const { decor } = look.biome;
+  return Object.freeze(
+    decorCandidates(look, density).map((c) =>
+      Object.freeze({
+        key: decor[Math.floor(c.pick * decor.length)],
+        x: c.x,
+        y: c.y,
+        scale: c.scale,
+        flip: c.flip,
+      }),
+    ),
+  );
+}
+
+/**
+ * Task 31: tall art props (trees, columns, walls, statues, lamps): about half as frequent as the
+ * other props and never within `clearRadius` of the spawn centre; the scene also hides them within
+ * `clearRadius` of a live activity or chest. Provisional, for the owner to tune.
+ */
+export const TALL_DECOR = Object.freeze({ share: 0.5, clearRadius: 250 });
+export interface ArtDecorProp {
+  readonly key: string;
+  readonly tall: boolean;
+}
+export interface ArtDecorItem {
+  readonly key: string;
+  readonly tall: boolean;
+  readonly x: number;
+  readonly y: number;
+  readonly scale: number;
+  readonly flip: boolean;
+}
+/**
+ * Task 31: the art decor of a map — the same seeded spots as the procedural decor (same count,
+ * positions, scale jitter and flips), each picking one of the act's art props. A tall pick is kept
+ * on every other candidate only (≈ half density) and outside the spawn clearing; otherwise it is
+ * replaced by a low prop chosen from the same draw, so the ground stays as filled as before.
+ */
+export function artDecorLayout(
+  look: MapLook,
+  density: number,
+  props: readonly ArtDecorProp[],
+): readonly ArtDecorItem[] {
+  if (props.length === 0) return Object.freeze([]);
+  const low = props.filter((p) => !p.tall);
+  const keepEvery = Math.max(1, Math.round(1 / TALL_DECOR.share));
+  return Object.freeze(
+    decorCandidates(look, density).map((c, i) => {
+      let prop = props[Math.floor(c.pick * props.length)];
+      if (prop.tall && low.length > 0) {
+        const nearSpawn =
+          Math.hypot(c.x - ARENA.centre, c.y - ARENA.centre) < TALL_DECOR.clearRadius;
+        if (nearSpawn || i % keepEvery !== 0) prop = low[Math.floor(c.pick * low.length)];
+      }
+      return Object.freeze({
+        key: prop.key,
+        tall: prop.tall,
+        x: c.x,
+        y: c.y,
+        scale: c.scale,
+        flip: c.flip,
+      });
+    }),
+  );
 }

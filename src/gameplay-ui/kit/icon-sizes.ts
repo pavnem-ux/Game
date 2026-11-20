@@ -39,6 +39,14 @@ export const ICON_SIZES = Object.freeze({
   itemDetail: 64,
   /** Task 30: item icon inline in compare titles and quest rewards. */
   itemSmall: 24,
+  /** Task 31: buff icon in the HUD buff bar. */
+  buff: 28,
+  /** Task 31: buff / magnet icon in the chest pickup popup. */
+  popup: 32,
+  /** Task 31: the game emblem above the hub title (the source is 512 px). */
+  emblem: 168,
+  /** Task 31: the emblem on short / narrow screens. */
+  emblemCompact: 96,
 });
 export type IconSize = keyof typeof ICON_SIZES;
 /** The size config as CSS custom properties (`--icon-<size>`). */

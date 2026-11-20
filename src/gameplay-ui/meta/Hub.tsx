@@ -5,7 +5,7 @@ import { CLASS_LABELS, WEAPON_LABELS } from '../../gameplay';
 import { xpToNextLevel } from '../../profile';
 import { campaignStore } from '../campaign-state';
 import type { MenuPage } from '../campaign-state';
-import { Button, ClassEmblem, ClassPortrait, Panel, ProgressBar } from '../kit';
+import { Button, ClassEmblem, ClassPortrait, Emblem, Panel, ProgressBar } from '../kit';
 import { EN } from '../strings-en';
 import { claimableQuests } from '../../quests';
 
@@ -38,6 +38,8 @@ export function HubPage() {
   return (
     <div className="hub">
       <div className="hub-hero">
+        {/* Task 31: the emblem above the title (the title stays text in the serif font). */}
+        <Emblem size="emblem" />
         <p className="meta-eyebrow">{EN.meta.subtitle}</p>
         <h1 id="alpha-title" className="hub-title">
           {EN.meta.title}

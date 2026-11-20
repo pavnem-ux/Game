@@ -1,6 +1,6 @@
 import { useState, useSyncExternalStore } from 'react';
 import { artManifestStore, artUrl } from '../../engine/visuals/art-pack';
-import { CURRENCY_ART } from '../../engine/visuals/art-registry';
+import { currencyIconEntry } from '../../engine/visuals/art-registry';
 
 /**
  * Task 26: the Gold / Ore icon from the owner's art pack (`coin`, `ore`), sized 1em like the
@@ -15,7 +15,8 @@ export function CurrencyIcon({ kind, label }: { kind: 'gold' | 'ore'; label?: st
     artManifestStore.getServerSnapshot,
   );
   const [failed, setFailed] = useState(false);
-  const entry = manifest?.get(CURRENCY_ART[kind]);
+  // Task 31: the pack-7 badge icon (`icon_gold` / `icon_ore`), else the Task 26 pickup art.
+  const entry = currencyIconEntry(manifest, kind);
   const a11y = label ? { role: 'img', 'aria-label': label } : { 'aria-hidden': true as const };
   if (entry && !failed)
     return (

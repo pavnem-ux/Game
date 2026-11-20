@@ -157,6 +157,9 @@ export interface GameplaySnapshot {
       content: ChestContent;
       amount: number;
       time: number;
+      /** Task 31 (read-only, for the open-chest frame): where the chest stood. */
+      x: number;
+      y: number;
     }> | null;
   }> | null;
   /**

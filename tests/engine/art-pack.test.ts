@@ -29,6 +29,15 @@ import {
   itemIconEntries,
   itemIconEntry,
   petArtEntry,
+  ACTIVITY_ART,
+  BACKGROUND_ART,
+  BUFF_ART,
+  CHEST_OPEN_ART,
+  CURRENCY_ICON_ART,
+  EMBLEM_ART,
+  backgroundEntry,
+  currencyIconEntry,
+  decorEntriesForAct,
 } from '../../src/engine/visuals/art-registry';
 import { GEAR_TEMPLATES, STARTER_WEAPONS } from '../../src/equipment/config';
 import { SHOP_ITEMS } from '../../src/equipment/items';
@@ -63,8 +72,8 @@ const entry = (key: string, extra: Record<string, unknown> = {}) => ({
 });
 
 describe('Task 25 — art pack 1 files and manifest', () => {
-  it('123 entries (packs 1–6: 17 + 9 + 37 + 24 + 30 + 6); every file exists and has the manifest size', () => {
-    expect(manifest.size).toBe(123);
+  it('172 entries (packs 1–7: 17 + 9 + 37 + 24 + 30 + 6 + 49); every file exists and has the manifest size', () => {
+    expect(manifest.size).toBe(172);
     for (const e of manifest.values()) {
       const buf = readFileSync(join(PUBLIC, e.file));
       expect(webpSize(buf), e.key).toEqual([e.width, e.height]);
@@ -82,10 +91,17 @@ describe('Task 25 — art pack 1 files and manifest', () => {
     walk(join(PUBLIC, 'assets'));
     expect(files.sort()).toEqual([...manifest.values()].map((e) => e.file).sort());
   });
-  it('the whole art set stays under 3 MiB (owner budget: 2 MiB in Task 26, 3 MiB from Task 30)', () => {
-    let total = statSync(join(PUBLIC, 'assets/manifest.json')).size;
-    for (const e of manifest.values()) total += statSync(join(PUBLIC, e.file)).size;
-    expect(total).toBeLessThan(3 * 1024 * 1024);
+  it('art budget (owner, Task 31): in-game / preloaded art ≤ 4 MiB, lazy menu backgrounds ≤ 2 MiB', () => {
+    // Task 26: 2 MiB in total; Task 30: 3 MiB; Task 31: split, backgrounds load only on their screen.
+    let main = statSync(join(PUBLIC, 'assets/manifest.json')).size;
+    let backgrounds = 0;
+    for (const e of manifest.values()) {
+      const size = statSync(join(PUBLIC, e.file)).size;
+      if (e.kind === 'background') backgrounds += size;
+      else main += size;
+    }
+    expect(main).toBeLessThan(4 * 1024 * 1024);
+    expect(backgrounds).toBeLessThan(2 * 1024 * 1024);
   });
   it('no duplicate keys in the manifest text', () => {
     expect(duplicateTopLevelKeys(text)).toEqual([]);
@@ -208,7 +224,7 @@ describe('Task 26 — pack 2 kinds: ground and pickup', () => {
       declared++;
       expect(artUsage(e.key), e.key).toBe(e.kind);
     }
-    expect(declared).toBe(9 + 37 + 24 + 30 + 6); // packs 2, 3 (Task 27), 4 (Task 28), 5 + 6 (Task 30)
+    expect(declared).toBe(9 + 37 + 24 + 30 + 6 + 49); // packs 2, 3, 4, 5 + 6, 7 (Tasks 26–31)
     for (const art of [...Object.values(PICKUP_ART), ...Object.values(GROUND_ART)])
       expect(manifest.has(art!), art).toBe(true);
     for (const art of Object.values(CURRENCY_ART)) expect(manifest.has(art), art).toBe(true);
@@ -232,7 +248,7 @@ describe('Task 26 — pack 2 kinds: ground and pickup', () => {
     expect(r.loadedGrounds()).toBe(4);
     // The scene loads units, pickups and grounds; portraits and the UI-only ore stay DOM images.
     const scene = r.sceneEntries().map((e) => e.key);
-    expect(scene).toHaveLength(21 + 6); // + Task 30 pet sprites
+    expect(scene).toHaveLength(21 + 6 + 32 + 5); // + pets (Task 30), decor, open chests, activities (Task 31)
     expect(scene).not.toContain('ore');
     expect(scene.some((k) => k.startsWith('portrait_'))).toBe(false);
   });
@@ -483,5 +499,95 @@ describe('Task 30 — packs 5 + 6: item icons and pet sprites', () => {
     expect(() => parseArtManifest(one('pet_fox', { ...pet, petId: 'wolf' }))).toThrow(
       /petId "wolf"/,
     );
+  });
+});
+
+describe('Task 31 — pack 7: decor, backgrounds, emblem, objects', () => {
+  it('every act maps to the 8 decor props of its biome (2–4 of them tall)', () => {
+    const biome = { 1: 'forest', 2: 'marsh', 3: 'ashlands', 4: 'frost' } as const;
+    for (const act of [1, 2, 3, 4] as const) {
+      const props = decorEntriesForAct(manifest, act);
+      expect(props, `act ${act}`).toHaveLength(8);
+      for (const p of props) {
+        expect(p.key.startsWith(`decor_${biome[act]}_`), p.key).toBe(true);
+        expect(p.decor?.act).toBe(biome[act]);
+        expect(p.anchor).toBe('bottom-center');
+      }
+      const tall = props.filter((p) => p.decor!.tall).length;
+      expect(tall, `act ${act} tall props`).toBeGreaterThanOrEqual(2);
+      expect(tall).toBeLessThanOrEqual(4);
+    }
+  });
+  it('fixed keys resolve: backgrounds, emblem, buff / currency icons, open chests, activities', () => {
+    for (const key of [
+      ...Object.values(BACKGROUND_ART),
+      EMBLEM_ART,
+      ...Object.values(BUFF_ART),
+      ...Object.values(CURRENCY_ICON_ART),
+      ...Object.values(CHEST_OPEN_ART),
+      ...Object.values(ACTIVITY_ART),
+    ])
+      expect(manifest.has(key), key).toBe(true);
+    for (const which of ['menu', 1, 2, 3, 4] as const) {
+      const bg = backgroundEntry(manifest, which);
+      expect([bg?.width, bg?.height, bg?.anchor], String(which)).toEqual([1920, 1080, 'cover']);
+    }
+    expect(currencyIconEntry(manifest, 'gold')?.key).toBe('icon_gold');
+    expect(currencyIconEntry(manifest, 'ore')?.key).toBe('icon_ore');
+  });
+  it('missing keys fall back: Gold / Ore to the Task 26 pickup art, others to null', () => {
+    const partial = new Map(manifest);
+    partial.delete('icon_gold');
+    partial.delete('bg_menu');
+    partial.delete('decor_frost_snowdrift');
+    expect(currencyIconEntry(partial, 'gold')?.key).toBe('coin');
+    expect(backgroundEntry(partial, 'menu')).toBeNull();
+    expect(decorEntriesForAct(partial, 4)).toHaveLength(7);
+    expect(decorEntriesForAct(null, 1)).toEqual([]);
+    expect(backgroundEntry(null, 1)).toBeNull();
+  });
+  it('backgrounds are never in the boot / scene preload', () => {
+    const r = new ArtRegistry(manifest);
+    const scene = r.sceneEntries().map((e) => e.kind);
+    expect(scene).not.toContain('background');
+    expect(scene).not.toContain('ui');
+    expect(scene.filter((k) => k === 'decor')).toHaveLength(32);
+  });
+  it("the scene uses an act's decor art only once all its props have loaded", () => {
+    const r = new ArtRegistry(manifest);
+    expect(r.decorProps(1)).toBeNull();
+    const forest = decorEntriesForAct(manifest, 1);
+    for (const e of forest.slice(1)) r.markLoaded(e.key);
+    expect(r.decorProps(1)).toBeNull(); // one still missing: keep the procedural set
+    r.markLoaded(forest[0].key);
+    expect(r.decorProps(1)).toHaveLength(8);
+    expect(r.decorProps(2)).toBeNull();
+    expect(r.object('shrine_embers')).toBeNull();
+    r.markLoaded('shrine_embers');
+    expect(r.object('shrine_embers')?.texture).toBe('art:shrine_embers');
+  });
+  it('validation: decor needs act + tall and the decor_ prefix; cover only for backgrounds', () => {
+    const one = (key: string, extra: Record<string, unknown>) =>
+      JSON.stringify({ [key]: { size: [256, 256], anchor: 'bottom-center', ...extra } });
+    const decor = { file: 'assets/decor/forest_bush.webp', kind: 'decor' };
+    expect(
+      parseArtManifest(one('decor_forest_bush', { ...decor, act: 'forest', tall: false })).size,
+    ).toBe(1);
+    expect(() =>
+      parseArtManifest(one('forest_bush', { ...decor, act: 'forest', tall: false })),
+    ).toThrow(/key must be "decor_forest_bush"/);
+    expect(() =>
+      parseArtManifest(one('decor_forest_bush', { ...decor, act: 'jungle', tall: false })),
+    ).toThrow(/act "jungle"/);
+    expect(() => parseArtManifest(one('decor_forest_bush', { ...decor, act: 'forest' }))).toThrow(
+      /tall/,
+    );
+    const bg = { file: 'assets/backgrounds/bg_menu.webp', kind: 'background' };
+    expect(() => parseArtManifest(one('bg_menu', { ...bg, anchor: 'center' }))).toThrow(/cover/);
+    expect(() =>
+      parseArtManifest(
+        one('emblem', { file: 'assets/ui/emblem.webp', kind: 'ui', anchor: 'cover' }),
+      ),
+    ).toThrow(/cover/);
   });
 });

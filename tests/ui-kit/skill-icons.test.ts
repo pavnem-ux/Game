@@ -64,8 +64,10 @@ describe('Task 27 — one size config', () => {
     expect(SKILL_ICON_SIZES.hud).toBe(44);
     expect(SKILL_ICON_SIZES.hudTouch).toBeGreaterThanOrEqual(44);
     expect(SKILL_ICON_SIZES.list).toBe(32);
-    // The art is 128 px: no size is drawn larger than the source.
-    for (const px of Object.values(SKILL_ICON_SIZES)) expect(px).toBeLessThanOrEqual(128);
+    // The art is 128 px: no size is drawn larger than the source. (Task 31: the 512 px emblem has
+    // its own sizes in the same config, checked against its own source in art-icons.test.ts.)
+    for (const [k, px] of Object.entries(SKILL_ICON_SIZES))
+      if (k !== 'emblem' && k !== 'emblemCompact') expect(px, k).toBeLessThanOrEqual(128);
   });
   it('is exposed to the stylesheet as --icon-<size> (Task 28: one config for every icon), and the CSS reads every size', () => {
     const vars = skillIconSizeVars();
