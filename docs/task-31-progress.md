@@ -2,12 +2,12 @@
 
 Spec: [task-31-decor-menus-objects.md](task-31-decor-menus-objects.md). Branch `task-31-art`.
 
-PR: (draft, linked after it is opened)
+PR: https://github.com/pavnem-ux/Game/pull/30
 
 ## Checklist
 
 - [x] 0 Setup: branch, spec, progress file, draft PR
-- [ ] 1 Pipeline: files, manifest, provenance, kinds, registry, split budget, tests
+- [x] 1 Pipeline: files, manifest, provenance, kinds, registry, split budget, tests
 - [ ] 2 Decor: art props per act, seeded placement, below all gameplay, tall-prop density / exclusion
 - [ ] 3 Objects: shrine, lanterns, open chests, buff icons + popups, Gold / Ore UI icons
 - [ ] 4 Menus: lazy backgrounds (hub, act regions of the map path) + emblem
