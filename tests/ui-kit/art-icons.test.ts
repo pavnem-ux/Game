@@ -10,6 +10,7 @@ import {
   SynergyIcon,
   SynergyIconView,
   BuffIconView,
+  BossPortraitView,
   ItemIconView,
   TalentBranchIconView,
   iconSizeVars,
@@ -163,5 +164,24 @@ describe('Task 31 — buff icons', () => {
     expect(html('haste', manifest)).toContain('/assets/objects/buff_quick_hands.webp');
     expect(html('magnet', manifest)).toContain('/assets/objects/buff_magnet.webp');
     expect(html('fury', null)).toBe('<span aria-hidden="true">⚔</span>');
+  });
+});
+
+describe('Task 32 — boss portrait (map-path side panel)', () => {
+  const html = (bossId: string, locked: boolean, m: typeof manifest | null = manifest) =>
+    renderToStaticMarkup(
+      createElement(BossPortraitView, { manifest: m, bossId, locked, size: 'bossPanel' }),
+    );
+  it('unlocked: the boss sprite (same file as in the run); locked: a «?» silhouette', () => {
+    expect(img(html('thornwarden', false))).toBe(
+      `<img class="art-icon boss-portrait icon-bossPanel" src="${base}assets/bosses/thornwarden.webp" alt="" aria-hidden="true" width="72" height="72" decoding="async" draggable="false"/>`,
+    );
+    expect(html('thornwarden', true)).toBe(
+      '<span class="art-icon boss-portrait is-locked icon-bossPanel" aria-hidden="true">?</span>',
+    );
+  });
+  it('nothing (the ♚ text stays) for an unknown boss or without the manifest', () => {
+    expect(html('no_such_boss', false)).toBe('');
+    expect(html('thornwarden', false, null)).toBe('');
   });
 });

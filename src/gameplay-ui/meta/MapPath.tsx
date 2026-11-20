@@ -5,7 +5,7 @@ import { CLASS_LABELS } from '../../gameplay';
 import { isMapUnlocked, recommendedLevel } from '../../profile';
 import { campaignStore } from '../campaign-state';
 import { clock, factor, minutes } from '../campaign-format';
-import { BackgroundArt, Button, Panel } from '../kit';
+import { BackgroundArt, BossPortrait, Button, Panel } from '../kit';
 import { EN } from '../strings-en';
 
 const M = EN.meta.maps;
@@ -202,7 +202,10 @@ function MapPanel({ map }: { map: CampaignMap }) {
           )}
         </dd>
         <dt>{M.boss}</dt>
-        <dd>♚ {unlocked ? map.bossName : M.bossHidden}</dd>
+        <dd className="map-boss">
+          <BossPortrait bossId={map.bossId} locked={!unlocked} size="bossPanel" />
+          <span>♚ {unlocked ? map.bossName : M.bossHidden}</span>
+        </dd>
         <dt>{M.best}</dt>
         <dd>
           {best

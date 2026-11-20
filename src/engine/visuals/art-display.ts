@@ -154,5 +154,7 @@ export function pickupArtSize(kind: keyof typeof PICKUP_SIZE_PER_RADIUS, radius:
  * lantern's light radius stay drawn in code on top.
  */
 export const OBJECT_ART_SIZE = Object.freeze({ shrine: 96, lantern: 84 });
+/** Task 32: largest side (world px) of the boss portrait above the spawn notification (provisional). */
+export const BOSS_PORTRAIT_SIZE = 64;
 /** Task 31: how long (s) the open chest stays visible after opening, fading over the last third. */
 export const CHEST_OPEN_SHOW = 0.8;

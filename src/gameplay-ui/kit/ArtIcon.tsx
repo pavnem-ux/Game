@@ -6,6 +6,7 @@ import {
   BUFF_ART,
   EMBLEM_ART,
   backgroundEntry,
+  bossArtEntry,
   itemIconEntry,
   synergyIconEntry,
   talentBranchIconEntry,
@@ -199,6 +200,33 @@ export function BackgroundArt({
       <div className="art-bg-shade" />
     </div>
   );
+}
+/**
+ * Task 32: a boss portrait (the same sprite as in the run; the `<img>` exists only while the
+ * selected map's panel shows it, so it loads on demand). Locked maps get a «?» silhouette; without
+ * the art nothing (the ♚ text stays).
+ */
+export function BossPortraitView({
+  manifest,
+  bossId,
+  locked,
+  size,
+}: {
+  manifest: ArtManifest | null;
+  bossId: string;
+  locked: boolean;
+  size: IconSize;
+}) {
+  if (locked)
+    return (
+      <span className={`art-icon boss-portrait is-locked icon-${size}`} aria-hidden="true">
+        ?
+      </span>
+    );
+  return <ArtImage entry={bossArtEntry(manifest, bossId)} size={size} className="boss-portrait" />;
+}
+export function BossPortrait(props: { bossId: string; locked: boolean; size: IconSize }) {
+  return <BossPortraitView manifest={useArtManifest()} {...props} />;
 }
 /** Task 31: the game emblem (hub title); nothing without the art (the text title stays). */
 export function Emblem({ size }: { size: IconSize }) {
