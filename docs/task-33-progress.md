@@ -49,3 +49,7 @@ PR: https://github.com/pavnem-ux/Game/pull/32
   shard upright, slash crescent facing +x) and saved ≤ 256 px WebP (172 KB total); originals unchanged
   and not in the repo. The renderer fits art into the generated box (`vfxFit`); `PRECOLORED_VFX` art
   is drawn untinted.
+- Owner feedback (Preview): some attacks still showed the old yellow shapes. Removed the Task 09.1
+  melee sector fill / outline (class colour), the Task 15 skill-area fills / outlines and the Task 15
+  synergy rings from the scene; the VFX layer draws them now (slash arcs, rings, decals, plumes, core
+  flash). Kept: zone circles (trap / zone extent), death puff, text labels, the area lights.

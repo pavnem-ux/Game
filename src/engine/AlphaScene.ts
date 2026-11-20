@@ -12,7 +12,6 @@ import { loadSave, saveRun } from '../progression/save';
 import type { TestingController } from '../gameplay/testing';
 import { stunIndicator } from './stun-indicator';
 import { oncePerKeyEvent } from './key-event-once';
-import { OFFHAND_WEAPON } from '../talents';
 import { cardKey } from '../skills';
 import { soundFrame } from '../gameplay-ui/sound';
 import { hapticFrame } from '../gameplay-ui/touch';
@@ -1402,45 +1401,8 @@ export class AlphaScene extends Phaser.Scene {
     let bossPortrait = false;
     for (const f of this.fx) {
       const e = f.event.event;
-      if (e.type === 'attack-started' && !e.projectileId) {
-        // Task 09.1 G6: the off-hand sword draws its own (shorter, narrower) swing.
-        const w =
-          e.weaponId === OFFHAND_WEAPON.id
-            ? { ...OFFHAND_WEAPON, pattern: 'melee_arc' as const }
-            : s.weapon.weapon;
-        if (w.pattern !== 'projectile') {
-          const a = Math.atan2(e.direction.y, e.direction.x),
-            half = (w.arcDegrees * Math.PI) / 360;
-          g.fillStyle(color, 0.14)
-            .beginPath()
-            .moveTo(f.x, f.y)
-            .arc(f.x, f.y, w.attackRange, a - half, a + half)
-            .closePath()
-            .fillPath();
-          g.lineStyle(2, color, 0.7)
-            .beginPath()
-            .arc(f.x, f.y, w.attackRange, a - half, a + half)
-            .strokePath();
-        }
-      }
-      if (e.type === 'skill-area') {
-        const c = skillColor(e.sourceKey),
-          alpha = Math.max(0, (f.until - s.time) / 0.25);
-        if (e.shape === 'cone' && e.direction) {
-          const a = Math.atan2(e.direction.y, e.direction.x),
-            half = ((e.arcDegrees ?? 90) * Math.PI) / 360;
-          g.fillStyle(c, 0.18 * alpha)
-            .beginPath()
-            .moveTo(f.x, f.y)
-            .arc(f.x, f.y, e.radius, a - half, a + half)
-            .closePath()
-            .fillPath();
-        } else {
-          g.fillStyle(c, 0.16 * alpha).fillCircle(f.x, f.y, e.radius);
-          g.lineStyle(2, c, 0.6 * alpha).strokeCircle(f.x, f.y, e.radius);
-          if (e.shape === 'ring' && e.innerRadius) g.strokeCircle(f.x, f.y, e.innerRadius);
-        }
-      }
+      // Task 33: weapon swings and skill areas are drawn by the VFX layer (slash arcs, rings,
+      // decals, plumes); the old Task 09.1 / 15 sector and circle fills are gone.
       if (e.type === 'death') {
         // Task 18: death puff — an expanding ring and a few motes, fading in 0.4 s.
         const life = Math.max(0, (f.until - s.time) / 0.4);
@@ -1455,18 +1417,6 @@ export class AlphaScene extends Phaser.Scene {
             2.2 * life + 0.4,
           );
         }
-      }
-      if (e.type === 'synergy-triggered') {
-        // Task 15: per-synergy flash; an awakened trigger draws a larger gold double ring.
-        const life = Math.max(0, (f.until - s.time) / 0.8);
-        const c = SYNERGY_COLORS[e.synergyId] ?? 0xbfe9ff;
-        const grow = 1 - life;
-        const y = f.y + 18;
-        if (e.awakened) {
-          g.fillStyle(0xffd877, 0.12 * life).fillCircle(f.x, y, 30 + grow * 40);
-          g.lineStyle(3, 0xffd877, 0.85 * life).strokeCircle(f.x, y, 30 + grow * 40);
-          g.lineStyle(2, c, 0.7 * life).strokeCircle(f.x, y, 18 + grow * 24);
-        } else g.lineStyle(2, c, 0.75 * life).strokeCircle(f.x, y, 12 + grow * 18);
       }
       if (f.text) {
         const text = this.label(this.damageLabels, damageLabel++)
