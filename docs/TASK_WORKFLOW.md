@@ -17,8 +17,11 @@ docs/TASK_WORKFLOW.md». AGENTS.md rules (roles, invariants, git) still apply.
 
 ## Steps
 
-- One step → targeted test (only the affected suite) → commit `Task NN: <step> <summary>` → push →
-  tick the step in the progress file.
+- One step → targeted test (only the affected suite) → commit `Task NN: <step> <summary>` → tick
+  the step in the progress file. Push only when needed (Actions minutes are limited, owner decision
+  chore/ci-minutes): the setup commit (to open the draft PR), when the owner should see a Preview
+  or a session may end, and after the final checks. Mark the PR ready for review only after the
+  final push (heavy CI jobs start then).
 - Phases run back-to-back; stop only on a blocker or when done.
 
 ## Progress file

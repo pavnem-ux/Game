@@ -1,9 +1,17 @@
 name: CI
 
+# Actions minutes are limited on this private repository (owner decision, chore/ci-minutes):
+# - docs-only changes (Markdown) start no CI;
+# - draft PRs run only the quick checks job; the heavy jobs (production, e2e, QA) start when the PR
+#   is marked ready for review and run on every later push to it;
+# - a push to `main` (a merge) re-runs checks and the production build (it deploys), not e2e.
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths-ignore: ['**/*.md', 'docs/**']
   push:
     branches: [main]
+    paths-ignore: ['**/*.md', 'docs/**']
   workflow_dispatch:
 
 permissions:
@@ -34,6 +42,7 @@ jobs:
 
   build:
     name: Production build and production regression
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -52,6 +61,10 @@ jobs:
 
   e2e:
     name: Browser end-to-end (dev server)
+    # Not on draft PRs, not again on the merge to `main` (it already passed on the PR).
+    if: >-
+      (github.event_name == 'pull_request' && !github.event.pull_request.draft) ||
+      github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
@@ -89,7 +102,7 @@ jobs:
 
   qa:
     name: QA preview build and browser regression
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && !github.event.pull_request.draft
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:

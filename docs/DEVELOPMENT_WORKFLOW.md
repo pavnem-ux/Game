@@ -65,6 +65,10 @@ GitHub, поэтому прямой push в `main` технически не з�
 ## Continuous Integration
 
 Workflow `CI` запускается на каждый PR, на push в `main` и вручную (`workflow_dispatch`).
+Чтобы экономить минуты Actions (решение владельца, chore/ci-minutes): изменения только в Markdown /
+`docs/` CI не запускают; черновой PR гоняет только `Typecheck, format and unit tests`; production,
+e2e и QA стартуют, когда PR помечен «Ready for review», и на каждый следующий push; после merge в
+`main` повторяются только проверки и production-сборка (e2e уже прошёл на PR).
 Node.js берётся из `.node-version` (24.19.0), зависимости — `npm ci` из lockfile.
 
 | Job                                          | Что проверяет                                                                                                                       |
