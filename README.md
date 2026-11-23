@@ -22,7 +22,9 @@ whole game is in English (since Task 23).
   **Quests**. Item rarities: Common, Uncommon, Rare, Epic, Legendary.
 - **Map activities:** shrines, lanterns, thieves and nests appear during a run (pointer at the
   screen edge). Stand in a shrine to cleanse it, defend a lantern for 30 s, catch the thief
-  before it escapes, destroy a nest — for chests, coins and Ore.
+  before it escapes, destroy a nest — for chests, coins and Ore. Task 38 adds the Snare Circle
+  (lure enemies in), the Cursed Altar (25% max HP for a long Fury), the Lantern Chain (race to the
+  next lantern) and Three Seals (break seals for a richer chest).
 - **Death:** the first death offers **Revive** (half health, 3 s of protection, same run) or
   **End run**; a second death ends the run.
 - **Saves** stay in this browser; **Settings → Save management** exports and imports a save file.

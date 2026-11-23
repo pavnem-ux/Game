@@ -20,7 +20,7 @@ workflow: [TASK_WORKFLOW.md](TASK_WORKFLOW.md).
 - `src/gameplay/` — `GameplayWorld.ts` (boundaries `peekBoundary` → `advanceToBoundary` →
   `resolveBoundary`, tie order, snapshot), `config.ts` (provisional numbers, `DASH_RULES`),
   `experience.ts` (`XP_RULES`, `runXpCost`), `spawning.ts`, `enemy-types.ts` (5 kinds, `ENEMY_MIX`),
-  `chests.ts` (`CHEST_RULES`, buffs), `coins.ts`, `activities.ts` (shrine / thief / lantern / nest),
+  `chests.ts` (`CHEST_RULES`, buffs), `coins.ts`, `activities.ts` (shrine / thief / lantern / nest; Task 38 snare / altar / chain / seals),
   `rng.ts` (`createRunRandom` seeded streams), `run-stats.ts`, `qa.ts` / `testing.ts` (DEV / QA only).
 - `src/combat-core/` — `CombatCore.ts`: the only owner of HP, damage, crit / Dodge, Resistance,
   death; `attack.ts`, `periodic.ts`.
