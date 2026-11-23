@@ -1,0 +1,38 @@
+# Task 37 — progress
+
+Spec: [task-37-ui-cleanup.md](task-37-ui-cleanup.md). Branch `task-37-ui-cleanup`.
+
+PR: https://github.com/pavnem-ux/Game/pull/35
+
+## Checklist
+
+- [x] 0 Setup: branch, spec, progress file, draft PR
+- [x] 1 Top bar removed (QA corner badge kept, production none), unused styles removed
+- [x] 2 Class emblems: files, manifest, provenance, kind `class-emblem`, `ClassEmblem` art + SVG fallback, tests
+- [x] 3 Synergy banners: compact toasts, ≤ 2 visible, ~2.5 s, queue, tests
+- [x] 4 Delivery: final checks, README line, PR
+
+## Decisions / blockers
+
+- Pack numbering: the class emblems are the owner's «art pack 10» (provenance row 10). The Task 33 VFX
+  textures (an unnumbered owner pack) had been given row 10; they move to row 11.
+- Top bar: the alpha's `<header className="topbar">` is gone from every screen (the shell is a flex
+  column, so the arena / menus take the height). QA builds show a small fixed corner badge «QA
+  PREVIEW» (`__QA_BUILD__` only; eliminated from production JS). Removed the alpha's `.topbar` media
+  rules; the shared `.topbar` / `.brand` / `.build-badge` styles in `src/ui/styles.css` stay — the
+  preserved prototype (`src/ui/App.tsx`) still uses them.
+- Class emblems: kind `class-emblem` (key `class_<class>`, `characterClass` validated);
+  `classEmblemEntry`; `ClassEmblem` now renders the shield `<img>` (width = size, height = size × 1.25,
+  no frame) once the manifest has it, else the Task 13 SVG (`ClassEmblemSvg`), also when the image
+  fails. Every usage goes through it (hub chips, equipment doll, talents header, `ClassPortrait`'s
+  fallback). DOM images only — not in the scene preload.
+- Synergy banners: one-line toasts (32 px synergy icon, title with level, the pair's two 20 px skill
+  icons), top-centre at 104 px under the timer, ≤ 360 px wide, gold at III. A pure queue
+  (`pushBanners` / `tickBanners` / `holdBanners`): ≤ 2 visible, 2.5 s each (UI time, fade 0.3 s), the
+  rest wait; paused / offer screens hide them and restart the visible ones' time on resume. The
+  effect text stays in a visually hidden span (screen readers; the existing e2e still reads it).
+  `role="status"`, `data-testid="synergy-banners"` and the `.synergy-banner.level-N` classes kept.
+- Delivery: `test:production` (no QA badge, no QA code) and `test:qa` against a fresh
+  `GAME_LOCAL_QA=1 npm run build:qa` of this branch (the «QA PREVIEW» corner badge) both pass. A first
+  `test:qa` run had used a stale `dist-qa/` because `build:qa` refuses without `GAME_LOCAL_QA=1`
+  outside Workers Builds; it was re-run on the fresh build.

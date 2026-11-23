@@ -10,6 +10,7 @@ import {
   SynergyIcon,
   SynergyIconView,
   BuffIconView,
+  ClassEmblemView,
   BossPortraitView,
   ItemIconView,
   TalentBranchIconView,
@@ -183,5 +184,21 @@ describe('Task 32 — boss portrait (map-path side panel)', () => {
   it('nothing (the ♚ text stays) for an unknown boss or without the manifest', () => {
     expect(html('no_such_boss', false)).toBe('');
     expect(html('thornwarden', false, null)).toBe('');
+  });
+});
+
+describe('Task 37 — class emblem', () => {
+  const html = (c: 'warrior' | 'mage', m: typeof manifest | null, size = 40) =>
+    renderToStaticMarkup(createElement(ClassEmblemView, { manifest: m, characterClass: c, size }));
+  it('renders the shield art at width = size, height = size × 1.25 (4:5)', () => {
+    expect(img(html('warrior', manifest))).toBe(
+      `<img class="class-emblem class-emblem-art emblem-warrior " src="${base}assets/ui/classes/class_warrior.webp" alt="" aria-hidden="true" width="40" height="50" decoding="async" draggable="false"/>`,
+    );
+  });
+  it('falls back to the procedural SVG without the art', () => {
+    expect(html('mage', null)).toContain('<svg class="class-emblem emblem-mage');
+    const partial = new Map(manifest);
+    partial.delete('class_mage');
+    expect(html('mage', partial)).toContain('<svg class="class-emblem emblem-mage');
   });
 });

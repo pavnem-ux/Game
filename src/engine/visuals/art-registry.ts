@@ -288,6 +288,20 @@ export function summonArtEntry(manifest: ArtManifest | null, id: string): ArtEnt
   const entry = manifest?.get(key);
   return entry && entry.kind === 'summon' ? entry : null;
 }
+/**
+ * Task 37 (pack 10): the shield emblem of a class (`class_<class>`, 256×320, DOM `<img>`), or null
+ * (the procedural SVG emblem stays).
+ */
+export const classEmblemArtKey = (c: CharacterClass): string => `class_${c}`;
+export function classEmblemEntry(
+  manifest: ArtManifest | null,
+  characterClass: CharacterClass,
+): ArtEntry | null {
+  const entry = manifest?.get(classEmblemArtKey(characterClass));
+  return entry && entry.kind === 'class-emblem' && entry.characterClass === characterClass
+    ? entry
+    : null;
+}
 /** Phaser texture key of an art image (prefixed: never collides with a procedural key). */
 export const artTextureKey = (artKey: string): string => `art:${artKey}`;
 
@@ -295,6 +309,7 @@ export const artTextureKey = (artKey: string): string => `art:${artKey}`;
 export function artUsage(artKey: string): ArtKind | null {
   if (Object.values(UNIT_ART).includes(artKey)) return 'unit';
   if (/^portrait_(warrior|mage|archer|rogue)$/.test(artKey)) return 'portrait';
+  if (/^class_(warrior|mage|archer|rogue)$/.test(artKey)) return 'class-emblem';
   if ((Object.values(GROUND_ART) as string[]).includes(artKey)) return 'ground';
   if (
     Object.values(PICKUP_ART).includes(artKey) ||

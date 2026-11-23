@@ -1710,60 +1710,75 @@ p.damage-note {
   background: #0d1424;
 }
 
-/* Task 15: synergy banners (unlock / II / III «Awakening» in gold), level pips, card level hints */
+/* Task 15: synergy banners (unlock / II / III «Awakening» in gold), level pips, card level hints.
+   Task 37: compact one-line toasts under the timer (≤ 2 at once), clear of the HUD bars and the
+   centre of the play area. */
 .synergy-banners {
   position: absolute;
-  top: 92px;
+  top: 104px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 60;
   display: grid;
-  gap: 8px;
-  width: min(520px, calc(100% - 32px));
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  gap: 6px;
+  width: min(360px, calc(100% - 32px));
   pointer-events: none;
 }
 .synergy-banner {
-  /* Task 28: icon on the left (when the pack has it), text block centred beside it. */
+  box-sizing: border-box;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 10px 16px;
-  border: 1px solid rgba(159, 220, 255, 0.55);
-  border-radius: 10px;
-  background: rgba(14, 24, 40, 0.92);
+  gap: 8px;
+  max-width: 100%;
+  padding: 4px 10px 4px 6px;
+  border: 1px solid rgba(159, 220, 255, 0.5);
+  border-radius: 999px;
+  background: rgba(14, 24, 40, 0.88);
   color: #e9f3ff;
-  text-align: center;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
-  animation: synergy-banner-in 0.35s ease-out;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+  animation: synergy-banner-in 0.3s ease-out;
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
 }
-.synergy-banner strong {
-  font-size: 15px;
+.synergy-banner.is-leaving {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+.synergy-banner-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 13px;
   letter-spacing: 0.02em;
 }
-.synergy-banner span {
-  font-size: 12px;
-  opacity: 0.85;
+.synergy-banner-pair {
+  display: inline-flex;
+  flex: none;
+  gap: 3px;
+  opacity: 0.9;
 }
 .synergy-banner.level-2 {
   border-color: rgba(185, 160, 255, 0.7);
 }
 .synergy-banner.level-3 {
   border-color: #e8c36a;
-  background: linear-gradient(180deg, rgba(74, 54, 14, 0.95), rgba(34, 24, 8, 0.95));
+  background: linear-gradient(180deg, rgba(74, 54, 14, 0.94), rgba(34, 24, 8, 0.94));
   color: #fff3cf;
   box-shadow:
-    0 0 22px rgba(232, 195, 106, 0.55),
-    0 8px 24px rgba(0, 0, 0, 0.45);
+    0 0 16px rgba(232, 195, 106, 0.5),
+    0 4px 14px rgba(0, 0, 0, 0.4);
 }
-.synergy-banner.level-3 strong {
+.synergy-banner.level-3 .synergy-banner-title {
   color: #ffd877;
-  font-size: 17px;
 }
 @keyframes synergy-banner-in {
   from {
     opacity: 0;
-    transform: translateY(-8px) scale(0.96);
+    transform: translateY(-6px);
   }
   to {
     opacity: 1;
@@ -1773,6 +1788,7 @@ p.damage-note {
 @media (prefers-reduced-motion: reduce) {
   .synergy-banner {
     animation: none;
+    transition: none;
   }
 }
 .synergy-pips {
@@ -1889,7 +1905,6 @@ body {
 }
 /* Phones and short screens: the arena takes the whole screen during a run. */
 @media (max-height: 560px), (max-width: 760px) {
-  .alpha-shell.in-run .topbar,
   .alpha-shell.in-run .page-footer {
     display: none;
   }
@@ -2005,7 +2020,6 @@ body {
 }
 /* Task 16: menus on phones — no outer page chrome, one scrolling nav row, safe-area padding. */
 @media (max-height: 560px), (max-width: 760px) {
-  .alpha-shell .topbar,
   .alpha-shell .page-footer {
     display: none;
   }
@@ -2241,11 +2255,6 @@ body {
   display: grid;
   gap: 2px;
 }
-@media (max-height: 560px) {
-  .synergy-banner .synergy-icon.icon-banner {
-    --size: var(--icon-bannerCompact);
-  }
-}
 .synergy-entry-heading .synergy-icon {
   margin: -6px 2px -6px 0;
   align-self: center;
@@ -2435,4 +2444,20 @@ body {
 .pause-game-speed {
   margin: 10px auto 4px;
   text-align: center;
+}
+/* ── Task 37: QA builds only — a small corner badge instead of the removed top bar. ── */
+.qa-corner-badge {
+  position: fixed;
+  top: max(4px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  padding: 1px 8px;
+  border: 1px solid rgba(255, 196, 110, 0.6);
+  border-radius: 999px;
+  background: rgba(40, 24, 8, 0.75);
+  color: #ffd79a;
+  font: 600 10px/1.5 var(--font-sans, system-ui, sans-serif);
+  letter-spacing: 0.12em;
+  pointer-events: none;
 }
