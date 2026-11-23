@@ -19,7 +19,7 @@ import { JOYSTICK, inJoystickZone, keyboardVector, movementInput } from './touch
 import { pinToScreen, screenToZoomed } from './screen-space';
 import { arrowDistanceLabel, edgeArrow } from './activity-arrows';
 import { ACTIVITY_RULES } from '../gameplay/activities';
-import type { ActivityType } from '../gameplay/activities';
+import type { ActivitySnapshot, ActivityType } from '../gameplay/activities';
 import { EN } from '../gameplay-ui/strings-en';
 import { buildUnitTextures } from './visuals/texture-factory';
 import { loadBossArt, startArtLoad } from './visuals/art-loader';
@@ -521,6 +521,36 @@ export class AlphaScene extends Phaser.Scene {
         if (this.accentGlow) this.units.glow(a.x, a.y, 50 + 70 * k, ACTIVITY_COLORS.lantern, 0.3);
       } else if (a.type === 'nest' && this.accentGlow)
         this.units.glow(a.x, a.y, 70, ACTIVITY_COLORS.nest, 0.22);
+      // Task 38: the snare flashes while it arms; the altar smoulders red; the chain's lanterns burn
+      // cold blue (the first once lit, the second while it waits); the sealed chest glows faintly.
+      else if (a.type === 'snare') {
+        const flash = a.phase === 'armed' ? 0.5 + 0.5 * Math.sin(s.time * 40) : 0;
+        L.add(a.x, a.y, 120 + 80 * flash, 0.8 + 0.2 * flash);
+        if (this.accentGlow)
+          this.units.glow(
+            a.x,
+            a.y,
+            110,
+            flash ? 0xffffff : ACTIVITY_COLORS.snare,
+            0.12 + 0.2 * flash,
+          );
+      } else if (a.type === 'altar') {
+        L.add(a.x, a.y, 120 + 40 * a.progress, 0.85);
+        if (this.accentGlow) this.units.glow(a.x, a.y, 70, ACTIVITY_COLORS.altar, 0.26);
+      } else if (a.type === 'chain') {
+        L.add(a.x, a.y, a.phase === 'waiting' ? 100 : 220, 0.95);
+        if (this.accentGlow) this.units.glow(a.x, a.y, 70, ACTIVITY_COLORS.chain, 0.3);
+        for (const p of a.points) {
+          const dim = a.phase === 'dimmed' ? 0.5 : 1;
+          L.add(p.x, p.y, 160 * dim, 0.9);
+          if (this.accentGlow) this.units.glow(p.x, p.y, 70, ACTIVITY_COLORS.chain, 0.3 * dim);
+        }
+      } else if (a.type === 'seals') {
+        L.add(a.x, a.y, a.phase === 'unlocked' ? 160 : 110, 0.9);
+        if (this.accentGlow)
+          for (const p of a.points)
+            if (p.state === 'idle') this.units.glow(p.x, p.y, 60, ACTIVITY_COLORS.seals, 0.2);
+      }
     }
     for (const lit of s.activities?.litLanterns ?? []) {
       L.add(lit.x, lit.y, 280, 1);
@@ -767,6 +797,8 @@ export class AlphaScene extends Phaser.Scene {
             6,
           );
         }
+      } else if (a.type !== 'thief' && a.type !== 'nest') {
+        this.drawTask38Activity(a, s.time, color);
       } else {
         // Thief / nest: a ring under the enemy that shrinks as its time runs out.
         const r =
@@ -788,10 +820,11 @@ export class AlphaScene extends Phaser.Scene {
           .setOrigin(0.5, 1)
           .setDepth(13));
       label++;
+      const left = Math.ceil(Math.max(0, (a.endsAt ?? s.time) - s.time));
       const hint =
         a.type === 'lantern' && a.phase === 'active'
-          ? `${EN.activities.defend} · ${Math.ceil(Math.max(0, (a.endsAt ?? s.time) - s.time))} s`
-          : EN.activities.hints[a.type];
+          ? `${EN.activities.defend} · ${left} s`
+          : activityHint(a, left);
       const top =
         a.type === 'shrine'
           ? ACTIVITY_RULES.shrine.radius
@@ -799,10 +832,18 @@ export class AlphaScene extends Phaser.Scene {
             ? ACTIVITY_RULES.lantern.drainRadius
             : a.type === 'nest'
               ? ACTIVITY_RULES.nest.radius + 26
-              : 34;
+              : a.type === 'snare'
+                ? ACTIVITY_RULES.snare.radius
+                : a.type === 'altar' || a.type === 'chain'
+                  ? ACTIVITY_RULES.altar.radius
+                  : a.type === 'seals'
+                    ? ACTIVITY_RULES.seals.chestRadius + 10
+                    : 34;
+      // Lantern Chain: once lit, the label follows the next lantern.
+      const labelAt = activityTarget(a, at);
       t.setText(`${a.name}\n${hint}`)
         .setColor(`#${color.toString(16).padStart(6, '0')}`)
-        .setPosition(at.x, at.y - top - 6)
+        .setPosition(labelAt.x, labelAt.y - top - 6)
         .setVisible(true);
     }
     for (let i = label; i < this.activityLabels.length; i++)
@@ -816,7 +857,7 @@ export class AlphaScene extends Phaser.Scene {
     const k = this.dpr;
     let arrows = 0;
     for (const a of items) {
-      const at = (a.enemyId && enemyPos.get(a.enemyId)) || a;
+      const at = activityTarget(a, (a.enemyId && enemyPos.get(a.enemyId)) || a);
       const arrow = edgeArrow(cam.worldView, at, s.playerBody);
       if (!arrow) continue;
       const color = ACTIVITY_COLORS[a.type];
@@ -857,6 +898,74 @@ export class AlphaScene extends Phaser.Scene {
         .setVisible(true);
     }
     for (let i = arrows; i < this.arrowLabels.length; i++) this.arrowLabels[i].setVisible(false);
+  }
+  /**
+   * Task 38: Snare Circle (flashes while it arms), Cursed Altar, Lantern Chain (cold blue, the next
+   * lantern once lit) and Three Seals (a ring and progress per seal, the chest glows once unlocked).
+   */
+  private drawTask38Activity(a: ActivitySnapshot, time: number, color: number) {
+    const g = this.graphics;
+    const R = ACTIVITY_RULES;
+    const item = (key: ActivityType | 'seal', x: number, y: number, alpha = 1) =>
+      this.units.item(
+        key === 'seal' ? 'activity-seal' : activityTextureKey(key),
+        x,
+        y,
+        1.2 / ART_SCALE,
+        alpha,
+      );
+    if (a.type === 'snare') {
+      const r = R.snare.radius;
+      const armed = a.phase === 'armed';
+      const flash = armed ? 0.5 + 0.5 * Math.sin(time * 40) : 0;
+      g.fillStyle(armed ? 0xffffff : color, armed ? 0.1 + 0.2 * flash : 0.07).fillCircle(
+        a.x,
+        a.y,
+        r,
+      );
+      g.lineStyle(armed ? 4 : 2, armed ? 0xffffff : color, 0.8).strokeCircle(a.x, a.y, r);
+      progressArc(g, a.x, a.y, r + 7, a.progress, color);
+      item('snare', a.x, a.y);
+    } else if (a.type === 'altar') {
+      const r = R.altar.radius;
+      const c = a.blocked ? 0x8a8f9c : color;
+      g.fillStyle(c, a.playerInside ? 0.16 : 0.08).fillCircle(a.x, a.y, r);
+      g.lineStyle(2, c, 0.75).strokeCircle(a.x, a.y, r);
+      progressArc(g, a.x, a.y, r + 7, a.progress, color);
+      item('altar', a.x, a.y);
+    } else if (a.type === 'chain') {
+      const r = R.chain.radius;
+      item('chain', a.x, a.y, a.phase === 'waiting' ? 1 : 0.85);
+      if (a.phase === 'waiting') {
+        g.fillStyle(color, 0.06).fillCircle(a.x, a.y, r);
+        g.lineStyle(2, color, 0.6).strokeCircle(a.x, a.y, r);
+        progressArc(g, a.x, a.y, r + 7, a.progress, color);
+      }
+      for (const p of a.points) {
+        const dim = a.phase === 'dimmed' ? 0.45 : 1;
+        g.lineStyle(2, color, 0.2 * dim).lineBetween(a.x, a.y, p.x, p.y);
+        g.fillStyle(color, 0.08 * dim).fillCircle(p.x, p.y, r);
+        g.lineStyle(2, color, 0.7 * dim).strokeCircle(p.x, p.y, r);
+        progressArc(g, p.x, p.y, r + 7, 1 - a.progress, color);
+        item('chain', p.x, p.y, a.phase === 'dimmed' ? 0.5 : 1);
+      }
+    } else if (a.type === 'seals') {
+      const r = R.seals.radius;
+      for (const p of a.points) {
+        if (p.state === 'gone') continue;
+        if (p.state === 'broken') {
+          g.lineStyle(2, color, 0.25).strokeCircle(p.x, p.y, r * 0.6);
+          continue;
+        }
+        g.fillStyle(color, p.playerInside ? 0.16 : 0.07).fillCircle(p.x, p.y, r);
+        g.lineStyle(2, color, 0.7).strokeCircle(p.x, p.y, r);
+        progressArc(g, p.x, p.y, r + 7, p.progress, color);
+        item('seal', p.x, p.y);
+      }
+      if (a.phase === 'unlocked')
+        g.lineStyle(3, 0xffe28a, 0.85).strokeCircle(a.x, a.y, R.seals.chestRadius);
+      item('seals', a.x, a.y);
+    }
   }
   private drawPet(s: GameplaySnapshot) {
     const pet = s.pet;
@@ -1817,13 +1926,50 @@ const ACTIVITY_COLORS: Readonly<Record<ActivityType, number>> = Object.freeze({
   lantern: 0xffd66b,
   thief: 0x7fe0c4,
   nest: 0xb07fe0,
+  // Task 38.
+  snare: 0x9be36b,
+  altar: 0xe0475f,
+  chain: 0x6fb6ff,
+  seals: 0xd8b4ff,
 });
 const ACTIVITY_ICONS: Readonly<Record<ActivityType, string>> = Object.freeze({
   shrine: '✦',
   lantern: '☼',
   thief: '◆',
   nest: '✺',
+  snare: '◎',
+  altar: '♦',
+  chain: '✧',
+  seals: '❖',
 });
+/** Task 38: where an activity's label / pointer goes — the chain's next lantern once lit. */
+function activityTarget(a: ActivitySnapshot, at: { x: number; y: number }) {
+  return a.type === 'chain' && a.phase !== 'waiting' && a.points.length ? a.points[0] : at;
+}
+/** Task 24 / 38: the in-world hint under an activity's name (live counts and timers). */
+function activityHint(a: ActivitySnapshot, left: number): string {
+  const T = EN.activities;
+  switch (a.type) {
+    case 'snare':
+      return a.phase === 'armed' ? T.snapping : T.lure(a.count ?? 0, a.threshold ?? 0);
+    case 'altar':
+      return a.blocked ? T.tooWeak : T.hints.altar;
+    case 'chain':
+      return a.phase === 'active'
+        ? T.reachNext(left)
+        : a.phase === 'dimmed'
+          ? T.lateLantern(left)
+          : T.hints.chain;
+    case 'seals':
+      return a.phase === 'unlocked'
+        ? T.sealsOpen
+        : a.phase === 'active'
+          ? T.sealsLocked(a.broken)
+          : T.hints.seals;
+    default:
+      return T.hints[a.type];
+  }
+}
 /** Task 24: the activity a thief / nest enemy belongs to (null for ordinary enemies). */
 function activityTypeOf(s: GameplaySnapshot, enemyId: string): ActivityType | null {
   for (const a of s.activities?.items ?? []) if (a.enemyId === enemyId) return a.type;

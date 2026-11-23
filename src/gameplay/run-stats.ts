@@ -1,5 +1,10 @@
 import type { WorldEvent } from './types';
+import { ACTIVITY_TYPES } from './activities';
 import type { ActivityType } from './activities';
+
+/** Task 24 / 38: a zero count per activity type. */
+const zeroActivities = (): Record<ActivityType, number> =>
+  Object.fromEntries(ACTIVITY_TYPES.map((t) => [t, 0])) as Record<ActivityType, number>;
 
 /**
  * Task 08.5 §2.1 run statistics. Framework-free and read-only: it consumes the world's own
@@ -109,9 +114,9 @@ export class RunStats {
   private skipsUsed = 0;
   private readonly banishedIds: string[] = [];
   private readonly chestOpened = { wooden: 0, enchanted: 0 };
-  private readonly activitySpawned = { shrine: 0, lantern: 0, thief: 0, nest: 0 };
-  private readonly activityCompleted = { shrine: 0, lantern: 0, thief: 0, nest: 0 };
-  private readonly activityFailed = { shrine: 0, lantern: 0, thief: 0, nest: 0 };
+  private readonly activitySpawned = zeroActivities();
+  private readonly activityCompleted = zeroActivities();
+  private readonly activityFailed = zeroActivities();
   private chestExpired = 0;
   private readonly chestContents: Record<string, number> = {};
   private readonly buffUptime = { fury: 0, haste: 0, lightStep: 0 };

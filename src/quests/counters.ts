@@ -21,14 +21,19 @@ export interface QuestCounters {
   /** Task 24: map activities completed, by type (lifetime; retroactively 0 for older saves). */
   readonly activities: ActivityCounts;
 }
-export type ActivityCounts = Readonly<Record<ActivityType, number>>;
+/**
+ * Task 24 activity types with lifetime counters (stored in the save). Task 38 activities have no
+ * quests and are not persisted, so the save format is unchanged.
+ */
+export type CountedActivityType = Extract<ActivityType, 'shrine' | 'lantern' | 'thief' | 'nest'>;
+export type ActivityCounts = Readonly<Record<CountedActivityType, number>>;
 export const NO_ACTIVITY_COUNTS: ActivityCounts = Object.freeze({
   shrine: 0,
   lantern: 0,
   thief: 0,
   nest: 0,
 });
-export const ACTIVITY_COUNTER_TYPES: readonly ActivityType[] = Object.freeze([
+export const ACTIVITY_COUNTER_TYPES: readonly CountedActivityType[] = Object.freeze([
   'shrine',
   'lantern',
   'thief',

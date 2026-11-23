@@ -1,7 +1,7 @@
 import { CHARACTER_CLASSES } from '../character-stats';
 import type { CharacterClass } from '../character-stats';
 import type { PetId } from '../pets/config';
-import type { ActivityType } from '../gameplay/activities';
+import type { CountedActivityType } from './counters';
 
 /**
  * Task 21 quest catalogue — data only. Every number is PROVISIONAL (owner-controlled).
@@ -54,7 +54,7 @@ export type QuestGoal =
   | Readonly<{ kind: 'item-level'; level: number }>
   | Readonly<{ kind: 'tier-loadout'; tier: number; items: number }>
   /** Task 24: map activities of one type completed (lifetime). */
-  | Readonly<{ kind: 'activities'; activity: ActivityType; count: number }>;
+  | Readonly<{ kind: 'activities'; activity: CountedActivityType; count: number }>;
 export interface QuestReward {
   readonly gold?: number;
   readonly ore?: number;

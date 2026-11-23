@@ -321,6 +321,69 @@ export const ART: Readonly<Record<TextureKey, Draw>> = Object.freeze({
       .fillTriangle(s(-3), s(-7), s(3), s(-16), s(7), s(-7));
     p.fillStyle(0xffe08a).fillTriangle(s(-2), s(-7), s(1), s(-14), s(3), s(-7));
   },
+  // Task 38 map activities (original shapes).
+  'activity-snare': (p, c) => {
+    // A ring of iron teeth around a trigger plate.
+    const s = u(c);
+    p.fillStyle(0x9be36b, 0.14).fillCircle(s(0), s(0), 26 * ART_SCALE);
+    for (let i = 0; i < 10; i++) {
+      const a = (i * Math.PI) / 5;
+      p.fillStyle(0x4c5560).fillTriangle(
+        s(Math.cos(a - 0.2) * 14),
+        s(Math.sin(a - 0.2) * 14),
+        s(Math.cos(a) * 24),
+        s(Math.sin(a) * 24),
+        s(Math.cos(a + 0.2) * 14),
+        s(Math.sin(a + 0.2) * 14),
+      );
+    }
+    p.lineStyle(3 * ART_SCALE, 0x2a3036, 1).strokeCircle(s(0), s(0), 14 * ART_SCALE);
+    p.fillStyle(0x6d7783).fillCircle(s(0), s(0), 7 * ART_SCALE);
+    p.fillStyle(0x9be36b, 0.9).fillCircle(s(0), s(0), 2.5 * ART_SCALE);
+  },
+  'activity-altar': (p, c) => {
+    // A cracked black slab with a bleeding rune.
+    const s = u(c);
+    p.fillStyle(0xe0475f, 0.16).fillCircle(s(0), s(0), 28 * ART_SCALE);
+    poly(p, c, 0x2c2630, [
+      [-17, 12],
+      [17, 12],
+      [13, 0],
+      [-13, 0],
+    ]);
+    poly(p, c, 0x3e3544, [
+      [-11, 0],
+      [11, 0],
+      [9, -16],
+      [-9, -16],
+    ]);
+    p.lineStyle(2 * ART_SCALE, 0xe0475f, 0.95)
+      .lineBetween(s(0), s(-13), s(0), s(-3))
+      .lineBetween(s(-4), s(-9), s(4), s(-9));
+    p.fillStyle(0xff8a9a).fillCircle(s(0), s(-9), 1.6 * ART_SCALE);
+    p.fillStyle(0x8a1f33, 0.9).fillEllipse(s(0), s(12), 16 * ART_SCALE, 4 * ART_SCALE);
+  },
+  'activity-chain': (p, c) => lantern(p, c, false, true),
+  'activity-seals': (p, c) => {
+    // A chest bound in three chains.
+    chest(p, c, false);
+    const s = u(c);
+    p.lineStyle(3 * ART_SCALE, 0x8a8f9c, 1)
+      .lineBetween(s(-15), s(-6), s(15), s(4))
+      .lineBetween(s(-15), s(4), s(15), s(-6));
+    p.fillStyle(0xd8b4ff).fillCircle(s(0), s(-1), 4 * ART_SCALE);
+    p.lineStyle(1.5 * ART_SCALE, 0x5a3f8a, 1).strokeCircle(s(0), s(-1), 4 * ART_SCALE);
+  },
+  'activity-seal': (p, c) => {
+    // A rune stone.
+    const s = u(c);
+    p.fillStyle(0xd8b4ff, 0.16).fillCircle(s(0), s(0), 24 * ART_SCALE);
+    p.fillStyle(0x4a4357).fillEllipse(s(0), s(2), 26 * ART_SCALE, 18 * ART_SCALE);
+    p.fillStyle(0x625a72).fillEllipse(s(0), s(-1), 22 * ART_SCALE, 13 * ART_SCALE);
+    p.lineStyle(2 * ART_SCALE, 0xd8b4ff, 0.95)
+      .strokeCircle(s(0), s(-1), 5 * ART_SCALE)
+      .lineBetween(s(-8), s(-1), s(8), s(-1));
+  },
   'activity-lantern': (p, c) => lantern(p, c, false),
   'activity-lantern-lit': (p, c) => lantern(p, c, true),
   'activity-thief': (p, c) => {
@@ -576,9 +639,33 @@ export const ART: Readonly<Record<TextureKey, Draw>> = Object.freeze({
     p.fillStyle(0x2b4660).fillCircle(s(0), s(9), 1.8 * ART_SCALE);
   },
 });
-function lantern(p: Pen, c: number, lit: boolean) {
-  // An iron post with a glass lamp; dim amber before, bright gold once defended.
+function lantern(p: Pen, c: number, lit: boolean, cold = false) {
+  // An iron post with a glass lamp; dim amber before, bright gold once defended. Task 38: the
+  // Lantern Chain's cold blue lamp.
   const s = u(c);
+  if (cold) {
+    p.fillStyle(0x6fb6ff, 0.18).fillCircle(s(0), s(-8), 22 * ART_SCALE);
+    p.lineStyle(4 * ART_SCALE, OUTLINE, 0.9).lineBetween(s(0), s(16), s(0), s(-2));
+    p.lineStyle(2 * ART_SCALE, 0x4a5666, 1).lineBetween(s(0), s(16), s(0), s(-2));
+    p.fillStyle(0x323a45).fillRect(s(-6), s(14), 12 * ART_SCALE, 3 * ART_SCALE);
+    p.lineStyle(3 * ART_SCALE, OUTLINE, 0.9).strokeRoundedRect(
+      s(-7),
+      s(-17),
+      14 * ART_SCALE,
+      15 * ART_SCALE,
+      3 * ART_SCALE,
+    );
+    p.fillStyle(0x2f5c8a).fillRoundedRect(
+      s(-7),
+      s(-17),
+      14 * ART_SCALE,
+      15 * ART_SCALE,
+      3 * ART_SCALE,
+    );
+    p.fillStyle(0xcfe8ff).fillCircle(s(0), s(-10), 3.5 * ART_SCALE);
+    p.fillStyle(0x27303a).fillTriangle(s(-9), s(-17), s(0), s(-24), s(9), s(-17));
+    return;
+  }
   p.fillStyle(lit ? 0xffe9a0 : 0xffd66b, lit ? 0.3 : 0.12).fillCircle(s(0), s(-8), 22 * ART_SCALE);
   p.lineStyle(4 * ART_SCALE, OUTLINE, 0.9).lineBetween(s(0), s(16), s(0), s(-2));
   p.lineStyle(2 * ART_SCALE, 0x4a4f56, 1).lineBetween(s(0), s(16), s(0), s(-2));

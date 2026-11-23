@@ -74,6 +74,9 @@ describe('Task 12 §1.5 — debug tools (DEV/QA controller)', () => {
     const { control, world } = controller();
     control({ type: 'auto-collect', enabled: true });
     const w = world();
+    // The idle player must live past 5:00 (Task 38: the new activity mix changed the seeded run,
+    // and the act's elite killed the undefended player at 4:07).
+    w.setTestProtection(true);
     expect(levelMarks(w.getSnapshot())).toBe('— / — / —');
     for (let i = 0; i < 310; i++) {
       if (i % 20 === 0) w.dropTestCrystal(40, 900);

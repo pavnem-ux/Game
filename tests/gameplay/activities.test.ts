@@ -14,13 +14,25 @@ const placement = (mapId = 1, chests: { x: number; y: number }[] = []) => ({
 });
 
 describe('Task 24 Phase 1 — activity types per act', () => {
-  it('maps 1–10: shrine + thief; 11–20: + lantern; 21–40: + nest', () => {
-    expect(activityTypesFor(1)).toEqual(['shrine', 'thief']);
-    expect(activityTypesFor(10)).toEqual(['shrine', 'thief']);
-    expect(activityTypesFor(11)).toEqual(['shrine', 'lantern', 'thief']);
-    expect(activityTypesFor(20)).toEqual(['shrine', 'lantern', 'thief']);
-    expect(activityTypesFor(21)).toEqual(['shrine', 'lantern', 'thief', 'nest']);
-    expect(activityTypesFor(40)).toEqual(['shrine', 'lantern', 'thief', 'nest']);
+  // Task 38 (owner spec): + snare from map 1, altar from 6, chain from 11, seals from 21.
+  it('maps 1–10: shrine + thief + snare (6+: altar); 11–20: + lantern, chain; 21–40: + nest, seals', () => {
+    expect(activityTypesFor(1)).toEqual(['shrine', 'thief', 'snare']);
+    expect(activityTypesFor(5)).toEqual(['shrine', 'thief', 'snare']);
+    expect(activityTypesFor(6)).toEqual(['shrine', 'thief', 'snare', 'altar']);
+    expect(activityTypesFor(10)).toEqual(['shrine', 'thief', 'snare', 'altar']);
+    expect(activityTypesFor(11)).toEqual(['shrine', 'lantern', 'thief', 'snare', 'altar', 'chain']);
+    expect(activityTypesFor(20)).toEqual(['shrine', 'lantern', 'thief', 'snare', 'altar', 'chain']);
+    expect(activityTypesFor(21)).toEqual([
+      'shrine',
+      'lantern',
+      'thief',
+      'nest',
+      'snare',
+      'altar',
+      'chain',
+      'seals',
+    ]);
+    expect(activityTypesFor(40)).toEqual(activityTypesFor(21));
     expect(() => activityTypesFor(0)).toThrow(RangeError);
   });
   it('rolls only available types and never the same type twice in a row', () => {

@@ -178,6 +178,12 @@ export interface HealingResult {
   readonly events: readonly HealingEvent[];
 }
 
+/** Task 38: HP paid by choice (Cursed Altar) — not damage, never lethal, no events. */
+export interface HpPaymentResult {
+  readonly entity: CombatEntity;
+  readonly paid: number;
+}
+
 export interface EntityChangeResult {
   readonly entity: CombatEntity;
   readonly events: readonly MaxHpChangedEvent[];
