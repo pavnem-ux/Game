@@ -110,9 +110,17 @@ try {
   assert.equal(await speed.innerText(), '×1', 'a fresh profile starts at ×1');
   await speed.click();
   assert.equal(await speed.innerText(), '×1.5');
+  // Task 38: the cycle goes on to ×5, then back to ×1.
+  for (const next of ['×2', '×3', '×4', '×5']) {
+    await speed.click();
+    assert.equal(await speed.innerText(), next);
+  }
   await speed.click();
-  await speed.click();
-  assert.equal(await speed.innerText(), '×1', 'the button cycles ×1 → ×1.5 → ×2 → ×1');
+  assert.equal(
+    await speed.innerText(),
+    '×1',
+    'the button cycles ×1 → ×1.5 → ×2 → ×3 → ×4 → ×5 → ×1',
+  );
   await page.screenshot({ path: 'artifacts/alpha-09-production.png' });
   for (const file of await readdir('dist/assets'))
     if (file.endsWith('.js')) {
