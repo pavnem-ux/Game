@@ -44,7 +44,7 @@ describe('Task 39 — tier variants of a map', () => {
       }
     }
   });
-  it('Elite Trial: 3 minutes, 5 elites at 0:00 / 1:00 / 2:00 (×3), the boss at 3:00 (×3), no waves', () => {
+  it('Elite Trial: 3 minutes, 5 elites every 30 s (×3), the boss at 3:00 (×3), no waves', () => {
     const normal = getCampaignMap(4);
     const m = getCampaignMap(4, 'trial');
     expect([m.durationSeconds, m.waves, m.bossScale, m.rewardScale]).toEqual([180, false, 3, 2]);
@@ -54,22 +54,12 @@ describe('Task 39 — tier variants of a map', () => {
     const plan = campaignSchedule(m).map((e) =>
       e.kind === 'elite' ? `${e.time}:${e.profile}` : `${e.time}:${e.kind}`,
     );
-    const wave = (t: number) => [
-      `${t}:melee`,
-      `${t}:ranged`,
-      `${t}:melee`,
-      `${t}:ranged`,
-      `${t}:melee`,
-    ];
-    // Profiles keep alternating across the waves (melee first).
-    expect(plan).toEqual([
-      ...wave(0),
-      ...['60:ranged', '60:melee', '60:ranged', '60:melee', '60:ranged'],
-      ...wave(120),
-      '180:boss',
-      '180:end',
-    ]);
-    expect(m.reservedSlots).toBeGreaterThanOrEqual(16);
+    // Owner change: a wave of 5 every 30 s (0:00 … 2:30); profiles keep alternating (melee first).
+    const elites = [0, 30, 60, 90, 120, 150].flatMap((t, w) =>
+      Array.from({ length: 5 }, (_, i) => `${t}:${(w * 5 + i) % 2 === 0 ? 'melee' : 'ranged'}`),
+    );
+    expect(plan).toEqual([...elites, '180:boss', '180:end']);
+    expect(m.reservedSlots).toBeGreaterThanOrEqual(31);
   });
 });
 
@@ -111,7 +101,7 @@ describe('Task 39 — tiers in the world', () => {
       w.update(1);
     }
     c = w.getSnapshot().campaign!;
-    expect(c.eliteEnemyIds).toHaveLength(15);
+    expect(c.eliteEnemyIds).toHaveLength(30);
     expect(c.bossEnemyId).not.toBeNull();
     const boss = w.core.getEntity(c.bossEnemyId!);
     const def = getBossDefinition(getCampaignMap(4).bossId);

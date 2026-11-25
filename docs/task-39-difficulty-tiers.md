@@ -11,8 +11,8 @@ Owner request (chat) and answers to the clarifying questions. All numbers provis
    - **Normal** — as today.
    - **Hard** — every monster (normal enemies, elites, boss) has **+50%** health and damage.
    - **Nightmare** — every monster has **+100%** health and damage.
-   - **Elite Trial** — no normal enemies (no waves). The map lasts **3 minutes**: **5 elites** at 0:00,
-     1:00 and 2:00; the **boss** appears at 3:00. Trial elites have **×3** health and damage of the map's
+   - **Elite Trial** — no normal enemies (no waves). The map lasts **3 minutes**: **5 elites** every 30 seconds from 0:00 to 2:30 (owner change after the first Preview; was at 0:00,
+     1:00 and 2:00); the **boss** appears at 3:00. Trial elites have **×3** health and damage of the map's
      Normal elites; the boss has **×3** health and damage of the map's Normal boss. The map is won when
      the boss dies (as on every map).
      Speed, enemy count and wave frequency are unchanged on Hard / Nightmare.

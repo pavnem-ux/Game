@@ -184,7 +184,7 @@ Spec: [task-39-difficulty-tiers.md](task-39-difficulty-tiers.md); log:
   still ×1.25 / ×1.15 on top.
 - Four tiers per map, `getCampaignMap(id, tier)`: **Normal**; **Hard** (every monster's health and
   damage ×1.5); **Nightmare** (×2); **Elite Trial** (no waves or initial enemies, 3 minutes, 5 elites
-  at 0:00 / 1:00 / 2:00 with ×3 the Normal elite health and damage, the boss at 3:00 with ×3 health
+  every 30 s from 0:00 to 2:30 (owner change; was every minute) with ×3 the Normal elite health and damage, the boss at 3:00 with ×3 health
   and damage; won when the boss dies). Speed and wave frequency unchanged.
 - Unlocks per map: Normal → Hard → Nightmare → Elite Trial, each after a victory on the previous
   tier of that map. Victory Gold (coins + bonus) and map Ore ×1.5 / ×2 / ×2; class XP and defeat

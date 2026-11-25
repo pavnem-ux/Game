@@ -379,7 +379,7 @@ export const EN = Object.freeze({
         hard: 'All monsters: +50% health and damage. Victory Gold and Ore ×1.5.',
         nightmare: 'All monsters: +100% health and damage. Victory Gold and Ore ×2.',
         trial:
-          'No ordinary enemies. 5 elites at 0:00, 1:00 and 2:00 (×3), the boss at 3:00 (×3). Victory Gold and Ore ×2.',
+          'No ordinary enemies. 5 elites every 30 seconds (×3), the boss at 3:00 (×3). Victory Gold and Ore ×2.',
       }),
       tierLocked: (previous: string) => `Win on ${previous} first`,
       tierUnlocked: (name: string) => `${name} unlocked on this map`,

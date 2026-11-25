@@ -185,7 +185,8 @@ export interface MapModifier {
 /**
  * Task 39: the difficulty tiers of every map (owner decision, PROVISIONAL numbers). Hard / Nightmare
  * scale every monster's health and damage; the Elite Trial is a 3-minute map with no waves — five
- * elites at 0:00, 1:00 and 2:00 (×3 the Normal elites) and the boss at 3:00 (×3 the Normal boss).
+ * elites every 30 s from 0:00 to 2:30 (×3 the Normal elites; owner change: was every minute) and the
+ * boss at 3:00 (×3 the Normal boss).
  * `rewardScale` multiplies the victory Gold and Ore. Tiers unlock in this order on each map.
  */
 export type CampaignDifficulty = 'normal' | 'hard' | 'nightmare' | 'trial';
@@ -204,7 +205,7 @@ export const DIFFICULTY_TIERS = Object.freeze({
     monsterScale: 1,
     rewardScale: 2,
     durationSeconds: 180,
-    eliteTimes: Object.freeze([0, 60, 120]),
+    eliteTimes: Object.freeze([0, 30, 60, 90, 120, 150]),
     elitesPerEvent: 5,
     /** Elite health and damage × this on top of the map's Normal elites. */
     eliteScale: 3,

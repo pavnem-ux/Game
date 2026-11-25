@@ -29,3 +29,5 @@ PR: https://github.com/pavnem-ux/Game/pull/39
 - Save v9: `mapTiers` (hardest above Normal; Normal = `completedMaps`), recent runs `difficulty` /
   `unlockedTier`. Tests updated only for the version number / new field and elites ×10; e2e
   `campaign-browser` and `activities-browser` pass locally with v9.
+- Owner change after the first Preview: Elite Trial waves every 30 s (0:00 … 2:30, 6 × 5 = 30 elites),
+  boss still at 3:00.
