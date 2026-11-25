@@ -18,6 +18,7 @@ export type {
   MaxHpChangedEvent,
   DamageResult,
   HealingResult,
+  HpPaymentResult,
   RevivalEvent,
   RevivalResult,
   EntityChangeResult,

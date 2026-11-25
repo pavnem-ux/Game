@@ -8,6 +8,7 @@ import type {
   DamageResult,
   EntityChangeResult,
   HealingResult,
+  HpPaymentResult,
   MaxHpChangedEvent,
   RandomSource,
   PeriodicDamageRequest,
@@ -236,6 +237,20 @@ export class CombatCore {
       healed,
       events: events(healed > 0 ? [{ type: 'healing', entityId, amount: healed }] : []),
     });
+  }
+
+  /**
+   * Task 38: a living entity pays `amount` of its current HP by choice (Cursed Altar). Not damage:
+   * no Resistance, barrier, crit, Dodge or events, and never lethal (`amount` must stay below the
+   * current HP; the caller checks affordability first).
+   */
+  payHp(entityId: string, amount: number): HpPaymentResult {
+    nonNegative(amount, 'HP payment');
+    const entity = this.getEntity(entityId);
+    if (!entity.alive) throw new Error('Cannot pay HP with an inactive entity.');
+    if (amount >= entity.currentHp) throw new RangeError('HP payment must stay below current HP.');
+    const next = this.store({ ...entity, currentHp: entity.currentHp - amount });
+    return Object.freeze({ entity: next, paid: amount });
   }
 
   changeMaxHp(entityId: string, delta: number): EntityChangeResult {

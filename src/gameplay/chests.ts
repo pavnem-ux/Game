@@ -258,10 +258,14 @@ export class RunChests {
     );
     return ENCHANTED_CONTENTS[i];
   }
-  /** Starts a buff, or refreshes its duration (the same buff never stacks). */
-  grantBuff(id: BuffId, now: number): ChestEvent {
+  /**
+   * Starts a buff, or refreshes its duration (the same buff never stacks). Task 38: an optional
+   * longer `duration` (Cursed Altar Fury); a refresh never shortens a longer running buff.
+   */
+  grantBuff(id: BuffId, now: number, duration: number = CHEST_RULES.buffDuration): ChestEvent {
+    if (!Number.isFinite(duration) || duration <= 0) throw new RangeError('Invalid buff duration.');
     const current = this.buffs.get(id);
-    const expiresAt = now + CHEST_RULES.buffDuration;
+    const expiresAt = Math.max(current?.expiresAt ?? -Infinity, now + duration);
     this.buffs.set(id, Object.freeze({ id, startedAt: current?.startedAt ?? now, expiresAt }));
     return Object.freeze({ type: 'buff-started', buff: id, expiresAt, refreshed: !!current });
   }

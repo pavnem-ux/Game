@@ -1,3 +1,4 @@
+import type { ActivityType } from '../../gameplay/activities';
 import type { CharacterClass } from '../../character-stats';
 import type { EnemyKind } from '../../gameplay/enemy-types';
 import type { PetId } from '../../pets/config';
@@ -50,6 +51,12 @@ export const TEXTURE_KEYS = Object.freeze([
   'activity-lantern-lit',
   'activity-thief',
   'activity-nest',
+  // Task 38 map activities.
+  'activity-snare',
+  'activity-altar',
+  'activity-chain',
+  'activity-seals',
+  'activity-seal',
 ] as const);
 export type TextureKey = (typeof TEXTURE_KEYS)[number];
 
@@ -65,11 +72,12 @@ export function playerProjectileKey(weaponId: string, characterClass: CharacterC
   return characterClass === 'archer' && !weaponId.startsWith('skill:') ? 'proj-arrow' : 'proj-bolt';
 }
 export const chestTextureKey = (type: 'wooden' | 'enchanted'): TextureKey => `chest-${type}`;
-/** Task 24: activity looks (the lantern has a lit variant after a successful defence). */
-export const activityTextureKey = (
-  type: 'shrine' | 'lantern' | 'thief' | 'nest',
-  lit = false,
-): TextureKey => (type === 'lantern' && lit ? 'activity-lantern-lit' : `activity-${type}`);
+/**
+ * Task 24: activity looks (the lantern has a lit variant after a successful defence). Task 38: the
+ * Lantern Chain's cold lanterns, the snare, the altar and the sealed chest (seals: `activity-seal`).
+ */
+export const activityTextureKey = (type: ActivityType, lit = false): TextureKey =>
+  type === 'lantern' && lit ? 'activity-lantern-lit' : `activity-${type}`;
 /** Task 20: one texture per pet. */
 export const petTextureKey = (id: PetId): TextureKey => `pet-${id}`;
 

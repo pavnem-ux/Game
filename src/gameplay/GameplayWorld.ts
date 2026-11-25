@@ -78,8 +78,14 @@ import { BUFFS, CHEST_RULES, RunChests, buffModifiers, chestGold } from './chest
 const CHEST_HEAL_FRACTION = CHEST_RULES.healFraction;
 const CHEST_BLINK_FOR = CHEST_RULES.blinkFor;
 import type { BuffId, Chest, ChestContent, ChestType } from './chests';
-import { ACTIVITY_RULES, RunActivities, activityGold, lanternOre } from './activities';
-import type { ActivityEvent, ActivitySnapshot, ActivityType } from './activities';
+import { ACTIVITY_RULES, RunActivities, activityGold, lanternOre, shareOf } from './activities';
+import { ACTIVITY_TYPES } from './activities';
+import type {
+  ActivityEvent,
+  ActivityResolveContext,
+  ActivitySnapshot,
+  ActivityType,
+} from './activities';
 import {
   ENEMY_KINDS,
   NEW_ENEMY_KINDS,
@@ -203,7 +209,9 @@ export class GameplayWorld {
     this.campaignMap = options.campaign ? getCampaignMap(options.campaign.mapId) : null;
     this.director = this.campaignMap ? new CampaignDirector(this.campaignMap) : null;
     this.chests = this.campaignMap ? new RunChests(rng.chests, ALPHA.arenaSize) : null;
-    this.activities = this.campaignMap ? new RunActivities(rng.activities, ALPHA.arenaSize) : null;
+    this.activities = this.campaignMap
+      ? new RunActivities(rng.activities, ALPHA.arenaSize, ALPHA.baseMovementSpeed)
+      : null;
     this.kindShares = this.campaignMap
       ? enemyMix(this.campaignMap.id)
       : Object.freeze({ swift: 0, brute: 0, bombard: 0 });
@@ -746,7 +754,7 @@ export class GameplayWorld {
       else if (next.kind === 'chest-expire') this.expireChests();
       else if (next.kind === 'activity-spawn') this.spawnActivity();
       else if (next.kind === 'activity-resolve')
-        this.applyActivityEvents(this.activities!.resolveDue(this.clock));
+        this.applyActivityEvents(this.activities!.resolveDue(this.clock, this.activityResolve));
       else if (next.kind === 'activity-enemies') this.spawnActivityEnemies();
       // Task 09.1: status applications of this boundary (Rogue Deadly Synthesis check).
       if (this.statusTargets.size) {
@@ -1316,7 +1324,8 @@ export class GameplayWorld {
       // AGENTS §4.6 / Task 24 review: activity results already due at T (e.g. a shrine completing
       // at the instant of a terminal lethal hit) finish and are rewarded before the run ends;
       // `endRun()` below then discards only future activity work.
-      if (this.activities) this.applyActivityEvents(this.activities.resolveDue(this.clock));
+      if (this.activities)
+        this.applyActivityEvents(this.activities.resolveDue(this.clock, this.activityResolve));
       this.input = Object.freeze({ x: 0, y: 0 });
       this.record('campaign', [
         Object.freeze({
@@ -1414,8 +1423,7 @@ export class GameplayWorld {
    */
   debugSpawnActivity(type: ActivityType): string | null {
     if (!this.activities || this.campaignRun.status !== 'active') return null;
-    if (!['shrine', 'lantern', 'thief', 'nest'].includes(type))
-      throw new TypeError('Invalid activity type.');
+    if (!ACTIVITY_TYPES.includes(type)) throw new TypeError('Invalid activity type.');
     const event = this.activities.spawnNear(this.clock, this.activityPlacement(), type);
     this.applyActivityEvents([event]);
     this.prepare();
@@ -1678,20 +1686,40 @@ export class GameplayWorld {
         this.activities.sample(this.clock, {
           player: this.body,
           enemiesNear: (center, radius) => this.enemiesNear(center, radius),
+          playerHp: this.playerHp(),
         }),
       );
   }
-  /** Task 24: living normal enemies within `radius` of `center` (activity enemies excluded). */
-  private enemiesNear(center: Point, radius: number): number {
+  /**
+   * Task 24 / 38: living normal enemies within `radius` of `center` (activity enemies excluded) —
+   * the one shared "enemies inside a circle" query (lantern drain, snare lure and snap, snare
+   * threshold). `into` collects their ids (id order) when given.
+   */
+  private enemiesNear(center: Point, radius: number, into?: string[]): number {
     const own = this.activities!.activityEnemyIds();
     let n = 0;
     for (const id of this.enemyIds) {
       if (own.has(id) || !this.core.getEntity(id).alive) continue;
       const p = this.enemies.getEnemy(id).position;
-      if (Math.hypot(p.x - center.x, p.y - center.y) <= radius) n++;
+      if (Math.hypot(p.x - center.x, p.y - center.y) <= radius) {
+        n++;
+        into?.push(id);
+      }
     }
     return n;
   }
+  private playerHp() {
+    const player = this.core.getEntity(this.playerId);
+    return Object.freeze({ current: player.alive ? player.currentHp : 0, max: player.maxHp });
+  }
+  /** Task 38: exact checks at the instant a result resolves (snare count, altar cost). */
+  private readonly activityResolve: ActivityResolveContext = Object.freeze({
+    enemiesNear: (center: Point, radius: number) => this.enemiesNear(center, radius),
+    canPay: () => {
+      const hp = this.playerHp();
+      return hp.current > hp.max * ACTIVITY_RULES.altar.hpCost;
+    },
+  });
   /** Task 24 scheduled activity spawn (placement keeps away from chests; thief/nest need a slot). */
   private spawnActivity(): void {
     const event = this.activities!.spawnDue(this.clock, this.activityPlacement());
@@ -1703,6 +1731,7 @@ export class GameplayWorld {
       mapId: this.campaignMap!.id,
       chests: this.chests?.getChests() ?? [],
       enemySlotFree: this.enemyIds.size < this.spawnSettings.maxActive,
+      enemiesNearPlayer: this.enemiesNear(this.body, ACTIVITY_RULES.snare.countRadius),
     });
   }
   /** Task 24 extra enemies of shrines / lanterns / nests (act mix, within the cap; else skipped). */
@@ -1760,11 +1789,18 @@ export class GameplayWorld {
         });
       if (event.type === 'activity-spawned')
         this.onActivitySpawned(event.activity.id, event.activity.type);
+      else if (event.type === 'activity-seal-broken') this.spawnSealBurst(event);
       else if (event.type === 'activity-completed') {
         // A debug completion of a living thief / nest removes it (the kill path is the normal one).
         const id = event.activity.enemyId;
+        // Lantern Chain: the reward stands at the second lantern.
         const position =
-          at ?? (id && this.enemyIds.has(id) ? this.enemies.getEnemy(id).position : event.activity);
+          at ??
+          (id && this.enemyIds.has(id)
+            ? this.enemies.getEnemy(id).position
+            : event.activity.type === 'chain' && event.activity.points.length
+              ? event.activity.points[0]
+              : event.activity);
         if (id && this.enemyIds.has(id)) this.removeActivityEnemy(id);
         this.rewardActivity(event.activity, position);
       } else if (event.type === 'activity-failed' && event.activity.enemyId)
@@ -1820,9 +1856,30 @@ export class GameplayWorld {
     let coins = 0,
       ore = 0,
       chest: 'wooden' | 'enchanted' | null = null;
-    if (a.type === 'shrine' || a.type === 'nest') {
-      chest = a.type === 'shrine' ? 'enchanted' : 'wooden';
+    const extra: { buff?: 'fury'; hpPaid?: number; caught?: number } = {};
+    if (a.type === 'shrine' || a.type === 'nest' || a.type === 'chain') {
+      // Lantern Chain: Enchanted Chest in time, Wooden Chest after the timer (dimmed lantern).
+      chest =
+        a.type === 'nest' || (a.type === 'chain' && a.phase === 'dimmed') ? 'wooden' : 'enchanted';
       if (this.chests) this.record('chests', [this.chests.placeReward(this.clock, at, chest)]);
+    } else if (a.type === 'snare') {
+      extra.caught = this.snareSnap(a);
+      // Bonus only when the threshold triggered the snap (armed).
+      if (a.phase === 'armed') {
+        coins = shareOf(map.victoryGold, ACTIVITY_RULES.snare.goldShare);
+        this.dropActivityCoins(at, coins, 1);
+      }
+    } else if (a.type === 'altar') {
+      const paid = this.payAltar();
+      if (paid !== null) {
+        extra.hpPaid = paid;
+        extra.buff = 'fury';
+      }
+    } else if (a.type === 'seals') {
+      const broken = a.broken >= 3 ? 3 : 2;
+      coins = shareOf(map.victoryGold, ACTIVITY_RULES.seals.goldShare[broken]);
+      ore = ACTIVITY_RULES.seals.ore[broken];
+      this.dropActivityCoins(at, coins, 1);
     } else if (a.type === 'lantern') {
       coins = activityGold('lantern', map.victoryGold);
       ore = lanternOre(map.id);
@@ -1841,8 +1898,89 @@ export class GameplayWorld {
         coins,
         ore,
         chest,
+        ...extra,
       }),
     ]);
+  }
+  /**
+   * Task 38 Snare Circle snap on the enemies inside at this instant (activity enemies excluded):
+   * normal enemies die, elites lose 25% and bosses 10% of their Max HP. Combat Core resolves it as
+   * the player's damage (Resistance pre-compensated so the share is exact), so kills give the
+   * normal crystal and coin drops. Never touches the player. Returns the enemies caught.
+   */
+  private snareSnap(a: ActivitySnapshot): number {
+    const s = ACTIVITY_RULES.snare;
+    const caught: string[] = [];
+    this.enemiesNear(a, s.radius, caught);
+    for (const id of caught) {
+      if (!this.enemyIds.has(id)) continue;
+      const entity = this.core.getEntity(id);
+      if (!entity.alive) continue;
+      const share =
+        id === this.bossEnemyId ? s.bossShare : this.eliteProfiles.has(id) ? s.eliteShare : null;
+      const raw =
+        share === null
+          ? Number.MAX_SAFE_INTEGER
+          : (entity.maxHp * share * (100 + entity.resistance)) / 100;
+      const result = this.core.applyPeriodicDamage({
+        operationId: `activity-snare-${a.id}-${id}`,
+        targetId: id,
+        effectId: 'activity-snare',
+        rawDamage: raw,
+        sources: [
+          { applicationId: `activity-snare-${a.id}`, sourceId: this.playerId, rawDamage: raw },
+        ],
+      });
+      this.forwardCombat(result.events);
+    }
+    return caught.length;
+  }
+  /**
+   * Task 38 Cursed Altar: the player pays 25% of Max HP from current HP through Combat Core (not
+   * damage: no death trigger, revive prompt or "damage taken"), then gains Fury at the chest
+   * strength for 2× its duration (a running Fury is refreshed to that, never stacked). Null if the
+   * player could not pay at this instant (the activity module already refused it then).
+   */
+  private payAltar(): number | null {
+    const player = this.core.getEntity(this.playerId);
+    const cost = player.maxHp * ACTIVITY_RULES.altar.hpCost;
+    if (!player.alive || player.currentHp <= cost || !this.chests) return null;
+    this.core.payHp(this.playerId, cost);
+    const duration = CHEST_RULES.buffDuration * ACTIVITY_RULES.altar.furyDurationMultiplier;
+    this.record('chests', [this.chests.grantBuff('fury', this.clock, duration)]);
+    this.syncBuffs();
+    return cost;
+  }
+  /**
+   * Task 38 Three Seals: a broken seal releases a burst of enemies on a ring just beyond it, on the
+   * side away from the chest (fixed fan, no randomness); each needs a free slot below the cap.
+   */
+  private spawnSealBurst(e: Extract<ActivityEvent, { type: 'activity-seal-broken' }>): void {
+    const r = ACTIVITY_RULES.seals;
+    const base = Math.atan2(e.position.y - e.chest.y, e.position.x - e.chest.x);
+    const out: ActivityEvent[] = [];
+    for (let i = 0; i < r.burst; i++) {
+      if (this.enemyIds.size >= this.spawnSettings.maxActive) break;
+      const kind = this.nextSpawnKind(this.activitySpawnSequence, this.activitySpawnedByKind);
+      const radius = this.enemyProfile(kind).radius;
+      const angle = base + (i - (r.burst - 1) / 2) * r.burstSpread;
+      const position = Object.freeze({
+        x: this.clamp(e.position.x + Math.cos(angle) * r.burstDistance, radius),
+        y: this.clamp(e.position.y + Math.sin(angle) * r.burstDistance, radius),
+      });
+      this.activitySpawnSequence++;
+      this.activitySpawnedByKind[kind]++;
+      const enemyId = this.registerEnemy(kind, position);
+      out.push(
+        Object.freeze({
+          type: 'activity-enemy-spawned',
+          activityId: e.activityId,
+          enemyId,
+          position,
+        }),
+      );
+    }
+    this.record('activities', out);
   }
   /** Coin piles worth `total` around `at` (evenly spread; whole coins, the remainder on the first). */
   private dropActivityCoins(at: Point, total: number, piles: number): void {
