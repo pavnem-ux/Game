@@ -15,15 +15,16 @@ export function isDebugTimeScale(value: unknown): value is DebugTimeScale {
  * Task 36 «Game speed» (player setting, production): the same simulation-time path as the QA time
  * scale — more simulated seconds per real frame, still advanced through the world's boundaries, so
  * the same seed and inputs give the same results at every speed. Separate from the QA scale, which
- * stays DEV / QA-only (AGENTS §4.10).
+ * stays DEV / QA-only (AGENTS §4.10). Task 38: ×1 / ×1.5 / ×2 / ×3 / ×4 / ×5 (saved 1 / 1.5 / 2
+ * stay valid; anything else falls back to ×1).
  */
-export const GAME_SPEEDS = Object.freeze([1, 1.5, 2] as const);
+export const GAME_SPEEDS = Object.freeze([1, 1.5, 2, 3, 4, 5] as const);
 export type GameSpeed = (typeof GAME_SPEEDS)[number];
 export const DEFAULT_GAME_SPEED: GameSpeed = 1;
 export function isGameSpeed(value: unknown): value is GameSpeed {
   return GAME_SPEEDS.includes(value as GameSpeed);
 }
-/** The HUD button's cycle: ×1 → ×1.5 → ×2 → ×1. */
+/** The HUD button's cycle: ×1 → ×1.5 → ×2 → ×3 → ×4 → ×5 → ×1. */
 export function nextGameSpeed(speed: GameSpeed): GameSpeed {
   return GAME_SPEEDS[(GAME_SPEEDS.indexOf(speed) + 1) % GAME_SPEEDS.length];
 }
@@ -45,8 +46,11 @@ export function frameStep(deltaMs: number, scale: number = 1): number {
  * differently). The rendered state lags by less than one step (≈ 8 ms).
  */
 export const SIM_STEP = 1 / 120;
-/** Most steps simulated in one frame (the frame cap × the top speed, plus QA headroom). */
-export const MAX_STEPS_PER_FRAME = 120;
+/**
+ * Most steps simulated in one frame. Task 38: sized for the top speed × the top QA scale (×5 × ×8 ×
+ * the 0.05 s frame cap = 240 steps); production at ×5 needs at most 30, so it is never clamped.
+ */
+export const MAX_STEPS_PER_FRAME = 240;
 export class SimStepper {
   /** Accumulated, not yet simulated time, in steps (fractional). */
   private pending = 0;
@@ -55,8 +59,11 @@ export class SimStepper {
     if (!(seconds > 0)) return 0;
     this.pending += seconds / SIM_STEP;
     // A hair of tolerance: 1/60 s is 2 steps even when the division rounds just below 2.
-    const n = Math.min(MAX_STEPS_PER_FRAME, Math.floor(this.pending + 1e-9));
-    this.pending = Math.max(0, this.pending - n);
+    const whole = Math.floor(this.pending + 1e-9);
+    const n = Math.min(MAX_STEPS_PER_FRAME, whole);
+    // Task 38: time above the cap is dropped (only the fraction of a step carries over), so a long
+    // clamp never builds a backlog that later frames would keep catching up on.
+    this.pending = Math.max(0, this.pending - (whole > n ? whole : n));
     return n;
   }
   /** A new run (or a restart): no carried-over time. */

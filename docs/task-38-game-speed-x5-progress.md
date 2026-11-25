@@ -7,7 +7,7 @@ PR: (draft, to be opened)
 ## Checklist
 
 - [x] 0 Setup: branch, spec, progress file, draft PR
-- [ ] 1 Core: speeds ×1 … ×5, step cap raised, excess time above the cap dropped (determinism test)
+- [x] 1 Core: speeds ×1 … ×5, step cap raised, excess time above the cap dropped (determinism test)
 - [ ] 2 UI: HUD button cycle + highlight for every speed above ×1; six options fit pause / Settings
 - [ ] 3 Delivery: comments, PLAYABLE_COMBAT_ALPHA line, final checks, PR
 
