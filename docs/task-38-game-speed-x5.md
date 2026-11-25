@@ -5,6 +5,7 @@ Extends Task 36 (`docs/task-36-game-speed.md`): same player setting, same fixed-
 The QA time scale stays QA-only (AGENTS §4.10).
 
 ## Spec
+
 1. **Speeds:** `GAME_SPEEDS` in `src/engine/time-scale.ts` becomes ×1 (default), ×1.5, ×2, ×3, ×4, ×5. Nothing else
    about the mechanism changes: the scaled frame time still feeds `SimStepper`, the world still advances only in whole
    `SIM_STEP` steps, so the same seed and inputs give identical results at every speed. Saved settings with an old
@@ -26,5 +27,6 @@ The QA time scale stays QA-only (AGENTS §4.10).
    Task 36 line in `docs/PLAYABLE_COMBAT_ALPHA.md` (×1 … ×5). No new doc.
 
 ## Verification
+
 - Extend the existing determinism test `tests/engine/game-speed.test.ts` to the new speeds. No other new tests.
 - In the final report, list anything you found that does not scale with the speed (real-time timers, tweens etc.).
