@@ -6,6 +6,7 @@ import { defaultLoadout } from '../equipment';
 import type { RunOutcome, RunStatsSummary } from './rewards';
 import { NO_QUEST_COUNTERS } from '../quests/counters';
 import type { QuestCounters } from '../quests/counters';
+import type { CampaignDifficulty } from '../campaign/config';
 
 /**
  * Task 08 player profile (persisted as one JSON document by the save store in Phase 4).
@@ -18,7 +19,7 @@ import type { QuestCounters } from '../quests/counters';
 /** v6 (Task 20): `ownedPets`, `petLevels`, `activePet` (see migrateV5toV6). */
 /** v7 (Task 21): `questCounters`, `questsClaimed` (see migrateV6toV7). */
 /** v8 (Task 24): `questCounters.activities` — map activities completed by type (migrateV7toV8). */
-export const PROFILE_SCHEMA_VERSION = 8;
+export const PROFILE_SCHEMA_VERSION = 9;
 export const MAX_RECENT_RUNS = 20;
 export const MAX_PROCESSED_RUN_IDS = 50;
 
@@ -46,6 +47,9 @@ export interface RecentRun {
   readonly levelAfter: number;
   readonly levelsGained: number;
   readonly unlockedMap: number | null;
+  /** Task 39: the map's difficulty tier (absent = Normal) and the tier it opened (absent = none). */
+  readonly difficulty?: CampaignDifficulty;
+  readonly unlockedTier?: CampaignDifficulty;
   /** ISO timestamp supplied by the caller (null when unknown). */
   readonly finishedAt: string | null;
   /** Task 08.5 (additive, optional): run-statistics summary; absent in older saves. */
@@ -71,6 +75,11 @@ export interface PlayerProfile {
   /** Highest playable map id (Map 1 is always unlocked). */
   readonly highestUnlockedMap: number;
   readonly completedMaps: readonly number[];
+  /**
+   * Task 39: the hardest tier won per map above Normal ("hard" / "nightmare" / "trial"), keyed by
+   * map id as a string. A Normal win is `completedMaps`. Each won tier opens the next on that map.
+   */
+  readonly mapTiers: Readonly<Record<string, Exclude<CampaignDifficulty, 'normal'>>>;
   /** Keyed by map id as a string ("1".."40"). */
   readonly bestResults: Readonly<Record<string, MapBest>>;
   readonly stats: ProfileStats;
@@ -118,6 +127,7 @@ export function createProfile(profileId: string, createdAt: string): PlayerProfi
     ore: 0,
     highestUnlockedMap: 1,
     completedMaps: Object.freeze([]),
+    mapTiers: Object.freeze({}),
     bestResults: Object.freeze({}),
     stats: Object.freeze({ runs: 0, wins: 0, defeats: 0, enemiesKilled: 0, bestSurvivalTime: 0 }),
     recentRuns: Object.freeze([]),

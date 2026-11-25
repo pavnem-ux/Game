@@ -111,7 +111,7 @@ describe('Task 24 Phase 4 — save v8', () => {
     const r = parseProfile(v7);
     expect(r.ok).toBe(true);
     if (r.ok) {
-      expect(r.profile.schemaVersion).toBe(8);
+      expect(r.profile.schemaVersion).toBe(9); // Task 39: … then v8 → v9 (empty mapTiers)
       expect(r.profile.questCounters.activities).toEqual(activities());
       expect({ ...r.profile, schemaVersion: 7, questCounters: counters7 }).toEqual(v7);
     }

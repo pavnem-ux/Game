@@ -95,7 +95,7 @@ function v5Profile(): PlayerProfile {
 
 describe('Task 19 §1.4 — save schema v5', () => {
   it('a v4 save migrates without loss: ore 0, item levels {}, empty helmet/gloves/pants', () => {
-    expect(SAVE_SCHEMA_VERSION).toBe(8); // Task 20/21/24: v5 → … → v8 add pets / quests only
+    expect(SAVE_SCHEMA_VERSION).toBe(9); // Task 20/21/24/39: v5 → … → v9 add pets / quests / map tiers only
     const v4 = v4Save();
     const r = parseProfileJson(JSON.stringify(v4));
     if (!r.ok) throw r.error;

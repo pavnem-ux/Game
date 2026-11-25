@@ -15,7 +15,7 @@ import type { StorageLike } from '../../src/persistence';
  * how an existing save loads. Both fixtures were written by the pre-Task-23 (Russian) code at
  * commit f3116ee: a schema-v7 save (gear levels, ore, a pet, quest counters) and its export file.
  * Task 24 bumped the schema to v8: the only change on load is the v7 → v8 migration (activity
- * counters at 0).
+ * counters at 0); Task 39's v8 → v9 adds an empty `mapTiers`.
  */
 const FIXTURES = join(__dirname, '..', 'fixtures');
 const SAVE = readFileSync(join(FIXTURES, 'pre-task23-save-v7.json'), 'utf8');
@@ -23,14 +23,25 @@ const EXPORT = readFileSync(join(FIXTURES, 'pre-task23-export-v7.json'), 'utf8')
 
 const MIGRATED = () => {
   const p = JSON.parse(SAVE);
-  return {
+  const out = {
     ...p,
-    schemaVersion: 8,
+    schemaVersion: 9,
     questCounters: {
       ...p.questCounters,
       activities: { shrine: 0, lantern: 0, thief: 0, nest: 0 },
     },
   };
+  // Task 39: `mapTiers` sits right after `completedMaps` (the export keeps the profile's key order).
+  return Object.fromEntries(
+    Object.entries(out).flatMap(([k, v]) =>
+      k === 'completedMaps'
+        ? [
+            [k, v],
+            ['mapTiers', {}],
+          ]
+        : [[k, v]],
+    ),
+  );
 };
 class FakeStorage implements StorageLike {
   readonly data = new Map<string, string>();

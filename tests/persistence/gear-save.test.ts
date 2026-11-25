@@ -74,7 +74,7 @@ const json = (p: unknown) => JSON.parse(JSON.stringify(p));
 
 describe('Task 11 Phase 2 — gear in the save (schema v4)', () => {
   it('an old v3 save migrates without loss: ownedItems [], starter loadouts; Gold, XP, maps, talents kept', () => {
-    expect(SAVE_SCHEMA_VERSION).toBe(8); // Task 24
+    expect(SAVE_SCHEMA_VERSION).toBe(9); // Task 39
     const current = json(geared());
     const v3 = json(current);
     v3.schemaVersion = 3;

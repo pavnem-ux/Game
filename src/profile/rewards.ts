@@ -1,5 +1,6 @@
 import type { CharacterClass } from '../character-stats';
 import { CAMPAIGN_BALANCE, getCampaignMap } from '../campaign';
+import type { CampaignDifficulty } from '../campaign';
 import { runGold } from '../equipment/economy';
 import type { RunQuestSummary } from '../quests/counters';
 
@@ -30,6 +31,8 @@ export interface RunResult {
   readonly quest?: RunQuestSummary;
   /** Task 24: Ore earned from map activities (paid only with a victory; absent = 0). */
   readonly activityOre?: number;
+  /** Task 39: the map's difficulty tier (absent = Normal). */
+  readonly difficulty?: CampaignDifficulty;
 }
 /**
  * Task 08.5 §2: the only run statistics that are persisted (in `recentRuns`). Whole numbers for
@@ -98,9 +101,10 @@ export interface RunRewards {
  * when abandoned — see `runGold` in the economy config.
  */
 export function runRewards(
-  result: Pick<RunResult, 'mapId' | 'outcome' | 'elapsed' | 'coins'>,
+  result: Pick<RunResult, 'mapId' | 'outcome' | 'elapsed' | 'coins' | 'difficulty'>,
 ): RunRewards {
-  const map = getCampaignMap(result.mapId);
+  // Task 39: the tier's duration (defeat XP share) and its victory Gold multiplier.
+  const map = getCampaignMap(result.mapId, result.difficulty ?? 'normal');
   if (!Number.isFinite(result.elapsed) || result.elapsed < 0)
     throw new RangeError('elapsed must be a finite, non-negative number of seconds.');
   let xp: number;
@@ -122,5 +126,10 @@ export function runRewards(
       throw new TypeError(`Unknown run outcome: ${String(result.outcome)}.`);
   }
   const gold = runGold(result.outcome, map.id, result.coins ?? 0);
+  // Task 39: a victory on a harder tier pays its whole Gold (coins + bonus) × the tier's scale.
+  if (result.outcome === 'victory' && map.rewardScale !== 1) {
+    const total = Math.round(gold.total * map.rewardScale);
+    return Object.freeze({ xp, gold: total, coins: gold.coins, bonus: total - gold.coins });
+  }
   return Object.freeze({ xp, gold: gold.total, coins: gold.coins, bonus: gold.bonus });
 }

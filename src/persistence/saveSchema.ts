@@ -1,6 +1,7 @@
 import { CHARACTER_CLASSES } from '../character-stats';
 import type { CharacterClass } from '../character-stats';
-import { CAMPAIGN_MAPS } from '../campaign';
+import { CAMPAIGN_MAPS, isCampaignDifficulty } from '../campaign';
+import type { CampaignDifficulty } from '../campaign';
 import {
   MAX_CLASS_LEVEL,
   MAX_PROCESSED_RUN_IDS,
@@ -140,6 +141,13 @@ export function migrateV7toV8(data: Json): Json {
     ? { ...data, questCounters: { ...data.questCounters, activities: { ...NO_ACTIVITY_COUNTS } } }
     : data; // a missing / invalid counters object is left for validation
 }
+/**
+ * v8 → v9 (Task 39): map difficulty tiers. `mapTiers` (hardest tier won above Normal per map) starts
+ * empty: maps already won count as Normal wins through `completedMaps`. Nothing else changes.
+ */
+export function migrateV8toV9(data: Json): Json {
+  return { ...data, mapTiers: {} };
+}
 export const migrations: Readonly<Record<number, Migration>> = Object.freeze({
   1: migrateV1toV2,
   2: migrateV2toV3,
@@ -148,6 +156,7 @@ export const migrations: Readonly<Record<number, Migration>> = Object.freeze({
   5: migrateV5toV6,
   6: migrateV6toV7,
   7: migrateV7toV8,
+  8: migrateV8toV9,
 });
 
 export type SaveErrorCode =
@@ -286,6 +295,23 @@ function recentRun(raw: unknown, i: number): RecentRun {
     levelAfter,
     levelsGained: int(or(v.levelsGained, levelAfter - levelBefore), `${p}.levelsGained`),
     unlockedMap: unlocked === null ? null : mapId(unlocked, `${p}.unlockedMap`),
+    // Task 39: optional (absent = Normal; Normal is never stored).
+    ...(v.difficulty === undefined
+      ? {}
+      : {
+          difficulty:
+            isCampaignDifficulty(v.difficulty) && v.difficulty !== 'normal'
+              ? v.difficulty
+              : invalid(`${p}.difficulty`),
+        }),
+    ...(v.unlockedTier === undefined
+      ? {}
+      : {
+          unlockedTier:
+            isCampaignDifficulty(v.unlockedTier) && v.unlockedTier !== 'normal'
+              ? v.unlockedTier
+              : invalid(`${p}.unlockedTier`),
+        }),
     finishedAt: finishedAt === null ? null : iso(finishedAt, `${p}.finishedAt`),
     // Task 08.5: optional additive field (older saves have none; schema version unchanged).
     ...(v.stats === undefined ? {} : { stats: runStats(v.stats, `${p}.stats`) }),
@@ -350,6 +376,16 @@ export function normalizeProfile(data: Json, version = SAVE_SCHEMA_VERSION): Pla
   for (const m of completedMaps)
     if (m > highestUnlockedMap || Math.min(MAP_COUNT, m + 1) > highestUnlockedMap)
       invalid('completedMaps/highestUnlockedMap');
+  // Task 39: hardest tier above Normal won per map; only on maps won at all.
+  const tiersRaw = or(data.mapTiers, {});
+  if (!isObject(tiersRaw)) invalid('mapTiers');
+  const mapTiers: Record<string, Exclude<CampaignDifficulty, 'normal'>> = {};
+  for (const [key, value] of Object.entries(tiersRaw as Json)) {
+    const id = mapId(Number(key), `mapTiers.${key}`);
+    if (String(id) !== key || !completedMaps.includes(id)) invalid(`mapTiers.${key}`);
+    if (!isCampaignDifficulty(value) || value === 'normal') invalid(`mapTiers.${key}`);
+    mapTiers[key] = value as Exclude<CampaignDifficulty, 'normal'>;
+  }
   const bestRaw = or(data.bestResults, {});
   if (!isObject(bestRaw)) invalid('bestResults');
   const bestResults: Record<string, MapBest> = {};
@@ -388,6 +424,7 @@ export function normalizeProfile(data: Json, version = SAVE_SCHEMA_VERSION): Pla
     ore: int(or(data.ore, 0), 'ore'),
     highestUnlockedMap,
     completedMaps: Object.freeze(completedMaps),
+    mapTiers: Object.freeze(mapTiers),
     bestResults: Object.freeze(bestResults),
     stats: Object.freeze({
       runs: int(or(st.runs, 0), 'stats.runs'),

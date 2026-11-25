@@ -1,5 +1,11 @@
 import { CHARACTER_CLASSES } from '../character-stats';
-import { CAMPAIGN_MAPS, getCampaignMap } from '../campaign';
+import {
+  CAMPAIGN_DIFFICULTIES,
+  CAMPAIGN_MAPS,
+  getCampaignMap,
+  isCampaignDifficulty,
+} from '../campaign';
+import type { CampaignDifficulty } from '../campaign';
 import { addClassXp, talentPoints } from './class-xp';
 import { MAX_PROCESSED_RUN_IDS, MAX_RECENT_RUNS } from './profile';
 import type { MapBest, PlayerProfile, RecentRun } from './profile';
@@ -29,6 +35,9 @@ export interface RunSummary {
   readonly levelsGained: number;
   readonly talentPointsGained: number;
   readonly newlyUnlockedMap: number | null;
+  /** Task 39: the map's tier, and the tier this victory opened on the map (null if none). */
+  readonly difficulty: CampaignDifficulty;
+  readonly newlyUnlockedTier: CampaignDifficulty | null;
   /** True if this run had already been applied: nothing changed. */
   readonly duplicate: boolean;
 }
@@ -41,6 +50,27 @@ export const isMapUnlocked = (profile: PlayerProfile, mapId: number) =>
   Number.isInteger(mapId) && mapId >= 1 && mapId <= profile.highestUnlockedMap;
 /** The map unlocked by winning `mapId` (null after the last map). */
 export const nextMapAfter = (mapId: number) => (mapId < CAMPAIGN_MAPS.length ? mapId + 1 : null);
+/** Task 39: the hardest tier won on a map (null = never won). */
+export function hardestTierWon(profile: PlayerProfile, mapId: number): CampaignDifficulty | null {
+  return (
+    profile.mapTiers[String(mapId)] ?? (profile.completedMaps.includes(mapId) ? 'normal' : null)
+  );
+}
+/**
+ * Task 39: Normal is open on every unlocked map; each further tier (Hard → Nightmare → Elite
+ * Trial) opens after a victory on the previous tier of the same map.
+ */
+export function isTierUnlocked(
+  profile: PlayerProfile,
+  mapId: number,
+  tier: CampaignDifficulty = 'normal',
+): boolean {
+  if (!isMapUnlocked(profile, mapId) || !isCampaignDifficulty(tier)) return false;
+  const i = CAMPAIGN_DIFFICULTIES.indexOf(tier);
+  if (i === 0) return true;
+  const won = hardestTierWon(profile, mapId);
+  return won !== null && CAMPAIGN_DIFFICULTIES.indexOf(won) >= i - 1;
+}
 
 export function validateRunResult(result: RunResult): void {
   if (!result || typeof result !== 'object') throw new TypeError('Run result required.');
@@ -68,6 +98,8 @@ export function validateRunResult(result: RunResult): void {
   )
     throw new RangeError('activityOre must be a whole number 0–1000.');
   if (result.quest !== undefined) validateRunQuestSummary(result.quest);
+  if (result.difficulty !== undefined && !isCampaignDifficulty(result.difficulty))
+    throw new TypeError('Unknown difficulty.');
 }
 
 function summaryFromRecent(run: RecentRun): RunSummary {
@@ -84,6 +116,8 @@ function summaryFromRecent(run: RecentRun): RunSummary {
     levelsGained: run.levelsGained,
     talentPointsGained: talentPoints(run.levelAfter) - talentPoints(run.levelBefore),
     newlyUnlockedMap: run.unlockedMap,
+    difficulty: run.difficulty ?? 'normal',
+    newlyUnlockedTier: run.unlockedTier ?? null,
     duplicate: true,
   });
 }
@@ -111,20 +145,26 @@ export function applyRunResult(
           levelsGained: 0,
           talentPointsGained: 0,
           newlyUnlockedMap: null,
+          difficulty: result.difficulty ?? 'normal',
+          newlyUnlockedTier: null,
           duplicate: true,
         });
     return Object.freeze({ profile, summary });
   }
   if (!isMapUnlocked(profile, result.mapId))
     throw new RangeError(`Map ${result.mapId} is locked for this profile.`);
+  const tier = result.difficulty ?? 'normal';
+  if (!isTierUnlocked(profile, result.mapId, tier))
+    throw new RangeError(`Difficulty ${tier} of map ${result.mapId} is locked for this profile.`);
 
-  const map = getCampaignMap(result.mapId);
+  const map = getCampaignMap(result.mapId, tier);
   const elapsed = Math.min(result.elapsed, map.durationSeconds);
   const rewards = runRewards({
     mapId: result.mapId,
     outcome: result.outcome,
     elapsed,
     coins: result.coins ?? 0,
+    difficulty: tier,
   });
   const before = profile.classes[result.characterClass];
   const { progress, levelsGained } = addClassXp(before, rewards.xp);
@@ -132,9 +172,12 @@ export function applyRunResult(
   const finished = result.outcome !== 'abandoned';
   // Task 19: ore in the same snapshot as XP / Gold (×3 when the map had never been won).
   // Task 24: Ore banked from map activities joins it only with a victory (no first-win ×3).
+  // Task 39: the map Ore × the tier's reward scale (activity Ore is not scaled).
   const ore =
-    runOre(result.outcome, result.mapId, !profile.completedMaps.includes(result.mapId)) +
-    (result.outcome === 'victory' ? (result.activityOre ?? 0) : 0);
+    Math.round(
+      runOre(result.outcome, result.mapId, !profile.completedMaps.includes(result.mapId)) *
+        map.rewardScale,
+    ) + (result.outcome === 'victory' ? (result.activityOre ?? 0) : 0);
 
   // Unlocks: only a victory unlocks the next map; unlocked maps stay unlocked.
   const next = victory ? nextMapAfter(result.mapId) : null;
@@ -145,6 +188,17 @@ export function applyRunResult(
   const completedMaps = victory
     ? [...new Set([...profile.completedMaps, result.mapId])].sort((a, b) => a - b)
     : [...profile.completedMaps];
+  // Task 39: a victory on a tier above the hardest won so far records it (and opens the next).
+  const won = hardestTierWon(profile, result.mapId);
+  const raisesTier =
+    victory &&
+    CAMPAIGN_DIFFICULTIES.indexOf(tier) > (won ? CAMPAIGN_DIFFICULTIES.indexOf(won) : -1);
+  const mapTiers =
+    raisesTier && tier !== 'normal'
+      ? Object.freeze({ ...profile.mapTiers, [String(result.mapId)]: tier })
+      : profile.mapTiers;
+  const nextTier = CAMPAIGN_DIFFICULTIES[CAMPAIGN_DIFFICULTIES.indexOf(tier) + 1] ?? null;
+  const newlyUnlockedTier = raisesTier ? nextTier : null;
 
   const key = String(result.mapId);
   const prevBest: MapBest = profile.bestResults[key] ?? {
@@ -180,6 +234,8 @@ export function applyRunResult(
     levelAfter: progress.level,
     levelsGained,
     unlockedMap: newlyUnlockedMap,
+    ...(tier === 'normal' ? {} : { difficulty: tier }),
+    ...(newlyUnlockedTier ? { unlockedTier: newlyUnlockedTier } : {}),
     finishedAt,
     ...(result.stats ? { stats: validateRunStatsSummary(result.stats) } : {}),
   });
@@ -191,6 +247,7 @@ export function applyRunResult(
     ore: profile.ore + ore,
     highestUnlockedMap,
     completedMaps: Object.freeze(completedMaps),
+    mapTiers,
     bestResults: finished
       ? Object.freeze({ ...profile.bestResults, [key]: best })
       : profile.bestResults,
@@ -227,6 +284,8 @@ export function applyRunResult(
       levelsGained,
       talentPointsGained: talentPoints(progress.level) - talentPoints(before.level),
       newlyUnlockedMap,
+      difficulty: tier,
+      newlyUnlockedTier,
       duplicate: false,
     }),
   });
