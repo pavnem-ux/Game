@@ -22,7 +22,7 @@ export interface UiSettings {
   readonly leftHanded: boolean;
   /** Task 16 «Vibration»: light haptic on dash / level-up where supported. */
   readonly haptics: boolean;
-  /** Task 36 «Game speed» (×1 / ×1.5 / ×2): each run starts at the last choice. */
+  /** Task 36 / 38 «Game speed» (×1 / ×1.5 / ×2 / ×3 / ×4 / ×5): each run starts at the last choice. */
   readonly gameSpeed: GameSpeed;
 }
 /** Touch-first devices (coarse pointer) default to Medium; desktops to High. */

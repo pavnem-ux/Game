@@ -666,7 +666,9 @@ export class AlphaScene extends Phaser.Scene {
       this.vfx.reset();
       this.vfx.draw(0);
     }
-    this.hudTimer -= dt;
+    // Task 38: React gets ~10 snapshots per real second at any game speed (AGENTS §4.9); the scaled
+    // frame step would publish ~50 per second at ×5.
+    this.hudTimer -= this.frameSeconds;
     if (this.hudTimer <= 0) {
       this.publish();
       this.hudTimer = 0.1;

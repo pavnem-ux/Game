@@ -2401,8 +2401,8 @@ body {
 .alpha-hud .timer .game-speed-button:hover {
   border-color: rgba(232, 196, 107, 0.85);
 }
-.alpha-hud .timer .game-speed-button[data-speed='1.5'],
-.alpha-hud .timer .game-speed-button[data-speed='2'] {
+/* Task 38: highlighted at every speed above ×1. */
+.alpha-hud .timer .game-speed-button:not([data-speed='1']) {
   background: rgba(120, 82, 22, 0.75);
   color: #fff3d2;
 }
@@ -2410,14 +2410,23 @@ body {
   margin: 0;
   padding: 0;
   border: 0;
+  min-width: 0;
+  /* Task 38: six options — one row when it fits, else two rows of three (no horizontal scroll). */
+  container-type: inline-size;
 }
 .game-speed-choice legend {
   margin-bottom: 6px;
   font-weight: 600;
 }
 .game-speed-options {
-  display: inline-flex;
+  display: inline-grid;
+  grid-template-columns: repeat(6, auto);
   gap: 6px;
+}
+@container (max-width: 400px) {
+  .game-speed-options {
+    grid-template-columns: repeat(3, auto);
+  }
 }
 .game-speed-options label {
   position: relative;

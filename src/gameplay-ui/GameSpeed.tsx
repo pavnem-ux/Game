@@ -5,8 +5,8 @@ import { uiSettings } from './ui-settings';
 import { EN } from './strings-en';
 
 /**
- * Task 36 «Game speed» controls (presentation only: they change a UI setting; the scene reads it
- * each frame and simulates that many more fixed steps). The choice is kept in the settings, so the
+ * Task 36 / 38 «Game speed» controls, ×1 … ×5 (presentation only: they change a UI setting; the
+ * scene reads it each frame and simulates that many more fixed steps). The choice is kept in the settings, so the
  * next run starts at it. While the game is paused / on an offer / revive / results nothing advances,
  * whatever the speed.
  */
@@ -14,7 +14,7 @@ const useGameSpeed = (): GameSpeed =>
   useSyncExternalStore(uiSettings.subscribe, () => uiSettings.get().gameSpeed);
 const setGameSpeed = (gameSpeed: GameSpeed) => uiSettings.set({ gameSpeed });
 
-/** In-run HUD button next to the timer: shows the current multiplier, cycles ×1 → ×1.5 → ×2. */
+/** In-run HUD button next to the timer: shows the current multiplier, cycles ×1 → ×1.5 → ×2 → ×3 → ×4 → ×5 → ×1. */
 export function GameSpeedButton() {
   const speed = useGameSpeed();
   return (
@@ -34,7 +34,7 @@ export function GameSpeedButton() {
   );
 }
 
-/** «Game speed» choice for the pause menu and Settings (×1 / ×1.5 / ×2). */
+/** «Game speed» choice for the pause menu and Settings (×1 / ×1.5 / ×2 / ×3 / ×4 / ×5). */
 export function GameSpeedChoice({ className = '' }: { className?: string }) {
   const speed = useGameSpeed();
   return (
