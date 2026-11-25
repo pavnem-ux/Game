@@ -55,7 +55,10 @@ describe('Task 10 Phase 3 — per-map modifiers (existing levers only)', () => {
         has(m.id, 'ranged18') ? 0.18 : has(m.id, 'ranged15') ? 0.15 : CAMPAIGN_BALANCE.rangedShare,
       );
       // elites → elite HP/damage only.
-      expect(m.elite.hpMultiplier).toBeCloseTo(2.5 * (has(m.id, 'elites') ? 1.25 : 1), 12);
+      expect(m.elite.hpMultiplier).toBeCloseTo(
+        10 * /* Task 39 (was 2.5) */ (has(m.id, 'elites') ? 1.25 : 1),
+        12,
+      );
       expect(m.elite.damageMultiplier).toBeCloseTo(1.4 * (has(m.id, 'elites') ? 1.15 : 1), 12);
     }
   });
@@ -96,9 +99,9 @@ describe('Task 10 Phase 3 — per-map modifiers (existing levers only)', () => {
     };
     const [hp15, dmg15] = ratio(15);
     const [hp14, dmg14] = ratio(14);
-    expect(hp14).toBeCloseTo(2.5, 10);
+    expect(hp14).toBeCloseTo(10, 10);
     expect(dmg14).toBeCloseTo(1.4, 10);
-    expect(hp15).toBeCloseTo(2.5 * 1.25, 10);
+    expect(hp15).toBeCloseTo(10 * 1.25, 10);
     expect(dmg15).toBeCloseTo(1.4 * 1.15, 10);
   });
   it('ranged15 (map 13): normal spawns follow the 0.15 share deterministically', () => {

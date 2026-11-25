@@ -1124,6 +1124,51 @@
   color: var(--down);
   font-weight: 600;
 }
+/* Task 39: difficulty tier choice on the map card. */
+.map-tiers {
+  margin: 0 0 var(--sp-3);
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.map-tiers legend {
+  margin-bottom: 6px;
+  color: var(--text-faint);
+  font-size: var(--fs-s);
+}
+.map-tier-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.map-tier {
+  padding: 5px 10px;
+  border: 1px solid var(--ink-line-strong);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: var(--fs-s);
+  cursor: pointer;
+}
+.map-tier.is-selected {
+  border-color: var(--gold-400);
+  background: rgba(232, 196, 107, 0.16);
+  color: var(--gold-300);
+}
+.map-tier:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.map-tier:focus-visible {
+  outline: 2px solid var(--gold-400);
+  outline-offset: 2px;
+}
+.map-tier-hint {
+  margin: 6px 0 0;
+  color: var(--text-faint);
+  font-size: var(--fs-s);
+}
 .map-facts {
   display: grid;
   grid-template-columns: auto 1fr;

@@ -16,7 +16,9 @@ import { QUEST_BY_ID } from '../quests';
 export function ResultsScreen({ world }: { world: GameplaySnapshot }) {
   const ui = useSyncExternalStore(campaignStore.subscribe, campaignStore.getSnapshot);
   const c = world.campaign!;
-  const map = getCampaignMap(c.mapId);
+  // Task 39: the run's tier (older snapshots without it are Normal).
+  const tier = c.difficulty ?? 'normal';
+  const map = getCampaignMap(c.mapId, tier);
   const last = ui.lastResult?.runId === c.runId ? ui.lastResult : null;
   const summary = last?.commit.summary ?? null;
   const victory = c.status === 'victory';
@@ -27,7 +29,10 @@ export function ResultsScreen({ world }: { world: GameplaySnapshot }) {
   // Task 24: Ore from activities is credited with a victory on top of the map's Ore.
   const activityOre = victory ? (world.activities?.ore ?? 0) : 0;
   const firstWin =
-    !!summary && victory && summary.oreGained - activityOre > runOre('victory', c.mapId, false);
+    !!summary &&
+    victory &&
+    summary.oreGained - activityOre >
+      Math.round(runOre('victory', c.mapId, false) * map.rewardScale);
   return (
     <section
       className="overlay modal-overlay results-overlay"
@@ -37,7 +42,9 @@ export function ResultsScreen({ world }: { world: GameplaySnapshot }) {
     >
       <div className={`results-panel ${victory ? 'is-victory' : 'is-defeat'}`}>
         <div className="eyebrow centered">
-          {map.id}. {map.name} · {CLASS_LABELS[world.character.characterClass]}
+          {map.id}. {map.name}
+          {tier !== 'normal' && ` · ${EN.meta.maps.tierNames[tier]}`} ·{' '}
+          {CLASS_LABELS[world.character.characterClass]}
         </div>
         <h2 id="results-title">{victory ? 'Victory.' : 'Defeat.'}</h2>
         <dl className="results-grid">
@@ -59,7 +66,16 @@ export function ResultsScreen({ world }: { world: GameplaySnapshot }) {
             {!victory && ` (50% → ${gold.coins})`}
           </dd>
           <dt>Victory bonus</dt>
-          <dd>{victory ? `+${gold.bonus}` : 'none'}</dd>
+          {/* Task 39: on a harder tier the bonus includes the tier's Gold scale. */}
+          <dd>
+            {victory
+              ? `+${summary ? summary.goldGained - world.coins.collected : gold.bonus}${
+                  map.rewardScale !== 1
+                    ? ` (${EN.meta.maps.tierNames[tier]} ×${map.rewardScale})`
+                    : ''
+                }`
+              : 'none'}
+          </dd>
           <dt>
             <CurrencyIcon kind="gold" /> Gold
           </dt>
@@ -89,6 +105,11 @@ export function ResultsScreen({ world }: { world: GameplaySnapshot }) {
           <dt>Talent points</dt>
           <dd>{summary ? `+${summary.talentPointsGained}` : '…'}</dd>
         </dl>
+        {summary?.newlyUnlockedTier && (
+          <p className="results-unlock">
+            ✦ {EN.meta.maps.tierUnlocked(EN.meta.maps.tierNames[summary.newlyUnlockedTier])}
+          </p>
+        )}
         {summary?.newlyUnlockedMap && (
           <p className="results-unlock">
             ✦ Map {summary.newlyUnlockedMap} unlocked:{' '}
@@ -126,7 +147,9 @@ export function ResultsScreen({ world }: { world: GameplaySnapshot }) {
           <button
             className="button primary"
             autoFocus
-            onClick={() => campaignStore.startRun(c.mapId, world.character.characterClass)}
+            onClick={() =>
+              campaignStore.startRun(c.mapId, world.character.characterClass, undefined, tier)
+            }
           >
             Again →
           </button>

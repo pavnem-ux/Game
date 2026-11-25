@@ -39,7 +39,7 @@ ids and timestamps come from the UI, never from the simulation; rewards are appl
 - Durations (min): 10, 10, 11, 11, 12, 12, 13, 13, 14, 15. Difficulty for map k+1: enemy HP
   ×(1+0.12k), damage ×(1+0.08k), spawn rate ×(1+0.08k).
 - Stages at 0 / 15% / 40% / 65% / 90% of the duration. 8 enemy slots reserved for elites/boss.
-- Elites: every 120 s, HP ×2.5, damage ×1.4 on top of the map, +40 run XP.
+- Elites: every 120 s, HP ×10 (Task 39; was ×2.5), damage ×1.4 on top of the map, +40 run XP.
 - Boss at 600 s; telegraphs ≥ 0.8 s, 1.2 s gap between casts; boss CC limits only tighten the
   global Slow/Stun rules.
 - Rewards: victory XP = 100 + 50 × mapId, Gold = XP × 0.5. Defeat: 25% × fraction of the map
@@ -173,3 +173,24 @@ run lost HP to death. The task's goal is «enough hard content for levels 30–5
 boss/enemy multipliers likely need raising after a human playtest (not tuned here: numbers are
 owner-controlled). A standing-still bot (no crystal pickup) died on map 20 around 1:30 for every
 class, so movement and crystal collection matter. Bot-driven, one seed: not a human playtest.
+
+## Task 39 — elites ×10 and difficulty tiers
+
+Spec: [task-39-difficulty-tiers.md](task-39-difficulty-tiers.md); log:
+[task-39-progress.md](task-39-progress.md). **All numbers provisional** (`DIFFICULTY_TIERS` in
+`src/campaign/config.ts`).
+
+- Elites have ×10 the map's normal enemy health (was ×2.5); damage ×1.4 unchanged; «Strong elites»
+  still ×1.25 / ×1.15 on top.
+- Four tiers per map, `getCampaignMap(id, tier)`: **Normal**; **Hard** (every monster's health and
+  damage ×1.5); **Nightmare** (×2); **Elite Trial** (no waves or initial enemies, 3 minutes, 5 elites
+  every 30 s from 0:00 to 2:30 (owner change; was every minute) with ×3 the Normal elite health and damage, the boss at 3:00 with ×3 health
+  and damage; won when the boss dies). Speed and wave frequency unchanged.
+- Unlocks per map: Normal → Hard → Nightmare → Elite Trial, each after a victory on the previous
+  tier of that map. Victory Gold (coins + bonus) and map Ore ×1.5 / ×2 / ×2; class XP and defeat
+  rewards unchanged; activity Ore not scaled.
+- Save v9 (`migrateV8toV9`): `mapTiers` (hardest tier won above Normal per map; a Normal win is
+  `completedMaps`); recent runs keep `difficulty` / `unlockedTier`.
+- UI: tier buttons on the map card (locked ones say what opens them), the tier in the pause info,
+  results («Hard unlocked on this map») and recent runs.
+- Not verified: how the tiers feel in human play (elites ×10 make every map's elites much tankier).

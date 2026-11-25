@@ -1,8 +1,13 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { CAMPAIGN_ACTS, CAMPAIGN_MAPS } from '../../campaign';
-import type { CampaignMap } from '../../campaign';
+import {
+  CAMPAIGN_ACTS,
+  CAMPAIGN_DIFFICULTIES,
+  CAMPAIGN_MAPS,
+  getCampaignMap,
+} from '../../campaign';
+import type { CampaignDifficulty, CampaignMap } from '../../campaign';
 import { CLASS_LABELS } from '../../gameplay';
-import { isMapUnlocked, recommendedLevel } from '../../profile';
+import { isMapUnlocked, isTierUnlocked, recommendedLevel } from '../../profile';
 import { campaignStore } from '../campaign-state';
 import { clock, factor, minutes } from '../campaign-format';
 import { BackgroundArt, BossPortrait, Button, Panel } from '../kit';
@@ -146,15 +151,20 @@ export function MapPathPage() {
           </ol>
         </div>
       </div>
-      <MapPanel map={map} />
+      {/* Task 39: a new map starts on Normal (the tier choice is per panel). */}
+      <MapPanel key={map.id} map={map} />
     </div>
   );
 }
 
-function MapPanel({ map }: { map: CampaignMap }) {
+function MapPanel({ map: base }: { map: CampaignMap }) {
   const ui = useSyncExternalStore(campaignStore.subscribe, campaignStore.getSnapshot);
   const profile = ui.progression.profile!;
-  const unlocked = isMapUnlocked(profile, map.id);
+  const unlocked = isMapUnlocked(profile, base.id);
+  // Task 39: the chosen difficulty tier (only unlocked tiers can be chosen).
+  const [chosen, setTier] = useState<CampaignDifficulty>('normal');
+  const tier = isTierUnlocked(profile, base.id, chosen) ? chosen : 'normal';
+  const map = getCampaignMap(base.id, tier);
   const act = CAMPAIGN_ACTS[map.act - 1];
   const best = profile.bestResults[String(map.id)];
   const cls = profile.selectedClass;
@@ -173,6 +183,36 @@ function MapPanel({ map }: { map: CampaignMap }) {
       }
     >
       {locked && <p className="map-locked-reason">🔒 {locked}</p>}
+      {unlocked && (
+        <fieldset className="map-tiers" data-testid="map-tiers">
+          <legend>{M.tier}</legend>
+          <div className="map-tier-options" role="radiogroup" aria-label={M.tier}>
+            {CAMPAIGN_DIFFICULTIES.map((t, i) => {
+              const open = isTierUnlocked(profile, base.id, t);
+              const reason = open
+                ? M.tierHints[t]
+                : M.tierLocked(M.tierNames[CAMPAIGN_DIFFICULTIES[i - 1]]);
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  role="radio"
+                  aria-checked={tier === t}
+                  className={`map-tier ${tier === t ? 'is-selected' : ''}`}
+                  data-tier={t}
+                  disabled={!open}
+                  title={reason}
+                  onClick={() => setTier(t)}
+                >
+                  {open ? '' : '🔒 '}
+                  {M.tierNames[t]}
+                </button>
+              );
+            })}
+          </div>
+          <p className="map-tier-hint">{M.tierHints[tier]}</p>
+        </fieldset>
+      )}
       <dl className="map-facts">
         <dt>{M.duration}</dt>
         <dd>{minutes(map.durationSeconds)}</dd>
@@ -186,7 +226,10 @@ function MapPanel({ map }: { map: CampaignMap }) {
           {recommended} · {CLASS_LABELS[cls]}: {M.yourLevel(level)}
         </dd>
         <dt>{M.rewards}</dt>
-        <dd>{M.reward(map.victoryXp, map.victoryGold)}</dd>
+        <dd>
+          {M.reward(map.victoryXp, map.victoryGold)}
+          {map.rewardScale !== 1 && M.rewardScaled(map.rewardScale)}
+        </dd>
         <dt>{M.modifiers}</dt>
         <dd>
           {map.modifiers.length ? (
@@ -221,7 +264,7 @@ function MapPanel({ map }: { map: CampaignMap }) {
         className="map-fight"
         aria-label={M.fightLabel(map.id)}
         disabledReason={locked}
-        onClick={() => campaignStore.startRun(map.id)}
+        onClick={() => campaignStore.startRun(map.id, undefined, undefined, tier)}
       >
         ⚔ {M.fight}
       </Button>

@@ -366,6 +366,24 @@ export const EN = Object.freeze({
       notDone: 'Not cleared yet',
       fight: 'To battle',
       fightLabel: (id: number) => `Play: map ${id}`,
+      /** Task 39: difficulty tiers. */
+      tier: 'Tier',
+      tierNames: Object.freeze({
+        normal: 'Normal',
+        hard: 'Hard',
+        nightmare: 'Nightmare',
+        trial: 'Elite Trial',
+      }),
+      tierHints: Object.freeze({
+        normal: 'The map as it is.',
+        hard: 'All monsters: +50% health and damage. Victory Gold and Ore ×1.5.',
+        nightmare: 'All monsters: +100% health and damage. Victory Gold and Ore ×2.',
+        trial:
+          'No ordinary enemies. 5 elites every 30 seconds (×3), the boss at 3:00 (×3). Victory Gold and Ore ×2.',
+      }),
+      tierLocked: (previous: string) => `Win on ${previous} first`,
+      tierUnlocked: (name: string) => `${name} unlocked on this map`,
+      rewardScaled: (scale: number) => ` · Gold and Ore ×${scale}`,
       select: 'Select',
       close: 'Close',
     }),

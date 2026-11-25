@@ -1,13 +1,16 @@
 export {
   CAMPAIGN_ACTS,
   CAMPAIGN_BALANCE,
+  CAMPAIGN_DIFFICULTIES,
   CAMPAIGN_MAPS,
+  DIFFICULTY_TIERS,
   DOUBLE_ELITE_MAPS,
   MAP_MODIFIERS,
   actOf,
   bossSpawnTime,
   eliteEventTimes,
   getCampaignMap,
+  isCampaignDifficulty,
   mapDifficulty,
   mapDurationSeconds,
   validateCampaignConfig,
@@ -16,6 +19,7 @@ export {
 } from './config';
 export type {
   CampaignAct,
+  CampaignDifficulty,
   CampaignMap,
   MapEliteSettings,
   MapModifier,

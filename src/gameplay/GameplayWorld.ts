@@ -206,7 +206,9 @@ export class GameplayWorld {
     const skillRandom = rng.skills;
     this.spawnRandom = rng.spawn;
     this.coinRandom = rng.coins;
-    this.campaignMap = options.campaign ? getCampaignMap(options.campaign.mapId) : null;
+    this.campaignMap = options.campaign
+      ? getCampaignMap(options.campaign.mapId, options.campaign.difficulty)
+      : null;
     this.director = this.campaignMap ? new CampaignDirector(this.campaignMap) : null;
     this.chests = this.campaignMap ? new RunChests(rng.chests, ALPHA.arenaSize) : null;
     this.activities = this.campaignMap
@@ -223,6 +225,8 @@ export class GameplayWorld {
       this.campaignMap
         ? {
             ...campaignSpawning(this.campaignMap, spawningSettings(), ALPHA.enemyCap),
+            // Task 39: the Elite Trial has no automatic waves.
+            ...(this.campaignMap.waves ? {} : { enabled: false }),
             ...options.spawning,
           }
         : options.spawning,
@@ -378,7 +382,8 @@ export class GameplayWorld {
     this.baseOnHit = Object.freeze([...(options.onHit ?? defaultOnHit(options.characterClass))]);
     this.onHitDefinitions = this.baseOnHit;
     this.adapter = this.makeAdapter(this.baseOnHit);
-    if (options.initialEnemies !== false) {
+    // Task 39: the Elite Trial starts with no ordinary enemies either.
+    if (options.initialEnemies !== false && this.campaignMap?.waves !== false) {
       const count = options.enemyCount ?? 12;
       if (!Number.isInteger(count) || count < 1 || count > 24)
         throw new RangeError('Initial enemy count must be 1–24.');
@@ -672,6 +677,7 @@ export class GameplayWorld {
     return Object.freeze({
       mapId: map.id,
       mapName: map.name,
+      difficulty: map.tier,
       duration: clock.duration,
       elapsed: clock.elapsed,
       remaining: clock.remaining,
@@ -1288,10 +1294,11 @@ export class GameplayWorld {
     } else if (event.kind === 'boss') {
       const def = getBossDefinition(map.bossId);
       const base = ALPHA_ENEMIES[def.behavior];
+      // Task 39: the Elite Trial boss has ×3 health and damage (bossScale; 1 elsewhere).
       const enemyId = this.spawnScheduled(
         def.behavior,
-        def.hpMultiplier,
-        def.damageMultiplier,
+        def.hpMultiplier * map.bossScale,
+        def.damageMultiplier * map.bossScale,
         Object.freeze({
           ...base,
           radius: base.radius * def.radiusScale,

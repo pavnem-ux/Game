@@ -147,7 +147,7 @@ for (const [tag, viewport, touch] of [
     { shrine: 1, lantern: 1, thief: 0, nest: 1 },
     `${tag}: lifetime activity counters saved once`,
   );
-  assert.equal(profile.schemaVersion, 8);
+  assert.equal(profile.schemaVersion, 9); // Task 39
 
   // Quests: the Activities group with its progress.
   await results.getByRole('button', { name: 'To menu' }).click();

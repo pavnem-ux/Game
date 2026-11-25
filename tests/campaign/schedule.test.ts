@@ -168,7 +168,7 @@ describe('scheduled events in the world fire exactly once at their time', () => 
     const base = w.core.getEntity(w.spawnEnemy('melee', 300));
     const c = w.getSnapshot().campaign!;
     const elite = w.core.getEntity(c.eliteEnemyIds[0]);
-    expect(elite.maxHp).toBeCloseTo(base.maxHp * 2.5, 6);
+    expect(elite.maxHp).toBeCloseTo(base.maxHp * 10, 6); // Task 39: elites ×10 (was 2.5);
     expect(elite.physicalDamage).toBeCloseTo(base.physicalDamage * 1.4, 6);
     const boss = w.core.getEntity(c.bossEnemyId!);
     expect(boss.maxHp).toBeCloseTo(base.maxHp * getBossDefinition('ash_wolf').hpMultiplier, 6);

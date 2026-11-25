@@ -5,7 +5,7 @@ import { talentPoints, xpToNextLevel } from '../profile';
 import { campaignStore } from './campaign-state';
 import { clock } from './campaign-format';
 import { Button, Panel } from './kit';
-import { formatNumber } from './strings-en';
+import { EN, formatNumber } from './strings-en';
 
 const useCampaign = () => useSyncExternalStore(campaignStore.subscribe, campaignStore.getSnapshot);
 
@@ -81,7 +81,8 @@ export function ProgressionPage() {
           <ol>
             {profile.recentRuns.map((r) => (
               <li key={r.runId} className={`recent-run outcome-${r.outcome}`}>
-                <b>{OUTCOME_LABELS[r.outcome]}</b> · map {r.mapId} ·{' '}
+                <b>{OUTCOME_LABELS[r.outcome]}</b> · map {r.mapId}
+                {r.difficulty ? ` (${EN.meta.maps.tierNames[r.difficulty]})` : ''} ·{' '}
                 {CLASS_LABELS[r.characterClass]} · {clock(r.elapsed)} · {r.kills} defeated · +{r.xp}{' '}
                 XP · +{r.gold} Gold
                 {r.unlockedMap ? ` · unlocked map ${r.unlockedMap}` : ''}

@@ -38,7 +38,7 @@ export const CAMPAIGN_BALANCE = Object.freeze({
     /** An elite every interval seconds, strictly before map end; the boss replaces one. */
     interval: 120,
     /** Extra multipliers on top of the map difficulty. */
-    hpMultiplier: 2.5,
+    hpMultiplier: 10, // Task 39: elites have ×10 the map's normal enemy health (was 2.5)
     damageMultiplier: 1.4,
     /** Profiles alternate in this order (aggressive melee, ranged). */
     profiles: Object.freeze(['melee', 'ranged'] as const),
@@ -182,10 +182,45 @@ export interface MapModifier {
   readonly id: MapModifierId;
   readonly label: string;
 }
+/**
+ * Task 39: the difficulty tiers of every map (owner decision, PROVISIONAL numbers). Hard / Nightmare
+ * scale every monster's health and damage; the Elite Trial is a 3-minute map with no waves — five
+ * elites every 30 s from 0:00 to 2:30 (×3 the Normal elites; owner change: was every minute) and the
+ * boss at 3:00 (×3 the Normal boss).
+ * `rewardScale` multiplies the victory Gold and Ore. Tiers unlock in this order on each map.
+ */
+export type CampaignDifficulty = 'normal' | 'hard' | 'nightmare' | 'trial';
+export const CAMPAIGN_DIFFICULTIES: readonly CampaignDifficulty[] = Object.freeze([
+  'normal',
+  'hard',
+  'nightmare',
+  'trial',
+]);
+export const DIFFICULTY_TIERS = Object.freeze({
+  normal: Object.freeze({ name: 'Normal', monsterScale: 1, rewardScale: 1 }),
+  hard: Object.freeze({ name: 'Hard', monsterScale: 1.5, rewardScale: 1.5 }),
+  nightmare: Object.freeze({ name: 'Nightmare', monsterScale: 2, rewardScale: 2 }),
+  trial: Object.freeze({
+    name: 'Elite Trial',
+    monsterScale: 1,
+    rewardScale: 2,
+    durationSeconds: 180,
+    eliteTimes: Object.freeze([0, 30, 60, 90, 120, 150]),
+    elitesPerEvent: 5,
+    /** Elite health and damage × this on top of the map's Normal elites. */
+    eliteScale: 3,
+    /** Boss health and damage × this on top of the map's Normal boss. */
+    bossScale: 3,
+  }),
+});
+export function isCampaignDifficulty(value: unknown): value is CampaignDifficulty {
+  return (CAMPAIGN_DIFFICULTIES as readonly unknown[]).includes(value);
+}
 /** Elite settings of one map (Act interval; per-event count; strength on top of difficulty). */
 export interface MapEliteSettings {
   readonly interval: number;
-  readonly perEvent: 1 | 2;
+  /** Elites per event (1 or 2; Task 39 Elite Trial: 5). */
+  readonly perEvent: number;
   readonly hpMultiplier: number;
   readonly damageMultiplier: number;
 }
@@ -211,6 +246,16 @@ export interface CampaignMap {
   /** Task 10: per-map modifiers (Russian labels for the map card) and the enemy speed lever. */
   readonly modifiers: readonly MapModifier[];
   readonly enemySpeedScale: number;
+  /** Task 39: the difficulty tier of this map variant (Normal for `getCampaignMap(id)`). */
+  readonly tier: CampaignDifficulty;
+  /** Task 39: elite event times (Normal: the act interval before the end; Trial: 0 / 60 / 120). */
+  readonly eliteTimes: readonly number[];
+  /** Task 39: false = no automatic waves and no initial enemies (Elite Trial). */
+  readonly waves: boolean;
+  /** Task 39: boss health and damage × this on top of its definition (Trial: 3). */
+  readonly bossScale: number;
+  /** Task 39: victory Gold and Ore × this (Hard 1.5, Nightmare 2, Trial 2). */
+  readonly rewardScale: number;
 }
 
 const MAP_TEXT: readonly {
@@ -452,14 +497,68 @@ export const CAMPAIGN_MAPS: readonly CampaignMap[] = Object.freeze(
       reservedSlots: Math.max(CAMPAIGN_BALANCE.reservedSlots, scheduled),
       modifiers: Object.freeze(modifiers),
       enemySpeedScale: has('swift') ? MAP_MODIFIERS.swift.enemySpeed : 1,
+      tier: 'normal',
+      eliteTimes: eliteEventTimes(id),
+      waves: true,
+      bossScale: 1,
+      rewardScale: 1,
     } satisfies CampaignMap);
   }),
 );
 
-export function getCampaignMap(mapId: number): CampaignMap {
+/**
+ * A campaign map, optionally at a Task 39 difficulty tier (Normal = the map itself). Hard /
+ * Nightmare scale the map's health and damage multipliers (every monster derives from them); the
+ * Elite Trial replaces the duration and schedule. Variants are cached (frozen, one per map and tier).
+ */
+export function getCampaignMap(mapId: number, tier: CampaignDifficulty = 'normal'): CampaignMap {
   const map = CAMPAIGN_MAPS[mapId - 1];
   if (!Number.isInteger(mapId) || !map) throw new RangeError(`Unknown campaign map: ${mapId}.`);
-  return map;
+  if (!isCampaignDifficulty(tier)) throw new RangeError(`Unknown difficulty: ${String(tier)}.`);
+  if (tier === 'normal') return map;
+  const key = `${mapId}:${tier}`;
+  let variant = VARIANTS.get(key);
+  if (!variant) {
+    variant = tierVariant(map, tier);
+    VARIANTS.set(key, variant);
+  }
+  return variant;
+}
+const VARIANTS = new Map<string, CampaignMap>();
+function tierVariant(map: CampaignMap, tier: Exclude<CampaignDifficulty, 'normal'>): CampaignMap {
+  if (tier === 'trial') {
+    const t = DIFFICULTY_TIERS.trial;
+    return Object.freeze({
+      ...map,
+      tier,
+      durationSeconds: t.durationSeconds,
+      eliteTimes: t.eliteTimes,
+      elite: Object.freeze({
+        ...map.elite,
+        perEvent: t.elitesPerEvent,
+        hpMultiplier: map.elite.hpMultiplier * t.eliteScale,
+        damageMultiplier: map.elite.damageMultiplier * t.eliteScale,
+      }),
+      waves: false,
+      bossScale: t.bossScale,
+      rewardScale: t.rewardScale,
+      reservedSlots: Math.max(
+        CAMPAIGN_BALANCE.reservedSlots,
+        t.eliteTimes.length * t.elitesPerEvent + 1,
+      ),
+    } satisfies CampaignMap);
+  }
+  const t = DIFFICULTY_TIERS[tier];
+  return Object.freeze({
+    ...map,
+    tier,
+    difficulty: Object.freeze({
+      ...map.difficulty,
+      hp: map.difficulty.hp * t.monsterScale,
+      damage: map.difficulty.damage * t.monsterScale,
+    }),
+    rewardScale: t.rewardScale,
+  } satisfies CampaignMap);
 }
 
 /** Startup validation: rejects an inconsistent configuration before any run can use it. */

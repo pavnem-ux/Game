@@ -661,7 +661,12 @@ export function PauseDialog({ world }: { world: GameplaySnapshot }) {
           {/* Task 22: the run details removed from the in-run HUD. */}
           <p className="pause-run-info" aria-label="Run">
             {world.campaign
-              ? `${world.campaign.mapId}. ${world.campaign.mapName} · Stage: ${world.campaign.stage.name} · ${
+              ? `${world.campaign.mapId}. ${world.campaign.mapName}${
+                  // Task 39: the tier, when not Normal.
+                  world.campaign.difficulty && world.campaign.difficulty !== 'normal'
+                    ? ` · ${EN.meta.maps.tierNames[world.campaign.difficulty]}`
+                    : ''
+                } · Stage: ${world.campaign.stage.name} · ${
                   world.campaign.durationReached
                     ? 'time is up'
                     : `${clock(world.campaign.remaining)} left`

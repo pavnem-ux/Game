@@ -34,7 +34,7 @@ workflow: [TASK_WORKFLOW.md](TASK_WORKFLOW.md).
   Slow / Stun, attribution), `synergies.ts` (`SYNERGY_RULES`, levels, `SynergyResolver`),
   `synergy-info.ts` (UI info, card hints), `damage-readout.ts`, `stats.ts` (`composeRunStats`, caps
   once), `config.ts` (`SKILL_RULES`, tuning).
-- `src/campaign/` — `config.ts` (`CAMPAIGN_MAPS` 1–40, acts, modifiers), `timer.ts`, `schedule.ts`
+- `src/campaign/` — `config.ts` (`CAMPAIGN_MAPS` 1–40, acts, modifiers, Task 39 `DIFFICULTY_TIERS` / `getCampaignMap(id, tier)`), `timer.ts`, `schedule.ts`
   (elites / boss), `run-state.ts`, `elites.ts`, `bosses.ts`, `boss-abilities.ts`.
 - `src/talents/` — `catalog.ts` (`TALENT_CATALOG_DATA`), `config.ts` (`TALENT_CONFIG`,
   `TALENT_RULES`), `rules.ts` (points, purchase, node state), `effects.ts`, `effect-data.ts`,

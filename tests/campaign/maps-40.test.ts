@@ -55,7 +55,12 @@ describe('Task 10 Phase 1 — 40 maps in 4 acts', () => {
       expect(now).toMatchObject({
         act: 1,
         reservedSlots: CAMPAIGN_BALANCE.reservedSlots,
-        elite: { interval: 120, perEvent: 1, hpMultiplier: 2.5, damageMultiplier: 1.4 },
+        elite: {
+          interval: 120,
+          perEvent: 1,
+          hpMultiplier: 10 /* Task 39 (was 2.5) */,
+          damageMultiplier: 1.4,
+        },
       });
       // Elite/boss schedule: byte-identical on the 10-minute maps 1–2 (boss already at the end).
       // Longer maps (owner decision, Task 11 review): the boss moves from 10:00 to the end and
