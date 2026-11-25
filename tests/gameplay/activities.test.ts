@@ -62,7 +62,7 @@ describe('Task 24 Phase 1 — scheduling', () => {
     expect(a.length).toBeGreaterThanOrEqual(6);
     expect(times(3)).toEqual(a);
     expect(times(4)).not.toEqual(a);
-  });
+  }, 30_000); // three 10-minute runs: ~3 s alone, over the 5 s default when CI runs suites in parallel
   it('never spawns at or after the map duration', () => {
     const w = campaignWorld(5, 1);
     const duration = w.campaignMap!.durationSeconds;
