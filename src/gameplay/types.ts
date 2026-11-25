@@ -1,3 +1,4 @@
+import type { CampaignDifficulty } from '../campaign';
 import type { TalentConfig, TalentRanks } from '../talents';
 import type { ItemLevels, Loadout } from '../equipment';
 import type { PetId } from '../pets';
@@ -45,7 +46,8 @@ export interface GameplayOptions {
   readonly viewport?: ViewportSize;
   readonly onHit?: readonly EffectDefinition[];
   /** Task 08: play a campaign map (scaled enemies/spawning, timer, scheduled events). */
-  readonly campaign?: Readonly<{ mapId: number; runId?: string }>;
+  /** Task 39: `difficulty` = the map's tier (absent = Normal). */
+  readonly campaign?: Readonly<{ mapId: number; runId?: string; difficulty?: CampaignDifficulty }>;
   /**
    * Task 09: the class's allocated talent ranks, applied at run start (validated; inert while
    * the catalog is not approved). `config` is a test seam (defaults to the shipped catalog).

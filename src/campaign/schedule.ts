@@ -1,5 +1,5 @@
 import { sameInstant } from '../simulation-boundary';
-import { CAMPAIGN_BALANCE, CAMPAIGN_MAPS, eliteEventTimes } from './config';
+import { CAMPAIGN_BALANCE, CAMPAIGN_DIFFICULTIES, CAMPAIGN_MAPS, getCampaignMap } from './config';
 import type { CampaignMap, EliteProfileId } from './config';
 
 /**
@@ -24,12 +24,13 @@ export type ScheduledEvent =
 export function campaignSchedule(map: CampaignMap): readonly ScheduledEvent[] {
   const { elite, boss } = CAMPAIGN_BALANCE;
   const events: ScheduledEvent[] = [];
-  if (!(map.durationSeconds >= boss.minSpawnTime))
+  // Task 39: the Elite Trial is a short map by design (boss at 3:00).
+  if (map.tier !== 'trial' && !(map.durationSeconds >= boss.minSpawnTime))
     throw new Error(`Map ${map.id} has no boss slot before its end.`);
   // Task 10: the act's elite interval (strictly before the end) and per-event
   // count; several elites of one event are separate events at the same time (index order).
   let index = 0;
-  for (const time of eliteEventTimes(map.id))
+  for (const time of map.eliteTimes)
     for (let n = 0; n < map.elite.perEvent; n++) {
       const profile = elite.profiles[index % elite.profiles.length];
       events.push(Object.freeze({ id: `elite-${index + 1}`, kind: 'elite', time, index, profile }));
@@ -91,6 +92,10 @@ export class CampaignDirector {
 }
 
 // Startup validation: every map's scheduled enemies fit in the reserved slots.
-for (const map of CAMPAIGN_MAPS)
-  if (scheduledEnemyCount(map) > map.reservedSlots)
-    throw new Error(`Map ${map.id} schedules more enemies than the reserved slots.`);
+// Task 39: every difficulty tier of every map, too.
+for (const base of CAMPAIGN_MAPS)
+  for (const tier of CAMPAIGN_DIFFICULTIES) {
+    const map = getCampaignMap(base.id, tier);
+    if (scheduledEnemyCount(map) > map.reservedSlots)
+      throw new Error(`Map ${map.id} (${tier}) schedules more enemies than the reserved slots.`);
+  }
