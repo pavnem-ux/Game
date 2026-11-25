@@ -10,7 +10,7 @@ PR: (draft, to be opened)
 - [x] 1 Elites ×10 health
 - [x] 2 Tier config + world (Hard / Nightmare multipliers, Elite Trial schedule)
 - [x] 3 Profile: per-map tier unlocks, rewards, save migration
-- [ ] 4 UI: tier choice on the map card, tier in pause / results / recent runs
+- [x] 4 UI: tier choice on the map card, tier in pause / results / recent runs
 - [ ] 5 Delivery: docs, final checks, PR
 
 ## Decisions / blockers

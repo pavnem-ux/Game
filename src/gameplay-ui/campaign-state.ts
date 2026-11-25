@@ -1,9 +1,11 @@
 import type { CharacterClass } from '../character-stats';
 import { getCampaignMap } from '../campaign';
+import type { CampaignDifficulty } from '../campaign';
 import {
   buyItem,
   equipItem,
   isMapUnlocked,
+  isTierUnlocked,
   unequipSlot,
   upgradeProfileItem,
   buyProfilePet,
@@ -126,6 +128,8 @@ export function runResultFrom(
     quest: runQuestSummary(world),
     // Task 24: Ore banked from map activities (credited only with a victory).
     activityOre: world.activities?.ore ?? 0,
+    // Task 39: the map's tier (Normal is the default and is left out).
+    ...(c.difficulty && c.difficulty !== 'normal' ? { difficulty: c.difficulty } : {}),
   });
 }
 
@@ -444,18 +448,20 @@ export const campaignStore = {
   },
   /**
    * Starts a campaign run on an unlocked map with the class's permanent level. Every run gets a
-   * new seed unless one is given (Task 08.5 §4.2: the debug tools replay a seed).
+   * new seed unless one is given (Task 08.5 §4.2: the debug tools replay a seed). Task 39: on an
+   * unlocked difficulty tier of the map (default Normal).
    */
   startRun(
     mapId = ensure().selectedMapId,
     characterClass?: CharacterClass,
     seed: number = generateRunSeed(),
+    difficulty: CampaignDifficulty = 'normal',
   ): boolean {
     if (!Number.isSafeInteger(seed) || seed < 0 || seed > MAX_UI_SEED)
       throw new RangeError(`Seed must be a whole number 0–${MAX_UI_SEED}.`);
     const profile = ensure().progression.profile;
-    if (!profile || !isMapUnlocked(profile, mapId)) return false;
-    getCampaignMap(mapId);
+    if (!profile || !isTierUnlocked(profile, mapId, difficulty)) return false;
+    getCampaignMap(mapId, difficulty);
     const cls = characterClass ?? profile.selectedClass;
     if (cls !== profile.selectedClass) campaignStore.service().selectClass(cls);
     update({ selectedMapId: mapId });
@@ -471,7 +477,7 @@ export const campaignStore = {
         equipment: { loadout: profile.classes[cls].loadout, itemLevels: profile.itemLevels },
         // Task 20: the profile's one active pet comes with whichever class starts the run.
         pet: activePetOf(profile),
-        campaign: { mapId, runId: generateRunId() },
+        campaign: { mapId, runId: generateRunId(), difficulty },
       },
     });
     return true;

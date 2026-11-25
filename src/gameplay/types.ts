@@ -243,6 +243,8 @@ export type CampaignEvent =
 export interface CampaignSnapshot {
   readonly mapId: number;
   readonly mapName: string;
+  /** Task 39: the map's difficulty tier. */
+  readonly difficulty: CampaignDifficulty;
   readonly duration: number;
   readonly elapsed: number;
   readonly remaining: number;

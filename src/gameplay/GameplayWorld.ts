@@ -677,6 +677,7 @@ export class GameplayWorld {
     return Object.freeze({
       mapId: map.id,
       mapName: map.name,
+      difficulty: map.tier,
       duration: clock.duration,
       elapsed: clock.elapsed,
       remaining: clock.remaining,
