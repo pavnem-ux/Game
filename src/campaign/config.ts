@@ -38,7 +38,7 @@ export const CAMPAIGN_BALANCE = Object.freeze({
     /** An elite every interval seconds, strictly before map end; the boss replaces one. */
     interval: 120,
     /** Extra multipliers on top of the map difficulty. */
-    hpMultiplier: 2.5,
+    hpMultiplier: 10, // Task 39: elites have ×10 the map's normal enemy health (was 2.5)
     damageMultiplier: 1.4,
     /** Profiles alternate in this order (aggressive melee, ranged). */
     profiles: Object.freeze(['melee', 'ranged'] as const),

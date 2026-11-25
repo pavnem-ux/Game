@@ -38,7 +38,7 @@ describe('campaign config (Task 08 §1.1)', () => {
   it('elite and boss parameters, stages and unique bosses', () => {
     expect(CAMPAIGN_BALANCE.elite).toMatchObject({
       interval: 120,
-      hpMultiplier: 2.5,
+      hpMultiplier: 10, // Task 39 (was 2.5)
       damageMultiplier: 1.4,
     });
     // Owner decision (Task 11 review): the boss appears when the map timer ends (≥ 10:00).

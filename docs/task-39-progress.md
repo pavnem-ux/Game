@@ -7,7 +7,7 @@ PR: (draft, to be opened)
 ## Checklist
 
 - [x] 0 Setup: branch, spec, progress file, draft PR
-- [ ] 1 Elites ×10 health
+- [x] 1 Elites ×10 health
 - [ ] 2 Tier config + world (Hard / Nightmare multipliers, Elite Trial schedule)
 - [ ] 3 Profile: per-map tier unlocks, rewards, save migration
 - [ ] 4 UI: tier choice on the map card, tier in pause / results / recent runs
