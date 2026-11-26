@@ -63,21 +63,22 @@ describe('Task 39 — rewards', () => {
       p = apply(p, { difficulty }).profile;
     return p;
   };
-  it('victory Gold and map Ore ×1.5 (Hard), ×2 (Nightmare), ×2 (Trial); XP unchanged', () => {
+  // Task 40: separate scales — Hard 1.5 / 1.5 / XP 1, Nightmare 2 / 2 / 1, Trial Gold 1 / Ore 2 / XP 0.2.
+  it('victory Gold, map Ore and class XP by tier (Hard ×1.5, Nightmare ×2, Trial Gold ×1, Ore ×2, XP ×0.2)', () => {
     const p = unlockedAll();
     const normal = apply(p).summary;
-    expect(normal.goldGained).toBe(75); // 45 coins + 30 bonus on map 1
+    expect(normal.goldGained).toBe(69); // 45 coins + 24 bonus on map 1 (Task 40 Gold ×0.8)
     const ore = runOre('victory', 1, false);
     expect(normal.oreGained).toBe(ore);
-    for (const [difficulty, k] of [
-      ['hard', 1.5],
-      ['nightmare', 2],
-      ['trial', 2],
+    for (const [difficulty, gold, oreScale, xp] of [
+      ['hard', 1.5, 1.5, 1],
+      ['nightmare', 2, 2, 1],
+      ['trial', 1, 2, 0.2],
     ] as const) {
       const s = apply(p, { difficulty, elapsed: difficulty === 'trial' ? 180 : 600 }).summary;
-      expect(s.goldGained).toBe(Math.round(75 * k));
-      expect(s.oreGained).toBe(Math.round(ore * k));
-      expect(s.xpGained).toBe(normal.xpGained);
+      expect(s.goldGained, difficulty).toBe(Math.round(69 * gold));
+      expect(s.oreGained, difficulty).toBe(Math.round(ore * oreScale));
+      expect(s.xpGained, difficulty).toBe(Math.round(normal.xpGained * xp));
     }
   });
   it('defeat rewards are not scaled', () => {
@@ -98,7 +99,7 @@ describe('Task 39 — save v9', () => {
     const r = parseProfileJson(JSON.stringify(v8));
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.profile.schemaVersion).toBe(9);
+    expect(r.profile.schemaVersion).toBe(10); // … then v9 → v10 (Task 40)
     expect(isTierUnlocked(r.profile, 1, 'hard')).toBe(true);
     expect(isTierUnlocked(r.profile, 1, 'nightmare')).toBe(false);
   });

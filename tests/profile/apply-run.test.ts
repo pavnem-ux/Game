@@ -45,7 +45,7 @@ describe('applyRunResult (Task 08 §1.3, step 3.3)', () => {
     expect(summary).toMatchObject({
       outcome: 'victory',
       xpGained: 150,
-      goldGained: 75,
+      goldGained: 69, // Task 40: 45 coins + 40% of map 1's victory Gold 60 (75 × 0.8)
       levelBefore: 1,
       levelAfter: 2,
       levelsGained: 1,
@@ -53,8 +53,9 @@ describe('applyRunResult (Task 08 §1.3, step 3.3)', () => {
       newlyUnlockedMap: 2,
       duplicate: false,
     });
-    expect(profile.classes.warrior).toMatchObject({ level: 2, xp: 50, lifetimeXp: 150 });
-    expect(profile.gold).toBe(75);
+    // Task 40: level 1 → 2 costs 106.
+    expect(profile.classes.warrior).toMatchObject({ level: 2, xp: 44, lifetimeXp: 150 });
+    expect(profile.gold).toBe(69);
     expect(profile.highestUnlockedMap).toBe(2);
     expect(profile.completedMaps).toEqual([1]);
     expect(profile.stats).toEqual({
@@ -122,9 +123,10 @@ describe('applyRunResult (Task 08 §1.3, step 3.3)', () => {
     let p = win(fresh(), { characterClass: 'warrior' });
     p = win(p, { characterClass: 'mage', mapId: 2, elapsed: 600 });
     expect(p.classes.warrior).toMatchObject({ level: 2, lifetimeXp: 150 });
-    expect(p.classes.mage).toMatchObject({ level: 2, lifetimeXp: 200, xp: 100 });
+    expect(p.classes.mage).toMatchObject({ level: 2, lifetimeXp: 200, xp: 94 });
     expect(p.classes.archer.level).toBe(1);
-    expect(p.gold).toBe(75 + (45 + 40)); // Task 11: map 2 bonus 40 + 45 coins
+    // Task 11 / 40: map 2 bonus 40% of 80 (100 × 0.8) = 32, + 45 coins.
+    expect(p.gold).toBe(69 + (45 + 32));
     expect(p.highestUnlockedMap).toBe(3);
   });
   it('replaying a completed map never lowers unlocks; the last map unlocks nothing new', () => {
@@ -152,13 +154,14 @@ describe('applyRunResult (Task 08 §1.3, step 3.3)', () => {
   it('level cap, overflow across levels and talent points via many victories', () => {
     let p = fresh();
     for (let m = 1; m <= 10; m++) p = win(p, { mapId: m, elapsed: 900 });
-    for (let i = 0; i < 400; i++) p = win(p, { mapId: 10, elapsed: 900 });
+    // Task 40: 247 450 XP to level 50 (3 000 from maps 1–10, then 600 per map-10 win).
+    for (let i = 0; i < 450; i++) p = win(p, { mapId: 10, elapsed: 900 });
     const w = p.classes.warrior;
     expect(w.level).toBe(50);
     expect(w.xp).toBe(0);
     expect(talentPoints(w.level)).toBe(26);
     expect(w.lifetimeXp).toBe(
-      [...Array(10)].reduce((s, _, i) => s + 100 + 50 * (i + 1), 0) + 400 * 600,
+      [...Array(10)].reduce((s, _, i) => s + 100 + 50 * (i + 1), 0) + 450 * 600,
     );
   });
   it('recent runs and processed ids are bounded; the original profile is never mutated', () => {

@@ -19,10 +19,10 @@ describe('campaign config (Task 08 §1.1)', () => {
     ]);
     expect(ACT_I.map((m) => m.id)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
   });
-  it('victory XP = 100 + 50i and (Act I, Task 10 table) Gold = XP / 2', () => {
+  it('victory XP = 100 + 50i and (Act I, Task 10 table) Gold = XP / 2 × 0.8 (Task 40)', () => {
     for (const m of ACT_I) {
       expect(m.victoryXp).toBe(100 + 50 * m.id);
-      expect(m.victoryGold).toBe((100 + 50 * m.id) / 2);
+      expect(m.victoryGold).toBe(Math.round(((100 + 50 * m.id) / 2) * 0.8));
     }
   });
   it('difficulty scales with k = i − 1 (Act I)', () => {

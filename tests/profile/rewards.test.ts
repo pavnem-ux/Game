@@ -11,9 +11,9 @@ describe('run rewards (Task 08 §1.3; Task 11 §1.4 Gold from coins)', () => {
           runRewards({ mapId: m.id, outcome: 'victory', elapsed: m.durationSeconds, coins }),
         ).toEqual({ xp: 100 + 50 * m.id, gold: coins + bonus, coins, bonus });
       }
-    // Map 1: 75 Gold → bonus 30; map 40: 750 → bonus 300. No coins field = 0 coins.
-    expect(runRewards({ mapId: 1, outcome: 'victory', elapsed: 600 }).gold).toBe(30);
-    expect(runRewards({ mapId: 40, outcome: 'victory', elapsed: 900, coins: 450 }).gold).toBe(750);
+    // Task 40 (Gold ×0.8): map 1: 60 Gold → bonus 24; map 40: 600 → bonus 240. No coins = 0.
+    expect(runRewards({ mapId: 1, outcome: 'victory', elapsed: 600 }).gold).toBe(24);
+    expect(runRewards({ mapId: 40, outcome: 'victory', elapsed: 900, coins: 360 }).gold).toBe(600);
   });
   it('defeat: XP = floor(reward × 0.25 × min(elapsed/duration, 1)); Gold = 50% of the coins, no bonus', () => {
     // Map 1: 150 XP over 600 s.
