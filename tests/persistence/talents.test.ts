@@ -56,7 +56,7 @@ function seeded(): PlayerProfile {
   const up = (cls: 'rogue' | 'mage', xp: number) => addClassXp(base.classes[cls], xp).progress;
   return {
     ...base,
-    classes: { ...base.classes, rogue: up('rogue', 40_000), mage: up('mage', 5_000) },
+    classes: { ...base.classes, rogue: up('rogue', 60_000), mage: up('mage', 5_000) },
   };
 }
 function withSeed(s: MemoryStorage) {
@@ -114,17 +114,16 @@ describe('Task 09 §1.4 talent persistence (schema v2)', () => {
     expect(other.getState().profile!.classes.rogue.talents).toEqual({ 'rogue.b1.n01': 2 });
   });
   it('an old v1 profile migrates without loss (talents empty, talentsSpent dropped)', () => {
-    // Task 19: v1 had no ore / item levels (v5 fields); the migrated profile gets the defaults.
+    // Task 19: v1 had no ore (v5 field); the migrated profile gets the defaults. Task 40: the
+    // v10 item fields are the fresh defaults too (equipment resets in v9 → v10).
     const v2 = {
       ...seeded(),
       ore: 0,
-      itemLevels: {},
       questCounters: NO_QUEST_COUNTERS,
       questsClaimed: [],
     };
     const v1 = JSON.parse(JSON.stringify(v2));
     delete v1.ore;
-    delete v1.itemLevels;
     delete v1.questCounters;
     delete v1.questsClaimed;
     v1.schemaVersion = 1;
@@ -165,7 +164,7 @@ describe('Task 09 §1.4 talent persistence (schema v2)', () => {
       bad({ 'rogue.b1.n02': 1 }), // prerequisite missing
       bad({ 'nope.b1.n01': 1 }), // unknown node
       bad({ 'mage.b3.n01': 1 }, 'mage'), // superpower branch below level 30
-      // More points spent than earned (12 ranks; the seeded mage is level 13 → 6 points).
+      // More points spent than earned (12 ranks; the seeded mage is level 12 on the Task 40 curve).
       bad({ 'mage.b1.n01': 3, 'mage.b1.n02': 3, 'mage.b1.n03': 3, 'mage.b2.n01': 3 }, 'mage'),
     ];
     expect(good.classes.mage.level).toBeLessThan(24);

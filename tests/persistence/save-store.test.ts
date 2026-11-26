@@ -39,7 +39,7 @@ const winOn = (p: PlayerProfile, runId: string) =>
     eliteKills: 4,
     bossKilled: true,
     runLevel: 9,
-    coins: 45, // Task 11: 45 coins + 30 victory bonus = 75 Gold on map 1
+    coins: 45, // Task 11: 45 coins + 24 victory bonus = 69 Gold on map 1 (Task 40)
   }).profile;
 
 describe('saveStore (Task 08 §1.4, step 4.2)', () => {
@@ -56,7 +56,7 @@ describe('saveStore (Task 08 §1.4, step 4.2)', () => {
     const p = winOn(store.load().profile!, 'r1');
     const saved = store.save(p);
     expect(saved.ok).toBe(true);
-    expect(JSON.parse(s.data.get(SAVE_KEY)!).gold).toBe(75);
+    expect(JSON.parse(s.data.get(SAVE_KEY)!).gold).toBe(69);
     const again = make(s).load();
     expect(again.status).toBe('loaded');
     expect(again.profile).toEqual(saved.ok && saved.profile);
@@ -81,7 +81,7 @@ describe('saveStore (Task 08 §1.4, step 4.2)', () => {
       coins: 45,
     });
     expect(again.summary.duplicate).toBe(true);
-    expect(again.profile.gold).toBe(75);
+    expect(again.profile.gold).toBe(69);
   });
   it('before each write the previous valid snapshot is copied to the backup key', () => {
     const s = new FakeStorage();

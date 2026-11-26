@@ -54,7 +54,7 @@ describe('Task 10 Phase 4.1 — saves with 40 maps', () => {
     expect(r.profile).toEqual({
       ...v2,
       ore: 0,
-      itemLevels: {},
+      // Task 40: v9 → v10 drops the old `ownedItems` / `itemLevels` (equipment reset).
       questCounters: NO_QUEST_COUNTERS,
       questsClaimed: [],
       schemaVersion: SAVE_SCHEMA_VERSION,
@@ -68,7 +68,7 @@ describe('Task 10 Phase 4.1 — saves with 40 maps', () => {
     expect(r.profile).toEqual({
       ...v2,
       ore: 0,
-      itemLevels: {},
+      // Task 40: v9 → v10 drops the old `ownedItems` / `itemLevels` (equipment reset).
       questCounters: NO_QUEST_COUNTERS,
       questsClaimed: [],
       schemaVersion: SAVE_SCHEMA_VERSION,
