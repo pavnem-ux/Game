@@ -29,3 +29,4 @@ PR: https://github.com/pavnem-ux/Game/pull/41 (draft, into `items-rework`)
   weapon is shown first in the grid (not counted) so it can be re-equipped; the pet slot of the old
   paper doll is gone (Pets page). With nothing selected the card shows the selected slot's item.
 - Shop compare shows the main-stat difference per stat (armor: HP and resistance on one line); «better» uses the Bag rule. Bag full disables «Buy» with the bag-full reason.
+- Mobile (frozen): on phones the item card sits under the bag, so the e2e scrolls it into view instead of asserting «Equip» without scrolling; nav items keep a 44 px minimum width.

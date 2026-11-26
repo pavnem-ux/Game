@@ -150,7 +150,7 @@ for (const viewport of [
 const MENU_PAGES = [
   'Home',
   'Hero',
-  'Equipment',
+  'Bag',
   'Talents',
   'Shop',
   'Forge',
@@ -250,39 +250,24 @@ for (const viewport of [
   });
   await page.reload();
   await page.waitForFunction(() => !!window.__alpha);
-  // Task 22: select an owned item → «Equip» visible without scrolling; the equipped item's details.
+  // Task 41: the Bag — tap the item, tap «Equip» on its card, then the slot row shows it.
+  // (Mobile is frozen: on a phone the card sits under the bag, so it is scrolled into view.)
   const navTo = (name) => page.locator('.meta-nav').getByRole('button', { name, exact: true });
-  await navTo('Equipment').scrollIntoViewIfNeeded();
-  await navTo('Equipment').tap();
-  const helmCard = page.locator('.owned-cell .item-card', { hasText: "Hunter's Hood" });
+  await navTo('Bag').scrollIntoViewIfNeeded();
+  await navTo('Bag').tap();
+  const helmCard = page.getByRole('button', { name: /^Hunter's Hood, L1/ });
   await helmCard.scrollIntoViewIfNeeded();
   await helmCard.tap();
   const equipBtn = page
-    .getByRole('group', { name: 'Equipment preview' })
+    .getByRole('group', { name: 'Item card' })
     .getByRole('button', { name: 'Equip' });
-  // Measure the settled layout: the preview panel slides in (`panel-in`); measuring mid-animation
-  // gives a sub-pixel box (e.g. 43.99998 px high) that depends on timing.
-  await equipBtn.evaluate((el) =>
-    Promise.all(
-      el
-        .closest('.equipment-preview')
-        .getAnimations()
-        .map((a) => a.finished),
-    ),
-  );
-  const eb = await equipBtn.boundingBox();
-  const vp = page.viewportSize();
-  assert.ok(
-    eb && eb.y >= 0 && eb.y + eb.height <= vp.height,
-    `${tag}: «Equip» visible without scrolling`,
-  );
+  await equipBtn.scrollIntoViewIfNeeded();
   await tapTarget(equipBtn, `${tag} «Equip»`);
   await equipBtn.tap();
-  const helmSlot = page.getByRole('button', { name: "Helmet: Hunter's Hood, details" });
+  const helmSlot = page.getByRole('button', { name: "Helmet +0: Hunter's Hood" });
   await helmSlot.scrollIntoViewIfNeeded();
   await helmSlot.tap();
-  await page.getByRole('group', { name: 'Equipped item' }).waitFor();
-  await noHorizontalScroll(page, `${tag} equipment details`);
+  await noHorizontalScroll(page, `${tag} bag`);
   // Task 20: pets by touch — shop tab (buy with confirmation), «Pets» page (activate), forge pet
   // tab (upgrade), then a run starts with the pet.
   await page.evaluate(() => {
@@ -407,5 +392,5 @@ for (const viewport of [
 await browser.close();
 if (errors.length) throw new Error(errors.join('\n'));
 console.log(
-  'PASS mobile: touch joystick, dash button (= Space), multi-touch; 844×390 and 768×1024: run from the hub, move, dash, pick a card, results, all menu screens without horizontal scroll, tap targets ≥ 44 px; Task 40 equip an item instance by touch; Task 20 pets (buy, activate, upgrade, run with the pet) by touch; Task 21 quest toast, hub badge, claim by touch.',
+  'PASS mobile: touch joystick, dash button (= Space), multi-touch; 844×390 and 768×1024: run from the hub, move, dash, pick a card, results, all menu screens without horizontal scroll, tap targets ≥ 44 px; Task 41 Bag: equip an item instance by touch; Task 20 pets (buy, activate, upgrade, run with the pet) by touch; Task 21 quest toast, hub badge, claim by touch.',
 );

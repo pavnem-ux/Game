@@ -43,6 +43,8 @@
 }
 .meta-nav-item {
   position: relative;
+  /* Task 41: short labels («Bag») keep a 44 px tap target. */
+  min-width: 44px;
   border: 0;
   background: none;
   color: var(--text-muted);
@@ -2004,7 +2006,13 @@
 }
 @media (max-width: 1300px) {
   .bag-layout {
-    grid-template-columns: minmax(240px, 0.8fr) minmax(0, 1.4fr);
+    grid-template-columns: minmax(220px, 0.75fr) minmax(0, 1.3fr) minmax(230px, 0.9fr);
+    gap: var(--sp-3);
+  }
+}
+@media (max-width: 1100px) {
+  .bag-layout {
+    grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.4fr);
   }
   .bag-card {
     grid-column: 1 / -1;
@@ -2062,9 +2070,8 @@
   min-width: 0;
 }
 .shop-offer-head strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  /* Long names wrap (never clipped) on narrow desktops. */
+  line-height: 1.2;
   font-size: var(--fs-s);
 }
 .shop-offer-head small {

@@ -102,7 +102,7 @@ try {
     for (const [name, label] of [
       ['home', 'Home'],
       ['hero', 'Hero'],
-      ['equipment', 'Equipment'],
+      ['equipment', 'Bag'],
       ['talents', 'Talents'],
       ['shop', 'Shop'],
       ['forge', 'Forge'],
@@ -113,8 +113,8 @@ try {
       await go(label);
       await check(name);
     }
-    await go('Equipment');
-    await page.locator('.owned-cell .item-card').first().click();
+    await go('Bag');
+    await page.locator('.bag-cell').first().click();
     await check('equipment-selected');
     await go('Shop');
     await page

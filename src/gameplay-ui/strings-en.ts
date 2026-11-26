@@ -205,7 +205,7 @@ export const EN = Object.freeze({
         next === null ? 'Maximum level' : `XP ${xp} / ${next}`,
       points: (n: number) => `Talent points: ${n}`,
       weapon: (name: string) => `Weapon: ${name}`,
-      toEquipment: 'Equipment',
+      toEquipment: 'Bag',
       toTalents: 'Talents',
       cardLabel: (name: string, level: number) => `${name}: level ${level}`,
     }),
