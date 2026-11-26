@@ -63,7 +63,9 @@ const inSource = <T>(w: GameplayWorld, source: string | null, run: () => T): T =
 const setHpPercent = (w: GameplayWorld, percent: number) => {
   const p = w.core.getEntity('player');
   w.core.heal('player', p.maxHp);
-  const raw = p.maxHp * (1 - percent / 100) * ((100 + p.resistance) / 100);
+  // Task 40: Max HP is fractional now; damage is whole HP, so the loss is rounded up (HP ends at
+  // or just below `percent`, never above it).
+  const raw = Math.ceil(p.maxHp * (1 - percent / 100)) * ((100 + p.resistance) / 100);
   w.core.applyPeriodicDamage({
     operationId: `test-hp-${percent}-${w.time}`,
     targetId: 'player',

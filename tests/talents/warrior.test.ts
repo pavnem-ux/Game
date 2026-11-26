@@ -333,18 +333,21 @@ describe('Task 09.1 Phase 6 — Warrior · Страж (b2)', () => {
       const w = warrior({ 'warrior.b2.n05': rank });
       const maxHp = w.core.getEntity('player').maxHp;
       const hp = () => (w.core.getEntity('player').currentHp / maxHp) * 100;
+      // Task 40: Max HP is fractional; the damage is whole HP, so «25%» is 25% ± half an HP.
+      const at25 = ((maxHp - Math.round(maxHp * 0.75)) / maxHp) * 100;
       setHp(w, 25); // crossing from 100% (start) by damage
-      expect(hp()).toBeCloseTo(25 + heal, 1);
+      expect(hp()).toBeCloseTo(at25 + heal, 1);
       setHp(w, 50);
       setHp(w, 25); // second crossing inside the 30 s cooldown: no heal
-      expect(hp()).toBeCloseTo(25, 1);
+      expect(hp()).toBeCloseTo(at25, 1);
       w.update(30.01);
       setHp(w, 50);
       setHp(w, 20);
-      expect(hp()).toBeCloseTo(20 + heal, 1);
+      const at20 = ((maxHp - Math.round(maxHp * 0.8)) / maxHp) * 100;
+      expect(hp()).toBeCloseTo(at20 + heal, 1);
       // A heal that keeps HP below 30% is not a crossing: nothing else happens.
       w.skills.onPlayerHpChanged(false);
-      expect(hp()).toBeCloseTo(20 + heal, 1);
+      expect(hp()).toBeCloseTo(at20 + heal, 1);
     }
   });
 });

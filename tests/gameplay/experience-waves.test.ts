@@ -1,3 +1,4 @@
+import { resolveOffers } from '../skills/helpers';
 import { segmentCircleIntersection } from '../../src/weapon-attacks';
 import { describe, expect, it } from 'vitest';
 import { GameplayWorld, ALPHA, ALPHA_ENEMIES } from '../../src/gameplay';
@@ -355,11 +356,13 @@ describe('continuous waves on the shared world timeline', () => {
       spawning: { maxActive: 12 },
     });
     w.setTestProtection(true);
-    for (let i = 0; i < 60; i++) {
-      w.update(5);
+    // Task 40: the (weaker) level-50 mage levels up in the run, so offers are resolved as they come.
+    for (let i = 0; i < 2000 && w.time < 300; i++) {
+      resolveOffers(w);
+      w.update(Math.min(5, 300 - w.time));
       expect(w.getSnapshot().enemies.length).toBeLessThanOrEqual(12);
     }
-    expect(w.time).toBe(300);
+    expect(w.time).toBeCloseTo(300, 9);
     expect(w.getSnapshot().spawning.waves).toBeGreaterThan(80);
     expect(w.getSnapshot().kills).toBeGreaterThan(100);
     expect(w.getSnapshot().crystals.length).toBeLessThanOrEqual(512);
