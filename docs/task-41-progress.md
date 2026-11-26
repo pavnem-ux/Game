@@ -12,7 +12,7 @@ PR: https://github.com/pavnem-ux/Game/pull/41 (draft, into `items-rework`)
 - [x] 2 Salvage + bag: Ore per rarity, equipped lock, bulk salvage, capacity 60, «new» flags
 - [x] 3 Save: version bump (slot levels 0, «new» flags off), validation; quests forge.plus5 / plus10 back
 - [x] 4 Bag screen: equipped rows + upgrade, bag grid (filters, sort, markers, multi-select), item card
-- [ ] 5 Shop layout: compact grid, «All» tab, compare / «better», short header line, sold-out placeholders
+- [x] 5 Shop layout: compact grid, «All» tab, compare / «better», short header line, sold-out placeholders
 - [ ] 6 Delivery: docs, e2e, final checks, PR ready
 
 ## Decisions / blockers
@@ -28,3 +28,4 @@ PR: https://github.com/pavnem-ux/Game/pull/41 (draft, into `items-rework`)
 - The Bag replaces the Equipment page (same page id; nav / hub label «Bag»). The class's starter
   weapon is shown first in the grid (not counted) so it can be re-equipped; the pet slot of the old
   paper doll is gone (Pets page). With nothing selected the card shows the selected slot's item.
+- Shop compare shows the main-stat difference per stat (armor: HP and resistance on one line); «better» uses the Bag rule. Bag full disables «Buy» with the bag-full reason.

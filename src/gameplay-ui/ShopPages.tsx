@@ -3,9 +3,20 @@ import { CHARACTER_CLASSES } from '../character-stats';
 import type { CharacterClass } from '../character-stats';
 import { CLASS_LABELS } from '../gameplay';
 import { uiSound } from './sound';
-import { GEAR_SLOTS, SLOT_LABELS, itemIconId, itemName, offerItem } from '../equipment';
+import {
+  GEAR_SLOTS,
+  ITEM_LEVEL_RANGE,
+  SLOT_LABELS,
+  bagFull,
+  findOwned,
+  isBetter,
+  itemIconId,
+  itemName,
+  offerItem,
+  shopStock,
+} from '../equipment';
 import type { GearSlot, ShopOffer } from '../equipment';
-import { shopOffersOf } from '../profile';
+import { equipmentStateOf, shopOffersOf } from '../profile';
 import { campaignStore } from './campaign-state';
 import { PET_CONFIG, PET_IDS, checkPetPurchase, petLevel } from '../pets';
 import type { PetId } from '../pets';
@@ -13,20 +24,22 @@ import { PetCard } from './meta/PetsScreen';
 import {
   Button,
   ConfirmModal,
+  CurrencyBadge,
   CurrencyIcon,
+  OreBadge,
   ItemIcon,
   Tabs,
   TierFrame,
   disabledReason,
 } from './kit';
-import { ItemStats, ItemTitle, rarityTier } from './item-view';
+import { rarityColor, rarityTier, slottedLines } from './item-view';
 import { EN, formatNumber } from './strings-en';
 
 /**
- * Task 40 shop (items rework 1/4; minimal UI until the bag screen of Task 41). It sells Common and
- * Uncommon items at item level = the class level: per slot one Common and three Uncommon offers
- * (a seeded stock that stays the same until the class levels up; a bought offer is gone until
- * then). Every change goes through the validated save (one atomic write per action).
+ * Task 40 shop: Common and Uncommon items at item level = the class level — per slot one Common
+ * and three Uncommon offers (a seeded stock that stays the same until the class levels up; a
+ * bought offer is gone until then). Task 41 §5a: compact rows (the 4 offers side by side), «All»
+ * first, main-stat compare with the worn item. Every change is one validated save.
  */
 const useCampaign = () => useSyncExternalStore(campaignStore.subscribe, campaignStore.getSnapshot);
 export const REFUSALS: Record<string, string> = {
@@ -45,16 +58,15 @@ export const REFUSALS: Record<string, string> = {
 export function ShopPage() {
   const ui = useCampaign();
   const profile = ui.progression.profile;
-  // Task 20: the «Pets» tab sits after the gear slots.
-  const [slot, setSlot] = useState<GearSlot | 'pets'>(ui.shopTab === 'pets' ? 'pets' : 'weapon');
+  // Task 20: the «Pets» tab sits after the gear slots. Task 41: «All» (every slot) comes first.
+  const [tab, setTab] = useState<GearSlot | 'all' | 'pets'>(ui.shopTab === 'pets' ? 'pets' : 'all');
   const [shopClass, setShopClass] = useState<CharacterClass>(profile?.selectedClass ?? 'warrior');
   const [confirming, setConfirming] = useState<ShopOffer | null>(null);
   const [message, setMessage] = useState('');
   if (!profile) return <p className="campaign-empty">Profile unavailable.</p>;
   const level = profile.classes[shopClass].level;
-  const offers =
-    slot === 'pets' ? [] : shopOffersOf(profile, shopClass).filter((o) => o.slot === slot);
   const preview = (o: ShopOffer) => offerItem(o, shopClass, 'preview');
+  const slots = tab === 'all' ? GEAR_SLOTS : tab === 'pets' ? [] : [tab];
   return (
     <div className="campaign-page shop-page">
       <header className="meta-page-head">
@@ -62,16 +74,20 @@ export function ShopPage() {
         <Tabs
           label="Shop slots"
           items={[
-            ...GEAR_SLOTS.map((s) => ({ id: s as GearSlot | 'pets', label: SLOT_LABELS[s] })),
+            { id: 'all' as const, label: 'All' },
+            ...GEAR_SLOTS.map((s) => ({
+              id: s as GearSlot | 'all' | 'pets',
+              label: SLOT_LABELS[s],
+            })),
             { id: 'pets' as const, label: EN.meta.pets.title },
           ]}
-          value={slot}
+          value={tab}
           onChange={(s) => {
-            setSlot(s);
+            setTab(s);
             setConfirming(null);
           }}
         />
-        {slot !== 'pets' && (
+        {tab !== 'pets' && (
           <label className="shop-class">
             Stock for{' '}
             <select
@@ -87,61 +103,39 @@ export function ShopPage() {
             </select>
           </label>
         )}
+        <span className="shop-wallet meta-push">
+          <CurrencyBadge amount={profile.gold} size="s" />
+          <OreBadge amount={profile.ore} size="s" />
+        </span>
       </header>
-      {slot === 'pets' ? (
+      {tab === 'pets' ? (
         <PetShop />
       ) : (
         <>
-          <p className="meta-note">
-            Items at item level {level} (the {CLASS_LABELS[shopClass]}&apos;s level). The stock
-            changes when the class levels up; a bought offer is gone until then. Bought items are
-            shared by every class that may equip them.
+          <p className="meta-note shop-level-line">
+            {level >= ITEM_LEVEL_RANGE.max
+              ? `Item level ${level}`
+              : `Item level ${level} · new stock at level ${level + 1}`}
+            {bagFull(profile.items) && ` · ${REFUSALS['bag-full']}`}
           </p>
           {message && (
             <p className="shop-message" role="status">
               {message}
             </p>
           )}
-          {offers.length === 0 ? (
-            <p className="meta-note">Sold out until the next level-up.</p>
-          ) : (
-            <ul className="shop-rows shop-offers" aria-label="Goods">
-              {offers.map((offer) => {
-                const item = preview(offer);
-                const name = itemName(item);
-                const short = profile.gold < offer.price;
-                return (
-                  <li
-                    key={offer.id}
-                    className="shop-cell"
-                    aria-label={`${name}: ${formatNumber(offer.price)} Gold`}
-                  >
-                    <TierFrame tier={rarityTier(item.rarity)} className="shop-card">
-                      <div className="shop-card-head">
-                        <ItemIcon templateId={itemIconId(item)} size="itemCard" />
-                        <ItemTitle item={item} />
-                      </div>
-                      <ItemStats item={item} characterClass={shopClass} />
-                      <Button
-                        variant="primary"
-                        size="s"
-                        disabledReason={disabledReason([[short, 'Not enough Gold']])}
-                        onClick={() => {
-                          setConfirming(offer);
-                          setMessage('');
-                        }}
-                      >
-                        Buy ·{' '}
-                        <span className="price-badge">
-                          <CurrencyIcon kind="gold" label="Gold" /> {formatNumber(offer.price)}
-                        </span>
-                      </Button>
-                    </TierFrame>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+          <div className="shop-rows-compact" aria-label="Goods">
+            {slots.map((slot) => (
+              <OfferRow
+                key={slot}
+                slot={slot}
+                characterClass={shopClass}
+                onBuy={(offer) => {
+                  setConfirming(offer);
+                  setMessage('');
+                }}
+              />
+            ))}
+          </div>
         </>
       )}
       {confirming && (
@@ -162,6 +156,100 @@ export function ShopPage() {
     </div>
   );
 }
+
+/**
+ * Task 41 §5a: one compact row per slot — the slot's 4 offers (Common + 3 Uncommon) side by side.
+ * Each card compares its main stat with what the class wears there (slot bonus included); a bought
+ * offer stays as a greyed placeholder so the row doesn't jump.
+ */
+function OfferRow({
+  slot,
+  characterClass,
+  onBuy,
+}: {
+  slot: GearSlot;
+  characterClass: CharacterClass;
+  onBuy: (offer: ShopOffer) => void;
+}) {
+  const profile = useCampaign().progression.profile!;
+  const progress = profile.classes[characterClass];
+  const stock = shopStock(profile.shopSalt, characterClass, progress.level).filter(
+    (o) => o.slot === slot,
+  );
+  const open = new Set(shopOffersOf(profile, characterClass).map((o) => o.id));
+  const loadouts = equipmentStateOf(profile).loadouts;
+  const wornUid = progress.loadout[slot];
+  const worn = wornUid ? findOwned(profile.items, wornUid, characterClass) : null;
+  const slotLevel = progress.slotLevels[slot];
+  const full = bagFull(profile.items);
+  return (
+    <section className="shop-slot-row" aria-label={SLOT_LABELS[slot]}>
+      <h4 className="shop-slot-label">{SLOT_LABELS[slot]}</h4>
+      <ul className="shop-offers">
+        {stock.map((offer) => {
+          const item = offerItem(offer, characterClass, 'preview');
+          const name = itemName(item);
+          if (!open.has(offer.id))
+            return (
+              <li key={offer.id} className="shop-cell sold" aria-label={`${name}: sold out`}>
+                <div className="shop-offer sold">{EN.meta.shop.soldOut}</div>
+              </li>
+            );
+          const lines = slottedLines(item, characterClass, slotLevel, worn);
+          const main = lines.filter((l) => MAIN_KEYS.has(l.key));
+          const affix = lines.find((l) => !MAIN_KEYS.has(l.key));
+          const better = isBetter(item, loadouts, profile.items, characterClass, slotLevel);
+          return (
+            <li
+              key={offer.id}
+              className="shop-cell"
+              aria-label={`${name}: ${formatNumber(offer.price)} Gold`}
+            >
+              <TierFrame tier={rarityTier(item.rarity)} className="shop-offer">
+                <div className="shop-offer-head">
+                  <ItemIcon templateId={itemIconId(item)} size="itemSmall" />
+                  <strong style={{ color: rarityColor(item.rarity) }}>{name}</strong>
+                  <small>L{item.itemLevel}</small>
+                  {better && <span className="bag-marker better">better</span>}
+                </div>
+                <p className="shop-offer-line">
+                  {main.map((l, i) => (
+                    <span key={l.key}>
+                      {i > 0 && ' · '}
+                      {l.text}
+                      {l.deltaText !== undefined && l.delta !== 0 && (
+                        <span className={`bag-delta ${l.delta! > 0 ? 'up' : 'down'}`}>
+                          {' '}
+                          {l.deltaText}
+                        </span>
+                      )}
+                    </span>
+                  ))}
+                </p>
+                {affix && <p className="shop-offer-line affix">{affix.text}</p>}
+                <Button
+                  variant="primary"
+                  size="s"
+                  disabledReason={disabledReason([
+                    [profile.gold < offer.price, 'Not enough Gold'],
+                    [full, REFUSALS['bag-full']],
+                  ])}
+                  onClick={() => onBuy(offer)}
+                >
+                  Buy ·{' '}
+                  <span className="price-badge">
+                    <CurrencyIcon kind="gold" label="Gold" /> {formatNumber(offer.price)}
+                  </span>
+                </Button>
+              </TierFrame>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+const MAIN_KEYS = new Set(['physicalDamage', 'magicalDamage', 'maxHp', 'resistance']);
 
 /**
  * Task 20 shop tab «Pets»: the three shop pets with price and «Buy» (confirmation, one

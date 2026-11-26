@@ -385,6 +385,7 @@ export const EN = Object.freeze({
     shop: Object.freeze({
       lockedOverlay: (mapId: number) => `unlocks after map ${mapId}`,
       owned: 'Owned',
+      soldOut: 'Sold out until the next level',
       equippedStamp: 'Equipped',
     }),
     maps: Object.freeze({
