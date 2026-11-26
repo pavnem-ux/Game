@@ -51,7 +51,8 @@ export type QuestGoal =
   | Readonly<{ kind: 'synergies-opened'; count: number }>
   | Readonly<{ kind: 'synergies-awakened'; count: number }>
   | Readonly<{ kind: 'chests'; count: number }>
-  | Readonly<{ kind: 'item-level'; level: number }>
+  /** Task 41: any class's slot upgraded to this level (was the Task 19 item level). */
+  | Readonly<{ kind: 'slot-level'; level: number }>
   | Readonly<{ kind: 'tier-loadout'; tier: number; items: number }>
   /** Task 24: map activities of one type completed (lifetime). */
   | Readonly<{ kind: 'activities'; activity: CountedActivityType; count: number }>;
@@ -215,18 +216,16 @@ const FORGE = [
   q(
     'forge.plus5',
     'forge',
-    'Upgrade any item to +5',
-    { kind: 'item-level', level: 5 },
+    'Upgrade any slot to +5',
+    { kind: 'slot-level', level: 5 },
     { ore: 20 },
-    true,
   ),
   q(
     'forge.plus10',
     'forge',
-    'Upgrade any item to +10',
-    { kind: 'item-level', level: 10 },
+    'Upgrade any slot to +10',
+    { kind: 'slot-level', level: 10 },
     { ore: 60 },
-    true,
   ),
   q(
     'forge.tier4',

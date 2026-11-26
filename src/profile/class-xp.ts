@@ -1,5 +1,5 @@
 import { PERMANENT_LEVEL_RANGE } from '../character-stats';
-import type { Loadout } from '../equipment';
+import type { Loadout, SlotLevels } from '../equipment';
 
 /**
  * Task 08 permanent class XP (pure). Level L → L+1 costs 100 + 50·(L − 1) XP. Overflow carries
@@ -24,6 +24,8 @@ export interface ClassProgressCore {
 export interface ClassProgress extends ClassProgressCore {
   /** Task 11: this class's equipment (starter weapon + empty slots by default). */
   readonly loadout: Loadout;
+  /** Task 41: this class's slot upgrade levels 0–30 (stay forever, whatever item is slotted). */
+  readonly slotLevels: SlotLevels;
 }
 export const NEW_CLASS_PROGRESS: ClassProgressCore = Object.freeze({
   xp: 0,

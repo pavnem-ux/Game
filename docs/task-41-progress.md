@@ -9,8 +9,8 @@ PR: https://github.com/pavnem-ux/Game/pull/41 (draft, into `items-rework`)
 
 - [x] 0 Setup: branch, spec, progress file, draft PR (stacked on Task 40, owner decision)
 - [x] 1 Slot upgrades: per-class slot levels 0–30, costs, main / milestone secondary multipliers in the gear pipeline
-- [ ] 2 Salvage + bag: Ore per rarity, equipped lock, bulk salvage, capacity 60, «new» flags
-- [ ] 3 Save: version bump (slot levels 0, «new» flags off), validation; quests forge.plus5 / plus10 back
+- [x] 2 Salvage + bag: Ore per rarity, equipped lock, bulk salvage, capacity 60, «new» flags
+- [x] 3 Save: version bump (slot levels 0, «new» flags off), validation; quests forge.plus5 / plus10 back
 - [ ] 4 Bag screen: equipped rows + upgrade, bag grid (filters, sort, markers, multi-select), item card
 - [ ] 5 Shop layout: compact grid, «All» tab, compare / «better», short header line, sold-out placeholders
 - [ ] 6 Delivery: docs, e2e, final checks, PR ready
@@ -20,3 +20,8 @@ PR: https://github.com/pavnem-ux/Game/pull/41 (draft, into `items-rework`)
 - Started on top of `task-40-items-model` (PR #40 not yet merged into `items-rework`; owner chose to
   stack). `main` had no commits beyond `items-rework`, so nothing to merge there.
 - Slot-upgraded main stats are not rounded in the pipeline (×1.04 of a whole number); the UI rounds.
+- «new» markers live in `profile.newItems` (uids), not on the item instances.
+- «better» = every main value ≥ the worn item's (slot bonus included) and one higher; an empty slot
+  makes any fitting item better.
+- At the bag cap the DEV grant tools refuse too (like the shop); Task 42 handles drops.
+- Quest goal `item-level` became `slot-level` (highest slot level of any class); ids and rewards kept.

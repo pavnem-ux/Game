@@ -14,7 +14,12 @@ export interface QuestProfileView {
   readonly gold: number;
   readonly ore: number;
   readonly completedMaps: readonly number[];
-  readonly classes: Readonly<Record<string, Readonly<{ level: number; loadout: Loadout }>>>;
+  readonly classes: Readonly<
+    Record<
+      string,
+      Readonly<{ level: number; loadout: Loadout; slotLevels?: Readonly<Record<string, number>> }>
+    >
+  >;
   readonly stats: Readonly<{ enemiesKilled: number }>;
   readonly ownedPets: readonly string[];
   readonly questCounters: QuestCounters;
@@ -61,9 +66,15 @@ function measure(p: QuestProfileView, goal: QuestGoal): { current: number; targe
       return { current: c.synergiesAwakened.length, target: goal.count };
     case 'chests':
       return { current: c.chestsOpened, target: goal.count };
-    // Task 40: the Forge is gone (hidden quests; Tasks 41–42 retarget them).
-    case 'item-level':
-      return { current: 0, target: goal.level };
+    // Task 41: the highest slot upgrade of any class (slot levels never drop).
+    case 'slot-level':
+      return {
+        current: Math.max(
+          0,
+          ...Object.values(p.classes).flatMap((c) => Object.values(c.slotLevels ?? {})),
+        ),
+        target: goal.level,
+      };
     case 'tier-loadout':
       return { current: Math.min(c.bestTierLoadout, goal.items), target: goal.items };
     case 'activities':

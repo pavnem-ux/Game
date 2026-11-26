@@ -256,13 +256,26 @@ export const campaignDebug = {
             ...p,
             classes: {
               ...p.classes,
-              [g.characterClass]: { ...progressAt(g.level, cur.talents), loadout: cur.loadout },
+              [g.characterClass]: {
+                ...progressAt(g.level, cur.talents),
+                loadout: cur.loadout,
+                slotLevels: cur.slotLevels,
+              },
             },
           };
         }
-        // Task 40: the Forge quests are hidden (no item levels to set).
-        case 'item-level':
-          return p;
+        // Task 41: raise the selected class's weapon slot to the goal level.
+        case 'slot-level': {
+          const cur = p.classes[p.selectedClass];
+          const weapon = Math.max(cur.slotLevels.weapon, g.level);
+          return {
+            ...p,
+            classes: {
+              ...p.classes,
+              [p.selectedClass]: { ...cur, slotLevels: { ...cur.slotLevels, weapon } },
+            },
+          };
+        }
         default:
           return { ...p, questCounters: completeCounter(c, g) };
       }

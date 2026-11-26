@@ -7,6 +7,8 @@ export {
   migrateV5toV6,
   migrateV6toV7,
   migrateV7toV8,
+  migrateV9toV10,
+  migrateV10toV11,
   migrations,
   normalizeProfile,
   parseProfile,

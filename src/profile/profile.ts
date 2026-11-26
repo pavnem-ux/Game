@@ -2,7 +2,7 @@ import { CHARACTER_CLASSES } from '../character-stats';
 import type { CharacterClass } from '../character-stats';
 import type { ClassProgress } from './class-xp';
 import { NEW_CLASS_PROGRESS } from './class-xp';
-import { defaultLoadout } from '../equipment';
+import { NO_SLOT_LEVELS, defaultLoadout } from '../equipment';
 import type { ItemInstance, ShopBought } from '../equipment';
 import type { RunOutcome, RunStatsSummary } from './rewards';
 import { NO_QUEST_COUNTERS } from '../quests/counters';
@@ -25,7 +25,7 @@ import type { CampaignDifficulty } from '../campaign/config';
  * v10 (Task 40, items-rework branch): item instances `items` + `nextItemNumber`, loadouts by uid,
  * `shopSalt`, `shopBought`; `ownedItems` / `itemLevels` (old tiers, Forge) removed (migrateV9toV10).
  */
-export const PROFILE_SCHEMA_VERSION = 10;
+export const PROFILE_SCHEMA_VERSION = 11;
 export const MAX_RECENT_RUNS = 20;
 export const MAX_PROCESSED_RUN_IDS = 50;
 
@@ -95,6 +95,8 @@ export interface PlayerProfile {
   readonly processedRunIds: readonly string[];
   /** Task 40: owned item instances (account-wide; never the starter weapons), in order. */
   readonly items: readonly ItemInstance[];
+  /** Task 41: uids of items not yet viewed («new» marker), in acquisition order. */
+  readonly newItems: readonly string[];
   /** Task 40: the number of the next item uid (`i<n>`); only grows. */
   readonly nextItemNumber: number;
   /** Task 40: per-profile salt of the derived shop stock (created once, saved). */
@@ -129,7 +131,11 @@ export function createProfile(profileId: string, createdAt: string): PlayerProfi
       Object.fromEntries(
         CHARACTER_CLASSES.map((c) => [
           c,
-          Object.freeze({ ...NEW_CLASS_PROGRESS, loadout: defaultLoadout(c) }),
+          Object.freeze({
+            ...NEW_CLASS_PROGRESS,
+            loadout: defaultLoadout(c),
+            slotLevels: NO_SLOT_LEVELS,
+          }),
         ]),
       ) as Record<CharacterClass, ClassProgress>,
     ),
@@ -143,6 +149,7 @@ export function createProfile(profileId: string, createdAt: string): PlayerProfi
     recentRuns: Object.freeze([]),
     processedRunIds: Object.freeze([]),
     items: Object.freeze([]),
+    newItems: Object.freeze([]),
     nextItemNumber: 1,
     shopSalt: shopSaltOf(profileId),
     shopBought: Object.freeze({}),

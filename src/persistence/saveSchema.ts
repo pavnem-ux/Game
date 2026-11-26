@@ -19,9 +19,11 @@ import {
   equipBlock,
   findOwned,
   isStarterUid,
+  NO_SLOT_LEVELS,
   validateItem,
+  validateSlotLevels,
 } from '../equipment';
-import type { ItemInstance, Loadout, ShopBought } from '../equipment';
+import type { ItemInstance, Loadout, ShopBought, SlotLevels } from '../equipment';
 import { shopSaltOf } from '../profile/profile';
 import { PET_LEVEL_RULES, isPetId } from '../pets';
 import {
@@ -194,6 +196,21 @@ export function migrateV9toV10(data: Json): Json {
     shopBought: {},
   };
 }
+/**
+ * v10 → v11 (Task 41): every class gets slot levels 0 in all seven slots and the profile an empty
+ * «new» list (existing items are not new). Nothing else changes.
+ */
+export function migrateV10toV11(data: Json): Json {
+  const classes = isObject(data.classes)
+    ? Object.fromEntries(
+        Object.entries(data.classes).map(([id, value]) => [
+          id,
+          isObject(value) ? { ...value, slotLevels: { ...NO_SLOT_LEVELS } } : value,
+        ]),
+      )
+    : data.classes;
+  return { ...data, classes, newItems: [] };
+}
 export const migrations: Readonly<Record<number, Migration>> = Object.freeze({
   1: migrateV1toV2,
   2: migrateV2toV3,
@@ -204,6 +221,7 @@ export const migrations: Readonly<Record<number, Migration>> = Object.freeze({
   7: migrateV7toV8,
   8: migrateV8toV9,
   9: migrateV9toV10,
+  10: migrateV10toV11,
 });
 
 export type SaveErrorCode =
@@ -285,6 +303,13 @@ function loadout(
   }
   return Object.freeze(out as Record<(typeof GEAR_SLOTS)[number], string | null>);
 }
+function slotLevels(raw: unknown, what: string): SlotLevels {
+  try {
+    return validateSlotLevels(raw);
+  } catch {
+    return invalid(what);
+  }
+}
 function classProgress(raw: unknown, c: string, items: readonly ItemInstance[]): ClassProgress {
   const v = isObject(raw) ? raw : raw === undefined ? {} : invalid(`classes.${c}`);
   const level = int(
@@ -301,6 +326,7 @@ function classProgress(raw: unknown, c: string, items: readonly ItemInstance[]):
     lifetimeXp: int(or(v.lifetimeXp, 0), `classes.${c}.lifetimeXp`),
     talents: talentRanks(c as CharacterClass, level, or(v.talents, {}), `classes.${c}.talents`),
     loadout: loadout(v.loadout, c as CharacterClass, items, level),
+    slotLevels: slotLevels(or(v.slotLevels, {}), `classes.${c}.slotLevels`),
   });
 }
 function mapBest(raw: unknown, key: string): MapBest {
@@ -392,6 +418,14 @@ export function normalizeProfile(data: Json, version = SAVE_SCHEMA_VERSION): Pla
     return item;
   });
   if (new Set(items.map((i) => i.uid)).size !== items.length) invalid('items (duplicate uids)');
+  // Task 41: the «new» markers — unique uids of owned items.
+  const newRaw = or(data.newItems, []);
+  if (!Array.isArray(newRaw)) invalid('newItems');
+  const owned = new Set(items.map((i) => i.uid));
+  const newItems = (newRaw as unknown[]).map((uid, i) =>
+    typeof uid === 'string' && owned.has(uid) ? uid : invalid(`newItems[${i}]`),
+  );
+  if (new Set(newItems).size !== newItems.length) invalid('newItems (duplicates)');
   const shopSalt = int(
     or(data.shopSalt, shopSaltOf(String(data.profileId))),
     'shopSalt',
@@ -512,6 +546,7 @@ export function normalizeProfile(data: Json, version = SAVE_SCHEMA_VERSION): Pla
     recentRuns: Object.freeze((recentRaw as unknown[]).map(recentRun)),
     processedRunIds: Object.freeze(processedRunIds),
     items: Object.freeze(items),
+    newItems: Object.freeze(newItems),
     nextItemNumber,
     shopSalt,
     shopBought: Object.freeze(shopBought),
