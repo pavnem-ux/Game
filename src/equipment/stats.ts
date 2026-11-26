@@ -5,7 +5,8 @@ import type { RunStatModifiers } from '../skills/stats';
 import { talentLoadout } from '../talents';
 import type { TalentRanks } from '../talents';
 import { GOLD_FIND_CAP } from './config';
-import { itemMainStats } from './items';
+import { slottedStats } from './slots';
+import type { SlotLevels } from './slots';
 import type { ItemInstance } from './items';
 import { equippedItems } from './logic';
 import type { Loadout } from './logic';
@@ -14,22 +15,25 @@ import type { Loadout } from './logic';
  * Task 40 gear in the attribute pipeline: main stats are FLAT modifiers (added to the class
  * attributes before every percent modifier), secondary stats are run-modifier points; both join the
  * talent stat layer in one permanent layer composed once by `composeRunStats` (central caps once).
- * Gold find from gear is capped at 25% here.
+ * Gold find from gear is capped at 25% here. Task 41: the class's slot levels scale the slotted
+ * item's own stats (main every level, secondary at milestones) before everything else (additive
+ * optional parameter: absent = level 0 everywhere, the Task 40 behaviour).
  */
 export function gearModifiers(
   loadout: Loadout | null | undefined,
   items: readonly ItemInstance[],
   characterClass: CharacterClass,
+  slotLevels?: SlotLevels,
 ): RunStatModifiers {
   const m: Record<keyof RunStatModifiers, number> = { ...NO_MODIFIERS };
   if (loadout)
     for (const item of equippedItems(loadout, items, characterClass)) {
-      const main = itemMainStats(item, characterClass);
+      const { main, affixes } = slottedStats(item, characterClass, slotLevels?.[item.slot] ?? 0);
       m.flatPhysicalDamage += main.physicalDamage;
       m.flatMagicalDamage += main.magicalDamage;
       m.flatMaxHp += main.maxHp;
       m.resistance += main.resistance;
-      for (const a of item.affixes) m[a.stat] += a.value;
+      for (const a of affixes) m[a.stat] += a.value;
     }
   m.goldFindPercent = Math.min(GOLD_FIND_CAP, m.goldFindPercent);
   return Object.freeze(m);
@@ -49,11 +53,12 @@ export function permanentStats(
   talents: TalentRanks,
   loadout: Loadout | null,
   items: readonly ItemInstance[] = [],
+  slotLevels?: SlotLevels,
 ): CombatAttributes {
   const primary = calculateCharacterStats(characterClass, level).primaryAttributes;
   const talentMods = talentLoadout(characterClass, level, talents).modifiers;
   return composeRunStats(
     primary,
-    addModifiers(talentMods, gearModifiers(loadout, items, characterClass)),
+    addModifiers(talentMods, gearModifiers(loadout, items, characterClass, slotLevels)),
   );
 }

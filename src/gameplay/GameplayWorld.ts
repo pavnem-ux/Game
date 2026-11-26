@@ -71,7 +71,13 @@ import type {
   RunInput,
 } from '../campaign';
 import type { DirectDamageObserver, DirectDamagePolicy } from '../enemy-ai';
-import { addModifiers, gearModifiers, validateItem, validateLoadout } from '../equipment';
+import {
+  addModifiers,
+  gearModifiers,
+  validateItem,
+  validateLoadout,
+  validateSlotLevels,
+} from '../equipment';
 import type { Loadout } from '../equipment';
 import { RunCoins } from './coins';
 import { BUFFS, CHEST_RULES, RunChests, buffModifiers, chestGold } from './chests';
@@ -249,9 +255,13 @@ export class GameplayWorld {
     // Task 20: the active pet (validated before anything is created).
     if (options.pet) validatePetSpec(options.pet);
     this.loadout = options.equipment?.loadout ?? null;
+    // Task 41: slot upgrade levels scale the slotted items' stats (validated, read at start only).
+    const slotLevels = options.equipment?.slotLevels
+      ? validateSlotLevels(options.equipment.slotLevels)
+      : undefined;
     this.permanentModifiers = addModifiers(
       this.talents.modifiers,
-      gearModifiers(this.loadout, items, options.characterClass),
+      gearModifiers(this.loadout, items, options.characterClass, slotLevels),
     );
     // Task 40: gear «Run XP %» on collected crystals.
     this.experience.setBonusPercent(this.permanentModifiers.runXpPercent);

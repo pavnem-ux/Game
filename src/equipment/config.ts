@@ -458,3 +458,32 @@ export const SHOP_RULES = Object.freeze({
   /** Uncommon offers per slot (each with a different stat from the slot's pool). */
   uncommonPerSlot: 3,
 });
+
+// ── Task 41: slot upgrades, salvage, bag (PROVISIONAL; docs/task-41-bag-slots.md) ──
+
+/**
+ * Slot upgrades belong to a class's slot (not the item) and stay forever. Level 0–30. Every level:
+ * the slotted item's main stat ×(1 + mainPerLevel · level). Every `milestoneEvery` levels: its
+ * secondary stats ×(1 + secondaryPerMilestone · milestones). Cost of level n: Gold
+ * goldBase + goldPerSquare · n², Ore oreBase + orePerLevel · n. No class-level gate.
+ */
+export const SLOT_UPGRADE_RULES = Object.freeze({
+  maxLevel: 30,
+  mainPerLevel: 0.04,
+  milestoneEvery: 5,
+  secondaryPerMilestone: 0.2,
+  goldBase: 250,
+  goldPerSquare: 4,
+  oreBase: 8,
+  orePerLevel: 4,
+});
+/** Ore paid for salvaging an item, by rarity. */
+export const SALVAGE_ORE: Readonly<Record<Rarity, number>> = Object.freeze({
+  common: 0,
+  uncommon: 1,
+  rare: 3,
+  epic: 8,
+  legendary: 25,
+});
+/** Owned items the bag holds (starter weapons don't count). */
+export const BAG_CAPACITY = 60;
