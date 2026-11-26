@@ -14,7 +14,7 @@ const N = EN.meta.nav;
 /** Hub tiles: page, title, one-line description, glyph. Accessible names differ from the nav. */
 const TILES: readonly { id: MenuPage; title: string; text: string; glyph: string }[] = [
   { id: 'character', title: N.character, text: 'Choose your hero and see their power', glyph: '♜' },
-  { id: 'equipment', title: N.equipment, text: 'Seven equipment slots', glyph: '⛨' },
+  { id: 'equipment', title: N.equipment, text: 'Gear, slot upgrades, salvage', glyph: '⛨' },
   { id: 'talents', title: N.talents, text: 'Class talent branches', glyph: '❖' },
   { id: 'shop', title: N.shop, text: 'Gear for Gold', glyph: '⚖' },
   { id: 'forge', title: N.forge, text: 'Upgrade pets with Gold and Ore', glyph: '⚒' },

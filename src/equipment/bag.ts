@@ -1,7 +1,7 @@
 import { CHARACTER_CLASSES } from '../character-stats';
 import type { CharacterClass } from '../character-stats';
-import { BAG_CAPACITY, GEAR_SLOTS, SALVAGE_ORE } from './config';
-import type { GearSlot } from './config';
+import { BAG_CAPACITY, GEAR_SLOTS, RARITIES, SALVAGE_ORE } from './config';
+import type { GearSlot, Rarity } from './config';
 import type { ItemInstance } from './items';
 import { findOwned } from './logic';
 import type { Loadouts } from './logic';
@@ -71,4 +71,35 @@ export function mainDelta(
     maxHp: a.maxHp - (b?.maxHp ?? 0),
     resistance: a.resistance - (b?.resistance ?? 0),
   });
+}
+
+export type BagSort = 'level' | 'rarity' | 'newest';
+export interface BagFilter {
+  readonly characterClass: CharacterClass;
+  readonly rarity: Rarity | 'all';
+  readonly slot: GearSlot | 'all';
+  /** Other classes' weapons are shown only with the Weapon slot filter and this toggle. */
+  readonly showAllClasses: boolean;
+  readonly sort: BagSort;
+}
+const uidNumber = (uid: string) => Number(/^i(\d+)$/.exec(uid)?.[1] ?? 0);
+const rank = (r: Rarity) => RARITIES.indexOf(r);
+/** The bag grid: filtered and sorted owned items (pure; starter weapons are not in the bag). */
+export function bagView(items: readonly ItemInstance[], f: BagFilter): readonly ItemInstance[] {
+  const shown = items.filter(
+    (i) =>
+      (f.rarity === 'all' || i.rarity === f.rarity) &&
+      (f.slot === 'all' || i.slot === f.slot) &&
+      (i.slot !== 'weapon' ||
+        i.characterClass === f.characterClass ||
+        (f.slot === 'weapon' && f.showAllClasses)),
+  );
+  const by = {
+    level: (a: ItemInstance, b: ItemInstance) =>
+      b.itemLevel - a.itemLevel || rank(b.rarity) - rank(a.rarity),
+    rarity: (a: ItemInstance, b: ItemInstance) =>
+      rank(b.rarity) - rank(a.rarity) || b.itemLevel - a.itemLevel,
+    newest: () => 0,
+  }[f.sort];
+  return Object.freeze([...shown].sort((a, b) => by(a, b) || uidNumber(b.uid) - uidNumber(a.uid)));
 }

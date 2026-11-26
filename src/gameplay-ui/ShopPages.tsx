@@ -36,6 +36,10 @@ export const REFUSALS: Record<string, string> = {
   'not-owned': 'Item not owned.',
   'not-eligible': 'This class cannot equip the item.',
   level: 'The class level is below the item level.',
+  'bag-full': 'Bag is full — salvage something first.',
+  equipped: 'An equipped item cannot be salvaged.',
+  ore: 'Not enough Ore.',
+  max: 'The slot is already at +30.',
 };
 
 export function ShopPage() {
