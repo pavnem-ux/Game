@@ -3,26 +3,13 @@ import { CHARACTER_CLASSES } from '../character-stats';
 import type { CharacterClass } from '../character-stats';
 import { CLASS_LABELS } from '../gameplay';
 import { uiSound } from './sound';
-import {
-  GEAR_SLOTS,
-  GEAR_STAT_LABELS,
-  SHOP_ITEMS,
-  SLOT_LABELS,
-  TIER_CONFIG,
-  findItem,
-  highestClearedMap,
-  isOwned,
-  isTierUnlocked,
-  itemDisplayName,
-  itemLevel,
-  upgradedStats,
-} from '../equipment';
-import type { GearItem, GearSlot, GearStat, Tier } from '../equipment';
+import { GEAR_SLOTS, SLOT_LABELS, itemIconId, itemName, offerItem } from '../equipment';
+import type { GearSlot, ShopOffer } from '../equipment';
+import { shopOffersOf } from '../profile';
 import { campaignStore } from './campaign-state';
 import { PET_CONFIG, PET_IDS, checkPetPurchase, petLevel } from '../pets';
 import type { PetId } from '../pets';
 import { PetCard } from './meta/PetsScreen';
-import { TierRows } from './meta/TierRows';
 import {
   Button,
   ConfirmModal,
@@ -32,66 +19,38 @@ import {
   TierFrame,
   disabledReason,
 } from './kit';
+import { ItemStats, ItemTitle, rarityTier } from './item-view';
 import { EN, formatNumber } from './strings-en';
 
 /**
- * Task 11 §1.5 shop and equipment screens. They only read the profile and call the campaign
- * store; every change goes through the validated save (one atomic write per action).
+ * Task 40 shop (items rework 1/4; minimal UI until the bag screen of Task 41). It sells Common and
+ * Uncommon items at item level = the class level: per slot one Common and three Uncommon offers
+ * (a seeded stock that stays the same until the class levels up; a bought offer is gone until
+ * then). Every change goes through the validated save (one atomic write per action).
  */
 const useCampaign = () => useSyncExternalStore(campaignStore.subscribe, campaignStore.getSnapshot);
 export const REFUSALS: Record<string, string> = {
   gold: 'Not enough Gold.',
-  owned: 'Already bought.',
-  locked: 'This item tier is still locked.',
-  'not-owned': 'Item not bought.',
+  'sold-out': 'Already bought at this level.',
+  'unknown-offer': 'This offer is gone.',
+  'not-owned': 'Item not owned.',
   'not-eligible': 'This class cannot equip the item.',
+  level: 'The class level is below the item level.',
 };
-const statText = (stat: GearStat, value: number) => {
-  const { label, unit } = GEAR_STAT_LABELS[stat];
-  return `${label} +${Math.round(value * 10) / 10}${unit}`;
-};
-/** Item stat lines; Task 19: at the item's forge `level` (default +0). */
-export function ItemStats({ item, level = 0 }: { item: GearItem; level?: number }) {
-  const entries = Object.entries(upgradedStats(item, level)) as [GearStat, number][];
-  if (!entries.length) return <p className="gear-stats">No bonuses</p>;
-  return (
-    <ul className="gear-stats">
-      {entries.map(([stat, v]) => (
-        <li key={stat}>{statText(stat, v)}</li>
-      ))}
-    </ul>
-  );
-}
-const tierStyle = (item: GearItem) =>
-  item.tier === 0 ? undefined : { borderColor: TIER_CONFIG[item.tier as Tier].color };
-export const tierLabel = (item: GearItem) =>
-  item.tier === 0 ? 'Starter' : TIER_CONFIG[item.tier as Tier].name;
 
-/**
- * «Shop» (Task 13 restyle): slot tabs, weapons filtered by a class switcher (the selected class
- * first), item cards in tier frames with price badges, «Bought» / «Equipped» stamps and a locked
- * overlay «unlocks after map N». Buying asks for confirmation (kit modal) and goes through the
- * campaign store (one atomic save).
- */
 export function ShopPage() {
   const ui = useCampaign();
   const profile = ui.progression.profile;
   // Task 20: the «Pets» tab sits after the gear slots.
   const [slot, setSlot] = useState<GearSlot | 'pets'>(ui.shopTab === 'pets' ? 'pets' : 'weapon');
-  const [weaponClass, setWeaponClass] = useState<CharacterClass>(
-    profile?.selectedClass ?? 'warrior',
-  );
-  const [confirming, setConfirming] = useState<string | null>(null);
+  const [shopClass, setShopClass] = useState<CharacterClass>(profile?.selectedClass ?? 'warrior');
+  const [confirming, setConfirming] = useState<ShopOffer | null>(null);
   const [message, setMessage] = useState('');
   if (!profile) return <p className="campaign-empty">Profile unavailable.</p>;
-  const cleared = highestClearedMap(profile.completedMaps);
-  const state = { ownedItems: profile.ownedItems };
-  const items = SHOP_ITEMS.filter(
-    (i) => i.slot === slot && (slot !== 'weapon' || i.characterClass === weaponClass),
-  );
-  const equippedBy = (id: string) =>
-    CHARACTER_CLASSES.filter((c) => Object.values(profile.classes[c].loadout).includes(id));
-  const buying = confirming ? findItem(confirming) : undefined;
+  const level = profile.classes[shopClass].level;
+  const offers =
+    slot === 'pets' ? [] : shopOffersOf(profile, shopClass).filter((o) => o.slot === slot);
+  const preview = (o: ShopOffer) => offerItem(o, shopClass, 'preview');
   return (
     <div className="campaign-page shop-page">
       <header className="meta-page-head">
@@ -108,17 +67,17 @@ export function ShopPage() {
             setConfirming(null);
           }}
         />
-        {slot === 'weapon' && (
+        {slot !== 'pets' && (
           <label className="shop-class">
-            Weapons for{' '}
+            Stock for{' '}
             <select
-              aria-label="Weapon class"
-              value={weaponClass}
-              onChange={(e) => setWeaponClass(e.target.value as CharacterClass)}
+              aria-label="Shop class"
+              value={shopClass}
+              onChange={(e) => setShopClass(e.target.value as CharacterClass)}
             >
               {CHARACTER_CLASSES.map((c) => (
                 <option key={c} value={c}>
-                  {CLASS_LABELS[c]}
+                  {CLASS_LABELS[c]} (level {profile.classes[c].level})
                 </option>
               ))}
             </select>
@@ -130,97 +89,70 @@ export function ShopPage() {
       ) : (
         <>
           <p className="meta-note">
-            Buying unlocks an item forever for every eligible class. Equipment changes take effect
-            from the next run.
+            Items at item level {level} (the {CLASS_LABELS[shopClass]}&apos;s level). The stock
+            changes when the class levels up; a bought offer is gone until then. Bought items are
+            shared by every class that may equip them.
           </p>
           {message && (
             <p className="shop-message" role="status">
               {message}
             </p>
           )}
-          <TierRows
-            items={items}
-            label="Goods"
-            className="shop-rows"
-            render={(item) => {
-              const owned = isOwned(state, item);
-              const wearing = equippedBy(item.id);
-              const level = itemLevel(profile.itemLevels, item.id);
-              const name = itemDisplayName(item, level);
-              const open = isTierUnlocked(item.tier as Tier, cleared);
-              const short = profile.gold < item.price;
-              const unlockAt = TIER_CONFIG[item.tier as Tier].unlockAfterMap;
-              const stateText = wearing.length
-                ? `Equipped: ${wearing.map((c) => CLASS_LABELS[c]).join(', ')}`
-                : owned
-                  ? 'Bought'
-                  : !open
-                    ? `Unlocks after map ${unlockAt}`
-                    : `${formatNumber(item.price)} Gold`;
-              return (
-                <li
-                  key={item.id}
-                  className={`shop-cell ${owned ? 'owned' : ''} ${open ? '' : 'locked'}`}
-                  aria-label={`${name}: ${stateText}`}
-                >
-                  <TierFrame tier={item.tier} className="shop-card">
-                    <div className="shop-card-head">
-                      <ItemIcon templateId={item.templateId} size="itemCard" level={level} />
-                      <strong>{name}</strong>
-                      <small style={{ color: TIER_CONFIG[item.tier as Tier].color }}>
-                        {tierLabel(item)}
-                      </small>
-                    </div>
-                    <ItemStats item={item} level={level} />
-                    <p className="shop-state">{stateText}</p>
-                    {wearing.length > 0 ? (
-                      <span className="item-stamp">{EN.meta.shop.equippedStamp}</span>
-                    ) : owned ? (
-                      <span className="item-stamp owned">{EN.meta.shop.owned}</span>
-                    ) : open ? (
+          {offers.length === 0 ? (
+            <p className="meta-note">Sold out until the next level-up.</p>
+          ) : (
+            <ul className="shop-rows shop-offers" aria-label="Goods">
+              {offers.map((offer) => {
+                const item = preview(offer);
+                const name = itemName(item);
+                const short = profile.gold < offer.price;
+                return (
+                  <li
+                    key={offer.id}
+                    className="shop-cell"
+                    aria-label={`${name}: ${formatNumber(offer.price)} Gold`}
+                  >
+                    <TierFrame tier={rarityTier(item.rarity)} className="shop-card">
+                      <div className="shop-card-head">
+                        <ItemIcon templateId={itemIconId(item)} size="itemCard" />
+                        <ItemTitle item={item} />
+                      </div>
+                      <ItemStats item={item} characterClass={shopClass} />
                       <Button
                         variant="primary"
                         size="s"
                         disabledReason={disabledReason([[short, 'Not enough Gold']])}
                         onClick={() => {
-                          setConfirming(item.id);
+                          setConfirming(offer);
                           setMessage('');
                         }}
                       >
                         Buy ·{' '}
                         <span className="price-badge">
-                          <CurrencyIcon kind="gold" label="Gold" /> {formatNumber(item.price)}
+                          <CurrencyIcon kind="gold" label="Gold" /> {formatNumber(offer.price)}
                         </span>
                       </Button>
-                    ) : (
-                      <div className="shop-locked-overlay" aria-hidden="true">
-                        🔒 {EN.meta.shop.lockedOverlay(unlockAt)}
-                      </div>
-                    )}
-                  </TierFrame>
-                </li>
-              );
-            }}
-          />
+                    </TierFrame>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </>
       )}
-      {buying && (
+      {confirming && (
         <ConfirmModal
-          title={`Buy “${buying.name}” for ${formatNumber(buying.price)} Gold?`}
+          title={`Buy “${itemName(preview(confirming))}” for ${formatNumber(confirming.price)} Gold?`}
           onConfirm={() => {
-            const refused = campaignStore.buyItem(buying.id);
+            const name = itemName(preview(confirming));
+            const refused = campaignStore.buyOffer(shopClass, confirming.id);
             uiSound(refused ? 'ui-error' : 'ui-buy');
             setConfirming(null);
-            setMessage(
-              refused ? (REFUSALS[refused] ?? 'Purchase failed.') : `Bought: ${buying.name}.`,
-            );
+            setMessage(refused ? (REFUSALS[refused] ?? 'Purchase failed.') : `Bought: ${name}.`);
           }}
           onCancel={() => setConfirming(null)}
         >
-          <p>
-            {formatNumber(profile.gold - buying.price)} Gold will remain. The item unlocks forever
-            for every eligible class.
-          </p>
+          <p>{formatNumber(profile.gold - confirming.price)} Gold will remain.</p>
         </ConfirmModal>
       )}
     </div>

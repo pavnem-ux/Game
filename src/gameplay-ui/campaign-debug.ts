@@ -14,23 +14,18 @@ import {
   NEW_CLASS_PROGRESS,
   addClassXp,
   createProfile,
+  grantItem,
   withProfileLoadoutCounter,
 } from '../profile';
 import { TALENT_CONFIG, TALENT_RULES, superpowerActive, validateTalentRanks } from '../talents';
 import type { TalentRanks } from '../talents';
 import type { PlayerProfile } from '../profile';
 import { campaignStore } from './campaign-state';
-import { GEAR_SLOTS, SHOP_ITEMS, isEligible } from '../equipment';
+import { GEAR_SLOTS, ITEM_LEVEL_RANGE, RARITIES } from '../equipment';
 import { PET_IDS } from '../pets';
 import { NO_QUEST_COUNTERS, QUEST_BY_ID, SYNERGY_IDS } from '../quests';
 import type { QuestCounters, QuestGoal } from '../quests';
-import type { GearSlot, Loadout } from '../equipment';
-/** Task 19: magic templates of the new slots for the Mage's best-gear debug loadout. */
-const MAGE_GEAR: Partial<Record<GearSlot, string>> = {
-  helmet: 'mage_circlet',
-  gloves: 'sorcerer_gloves',
-  pants: 'mystic_trousers',
-};
+import type { GearSlot, Loadout, Rarity } from '../equipment';
 
 /**
  * Task 08 profile debug tools. Imported only by the DEV/QA DeveloperPanel (lazy, gated), so none
@@ -154,40 +149,46 @@ export const campaignDebug = {
       },
     }));
   },
-  /** Task 11 §1.7: owns every shop item (no Gold spent; validated save). */
-  unlockAllItems(): boolean {
-    return edit((p) => ({ ...p, ownedItems: SHOP_ITEMS.map((i) => i.id) }));
+  /**
+   * Task 40 DEV / QA hook: grants a random item of a slot, rarity and item level (seeded `items`
+   * stream; Rare+ only come from drops in Task 42). Weapons are for `characterClass`.
+   */
+  grantItem(
+    characterClass: CharacterClass,
+    slot: GearSlot,
+    rarity: Rarity,
+    itemLevel: number,
+  ): boolean {
+    if (!RARITIES.includes(rarity) || !GEAR_SLOTS.includes(slot)) return false;
+    if (
+      !Number.isInteger(itemLevel) ||
+      itemLevel < ITEM_LEVEL_RANGE.min ||
+      itemLevel > ITEM_LEVEL_RANGE.max
+    )
+      return false;
+    return edit((p) => grantItem(p, { slot, rarity, itemLevel, characterClass }));
   },
   /**
-   * Task 11 §1.7: owns everything and equips the best tier for a class — its first weapon
-   * template and the first template of every other slot (magic amulet / helmet / gloves / pants
-   * for the Mage), tier 5.
+   * Task 40: grants a full Legendary set at the class's level and equips it (no Gold spent;
+   * validated save) — the strongest gear a class can wear right now.
    */
   equipBestTier(characterClass: CharacterClass): boolean {
-    const best = (slot: GearSlot) => {
-      const pool = SHOP_ITEMS.filter((i) => i.tier === 5 && isEligible(i, characterClass, slot));
-      if (slot === 'amulet')
-        return pool.find((i) =>
-          characterClass === 'mage'
-            ? i.templateId === 'amulet_magic'
-            : i.templateId === 'amulet_power',
-        )!;
-      // Task 19: the Mage gets the magic helmet / gloves / pants; the others the first template.
-      const magic = MAGE_GEAR[slot];
-      if (characterClass === 'mage' && magic) return pool.find((i) => i.templateId === magic)!;
-      return pool[0];
-    };
-    return edit((p) => ({
-      ...p,
-      ownedItems: SHOP_ITEMS.map((i) => i.id),
-      classes: {
-        ...p.classes,
-        [characterClass]: {
-          ...p.classes[characterClass],
-          loadout: Object.fromEntries(GEAR_SLOTS.map((s) => [s, best(s).id])) as Loadout,
+    return edit((p) => {
+      let next = p;
+      const loadout: Record<string, string | null> = {};
+      const level = p.classes[characterClass].level;
+      for (const slot of GEAR_SLOTS) {
+        next = grantItem(next, { slot, rarity: 'legendary', itemLevel: level, characterClass });
+        loadout[slot] = next.items[next.items.length - 1].uid;
+      }
+      return {
+        ...next,
+        classes: {
+          ...next.classes,
+          [characterClass]: { ...next.classes[characterClass], loadout: loadout as Loadout },
         },
-      },
-    }));
+      };
+    });
   },
   /** Task 09 §1.6: clears one class tree (debug only; players have no respec). */
   resetTalents(characterClass: CharacterClass): boolean {
@@ -257,14 +258,9 @@ export const campaignDebug = {
             },
           };
         }
-        case 'item-level': {
-          const id = p.ownedItems[0] ?? 'ring_precision-t1';
-          return {
-            ...p,
-            ownedItems: p.ownedItems.includes(id) ? p.ownedItems : [...p.ownedItems, id],
-            itemLevels: { ...p.itemLevels, [id]: Math.max(p.itemLevels[id] ?? 0, g.level) },
-          };
-        }
+        // Task 40: the Forge quests are hidden (no item levels to set).
+        case 'item-level':
+          return p;
         default:
           return { ...p, questCounters: completeCounter(c, g) };
       }
@@ -311,21 +307,6 @@ export const campaignDebug = {
   /** Task 19 §1.5: adds ore (validated save). */
   grantOre(amount: number) {
     return edit((p) => ({ ...p, ore: p.ore + amount }));
-  },
-  /**
-   * Task 19 §1.5: sets an item's forge level 0–10 (the item becomes owned; no Gold/ore spent). The
-   * validated save rejects starter weapons, unknown ids and levels outside 0–10.
-   */
-  setItemLevel(itemId: string, level: number) {
-    return edit((p) => {
-      const levels: Record<string, number> = { ...p.itemLevels, [itemId]: level };
-      if (level === 0) delete levels[itemId];
-      return {
-        ...p,
-        ownedItems: p.ownedItems.includes(itemId) ? p.ownedItems : [...p.ownedItems, itemId],
-        itemLevels: levels,
-      };
-    });
   },
   /** Removes the profile, backup and quarantine, then starts a fresh test profile. */
   resetProgress() {
