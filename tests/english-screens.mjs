@@ -122,12 +122,7 @@ try {
       .getByRole('button', { name: /Pets/ })
       .evaluate((el) => el.click());
     await check('shop-pets');
-    await go('Forge');
-    await page
-      .getByRole('group', { name: 'Forge sections' })
-      .getByRole('button', { name: /Pets/ })
-      .click();
-    await check('forge-pets');
+    // Task 40: the forge upgrades pets only (covered by the «forge» screen above).
     await tile('Pets');
     await check('pets');
     await tile('Quests');

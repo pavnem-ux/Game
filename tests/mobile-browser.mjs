@@ -240,41 +240,21 @@ for (const viewport of [
     await page.waitForTimeout(150);
     await noHorizontalScroll(page, `${tag} ${name}`);
   }
-  // Task 19: forge by touch — own an item with Gold + ore, tap it, tap «Upgrade» (one save).
+  // Task 40: equip by touch — own a Common helmet instance (item level 1), select it, «Equip».
   await page.evaluate(() => {
     const p = JSON.parse(localStorage.getItem('skazki.profile'));
-    p.gold += 200;
-    p.ore += 5;
-    p.ownedItems = [...p.ownedItems, 'guard_helm-t1'];
+    const uid = `i${p.nextItemNumber}`;
+    p.items = [...p.items, { uid, slot: 'helmet', itemLevel: 1, rarity: 'common', affixes: [] }];
+    p.nextItemNumber += 1;
     localStorage.setItem('skazki.profile', JSON.stringify(p));
   });
   await page.reload();
   await page.waitForFunction(() => !!window.__alpha);
-  const forgeNav = page.locator('.meta-nav').getByRole('button', { name: 'Forge', exact: true });
-  await forgeNav.scrollIntoViewIfNeeded();
-  await forgeNav.tap();
-  const helm = page.locator('.forge-card', { hasText: "Common Guard's Helm" });
-  await tapTarget(helm, `${tag} forge item`);
-  await helm.tap();
-  const up = page.getByRole('button', { name: /Upgrade to \+1/ });
-  await up.scrollIntoViewIfNeeded();
-  await tapTarget(up, `${tag} forge «Upgrade»`);
-  const before = await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.profile')));
-  await up.tap();
-  await page.waitForFunction(
-    () => JSON.parse(localStorage.getItem('skazki.profile')).itemLevels['guard_helm-t1'] === 1,
-  );
-  const after = await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.profile')));
-  assert.equal(after.gold, before.gold - 8, `${tag}: forge Gold`);
-  assert.equal(after.ore, before.ore - 1, `${tag}: forge ore`);
-  await page.getByRole('heading', { name: "Common Guard's Helm +1" }).waitFor();
-  await noHorizontalScroll(page, `${tag} forge`);
-  // Task 22: select an owned item → «Equip» visible without scrolling; the equipped item's
-  // details → «Upgrade in the forge» opens the forge on it; mode switch; back to Equipment.
+  // Task 22: select an owned item → «Equip» visible without scrolling; the equipped item's details.
   const navTo = (name) => page.locator('.meta-nav').getByRole('button', { name, exact: true });
   await navTo('Equipment').scrollIntoViewIfNeeded();
   await navTo('Equipment').tap();
-  const helmCard = page.locator('.owned-cell .item-card', { hasText: "Common Guard's Helm +1" });
+  const helmCard = page.locator('.owned-cell .item-card', { hasText: "Hunter's Hood" });
   await helmCard.scrollIntoViewIfNeeded();
   await helmCard.tap();
   const equipBtn = page
@@ -298,26 +278,10 @@ for (const viewport of [
   );
   await tapTarget(equipBtn, `${tag} «Equip»`);
   await equipBtn.tap();
-  const helmSlot = page.getByRole('button', { name: /^Helmet: Common Guard's Helm \+1, details/ });
+  const helmSlot = page.getByRole('button', { name: "Helmet: Hunter's Hood, details" });
   await helmSlot.scrollIntoViewIfNeeded();
   await helmSlot.tap();
-  const toForge = page
-    .getByRole('group', { name: 'Equipped item' })
-    .getByRole('button', { name: /Upgrade in the forge/ });
-  await tapTarget(toForge, `${tag} «Upgrade in the forge»`);
-  await toForge.tap();
-  await page
-    .getByRole('group', { name: 'Item upgrade' })
-    .getByRole('heading', { name: "Common Guard's Helm +1" })
-    .waitFor();
-  const modeSwitch = page.getByRole('group', { name: 'Forge sections' });
-  const petsMode = modeSwitch.getByRole('button', { name: /Pets/ });
-  await tapTarget(petsMode, `${tag} forge mode switch`);
-  await petsMode.tap();
-  assert.equal(await petsMode.getAttribute('aria-pressed'), 'true');
-  await modeSwitch.getByRole('button', { name: /Items/ }).tap();
-  await page.getByRole('button', { name: /Back to equipment/ }).tap();
-  await page.getByRole('region', { name: /^Equipment:/ }).waitFor();
+  await page.getByRole('group', { name: 'Equipped item' }).waitFor();
   await noHorizontalScroll(page, `${tag} equipment details`);
   // Task 20: pets by touch — shop tab (buy with confirmation), «Pets» page (activate), forge pet
   // tab (upgrade), then a run starts with the pet.
@@ -364,7 +328,7 @@ for (const viewport of [
   // «Pets» page from the hub tile: make the owlet the active pet.
   await nav('Home').scrollIntoViewIfNeeded();
   await nav('Home').tap();
-  const tile = page.locator('.hub-tile', { hasText: 'Pets' });
+  const tile = page.locator('.hub-tile', { hasText: 'A companion on every run' }); // «Forge» mentions pets too
   await tile.scrollIntoViewIfNeeded();
   await tile.tap();
   const choose = page.getByRole('group', { name: 'Hoot the Owlet' }).getByRole('button', {
@@ -377,13 +341,9 @@ for (const viewport of [
     () => JSON.parse(localStorage.getItem('skazki.profile')).activePet === 'owlet',
   );
   await noHorizontalScroll(page, `${tag} pets page`);
-  // Forge → «Pets» → upgrade to level 2 (500 Gold, 10 ore).
+  // Forge (pets only since Task 40) → upgrade to level 2 (500 Gold, 10 ore).
   await nav('Forge').scrollIntoViewIfNeeded();
   await nav('Forge').tap();
-  await page
-    .getByRole('group', { name: 'Forge sections' })
-    .getByRole('button', { name: 'Pets' })
-    .evaluate((el) => el.click()); // under the DEV toggle (debug builds)
   const upPet = page.getByRole('button', { name: /Upgrade to level 2/ });
   await upPet.scrollIntoViewIfNeeded();
   await tapTarget(upPet, `${tag} upgrade pet`);
@@ -437,7 +397,7 @@ for (const viewport of [
     JSON.parse(localStorage.getItem('skazki.profile')).questsClaimed.includes('campaign.map5'),
   );
   const afterClaim = await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.profile')));
-  assert.equal(afterClaim.gold, beforeClaim.gold + 300, `${tag}: quest Gold`);
+  assert.equal(afterClaim.gold, beforeClaim.gold + 240, `${tag}: quest Gold`); // Task 40: 300 × 0.8
   assert.equal(afterClaim.ore, beforeClaim.ore + 10, `${tag}: quest ore`);
   await map5.getByText('Claimed').waitFor();
   await noHorizontalScroll(page, `${tag} quests`);
@@ -447,5 +407,5 @@ for (const viewport of [
 await browser.close();
 if (errors.length) throw new Error(errors.join('\n'));
 console.log(
-  'PASS mobile: touch joystick, dash button (= Space), multi-touch; 844×390 and 768×1024: run from the hub, move, dash, pick a card, results, all menu screens without horizontal scroll, tap targets ≥ 44 px; Task 19 forge upgrade by touch; Task 20 pets (buy, activate, upgrade, run with the pet) by touch; Task 21 quest toast, hub badge, claim by touch.',
+  'PASS mobile: touch joystick, dash button (= Space), multi-touch; 844×390 and 768×1024: run from the hub, move, dash, pick a card, results, all menu screens without horizontal scroll, tap targets ≥ 44 px; Task 40 equip an item instance by touch; Task 20 pets (buy, activate, upgrade, run with the pet) by touch; Task 21 quest toast, hub badge, claim by touch.',
 );

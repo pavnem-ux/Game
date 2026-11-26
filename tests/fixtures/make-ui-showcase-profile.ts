@@ -1,6 +1,6 @@
 /**
  * Task 13: builds the "showcase" profile used by `tests/ui-screenshots.mjs` (a partly played
- * campaign: maps 1–12 won, mixed class levels, talents on one class, a few bought items) with the
+ * campaign: maps 1–12 won, mixed class levels, talents on one class, a few bought item instances) with the
  * game's own pure functions, validates it with the normal save parser and prints the JSON.
  *
  * Run: npx tsx tests/fixtures/make-ui-showcase-profile.ts > tests/fixtures/ui-showcase-profile.json
@@ -10,7 +10,7 @@ import { parseProfile } from '../../src/persistence';
 import {
   addClassXp,
   applyRunResult,
-  buyItem,
+  buyOffer,
   createProfile,
   equipItem,
   xpToNextLevel,
@@ -72,11 +72,10 @@ p = {
     rogue: { ...rogue, talents: ranks },
   },
 };
-for (const id of ['plate-t1', 'amulet_power-t1', 'ring_precision-t1', 'heavy_sword-t2'])
-  p = buyItem(p, id);
-p = equipItem(p, 'warrior', 'plate-t1');
-p = equipItem(p, 'warrior', 'heavy_sword-t2');
-p = equipItem(p, 'warrior', 'amulet_power-t1');
+// Task 40: a few shop offers bought for the Warrior (item instances i1 … i4); three equipped.
+for (const id of ['armor:common', 'amulet:common', 'ring:common', 'weapon:common'])
+  p = buyOffer(p, 'warrior', id);
+for (const uid of ['i1', 'i4', 'i2']) p = equipItem(p, 'warrior', uid);
 p = { ...p, selectedClass: 'warrior' };
 const checked = parseProfile(JSON.parse(JSON.stringify(p)));
 if (!checked.ok) throw new Error(`Invalid showcase profile: ${JSON.stringify(checked.error)}`);

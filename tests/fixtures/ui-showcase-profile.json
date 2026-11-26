@@ -1,42 +1,51 @@
 {
-  "schemaVersion": 4,
+  "schemaVersion": 10,
   "profileId": "ui-showcase",
   "createdAt": "2026-11-11T12:00:00.000Z",
   "lastSavedAt": null,
   "selectedClass": "warrior",
   "classes": {
     "warrior": {
-      "xp": 600,
+      "xp": 0,
       "level": 13,
       "lifetimeXp": 5100,
       "talents": {},
       "loadout": {
-        "weapon": "heavy_sword-t2",
-        "armor": "plate-t1",
-        "amulet": "amulet_power-t1",
+        "weapon": "i4",
+        "helmet": null,
+        "armor": "i1",
+        "gloves": null,
+        "pants": null,
+        "amulet": "i2",
         "ring": null
       }
     },
     "mage": {
-      "xp": 200,
-      "level": 5,
+      "xp": 70,
+      "level": 6,
       "lifetimeXp": 900,
       "talents": {},
       "loadout": {
         "weapon": "starter_staff",
+        "helmet": null,
         "armor": null,
+        "gloves": null,
+        "pants": null,
         "amulet": null,
         "ring": null
       }
     },
     "archer": {
-      "xp": 100,
+      "xp": 120,
       "level": 3,
       "lifetimeXp": 350,
       "talents": {},
       "loadout": {
         "weapon": "starter_bow",
+        "helmet": null,
         "armor": null,
+        "gloves": null,
+        "pants": null,
         "amulet": null,
         "ring": null
       }
@@ -44,7 +53,7 @@
     "rogue": {
       "xp": 0,
       "level": 32,
-      "lifetimeXp": 26350,
+      "lifetimeXp": 65596,
       "talents": {
         "rogue.b1.n01": 3,
         "rogue.b2.n01": 3,
@@ -54,15 +63,33 @@
       },
       "loadout": {
         "weapon": "starter_daggers",
+        "helmet": null,
         "armor": null,
+        "gloves": null,
+        "pants": null,
         "amulet": null,
         "ring": null
       }
     }
   },
-  "gold": 2530,
+  "gold": 1904,
+  "ore": 130,
   "highestUnlockedMap": 13,
-  "completedMaps": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+  "completedMaps": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
+  ],
+  "mapTiers": {},
   "bestResults": {
     "1": {
       "victories": 3,
@@ -155,7 +182,8 @@
       "eliteKills": 4,
       "bossKilled": true,
       "xp": 200,
-      "gold": 100,
+      "gold": 80,
+      "ore": 2,
       "levelBefore": 2,
       "levelAfter": 3,
       "levelsGained": 1,
@@ -172,7 +200,8 @@
       "eliteKills": 4,
       "bossKilled": true,
       "xp": 150,
-      "gold": 75,
+      "gold": 60,
+      "ore": 2,
       "levelBefore": 1,
       "levelAfter": 2,
       "levelsGained": 1,
@@ -189,9 +218,10 @@
       "eliteKills": 4,
       "bossKilled": true,
       "xp": 300,
-      "gold": 150,
-      "levelBefore": 4,
-      "levelAfter": 5,
+      "gold": 120,
+      "ore": 3,
+      "levelBefore": 5,
+      "levelAfter": 6,
       "levelsGained": 1,
       "unlockedMap": null,
       "finishedAt": "2026-11-11T12:00:00.000Z"
@@ -206,10 +236,11 @@
       "eliteKills": 4,
       "bossKilled": true,
       "xp": 250,
-      "gold": 125,
+      "gold": 100,
+      "ore": 2,
       "levelBefore": 3,
-      "levelAfter": 4,
-      "levelsGained": 1,
+      "levelAfter": 5,
+      "levelsGained": 2,
       "unlockedMap": null,
       "finishedAt": "2026-11-11T12:00:00.000Z"
     },
@@ -223,7 +254,8 @@
       "eliteKills": 4,
       "bossKilled": true,
       "xp": 200,
-      "gold": 100,
+      "gold": 80,
+      "ore": 2,
       "levelBefore": 2,
       "levelAfter": 3,
       "levelsGained": 1,
@@ -240,7 +272,8 @@
       "eliteKills": 4,
       "bossKilled": true,
       "xp": 150,
-      "gold": 75,
+      "gold": 60,
+      "ore": 2,
       "levelBefore": 1,
       "levelAfter": 2,
       "levelsGained": 1,
@@ -257,11 +290,13 @@
       "eliteKills": 4,
       "bossKilled": true,
       "xp": 700,
-      "gold": 330,
+      "gold": 264,
+      "ore": 15,
       "levelBefore": 12,
       "levelAfter": 13,
       "levelsGained": 1,
       "unlockedMap": 13,
+      "unlockedTier": "hard",
       "finishedAt": "2026-11-11T12:00:00.000Z"
     },
     {
@@ -274,11 +309,13 @@
       "eliteKills": 4,
       "bossKilled": true,
       "xp": 650,
-      "gold": 315,
+      "gold": 252,
+      "ore": 12,
       "levelBefore": 11,
       "levelAfter": 12,
       "levelsGained": 1,
       "unlockedMap": 12,
+      "unlockedTier": "hard",
       "finishedAt": "2026-11-11T12:00:00.000Z"
     },
     {
@@ -291,11 +328,13 @@
       "eliteKills": 4,
       "bossKilled": true,
       "xp": 600,
-      "gold": 300,
+      "gold": 240,
+      "ore": 12,
       "levelBefore": 10,
       "levelAfter": 11,
       "levelsGained": 1,
       "unlockedMap": 11,
+      "unlockedTier": "hard",
       "finishedAt": "2026-11-11T12:00:00.000Z"
     },
     {
@@ -308,11 +347,13 @@
       "eliteKills": 4,
       "bossKilled": true,
       "xp": 550,
-      "gold": 275,
+      "gold": 220,
+      "ore": 12,
       "levelBefore": 9,
       "levelAfter": 10,
       "levelsGained": 1,
       "unlockedMap": 10,
+      "unlockedTier": "hard",
       "finishedAt": "2026-11-11T12:00:00.000Z"
     },
     {
@@ -325,11 +366,13 @@
       "eliteKills": 4,
       "bossKilled": true,
       "xp": 500,
-      "gold": 250,
-      "levelBefore": 8,
+      "gold": 200,
+      "ore": 12,
+      "levelBefore": 9,
       "levelAfter": 9,
-      "levelsGained": 1,
+      "levelsGained": 0,
       "unlockedMap": 9,
+      "unlockedTier": "hard",
       "finishedAt": "2026-11-11T12:00:00.000Z"
     },
     {
@@ -342,11 +385,13 @@
       "eliteKills": 4,
       "bossKilled": true,
       "xp": 450,
-      "gold": 225,
-      "levelBefore": 7,
-      "levelAfter": 8,
+      "gold": 180,
+      "ore": 9,
+      "levelBefore": 8,
+      "levelAfter": 9,
       "levelsGained": 1,
       "unlockedMap": 8,
+      "unlockedTier": "hard",
       "finishedAt": "2026-11-11T12:00:00.000Z"
     },
     {
@@ -359,11 +404,13 @@
       "eliteKills": 4,
       "bossKilled": true,
       "xp": 400,
-      "gold": 200,
-      "levelBefore": 6,
-      "levelAfter": 7,
+      "gold": 160,
+      "ore": 9,
+      "levelBefore": 7,
+      "levelAfter": 8,
       "levelsGained": 1,
       "unlockedMap": 7,
+      "unlockedTier": "hard",
       "finishedAt": "2026-11-11T12:00:00.000Z"
     },
     {
@@ -376,11 +423,13 @@
       "eliteKills": 4,
       "bossKilled": true,
       "xp": 350,
-      "gold": 175,
-      "levelBefore": 5,
-      "levelAfter": 6,
+      "gold": 140,
+      "ore": 9,
+      "levelBefore": 6,
+      "levelAfter": 7,
       "levelsGained": 1,
       "unlockedMap": 6,
+      "unlockedTier": "hard",
       "finishedAt": "2026-11-11T12:00:00.000Z"
     },
     {
@@ -393,11 +442,13 @@
       "eliteKills": 4,
       "bossKilled": true,
       "xp": 300,
-      "gold": 150,
-      "levelBefore": 4,
-      "levelAfter": 5,
+      "gold": 120,
+      "ore": 9,
+      "levelBefore": 5,
+      "levelAfter": 6,
       "levelsGained": 1,
       "unlockedMap": 5,
+      "unlockedTier": "hard",
       "finishedAt": "2026-11-11T12:00:00.000Z"
     },
     {
@@ -410,11 +461,13 @@
       "eliteKills": 4,
       "bossKilled": true,
       "xp": 250,
-      "gold": 125,
+      "gold": 100,
+      "ore": 6,
       "levelBefore": 3,
-      "levelAfter": 4,
-      "levelsGained": 1,
+      "levelAfter": 5,
+      "levelsGained": 2,
       "unlockedMap": 4,
+      "unlockedTier": "hard",
       "finishedAt": "2026-11-11T12:00:00.000Z"
     },
     {
@@ -427,11 +480,13 @@
       "eliteKills": 4,
       "bossKilled": true,
       "xp": 200,
-      "gold": 100,
+      "gold": 80,
+      "ore": 6,
       "levelBefore": 2,
       "levelAfter": 3,
       "levelsGained": 1,
       "unlockedMap": 3,
+      "unlockedTier": "hard",
       "finishedAt": "2026-11-11T12:00:00.000Z"
     },
     {
@@ -444,11 +499,13 @@
       "eliteKills": 4,
       "bossKilled": true,
       "xp": 150,
-      "gold": 75,
+      "gold": 60,
+      "ore": 6,
       "levelBefore": 1,
       "levelAfter": 2,
       "levelsGained": 1,
       "unlockedMap": 2,
+      "unlockedTier": "hard",
       "finishedAt": "2026-11-11T12:00:00.000Z"
     }
   ],
@@ -472,5 +529,84 @@
     "showcase-archer-1-2",
     "showcase-archer-2-2"
   ],
-  "ownedItems": ["plate-t1", "amulet_power-t1", "ring_precision-t1", "heavy_sword-t2"]
+  "items": [
+    {
+      "uid": "i1",
+      "slot": "armor",
+      "itemLevel": 13,
+      "rarity": "common",
+      "affixes": []
+    },
+    {
+      "uid": "i2",
+      "slot": "amulet",
+      "itemLevel": 13,
+      "rarity": "common",
+      "affixes": []
+    },
+    {
+      "uid": "i3",
+      "slot": "ring",
+      "itemLevel": 13,
+      "rarity": "common",
+      "affixes": []
+    },
+    {
+      "uid": "i4",
+      "slot": "weapon",
+      "characterClass": "warrior",
+      "itemLevel": 13,
+      "rarity": "common",
+      "affixes": []
+    }
+  ],
+  "nextItemNumber": 5,
+  "shopSalt": 2088977691,
+  "shopBought": {
+    "warrior": {
+      "level": 13,
+      "offers": [
+        "armor:common",
+        "amulet:common",
+        "ring:common",
+        "weapon:common"
+      ]
+    }
+  },
+  "ownedPets": [],
+  "petLevels": {},
+  "activePet": null,
+  "questCounters": {
+    "killsByType": {
+      "swift": 0,
+      "brute": 0,
+      "bombard": 0
+    },
+    "eliteKills": 72,
+    "bossesDefeated": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "chestsOpened": 0,
+    "synergiesOpened": [],
+    "synergiesAwakened": [],
+    "bestTierLoadout": 0,
+    "activities": {
+      "shrine": 0,
+      "lantern": 0,
+      "thief": 0,
+      "nest": 0
+    }
+  },
+  "questsClaimed": []
 }
