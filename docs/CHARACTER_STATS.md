@@ -21,8 +21,8 @@ import {
 } from '../src/character-stats';
 
 const snapshot = calculateCharacterStats('mage', 50);
-// INT 250; DEX 99; HP 1100; magicalDamage 1260;
-// attackSpeed 149.5; criticalChance 29.8; areaSize 175.
+// Task 40 (рост ×2/15): INT 37.67; DEX 14.07; HP 250.67; magicalDamage 198.33;
+// attackSpeed 107.03; criticalChance 12.81; areaSize 111.3.
 
 let progression = createCharacterProgression('mage');
 progression = setPermanentCharacterLevel(progression, 'warrior', 20);
@@ -78,3 +78,16 @@ npm run build
 ### Playable Combat Alpha — Task 06
 
 Новая альфа использует calculateCharacterStats для выбранного класса/уровня, передаёт боевые значения в единственный Core, attackSpeed в Weapon Attacks и movementSpeed в movement utility. Прежние временные XP/upgrades stats из первого прототипа остаются отдельно по `/?prototype`. Формулы, class growth и caps не менялись; постоянные уровни в альфе пока не сохраняются. [Архитектура и тестовое управление уровнем](PLAYABLE_COMBAT_ALPHA.md).
+
+### Task 40 — рост классов ×2/15 и кривая XP (PROVISIONAL)
+
+Items rework 1/4 ([спецификация](task-40-items-model.md)): основная сила переходит в предметы,
+поэтому прирост атрибутов за уровень умножен на `GROWTH_SCALE = 2/15` (в `config()`, один раз;
+начальные атрибуты не меняются; например, сила воина +3 → +0.4 за уровень). Атрибуты и производные
+значения могут быть дробными (в UI округляются). Лимиты, конверсии и формулы не менялись.
+
+Стоимость следующего постоянного уровня: `100 + 6·L²` XP (уровень 1 → 2: 106, 2 → 3: 124,
+49 → 50: 14 506; 1 → 50 всего 247 450). Рекомендуемый уровень карт пересчитан по этой кривой
+(карта 11 → 11, 30 → 22, 40 → 27; после всех 40 карт — уровень 28). Миграция сохранения v10
+обрезает XP класса до «стоимость − 1», если старый запас уже оплачивал следующий уровень (уровни
+не меняются). Числа — предварительные, баланс в реальной игре не измерялся.

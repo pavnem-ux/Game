@@ -189,6 +189,11 @@ Spec: [task-39-difficulty-tiers.md](task-39-difficulty-tiers.md); log:
 - Unlocks per map: Normal → Hard → Nightmare → Elite Trial, each after a victory on the previous
   tier of that map. Victory Gold (coins + bonus) and map Ore ×1.5 / ×2 / ×2; class XP and defeat
   rewards unchanged; activity Ore not scaled.
+- Task 40 (provisional): the single reward scale is split into `goldScale` / `oreScale` /
+  `xpScale` — Hard 1.5 / 1.5 / 1, Nightmare 2 / 2 / 1, **Elite Trial Gold ×1, Ore ×2, class XP
+  ×0.2** (the defeat XP share too). All victory Gold is ×0.8 (`GOLD_SCALE`; map 1: 60, map 40:
+  600 — the Gold column of the table above predates it), and later maps' enemy damage grows by
+  `laterDifficulty.damagePerMap` 0.08.
 - Save v9 (`migrateV8toV9`): `mapTiers` (hardest tier won above Normal per map; a Normal win is
   `completedMaps`); recent runs keep `difficulty` / `unlockedTier`.
 - UI: tier buttons on the map card (locked ones say what opens them), the tier in the pause info,
