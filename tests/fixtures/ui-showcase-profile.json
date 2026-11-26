@@ -75,20 +75,7 @@
   "gold": 1904,
   "ore": 130,
   "highestUnlockedMap": 13,
-  "completedMaps": [
-    1,
-    2,
-    3,
-    4,
-    5,
-    6,
-    7,
-    8,
-    9,
-    10,
-    11,
-    12
-  ],
+  "completedMaps": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
   "mapTiers": {},
   "bestResults": {
     "1": {
@@ -565,12 +552,7 @@
   "shopBought": {
     "warrior": {
       "level": 13,
-      "offers": [
-        "armor:common",
-        "amulet:common",
-        "ring:common",
-        "weapon:common"
-      ]
+      "offers": ["armor:common", "amulet:common", "ring:common", "weapon:common"]
     }
   },
   "ownedPets": [],
@@ -583,20 +565,7 @@
       "bombard": 0
     },
     "eliteKills": 72,
-    "bossesDefeated": [
-      1,
-      2,
-      3,
-      4,
-      5,
-      6,
-      7,
-      8,
-      9,
-      10,
-      11,
-      12
-    ],
+    "bossesDefeated": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
     "chestsOpened": 0,
     "synergiesOpened": [],
     "synergiesAwakened": [],
