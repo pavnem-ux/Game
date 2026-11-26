@@ -14,6 +14,7 @@ import {
   NEW_CLASS_PROGRESS,
   addClassXp,
   createProfile,
+  xpToNextLevel,
   grantItem,
   withProfileLoadoutCounter,
 } from '../profile';
@@ -34,7 +35,8 @@ import type { GearSlot, Loadout, Rarity } from '../equipment';
  */
 /** Class progress at exactly `level` (start of the level) with the given talents. */
 function progressAt(level: number, talents: TalentRanks) {
-  const toReach = Array.from({ length: level - 1 }, (_, i) => 100 + 50 * i).reduce(
+  // Task 40: the real curve (it changed to 100 + 6·L²), never a copy of it.
+  const toReach = Array.from({ length: level - 1 }, (_, i) => xpToNextLevel(i + 1)!).reduce(
     (a, b) => a + b,
     0,
   );
