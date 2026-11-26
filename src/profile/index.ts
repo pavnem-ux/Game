@@ -25,6 +25,14 @@ export {
   validateRunResult,
 } from './apply-run';
 export type { ApplyRunOutcome, RunSummary } from './apply-run';
-export { buyItem, equipItem, equipmentStateOf, unequipSlot, upgradeProfileItem } from './equipment';
+export {
+  buyOffer,
+  equipItem,
+  equipmentStateOf,
+  grantItem,
+  shopOffersOf,
+  unequipSlot,
+} from './equipment';
+export { shopSaltOf } from './profile';
 export { buyProfilePet, setProfileActivePet, upgradeProfilePet } from './pets';
 export { claimProfileQuest, withProfileLoadoutCounter } from './quests';

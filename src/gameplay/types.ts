@@ -1,6 +1,6 @@
 import type { CampaignDifficulty } from '../campaign';
 import type { TalentConfig, TalentRanks } from '../talents';
-import type { ItemLevels, Loadout } from '../equipment';
+import type { ItemInstance, Loadout } from '../equipment';
 import type { PetId } from '../pets';
 import type { PetEvent, PetSnapshot } from '../pets/runtime';
 import type { CoinEvent, CoinPile } from './coins';
@@ -53,9 +53,11 @@ export interface GameplayOptions {
    * the catalog is not approved). `config` is a test seam (defaults to the shipped catalog).
    */
   readonly talents?: Readonly<{ ranks: TalentRanks; config?: TalentConfig }>;
-  /** Task 11: this class's equipped gear (validated: known items, right slot and class). */
-  /** Task 11 loadout; Task 19 `itemLevels` (forge upgrade levels, absent = all +0). */
-  readonly equipment?: Readonly<{ loadout: Loadout; itemLevels?: ItemLevels }>;
+  /**
+   * Task 40: this class's loadout (instance uids per slot) and the profile's owned item instances
+   * (validated: owned, right slot and class, item level ≤ the class level).
+   */
+  readonly equipment?: Readonly<{ loadout: Loadout; items: readonly ItemInstance[] }>;
   /** Task 20: the profile's active pet and its level 1–5 (absent / null = no pet). */
   readonly pet?: Readonly<{ id: PetId; level: number }> | null;
 }

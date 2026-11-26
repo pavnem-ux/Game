@@ -62,13 +62,22 @@ export const ATTRIBUTE_CONVERSIONS: Readonly<
   agility: Object.freeze({ movementSpeed: 0.5, dodgeChance: 0.1 }),
 });
 
+/**
+ * Task 40 (items rework): class levels give much less power — attribute growth per level is the
+ * listed (pre-Task 40) growth × 2/15 (Warrior strength 3 → 0.4 per level). Starting attributes are
+ * unchanged; attributes may be fractional (shown rounded). PROVISIONAL.
+ */
+export const GROWTH_SCALE = 2 / 15;
 function config(
   initialAttributes: PrimaryAttributes,
   growthPerLevel: PrimaryAttributes,
 ): ClassStatsConfig {
+  const scaled = Object.fromEntries(
+    Object.entries(growthPerLevel).map(([k, v]) => [k, v * GROWTH_SCALE]),
+  ) as unknown as PrimaryAttributes;
   return Object.freeze({
     initialAttributes: Object.freeze(initialAttributes),
-    growthPerLevel: Object.freeze(growthPerLevel),
+    growthPerLevel: Object.freeze(scaled),
   });
 }
 

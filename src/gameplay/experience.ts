@@ -47,6 +47,23 @@ export function runXpCost(level: number): number {
   return cost;
 }
 export class RunExperience {
+  /**
+   * Task 40 gear «Run XP %»: extra XP on collected crystals, carried so the total over the run is
+   * exactly ⌊percent × collected⌋ whatever the split (crystal values stay unchanged).
+   */
+  private bonusPercent = 0;
+  private bonusCarry = 0;
+  setBonusPercent(percent: number): void {
+    if (!Number.isFinite(percent) || percent < 0) throw new RangeError('Invalid XP bonus.');
+    this.bonusPercent = percent;
+  }
+  private withBonus(amount: number): number {
+    if (!(this.bonusPercent > 0) || amount <= 0) return amount;
+    this.bonusCarry += (amount * this.bonusPercent) / 100;
+    const extra = Math.floor(this.bonusCarry + 1e-9);
+    this.bonusCarry -= extra;
+    return amount + extra;
+  }
   private level = 1;
   private xp = 0;
   private total = 0;
@@ -117,7 +134,7 @@ export class RunExperience {
       this.cells.delete(this.key(c));
       events.push(Object.freeze({ type: 'xp-collected', amount: c.value, crystalId: c.id }));
     }
-    events.push(...this.gain(amount));
+    events.push(...this.gain(this.withBonus(amount)));
     return Object.freeze(events);
   }
   /**
@@ -134,7 +151,7 @@ export class RunExperience {
       this.cells.delete(this.key(c));
       events.push(Object.freeze({ type: 'xp-collected', amount: c.value, crystalId: c.id }));
     }
-    events.push(...this.gain(amount));
+    events.push(...this.gain(this.withBonus(amount)));
     return Object.freeze(events);
   }
   grantForTesting(amount: number): readonly ExperienceEvent[] {

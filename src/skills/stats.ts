@@ -19,6 +19,19 @@ export interface RunStatModifiers {
   readonly movementSpeedPercent: number;
   /** Task 11 (additive; 0 for every earlier source): percent area size (gear «area size»). */
   readonly areaSizePercent: number;
+  /**
+   * Task 40 (additive; gear only, 0 for every earlier source): flat main stats, added to the class
+   * attributes before every percent modifier and before the caps.
+   */
+  readonly flatPhysicalDamage: number;
+  readonly flatMagicalDamage: number;
+  readonly flatMaxHp: number;
+  /** Task 40 run stats (not combat attributes; read by the world): see `RUN_BONUS_KEYS`. */
+  readonly eliteDamagePercent: number;
+  readonly hpRegenPercent: number;
+  readonly pickupRadiusPercent: number;
+  readonly runXpPercent: number;
+  readonly goldFindPercent: number;
 }
 export const NO_MODIFIERS: RunStatModifiers = Object.freeze({
   damagePercent: 0,
@@ -34,6 +47,14 @@ export const NO_MODIFIERS: RunStatModifiers = Object.freeze({
   cooldownReduction: 0,
   movementSpeedPercent: 0,
   areaSizePercent: 0,
+  flatPhysicalDamage: 0,
+  flatMagicalDamage: 0,
+  flatMaxHp: 0,
+  eliteDamagePercent: 0,
+  hpRegenPercent: 0,
+  pickupRadiusPercent: 0,
+  runXpPercent: 0,
+  goldFindPercent: 0,
 });
 
 /**
@@ -44,9 +65,14 @@ export function composeRunStats(primary: PrimaryAttributes, m: RunStatModifiers)
   const base = deriveUncappedCombatAttributes(primary);
   return applyCombatAttributeCaps({
     ...base,
-    maxHp: base.maxHp * (1 + m.maxHpPercent / 100),
-    physicalDamage: base.physicalDamage * (1 + (m.damagePercent + m.physicalDamagePercent) / 100),
-    magicalDamage: base.magicalDamage * (1 + (m.damagePercent + m.magicalDamagePercent) / 100),
+    // Task 40: flat gear main stats first, then the percent modifiers, then the caps (once).
+    maxHp: (base.maxHp + m.flatMaxHp) * (1 + m.maxHpPercent / 100),
+    physicalDamage:
+      (base.physicalDamage + m.flatPhysicalDamage) *
+      (1 + (m.damagePercent + m.physicalDamagePercent) / 100),
+    magicalDamage:
+      (base.magicalDamage + m.flatMagicalDamage) *
+      (1 + (m.damagePercent + m.magicalDamagePercent) / 100),
     resistance: base.resistance + m.resistance,
     attackSpeed: base.attackSpeed + m.attackSpeed,
     criticalChance: base.criticalChance + m.criticalChance,

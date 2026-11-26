@@ -71,7 +71,7 @@ import type {
   RunInput,
 } from '../campaign';
 import type { DirectDamageObserver, DirectDamagePolicy } from '../enemy-ai';
-import { addModifiers, gearModifiers, validateItemLevels, validateLoadout } from '../equipment';
+import { addModifiers, gearModifiers, validateItem, validateLoadout } from '../equipment';
 import type { Loadout } from '../equipment';
 import { RunCoins } from './coins';
 import { BUFFS, CHEST_RULES, RunChests, buffModifiers, chestGold } from './chests';
@@ -241,18 +241,20 @@ export class GameplayWorld {
       options.talents?.ranks ?? {},
       options.talents?.config,
     );
-    // Task 11: gear joins the talent stat layer (one permanent layer, caps applied once).
-    if (options.equipment) validateLoadout(options.characterClass, options.equipment.loadout);
-    // Task 19: forge levels scale the equipped items' stats (validated; read at world start only).
-    const itemLevels = options.equipment?.itemLevels;
-    if (itemLevels !== undefined) validateItemLevels(itemLevels);
+    // Task 11 / 40: gear joins the talent stat layer (one permanent layer, caps applied once):
+    // flat main stats, secondary stats and the Task 40 run stats (validated, read at start only).
+    const items = (options.equipment?.items ?? []).map(validateItem);
+    if (options.equipment)
+      validateLoadout(options.characterClass, options.equipment.loadout, items, options.level ?? 1);
     // Task 20: the active pet (validated before anything is created).
     if (options.pet) validatePetSpec(options.pet);
     this.loadout = options.equipment?.loadout ?? null;
     this.permanentModifiers = addModifiers(
       this.talents.modifiers,
-      gearModifiers(this.loadout, itemLevels),
+      gearModifiers(this.loadout, items, options.characterClass),
     );
+    // Task 40: gear «Run XP %» on collected crystals.
+    this.experience.setBonusPercent(this.permanentModifiers.runXpPercent);
     const startStats = composeRunStats(this.character.primaryAttributes, this.permanentModifiers);
     this.core = createCore(this.random);
     this.core.addEntity({
@@ -347,6 +349,7 @@ export class GameplayWorld {
         statsChanged: (stats) => world.applyStats(stats),
         // Task 24: the Blight Nest ignores Slow and Stun (DoTs and damage still apply).
         controlImmune: (targetId) => world.activities?.isNest(targetId) ?? false,
+        targetDamageScale: (targetId) => world.targetDamageScale(targetId),
         controlLimits: (targetId) =>
           targetId === world.bossEnemyId && world.bossDefinition
             ? world.bossDefinition.control
@@ -798,12 +801,40 @@ export class GameplayWorld {
     )
       this.skills.setPet(null);
   }
-  /** Task 20 kitten: pickup-radius multiplier and coin bonus % (1 / 0 without it). */
+  /**
+   * Task 20 kitten: pickup-radius multiplier and coin bonus % (1 / 0 without it). Task 40: gear
+   * «Pickup radius %» multiplies the radius; gear «Gold find %» (capped at 25%) adds to the coins.
+   */
   private get pickupScale(): number {
-    return this.skills.pet?.pickupScale ?? 1;
+    return (
+      (this.skills.pet?.pickupScale ?? 1) * (1 + this.permanentModifiers.pickupRadiusPercent / 100)
+    );
   }
   private get petCoinPercent(): number {
-    return this.skills.pet?.coinPercent ?? 0;
+    return (this.skills.pet?.coinPercent ?? 0) + this.permanentModifiers.goldFindPercent;
+  }
+  /** Task 40: gear «Elite & boss damage %» on the player's direct hits on elites and the boss. */
+  targetDamageScale(targetId: string): number {
+    const bonus = this.permanentModifiers.eliteDamagePercent;
+    if (!(bonus > 0)) return 1;
+    return targetId === this.bossEnemyId || this.eliteProfiles.has(targetId) ? 1 + bonus / 100 : 1;
+  }
+  /** Task 40 «HP regen»: fractional healing carried to whole HP (fewer heal events). */
+  private regenCarry = 0;
+  private regenerate(): void {
+    const pct = this.permanentModifiers.hpRegenPercent;
+    if (!(pct > 0)) return;
+    const player = this.core.getEntity(this.playerId);
+    // Never revives; nothing is banked while at full HP.
+    if (!player.alive || player.currentHp >= player.maxHp) {
+      this.regenCarry = 0;
+      return;
+    }
+    this.regenCarry += (player.maxHp * pct * ALPHA.controlStep) / 100;
+    if (this.regenCarry < 1) return;
+    const amount = Math.floor(this.regenCarry);
+    this.regenCarry -= amount;
+    this.forwardCombat(this.core.heal(this.playerId, amount).events);
   }
   /**
    * Task 20 debug (DEV/QA controller only): spawn or replace the run's pet at the current clock;
@@ -1669,6 +1700,8 @@ export class GameplayWorld {
       });
     }
     this.controlIndex++;
+    // Task 40: gear HP regen heals at the control step (simulation time; Core owns HP).
+    this.regenerate();
     this.progression(this.experience.collect(this.body, this.body.radius, this.pickupScale));
     const coins = this.coins.collect(
       this.body,

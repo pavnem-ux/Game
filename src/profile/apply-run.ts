@@ -176,7 +176,7 @@ export function applyRunResult(
   const ore =
     Math.round(
       runOre(result.outcome, result.mapId, !profile.completedMaps.includes(result.mapId)) *
-        map.rewardScale,
+        map.oreScale,
     ) + (result.outcome === 'victory' ? (result.activityOre ?? 0) : 0);
 
   // Unlocks: only a victory unlocks the next map; unlocked maps stay unlocked.
