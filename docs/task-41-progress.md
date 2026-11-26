@@ -13,7 +13,7 @@ PR: https://github.com/pavnem-ux/Game/pull/41 (draft, into `items-rework`)
 - [x] 3 Save: version bump (slot levels 0, «new» flags off), validation; quests forge.plus5 / plus10 back
 - [x] 4 Bag screen: equipped rows + upgrade, bag grid (filters, sort, markers, multi-select), item card
 - [x] 5 Shop layout: compact grid, «All» tab, compare / «better», short header line, sold-out placeholders
-- [ ] 6 Delivery: docs, e2e, final checks, PR ready
+- [x] 6 Delivery: docs, e2e, final checks, PR ready
 
 ## Decisions / blockers
 
