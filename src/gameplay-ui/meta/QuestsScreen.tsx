@@ -8,6 +8,7 @@ import { campaignStore } from '../campaign-state';
 import { Button, CurrencyBadge, formatGold, OreBadge, ProgressBar, Tabs } from '../kit';
 import { EN } from '../strings-en';
 import { PetPortrait } from '../pets/PetPortrait';
+import { HomeButton } from './HomeButton';
 
 const Q = EN.meta.quests;
 type GroupFilter = QuestGroup | 'all';
@@ -46,6 +47,7 @@ export function QuestsPage() {
   return (
     <div className="quests-screen">
       <header className="meta-page-head">
+        <HomeButton />
         <h2 className="meta-title">{Q.title}</h2>
         <label className="quests-filter">
           <input

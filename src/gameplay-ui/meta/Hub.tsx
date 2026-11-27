@@ -11,7 +11,7 @@ import { claimableQuests } from '../../quests';
 
 const H = EN.meta.hub;
 const N = EN.meta.nav;
-/** Hub tiles: page, title, one-line description, glyph. Accessible names differ from the nav. */
+/** Hub tiles: page, title, one-line description, glyph — the only way into the sections (Task 45). */
 const TILES: readonly { id: MenuPage; title: string; text: string; glyph: string }[] = [
   { id: 'character', title: N.character, text: 'Choose your hero and see their power', glyph: '♜' },
   { id: 'equipment', title: N.equipment, text: 'Gear, slot upgrades, salvage', glyph: '⛨' },
@@ -20,6 +20,7 @@ const TILES: readonly { id: MenuPage; title: string; text: string; glyph: string
   { id: 'forge', title: N.forge, text: 'Upgrade pets with Gold and Ore', glyph: '⚒' },
   { id: 'pets', title: N.pets, text: 'A companion on every run', glyph: '❦' },
   { id: 'quests', title: N.quests, text: 'Goals and rewards', glyph: '✧' },
+  { id: 'maps', title: N.maps, text: 'Acts, maps and difficulty', glyph: '⚑' },
   { id: 'progression', title: N.progression, text: 'Chronicle of your runs', glyph: '☾' },
   { id: 'settings', title: N.settings, text: 'Saves and gameplay', glyph: '⚙' },
 ];
@@ -85,9 +86,6 @@ export function HubPage() {
           >
             ⚔ {H.fight}
           </Button>
-          <Button variant="secondary" onClick={() => campaignStore.startRun()}>
-            {H.quickStart(map.id)} · {CLASS_LABELS[cls]} →
-          </Button>
         </div>
         <p className="hub-campaign">
           {H.campaign(profile.completedMaps.length, CAMPAIGN_MAPS.length)} ·{' '}
@@ -105,7 +103,7 @@ export function HubPage() {
             aria-label={
               t.id === 'quests' && claimable > 0
                 ? `${t.title}. ${EN.meta.quests.badge(claimable)}`
-                : undefined
+                : t.title
             }
           >
             {t.id === 'quests' && claimable > 0 && (

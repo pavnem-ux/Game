@@ -33,6 +33,7 @@ import {
 } from './kit';
 import { ItemArt, StatName, rarityColor, rarityTier, slottedLines } from './item-view';
 import { EN, formatNumber } from './strings-en';
+import { HomeButton } from './meta/HomeButton';
 
 /**
  * Task 40 shop: Common and Uncommon items at item level = the class level — per slot one Common
@@ -71,6 +72,7 @@ export function ShopPage() {
   return (
     <div className="campaign-page shop-page">
       <header className="meta-page-head">
+        <HomeButton />
         <h2 className="meta-title">Shop</h2>
         <Tabs
           label="Shop slots"

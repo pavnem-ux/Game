@@ -8,6 +8,7 @@ import { GRAPHICS_QUALITIES } from '../engine/visuals/quality';
 import { EN } from './strings-en';
 import { statusText } from './save-messages';
 import { GameSpeedChoice } from './GameSpeed';
+import { HomeButton } from './meta/HomeButton';
 
 const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString('en-US') : 'never yet');
 
@@ -102,7 +103,10 @@ export function SettingsPage() {
   const pending = ui.pendingImport;
   return (
     <div className="campaign-page settings-page">
-      <h2>Settings</h2>
+      <header className="meta-page-head">
+        <HomeButton />
+        <h2>Settings</h2>
+      </header>
       <GameplaySettings />
       <section className="save-management" aria-label="Save management">
         <h3>Save management</h3>

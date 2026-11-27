@@ -10,7 +10,7 @@ PR: https://github.com/pavnem-ux/Game/pull/45 (draft, into `items-rework`)
 - [x] 0 Setup: branch, spec, progress file, Legendary icon files, draft PR (stacked on Task 44)
 - [x] 1 Legendary icons: assets, provenance, registry / preload, used everywhere an item icon shows
 - [x] 2 Equipment screen: name, paper doll (slots with icon / rarity name / +N, pet card), upgrade + Stats under the doll, bag + card on the right
-- [ ] 3 Hub: one battle button; no top navigation (title → hub, Gold / Ore); tiles for every section; «← Home» + Esc
+- [x] 3 Hub: one battle button; no top navigation (title → hub, Gold / Ore); tiles for every section; «← Home» + Esc
 - [ ] 4 Delivery: docs, e2e, final checks, PR ready
 
 ## Decisions / blockers

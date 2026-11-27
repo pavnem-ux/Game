@@ -9,6 +9,7 @@ import { campaignStore } from '../campaign-state';
 import { displayHp } from '../format';
 import { Button, ClassPortrait, ProgressBar } from '../kit';
 import { EN } from '../strings-en';
+import { HomeButton } from './HomeButton';
 
 const C = EN.meta.character;
 const S = EN.meta.stats;
@@ -42,7 +43,10 @@ export function CharacterSelectPage() {
   ) as Record<string, number>;
   return (
     <div className="character-select">
-      <h2 className="meta-title">{C.title}</h2>
+      <header className="meta-page-head">
+        <HomeButton />
+        <h2 className="meta-title">{C.title}</h2>
+      </header>
       <div className="character-grid">
         {CHARACTER_CLASSES.map((c) => {
           const p = profile.classes[c];

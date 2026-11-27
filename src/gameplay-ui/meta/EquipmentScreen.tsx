@@ -57,6 +57,7 @@ import {
   slottedLines,
   statNumber,
 } from '../item-view';
+import { HomeButton } from './HomeButton';
 
 const B = EN.meta.bag;
 type SlotFilter = GearSlot | 'all';
@@ -151,6 +152,7 @@ export function EquipmentPage() {
   return (
     <div className="bag-screen equipment-screen">
       <header className="meta-page-head">
+        <HomeButton />
         <h2 className="meta-title">{B.title}</h2>
         <Tabs
           label="Equipment class"

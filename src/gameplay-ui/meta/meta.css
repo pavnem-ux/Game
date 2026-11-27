@@ -34,45 +34,8 @@
   text-shadow: 0 0 14px var(--gold-glow);
   padding: 4px 6px;
 }
-.meta-nav {
-  display: flex;
-  gap: 2px;
-  flex: 1;
-  min-width: 0;
-  flex-wrap: wrap;
-}
-.meta-nav-item {
-  position: relative;
-  /* Task 41: short labels («Bag») keep a 44 px tap target. */
-  min-width: 44px;
-  border: 0;
-  background: none;
-  color: var(--text-muted);
-  font-size: var(--fs-s);
-  font-weight: 600;
-  padding: 8px 11px;
-  border-radius: var(--radius-m);
-  transition:
-    color var(--dur) var(--ease),
-    background var(--dur) var(--ease);
-}
-.meta-nav-item:hover {
-  color: var(--parchment-100);
-  background: rgba(255, 236, 196, 0.06);
-}
-.meta-nav-item.active {
-  color: var(--gold-300);
-}
-.meta-nav-item.active::after {
-  content: '';
-  position: absolute;
-  left: 11px;
-  right: 11px;
-  bottom: 2px;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--gold-400);
-  box-shadow: 0 0 8px var(--gold-glow);
+.meta-home {
+  flex: none;
 }
 .meta-content {
   flex: 1;
@@ -942,9 +905,14 @@
 .map-path-screen {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+  grid-template-rows: auto minmax(0, 1fr);
   gap: var(--sp-5);
   height: 100%;
   min-height: 0;
+}
+.map-path-head {
+  grid-column: 1 / -1;
+  margin-bottom: 0;
 }
 .meta-page-maps .meta-content {
   overflow: hidden;
@@ -1660,9 +1628,6 @@
   }
   .talent-board {
     grid-template-columns: 1fr;
-  }
-  .meta-nav-item {
-    padding: 8px 8px;
   }
 }
 @media (max-width: 760px) {

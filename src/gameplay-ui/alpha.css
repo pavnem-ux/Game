@@ -2003,7 +2003,6 @@ body {
 }
 /* Task 16: touch tap targets ≥ 44 px in menus and in-run dialogs (coarse pointers only). */
 @media (pointer: coarse) {
-  .meta-ui .meta-nav-item,
   .meta-ui .meta-brand,
   .meta-ui .kit-tab,
   .meta-ui .kit-button,
@@ -2018,7 +2017,7 @@ body {
     min-width: 44px;
   }
 }
-/* Task 16: menus on phones — no outer page chrome, one scrolling nav row, safe-area padding. */
+/* Task 16: menus on phones — no outer page chrome, safe-area padding (Task 45: no nav row). */
 @media (max-height: 560px), (max-width: 760px) {
   .alpha-shell .page-footer {
     display: none;
@@ -2028,36 +2027,11 @@ body {
     padding: max(6px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 6px
       max(12px, env(safe-area-inset-left));
   }
-  .meta-ui .meta-nav {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
-  }
-  .meta-ui .meta-nav::-webkit-scrollbar {
-    display: none;
-  }
-  .meta-ui .meta-nav-item {
-    flex: 0 0 auto;
-    white-space: nowrap;
-  }
   .meta-ui .meta-content {
     padding: 12px max(14px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom))
       max(14px, env(safe-area-inset-left));
   }
 }
-/* Narrow (portrait) phones: brand + Gold on the first row, the nav on its own full-width row. */
-@media (max-width: 760px) {
-  .meta-ui .meta-topbar {
-    flex-wrap: wrap;
-  }
-  .meta-ui .meta-nav {
-    order: 3;
-    flex: 1 1 100%;
-  }
-}
-
 /* ── Task 27: skill icons (art pack 3). Sizes: ICON_SIZES (kit/icon-sizes.ts) → --icon-* on :root. ── */
 .skill-icon {
   flex: none;

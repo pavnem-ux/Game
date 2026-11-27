@@ -6,6 +6,7 @@ import { campaignStore } from './campaign-state';
 import { clock } from './campaign-format';
 import { Button, Panel } from './kit';
 import { EN, formatNumber } from './strings-en';
+import { HomeButton } from './meta/HomeButton';
 
 const useCampaign = () => useSyncExternalStore(campaignStore.subscribe, campaignStore.getSnapshot);
 
@@ -19,7 +20,10 @@ export function ProgressionPage() {
   const next = xpToNextLevel(p.level);
   return (
     <div className="campaign-page progression-page">
-      <h2 className="meta-title">Progress</h2>
+      <header className="meta-page-head">
+        <HomeButton />
+        <h2 className="meta-title">Progress</h2>
+      </header>
       <div className="progression-grid">
         <Panel className="progression-card" aria-label="Class" title={CLASS_LABELS[cls]}>
           <p>

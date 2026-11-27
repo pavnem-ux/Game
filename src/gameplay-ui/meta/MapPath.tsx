@@ -13,6 +13,7 @@ import { campaignStore } from '../campaign-state';
 import { clock, factor, minutes } from '../campaign-format';
 import { BackgroundArt, BossPortrait, Button, Panel } from '../kit';
 import { EN } from '../strings-en';
+import { HomeButton } from './HomeButton';
 
 const M = EN.meta.maps;
 /** Path geometry (px): node spacing, act banner height, winding amplitude. */
@@ -58,6 +59,10 @@ export function MapPathPage() {
   const done = new Set(profile.completedMaps);
   return (
     <div className="map-path-screen">
+      <header className="meta-page-head map-path-head">
+        <HomeButton />
+        <h2 className="meta-title">{M.title}</h2>
+      </header>
       <div className="map-path-scroll" aria-label={M.title} role="region">
         <div className="map-path" style={{ height: PATH_HEIGHT }}>
           {CAMPAIGN_ACTS.map((a) => {
