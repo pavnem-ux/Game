@@ -73,6 +73,8 @@ export interface StatSummaryLine {
   readonly value: number;
   /** The part that comes from gear (final with gear − final without gear). */
   readonly gear: number;
+  /** Task 45: the part that comes from the active pet's aura (0 without one). */
+  readonly pet: number;
   /** «%» or '' (plain number). */
   readonly unit: '%' | '';
   readonly decimals: number;
@@ -103,11 +105,19 @@ export function statSummary(
   loadout: Loadout | null,
   items: readonly ItemInstance[] = [],
   slotLevels?: SlotLevels,
+  /** Task 45: the active pet's aura (joins the same composition, so caps apply once). */
+  petAura?: Partial<RunStatModifiers>,
 ): readonly StatSummaryLine[] {
   const withGear = permanentStats(characterClass, level, talents, loadout, items, slotLevels);
   const without = permanentStats(characterClass, level, talents, null, items);
   const talentMods = talentLoadout(characterClass, level, talents).modifiers;
   const gear = gearModifiers(loadout, items, characterClass, slotLevels);
+  const withPet = petAura
+    ? composeRunStats(
+        calculateCharacterStats(characterClass, level).primaryAttributes,
+        addModifiers(addModifiers(talentMods, gear), { ...NO_MODIFIERS, ...petAura }),
+      )
+    : withGear;
   const damageKey = characterClass === 'mage' ? 'magicalDamage' : 'physicalDamage';
   const combat = (
     key: StatSummaryKey,
@@ -119,8 +129,9 @@ export function statSummary(
     Object.freeze({
       key,
       label,
-      value: withGear[stat],
+      value: withPet[stat],
       gear: withGear[stat] - without[stat],
+      pet: withPet[stat] - withGear[stat],
       unit,
       decimals,
     });
@@ -133,6 +144,7 @@ export function statSummary(
       label,
       value: talentMods[key] + gear[key],
       gear: gear[key],
+      pet: 0,
       unit: '%',
       decimals: 1,
     });

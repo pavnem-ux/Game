@@ -22,7 +22,6 @@ import {
   findOwned,
   isBetter,
   isStarterUid,
-  itemIconId,
   itemName,
   lowRaritySalvage,
   nextSlotMilestone,
@@ -43,7 +42,10 @@ import type {
 } from '../../equipment';
 import { equipmentStateOf } from '../../profile';
 import { campaignStore } from '../campaign-state';
-import { Button, ConfirmModal, CurrencyIcon, ItemIcon, Panel, Tabs, TierFrame } from '../kit';
+import { Button, ClassEmblem, ConfirmModal, CurrencyIcon, Panel, Tabs, TierFrame } from '../kit';
+import { PET_CONFIG, isPetId, petAura, petLevel } from '../../pets';
+import { PetPortrait } from '../pets/PetPortrait';
+import { petLevelLabel } from '../pets/pet-text';
 import { EN, formatNumber } from '../strings-en';
 import { REFUSALS } from '../ShopPages';
 import {
@@ -63,12 +65,12 @@ type RarityFilter = Rarity | 'all';
 type Salvage = { uids: readonly string[]; step: 'total' | 'legendary' };
 
 /**
- * Task 41 Bag screen (replaces the Equipment page): equipped slots with the slot upgrade (left),
- * the bag grid with filters, sort, markers and multi-select salvage (middle), the selected item's
- * card with slot-bonus stats and differences, Equip / Salvage (right). Every change is one
+ * Equipment screen (Task 41 bag + Task 45 layout): the paper doll with the slot upgrade and the
+ * Stats panel (left); the bag grid with filters, sort, markers and multi-select salvage and the
+ * selected item's card with slot-bonus stats and differences, Equip / Salvage (right). Every change is one
  * validated save through the campaign store.
  */
-export function BagPage() {
+export function EquipmentPage() {
   const ui = useSyncExternalStore(campaignStore.subscribe, campaignStore.getSnapshot);
   const profile = ui.progression.profile;
   const [shown, setShown] = useState<CharacterClass | null>(null);
@@ -141,14 +143,17 @@ export function BagPage() {
       ].filter((s): s is string => !!s)
     : [];
   const milestone = nextSlotMilestone(lv);
+  // Task 45: the active pet's aura is part of the Stats values (marked «pet»).
+  const activePet = profile.activePet && isPetId(profile.activePet) ? profile.activePet : null;
+  const aura = activePet ? petAura(activePet, petLevel(profile.petLevels, activePet)) : undefined;
   const expansionPrice = nextExpansionPrice(profile.bagExpansions);
   const reforgeTarget = reforging ? profile.items.find((i) => i.uid === reforging.uid) : null;
   return (
-    <div className="bag-screen">
+    <div className="bag-screen equipment-screen">
       <header className="meta-page-head">
         <h2 className="meta-title">{B.title}</h2>
         <Tabs
-          label="Bag class"
+          label="Equipment class"
           items={CHARACTER_CLASSES.map((c) => ({ id: c, label: CLASS_LABELS[c] }))}
           value={cls}
           onChange={(c) => {
@@ -166,15 +171,27 @@ export function BagPage() {
           {message}
         </p>
       )}
-      <section className="bag-layout" aria-label={`Bag: ${CLASS_LABELS[cls]}`}>
+      <section className="bag-layout" aria-label={`Equipment: ${CLASS_LABELS[cls]}`}>
         <Panel title={B.equipped} className="bag-equipped" role="group" aria-label={B.equipped}>
-          <ul className="bag-slot-rows">
+          {/* Task 45: the paper doll is back — slot cards around the class figure, pet below. */}
+          <div className="paper-doll">
+            <div className={`doll-figure doll-${cls}`} aria-hidden="true">
+              <DollSilhouette />
+              <ClassEmblem characterClass={cls} size={56} glow />
+            </div>
             {GEAR_SLOTS.map((s) => {
               const item = worn(s);
               return (
-                <li key={s}>
+                <TierFrame
+                  key={s}
+                  tier={item && !isStarterUid(item.uid) ? rarityTier(item.rarity) : 0}
+                  className={`doll-slot doll-slot-${s} ${slot === s ? 'active' : ''}`}
+                >
+                  <span className="doll-slot-level" aria-hidden="true">
+                    +{level(s)}
+                  </span>
                   <button
-                    className={`bag-slot-row ${slot === s ? 'selected' : ''}`}
+                    className="doll-slot-button"
                     aria-pressed={slot === s}
                     aria-label={`${SLOT_LABELS[s]} +${level(s)}: ${item ? itemName(item) : B.empty}`}
                     onClick={() => {
@@ -183,19 +200,17 @@ export function BagPage() {
                       setSelected(null);
                     }}
                   >
-                    <span className="bag-slot-name">{SLOT_LABELS[s]}</span>
-                    <span className="bag-slot-level">+{level(s)}</span>
-                    <span
-                      className="bag-slot-item"
-                      style={item ? { color: rarityColor(item.rarity) } : undefined}
-                    >
+                    {item && <ItemArt item={item} size="itemSlot" />}
+                    <small>{SLOT_LABELS[s]}</small>
+                    <strong style={item ? { color: rarityColor(item.rarity) } : undefined}>
                       {item ? itemName(item) : B.empty}
-                    </span>
+                    </strong>
                   </button>
-                </li>
+                </TierFrame>
               );
             })}
-          </ul>
+            <PetSlot />
+          </div>
           <div className="bag-upgrade" role="group" aria-label="Slot upgrade">
             <h4>
               {SLOT_LABELS[slot]} +{lv}
@@ -233,6 +248,7 @@ export function BagPage() {
               loadout,
               profile.items,
               progress.slotLevels,
+              aura,
             )}
             preview={
               card && loadout[card.slot] !== card.uid && !equipBlock(card, cls, progress.level)
@@ -243,195 +259,202 @@ export function BagPage() {
                     { ...loadout, [card.slot]: card.uid },
                     profile.items,
                     progress.slotLevels,
+                    aura,
                   )
                 : null
             }
           />
         </Panel>
-        <Panel
-          title={
-            <span
-              className={
-                profile.items.length > bagCapacity(profile.bagExpansions) ? 'bag-over' : undefined
-              }
-            >
-              {B.count(profile.items.length, bagCapacity(profile.bagExpansions))}
-            </span>
-          }
-          className="bag-items"
-          actions={
-            <>
-              {expansionPrice !== null && (
+        <div className="bag-side">
+          <Panel
+            title={
+              <span
+                className={
+                  profile.items.length > bagCapacity(profile.bagExpansions) ? 'bag-over' : undefined
+                }
+              >
+                {B.count(profile.items.length, bagCapacity(profile.bagExpansions))}
+              </span>
+            }
+            className="bag-items"
+            actions={
+              <>
+                {expansionPrice !== null && (
+                  <Button
+                    size="s"
+                    variant="ghost"
+                    disabledReason={
+                      profile.gold < expansionPrice
+                        ? B.needGold(expansionPrice - profile.gold)
+                        : null
+                    }
+                    onClick={() => setExpanding(true)}
+                  >
+                    {B.expand} ·{' '}
+                    <span className="price-badge">
+                      <CurrencyIcon kind="gold" label="Gold" /> {formatNumber(expansionPrice)}
+                    </span>
+                  </Button>
+                )}
                 <Button
                   size="s"
-                  variant="ghost"
-                  disabledReason={
-                    profile.gold < expansionPrice ? B.needGold(expansionPrice - profile.gold) : null
-                  }
-                  onClick={() => setExpanding(true)}
+                  variant={marking ? 'primary' : 'ghost'}
+                  aria-pressed={marking}
+                  onClick={() => {
+                    setMarking(!marking);
+                    setMarked([]);
+                  }}
                 >
-                  {B.expand} ·{' '}
-                  <span className="price-badge">
-                    <CurrencyIcon kind="gold" label="Gold" /> {formatNumber(expansionPrice)}
-                  </span>
+                  {B.select}
                 </Button>
+              </>
+            }
+          >
+            <div className="bag-filters">
+              <Tabs
+                label="Filter by rarity"
+                items={[
+                  { id: 'all' as RarityFilter, label: B.all },
+                  ...RARITIES.map((r) => ({ id: r as RarityFilter, label: rarityLabel(r) })),
+                ]}
+                value={rarity}
+                onChange={setRarity}
+              />
+              <Tabs
+                label="Filter by slot"
+                items={[
+                  { id: 'all' as SlotFilter, label: B.all },
+                  ...GEAR_SLOTS.map((s) => ({ id: s as SlotFilter, label: SLOT_LABELS[s] })),
+                ]}
+                value={slotFilter}
+                onChange={setSlotFilter}
+              />
+              <Tabs
+                label="Sort"
+                items={[
+                  { id: 'level' as BagSort, label: B.sortLevel },
+                  { id: 'rarity' as BagSort, label: B.sortRarity },
+                  { id: 'newest' as BagSort, label: B.sortNewest },
+                ]}
+                value={sort}
+                onChange={setSort}
+              />
+              {slotFilter === 'weapon' && (
+                <label className="bag-toggle">
+                  <input
+                    type="checkbox"
+                    checked={allClasses}
+                    onChange={(e) => setAllClasses(e.target.checked)}
+                  />{' '}
+                  {B.allClasses}
+                </label>
               )}
-              <Button
-                size="s"
-                variant={marking ? 'primary' : 'ghost'}
-                aria-pressed={marking}
-                onClick={() => {
-                  setMarking(!marking);
-                  setMarked([]);
-                }}
-              >
-                {B.select}
-              </Button>
-            </>
-          }
-        >
-          <div className="bag-filters">
-            <Tabs
-              label="Filter by rarity"
-              items={[
-                { id: 'all' as RarityFilter, label: B.all },
-                ...RARITIES.map((r) => ({ id: r as RarityFilter, label: rarityLabel(r) })),
-              ]}
-              value={rarity}
-              onChange={setRarity}
-            />
-            <Tabs
-              label="Filter by slot"
-              items={[
-                { id: 'all' as SlotFilter, label: B.all },
-                ...GEAR_SLOTS.map((s) => ({ id: s as SlotFilter, label: SLOT_LABELS[s] })),
-              ]}
-              value={slotFilter}
-              onChange={setSlotFilter}
-            />
-            <Tabs
-              label="Sort"
-              items={[
-                { id: 'level' as BagSort, label: B.sortLevel },
-                { id: 'rarity' as BagSort, label: B.sortRarity },
-                { id: 'newest' as BagSort, label: B.sortNewest },
-              ]}
-              value={sort}
-              onChange={setSort}
-            />
-            {slotFilter === 'weapon' && (
-              <label className="bag-toggle">
-                <input
-                  type="checkbox"
-                  checked={allClasses}
-                  onChange={(e) => setAllClasses(e.target.checked)}
-                />{' '}
-                {B.allClasses}
-              </label>
-            )}
-          </div>
-          {marking && (
-            <div className="bag-bulk">
-              <Button
-                variant="danger"
-                size="s"
-                disabledReason={marked.length ? null : B.markFirst}
-                onClick={() => askSalvage(marked)}
-              >
-                {B.salvageMarked(marked.length, salvageTotal(itemsOf(marked)))}
-              </Button>
-              <Button
-                size="s"
-                disabledReason={lowRarity.length ? null : B.nothingLow}
-                onClick={() => askSalvage(lowRarity)}
-              >
-                {B.salvageLow(salvageTotal(itemsOf(lowRarity)))}
-              </Button>
             </div>
-          )}
-          {grid.length === 0 && !showStarter ? (
-            <p className="meta-empty">{B.noItems}</p>
-          ) : (
-            <ul className="bag-grid" aria-label="Bag items">
-              {[...(showStarter ? [starter] : []), ...grid].map((item) => {
-                const starterItem = isStarterUid(item.uid);
-                const equippedHere = loadout[item.slot] === item.uid;
-                const better =
-                  !equippedHere && isBetter(item, loadouts, profile.items, cls, level(item.slot));
-                const locked = wornBy(item.uid).length > 0;
-                const isMarked = marked.includes(item.uid);
-                const name = itemName(item);
-                return (
-                  <li key={item.uid}>
-                    <TierFrame tier={starterItem ? 0 : rarityTier(item.rarity)}>
-                      <button
-                        className={`bag-cell ${selected === item.uid ? 'selected' : ''} ${isMarked ? 'marked' : ''}`}
-                        aria-pressed={marking ? isMarked : selected === item.uid}
-                        aria-label={[
-                          name,
-                          `L${item.itemLevel}`,
-                          isNew(item.uid) ? B.markerNew : null,
-                          better ? B.markerBetter : null,
-                          equippedHere ? B.markerEquipped : null,
-                        ]
-                          .filter(Boolean)
-                          .join(', ')}
-                        title={name}
-                        onClick={() => {
-                          if (marking) {
-                            if (starterItem || locked) return;
-                            setMarked(
-                              isMarked
-                                ? marked.filter((u) => u !== item.uid)
-                                : [...marked, item.uid],
-                            );
-                          } else setSelected(selected === item.uid ? null : item.uid);
-                        }}
-                      >
-                        <ItemArt item={item} size="itemCard" />
-                        <span className="bag-cell-level">L{item.itemLevel}</span>
-                        <span className="bag-markers">
-                          {isNew(item.uid) && <span className="bag-marker new">{B.markerNew}</span>}
-                          {better && <span className="bag-marker better">▲</span>}
-                          {equippedHere && <span className="bag-marker equipped">E</span>}
-                          {marking && (locked || starterItem) && (
-                            <span className="bag-marker locked">🔒</span>
-                          )}
-                        </span>
-                      </button>
-                    </TierFrame>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </Panel>
-        <Panel className="bag-card" role="group" aria-label="Item card">
-          {card ? (
-            <ItemCard
-              key={card.uid}
-              item={card}
-              cls={cls}
-              slotLevel={level(card.slot)}
-              worn={worn(card.slot)}
-              equippedHere={loadout[card.slot] === card.uid}
-              wornBy={wornBy(card.uid)}
-              classLevel={progress.level}
-              onEquip={() => {
-                const refused = campaignStore.equipItem(cls, card.uid);
-                flash(refused, B.equippedMsg(itemName(card)));
-              }}
-              onUnequip={() => {
-                const refused = campaignStore.unequipSlot(cls, card.slot);
-                flash(refused, B.unequippedMsg(itemName(card)));
-              }}
-              onSalvage={() => askSalvage([card.uid])}
-              onReforge={(stat) => setReforging({ uid: card.uid, stat })}
-            />
-          ) : (
-            <p className="meta-empty">{B.pick}</p>
-          )}
-        </Panel>
+            {marking && (
+              <div className="bag-bulk">
+                <Button
+                  variant="danger"
+                  size="s"
+                  disabledReason={marked.length ? null : B.markFirst}
+                  onClick={() => askSalvage(marked)}
+                >
+                  {B.salvageMarked(marked.length, salvageTotal(itemsOf(marked)))}
+                </Button>
+                <Button
+                  size="s"
+                  disabledReason={lowRarity.length ? null : B.nothingLow}
+                  onClick={() => askSalvage(lowRarity)}
+                >
+                  {B.salvageLow(salvageTotal(itemsOf(lowRarity)))}
+                </Button>
+              </div>
+            )}
+            {grid.length === 0 && !showStarter ? (
+              <p className="meta-empty">{B.noItems}</p>
+            ) : (
+              <ul className="bag-grid" aria-label="Bag items">
+                {[...(showStarter ? [starter] : []), ...grid].map((item) => {
+                  const starterItem = isStarterUid(item.uid);
+                  const equippedHere = loadout[item.slot] === item.uid;
+                  const better =
+                    !equippedHere && isBetter(item, loadouts, profile.items, cls, level(item.slot));
+                  const locked = wornBy(item.uid).length > 0;
+                  const isMarked = marked.includes(item.uid);
+                  const name = itemName(item);
+                  return (
+                    <li key={item.uid}>
+                      <TierFrame tier={starterItem ? 0 : rarityTier(item.rarity)}>
+                        <button
+                          className={`bag-cell ${selected === item.uid ? 'selected' : ''} ${isMarked ? 'marked' : ''}`}
+                          aria-pressed={marking ? isMarked : selected === item.uid}
+                          aria-label={[
+                            name,
+                            `L${item.itemLevel}`,
+                            isNew(item.uid) ? B.markerNew : null,
+                            better ? B.markerBetter : null,
+                            equippedHere ? B.markerEquipped : null,
+                          ]
+                            .filter(Boolean)
+                            .join(', ')}
+                          title={name}
+                          onClick={() => {
+                            if (marking) {
+                              if (starterItem || locked) return;
+                              setMarked(
+                                isMarked
+                                  ? marked.filter((u) => u !== item.uid)
+                                  : [...marked, item.uid],
+                              );
+                            } else setSelected(selected === item.uid ? null : item.uid);
+                          }}
+                        >
+                          <ItemArt item={item} size="itemCard" />
+                          <span className="bag-cell-level">L{item.itemLevel}</span>
+                          <span className="bag-markers">
+                            {isNew(item.uid) && (
+                              <span className="bag-marker new">{B.markerNew}</span>
+                            )}
+                            {better && <span className="bag-marker better">▲</span>}
+                            {equippedHere && <span className="bag-marker equipped">E</span>}
+                            {marking && (locked || starterItem) && (
+                              <span className="bag-marker locked">🔒</span>
+                            )}
+                          </span>
+                        </button>
+                      </TierFrame>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Panel>
+          <Panel className="bag-card" role="group" aria-label="Item card">
+            {card ? (
+              <ItemCard
+                key={card.uid}
+                item={card}
+                cls={cls}
+                slotLevel={level(card.slot)}
+                worn={worn(card.slot)}
+                equippedHere={loadout[card.slot] === card.uid}
+                wornBy={wornBy(card.uid)}
+                classLevel={progress.level}
+                onEquip={() => {
+                  const refused = campaignStore.equipItem(cls, card.uid);
+                  flash(refused, B.equippedMsg(itemName(card)));
+                }}
+                onUnequip={() => {
+                  const refused = campaignStore.unequipSlot(cls, card.slot);
+                  flash(refused, B.unequippedMsg(itemName(card)));
+                }}
+                onSalvage={() => askSalvage([card.uid])}
+                onReforge={(stat) => setReforging({ uid: card.uid, stat })}
+              />
+            ) : (
+              <p className="meta-empty">{B.pick}</p>
+            )}
+          </Panel>
+        </div>
       </section>
       {expanding && expansionPrice !== null && (
         <ConfirmModal
@@ -667,6 +690,7 @@ function StatsPanel({
           const diff = after ? after.value - line.value : 0;
           const shown = Math.abs(diff) >= 0.5 * 10 ** -line.decimals;
           const gear = Math.abs(line.gear) >= 0.5 * 10 ** -line.decimals;
+          const pet = Math.abs(line.pet) >= 0.5 * 10 ** -line.decimals;
           return (
             <li key={line.key}>
               <span>{line.label}</span>
@@ -677,6 +701,13 @@ function StatsPanel({
                     {' '}
                     ({line.gear > 0 ? '+' : '−'}
                     {summaryValue(line, Math.abs(line.gear))} gear)
+                  </small>
+                )}
+                {pet && (
+                  <small className="bag-stats-gear">
+                    {' '}
+                    ({line.pet > 0 ? '+' : '−'}
+                    {summaryValue(line, Math.abs(line.pet))} pet)
                   </small>
                 )}
                 {after && shown && (
@@ -692,5 +723,41 @@ function StatsPanel({
         })}
       </ul>
     </details>
+  );
+}
+
+function DollSilhouette() {
+  return (
+    <svg className="doll-silhouette" viewBox="0 0 120 220" aria-hidden="true">
+      <circle cx="60" cy="30" r="20" />
+      <path d="M30 60 Q60 48 90 60 L100 120 L86 124 L82 92 L80 150 L88 214 L70 214 L60 160 L50 214 L32 214 L40 150 L38 92 L34 124 L20 120 Z" />
+    </svg>
+  );
+}
+
+/** Task 20 / 45: the profile's one active pet — the same card for every class; opens «Pets». */
+function PetSlot() {
+  const ui = useSyncExternalStore(campaignStore.subscribe, campaignStore.getSnapshot);
+  const profile = ui.progression.profile!;
+  const P = EN.meta.pets;
+  const id = profile.activePet && isPetId(profile.activePet) ? profile.activePet : null;
+  return (
+    <div className="doll-slot doll-slot-pet kit-tier-frame tier-0">
+      <button
+        className="doll-slot-button pet-slot-button"
+        aria-label={`${P.slot}: ${id ? PET_CONFIG[id].name : P.none}. ${P.change}`}
+        onClick={() => campaignStore.setPage('pets')}
+      >
+        {id && <PetPortrait id={id} size={40} />}
+        <span>
+          <small>{P.slot}</small>
+          <strong>{id ? PET_CONFIG[id].name : P.none}</strong>
+          {id && (
+            <span className="doll-tier">{petLevelLabel(petLevel(profile.petLevels, id))}</span>
+          )}
+        </span>
+        <span className="pet-slot-change">{P.change} →</span>
+      </button>
+    </div>
   );
 }

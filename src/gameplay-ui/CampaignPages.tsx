@@ -69,7 +69,7 @@ export function ProgressionPage() {
         <Panel className="progression-card" aria-label="Development" title="Development">
           <p>Hero equipment and talents have their own screens.</p>
           <div className="progression-links">
-            <Button onClick={() => campaignStore.setPage('equipment')}>⛨ Bag</Button>
+            <Button onClick={() => campaignStore.setPage('equipment')}>⛨ Equipment</Button>
             <Button onClick={() => campaignStore.setPage('talents')}>❖ Talents</Button>
           </div>
         </Panel>

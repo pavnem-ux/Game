@@ -1810,50 +1810,41 @@
   }
 }
 
-/* ── Task 41: Bag (equipped + upgrade · bag grid · item card) ── */
+/* ── Task 41 / 45: Equipment (paper doll + upgrade + stats · bag grid + item card) ── */
 .bag-layout {
   display: grid;
-  grid-template-columns: minmax(250px, 0.8fr) minmax(0, 1.6fr) minmax(260px, 0.9fr);
+  grid-template-columns: minmax(320px, 400px) minmax(0, 1fr);
   gap: var(--sp-4);
   align-items: start;
 }
-.bag-slot-rows {
+.bag-side {
   display: grid;
-  gap: 4px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
+  grid-template-columns: minmax(0, 1.6fr) minmax(260px, 0.9fr);
+  gap: var(--sp-4);
+  align-items: start;
+  min-width: 0;
 }
-.bag-slot-row {
-  display: grid;
-  grid-template-columns: 74px 36px minmax(0, 1fr);
-  gap: var(--sp-2);
-  align-items: center;
-  width: 100%;
-  min-height: 36px;
-  padding: 6px var(--sp-2);
-  border: 1px solid transparent;
-  border-radius: var(--radius-m);
-  background: rgba(255, 236, 196, 0.03);
-  color: var(--text);
-  text-align: left;
-  font-size: var(--fs-s);
+.bag-equipped .paper-doll {
+  padding: var(--sp-3);
 }
-.bag-slot-row:hover {
-  background: rgba(255, 236, 196, 0.07);
+/* The slot level sits in the card corner, where the tier gem used to be. */
+.bag-equipped .doll-slot .kit-tier-gem {
+  display: none;
 }
-.bag-slot-row.selected {
-  border-color: var(--gold-400);
-  background: rgba(245, 196, 98, 0.12);
-}
-.bag-slot-name {
-  color: var(--text-muted);
-}
-.bag-slot-level {
+.doll-slot-level {
+  position: absolute;
+  top: 4px;
+  right: 6px;
   color: var(--gold-300);
-  font-weight: 600;
+  font-size: var(--fs-xs);
+  font-weight: 700;
 }
-.bag-slot-item {
+.bag-equipped .doll-slot-button {
+  width: 100%;
+  min-width: 0;
+  cursor: pointer;
+}
+.bag-equipped .doll-slot-button strong {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2005,20 +1996,11 @@
   font-size: var(--fs-s);
 }
 @media (max-width: 1300px) {
-  .bag-layout {
-    grid-template-columns: minmax(220px, 0.75fr) minmax(0, 1.3fr) minmax(230px, 0.9fr);
-    gap: var(--sp-3);
+  .bag-side {
+    grid-template-columns: 1fr;
   }
 }
-@media (max-width: 1100px) {
-  .bag-layout {
-    grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.4fr);
-  }
-  .bag-card {
-    grid-column: 1 / -1;
-  }
-}
-@media (max-width: 760px) {
+@media (max-width: 860px) {
   .bag-layout {
     grid-template-columns: 1fr;
   }

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   AFFIX_RULES,
   affixText,
+  defaultLoadout,
+  statSummary,
   formatStatLine,
   formatStatValue,
   statExplanation,
@@ -10,6 +12,7 @@ import type { AffixStat } from '../../src/equipment';
 import { mainStatLines } from '../../src/gameplay-ui/item-view';
 import { generateItem } from '../../src/equipment';
 import { lcgStream } from '../../src/gameplay/rng';
+import { petAura } from '../../src/pets';
 
 /** Task 44 — one stat formatter: «%» everywhere, flat main stats plain, explanations with caps. */
 describe('Task 44 — readable stats', () => {
@@ -52,7 +55,7 @@ describe('Task 44 — readable stats', () => {
 
 describe('Task 44 — Bag «Stats» totals', () => {
   it('final run-start values with the gear share; no gear → share 0', async () => {
-    const { statSummary, defaultLoadout, permanentStats } = await import('../../src/equipment');
+    const { permanentStats } = await import('../../src/equipment');
     const ring = generateItem(lcgStream(5), {
       uid: 'i1',
       slot: 'ring',
@@ -89,5 +92,24 @@ describe('Task 44 — Bag «Stats» totals', () => {
     ]);
     const none = statSummary('mage', 10, {}, defaultLoadout('mage'), []);
     expect(none.filter((l) => l.key !== 'damage' && l.gear !== 0)).toEqual([]);
+  });
+  it('Task 45: the active pet aura joins the Stats values, reported as its own share', () => {
+    const base = statSummary('warrior', 10, {}, defaultLoadout('warrior'), []);
+    const aura = petAura('hedgehog', 1);
+    const withPet = statSummary('warrior', 10, {}, defaultLoadout('warrior'), [], undefined, aura);
+    const armor = (ls: typeof base) => ls.find((l) => l.key === 'resistance')!;
+    expect(aura.resistance).toBeGreaterThan(0);
+    expect(armor(withPet).value).toBeCloseTo(armor(base).value + aura.resistance, 6);
+    expect(armor(withPet).pet).toBeCloseTo(aura.resistance, 6);
+    expect(armor(withPet).gear).toBeCloseTo(armor(base).gear, 6);
+    expect(base.every((l) => l.pet === 0)).toBe(true);
+    const wolf = statSummary('archer', 10, {}, null, [], undefined, petAura('wolf', 3));
+    expect(wolf.find((l) => l.key === 'attackSpeed')!.pet).toBeGreaterThan(0);
+    expect(wolf.find((l) => l.key === 'movementSpeed')!.pet).toBeGreaterThan(0);
+    expect(petAura('kitten', 5)).toEqual({
+      resistance: 0,
+      attackSpeed: 0,
+      movementSpeedPercent: 0,
+    });
   });
 });
