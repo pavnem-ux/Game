@@ -24,6 +24,7 @@ import {
   useArtManifest,
 } from '../kit';
 import { EN } from '../strings-en';
+import { HomeButton } from './HomeButton';
 
 const T = EN.talents;
 const M = EN.meta.talents;
@@ -79,6 +80,7 @@ export function TalentsPage() {
   return (
     <section className="talents-screen" aria-label={T.title}>
       <header className="meta-page-head">
+        <HomeButton />
         <h2 className="meta-title">{T.title}</h2>
         <Tabs
           label={T.classSwitch}

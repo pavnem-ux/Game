@@ -2567,5 +2567,115 @@
   "characterClass": "warrior",
   "anchor": "center",
   "source": "owner-generated (ChatGPT image)"
+ },
+ "item_barrow_crown": {
+  "file": "assets/icons/items/legendary/barrow_crown.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "barrow_crown",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_leshy_bark": {
+  "file": "assets/icons/items/legendary/leshy_bark.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "leshy_bark",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_ash_wolf_stride": {
+  "file": "assets/icons/items/legendary/ash_wolf_stride.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "ash_wolf_stride",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_millwheel_gauntlets": {
+  "file": "assets/icons/items/legendary/millwheel_gauntlets.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "millwheel_gauntlets",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_mourner_heart": {
+  "file": "assets/icons/items/legendary/mourner_heart.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "mourner_heart",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_water_tsar_ring": {
+  "file": "assets/icons/items/legendary/water_tsar_ring.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "water_tsar_ring",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_warden_edge": {
+  "file": "assets/icons/items/legendary/warden_edge.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "warden_edge",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_frost_warlord_staff": {
+  "file": "assets/icons/items/legendary/frost_warlord_staff.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "frost_warlord_staff",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_thunder_kite_bow": {
+  "file": "assets/icons/items/legendary/thunder_kite_bow.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "thunder_kite_bow",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
+ },
+ "item_mire_serpent_fangs": {
+  "file": "assets/icons/items/legendary/mire_serpent_fangs.webp",
+  "size": [
+   128,
+   128
+  ],
+  "kind": "item-icon",
+  "templateId": "mire_serpent_fangs",
+  "anchor": "center",
+  "source": "owner-generated (ChatGPT image)"
  }
 }

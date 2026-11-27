@@ -22,7 +22,8 @@ import { TALENT_CONFIG, TALENT_RULES, superpowerActive, validateTalentRanks } fr
 import type { TalentRanks } from '../talents';
 import type { PlayerProfile } from '../profile';
 import { campaignStore } from './campaign-state';
-import { GEAR_SLOTS, ITEM_LEVEL_RANGE, RARITIES } from '../equipment';
+import { BAG_RULES, GEAR_SLOTS, ITEM_LEVEL_RANGE, RARITIES, legendaryDef } from '../equipment';
+import type { LegendaryId } from '../equipment';
 import { PET_IDS } from '../pets';
 import { NO_QUEST_COUNTERS, QUEST_BY_ID, SYNERGY_IDS } from '../quests';
 import type { QuestCounters, QuestGoal } from '../quests';
@@ -320,6 +321,27 @@ export const campaignDebug = {
     });
   },
   /** Task 19 §1.5: adds ore (validated save). */
+  /** Task 43: grant a Legendary (its unique effect) at an item level (validated save). */
+  grantLegendary(characterClass: CharacterClass, id: LegendaryId, itemLevel: number): boolean {
+    const def = legendaryDef(id);
+    if (!def || !Number.isInteger(itemLevel) || itemLevel < 1 || itemLevel > 50) return false;
+    const c = def.slot === 'weapon' ? def.characterClass! : characterClass;
+    return edit((p) =>
+      grantItem(p, {
+        slot: def.slot,
+        rarity: 'legendary',
+        itemLevel,
+        characterClass: c,
+        legendaryId: id,
+      }),
+    );
+  },
+  /** Task 42: set the bag expansions bought (0–5; no Gold spent). */
+  setBagExpansions(count: number) {
+    if (!Number.isInteger(count) || count < 0 || count > BAG_RULES.expansionPrices.length)
+      return false;
+    return edit((p) => ({ ...p, bagExpansions: count }));
+  },
   grantOre(amount: number) {
     return edit((p) => ({ ...p, ore: p.ore + amount }));
   },

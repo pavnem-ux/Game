@@ -7,6 +7,7 @@ import { Button, Panel } from '../kit';
 import { EN } from '../strings-en';
 import { PetPortrait } from '../pets/PetPortrait';
 import { petEffectLines, petLevelLabel, petSourceLabel } from '../pets/pet-text';
+import { HomeButton } from './HomeButton';
 
 const P = EN.meta.pets;
 
@@ -29,6 +30,7 @@ export function PetsPage() {
   return (
     <div className="pets-screen">
       <header className="meta-page-head">
+        <HomeButton />
         <h2 className="meta-title">{P.title}</h2>
         {profile.activePet && (
           <Button variant="ghost" className="meta-push" onClick={() => activate(null)}>

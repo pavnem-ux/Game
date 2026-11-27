@@ -1,4 +1,4 @@
-import { useEffect, useRef, useSyncExternalStore } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import { campaignStore } from './campaign-state';
 import type { MenuPage } from './campaign-state';
 import { ProgressionPage } from './CampaignPages';
@@ -9,7 +9,7 @@ import { Backdrop, BackgroundArt, CurrencyBadge, OreBadge } from './kit';
 import { EN } from './strings-en';
 import { HubPage } from './meta/Hub';
 import { CharacterSelectPage } from './meta/CharacterSelect';
-import { BagPage } from './meta/BagScreen';
+import { EquipmentPage } from './meta/EquipmentScreen';
 import { TalentsPage } from './meta/TalentsScreen';
 import { MapPathPage } from './meta/MapPath';
 import { ForgePage } from './meta/ForgeScreen';
@@ -18,23 +18,13 @@ import { QuestsPage } from './meta/QuestsScreen';
 import './meta/meta.css';
 
 const N = EN.meta.nav;
-const PAGES: readonly { id: MenuPage; label: string }[] = [
-  { id: 'hub', label: N.hub },
-  { id: 'character', label: N.character },
-  { id: 'equipment', label: N.equipment },
-  { id: 'talents', label: N.talents },
-  { id: 'shop', label: N.shop },
-  { id: 'forge', label: N.forge },
-  { id: 'maps', label: N.maps },
-  { id: 'progression', label: N.progression },
-  { id: 'settings', label: N.settings },
-];
 /** Act backdrop of the map path (the act of the selected map). */
 const ACT_OF_PAGE = (page: MenuPage, act: number) => (page === 'maps' ? act : undefined);
 
 /**
- * Task 13 meta shell: night backdrop, title bar with navigation and Gold, the current page.
- * Esc goes back to the hub (a modal handles its own Esc first). Reads state; store actions only.
+ * Task 13 meta shell: night backdrop, title bar (title → hub, Gold / Ore), the current page.
+ * Task 45: no top navigation — the hub tiles open the sections and every page has «← Home».
+ * Esc goes back to the hub (a modal handles its own Esc first; nothing happens while one is open). Reads state; store actions only.
  */
 export function CampaignMenu() {
   const ui = useSyncExternalStore(campaignStore.subscribe, campaignStore.getSnapshot);
@@ -45,19 +35,12 @@ export function CampaignMenu() {
       if (e.key !== 'Escape' || e.defaultPrevented) return;
       const target = e.target as HTMLElement | null;
       if (target?.closest('.kit-modal, .developer-panel, [role="dialog"]')) return;
+      if (document.querySelector('[aria-modal="true"]')) return;
       e.preventDefault();
       campaignStore.setPage('hub');
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [ui.page]);
-  // Task 16: on phones the nav is one scrolling row; keep the current page's item in view.
-  const navRef = useRef<HTMLElement>(null);
-  useEffect(() => {
-    const active = navRef.current?.querySelector<HTMLElement>('.meta-nav-item.active');
-    const nav = navRef.current;
-    if (!active || !nav || nav.scrollWidth <= nav.clientWidth) return;
-    nav.scrollLeft = active.offsetLeft - (nav.clientWidth - active.offsetWidth) / 2;
   }, [ui.page]);
   return (
     <section
@@ -75,18 +58,7 @@ export function CampaignMenu() {
         >
           <span aria-hidden="true">✦</span> {EN.meta.title}
         </button>
-        <nav className="meta-nav" aria-label={N.label} ref={navRef}>
-          {PAGES.map((p) => (
-            <button
-              key={p.id}
-              className={`meta-nav-item ${ui.page === p.id ? 'active' : ''}`}
-              aria-current={ui.page === p.id ? 'page' : undefined}
-              onClick={() => campaignStore.setPage(p.id)}
-            >
-              {p.label}
-            </button>
-          ))}
-        </nav>
+        <span className="meta-push" />
         <span className="meta-currencies">
           <CurrencyBadge amount={profile?.gold ?? 0} />
           <OreBadge amount={profile?.ore ?? 0} />
@@ -96,7 +68,7 @@ export function CampaignMenu() {
       <div className="meta-content" key={ui.page}>
         {ui.page === 'hub' && <HubPage />}
         {ui.page === 'character' && <CharacterSelectPage />}
-        {ui.page === 'equipment' && <BagPage />}
+        {ui.page === 'equipment' && <EquipmentPage />}
         {ui.page === 'talents' && <TalentsPage />}
         {ui.page === 'maps' && <MapPathPage />}
         {ui.page === 'shop' && <ShopPage />}

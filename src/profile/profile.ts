@@ -3,7 +3,7 @@ import type { CharacterClass } from '../character-stats';
 import type { ClassProgress } from './class-xp';
 import { NEW_CLASS_PROGRESS } from './class-xp';
 import { NO_SLOT_LEVELS, defaultLoadout } from '../equipment';
-import type { ItemInstance, ShopBought } from '../equipment';
+import type { ItemInstance, ShopBought, ShopRefreshes } from '../equipment';
 import type { RunOutcome, RunStatsSummary } from './rewards';
 import { NO_QUEST_COUNTERS } from '../quests/counters';
 import type { QuestCounters } from '../quests/counters';
@@ -25,7 +25,7 @@ import type { CampaignDifficulty } from '../campaign/config';
  * v10 (Task 40, items-rework branch): item instances `items` + `nextItemNumber`, loadouts by uid,
  * `shopSalt`, `shopBought`; `ownedItems` / `itemLevels` (old tiers, Forge) removed (migrateV9toV10).
  */
-export const PROFILE_SCHEMA_VERSION = 11;
+export const PROFILE_SCHEMA_VERSION = 12;
 export const MAX_RECENT_RUNS = 20;
 export const MAX_PROCESSED_RUN_IDS = 50;
 
@@ -95,6 +95,8 @@ export interface PlayerProfile {
   readonly processedRunIds: readonly string[];
   /** Task 40: owned item instances (account-wide; never the starter weapons), in order. */
   readonly items: readonly ItemInstance[];
+  /** Task 42: bag expansions bought (0–5; +10 capacity each). */
+  readonly bagExpansions: number;
   /** Task 41: uids of items not yet viewed («new» marker), in acquisition order. */
   readonly newItems: readonly string[];
   /** Task 40: the number of the next item uid (`i<n>`); only grows. */
@@ -103,6 +105,8 @@ export interface PlayerProfile {
   readonly shopSalt: number;
   /** Task 40: shop offers bought per class at its current level (reset on level-up). */
   readonly shopBought: Readonly<Partial<Record<CharacterClass, ShopBought>>>;
+  /** Task 42: paid shop refreshes per class at its current level (reset on level-up). */
+  readonly shopRefreshes: Readonly<Partial<Record<CharacterClass, ShopRefreshes>>>;
   /** Task 20: unlocked pets (account-wide), in unlock order. */
   readonly ownedPets: readonly string[];
   /** Task 20: pet level 2–5 per owned pet id; absent = level 1. */
@@ -150,9 +154,11 @@ export function createProfile(profileId: string, createdAt: string): PlayerProfi
     processedRunIds: Object.freeze([]),
     items: Object.freeze([]),
     newItems: Object.freeze([]),
+    bagExpansions: 0,
     nextItemNumber: 1,
     shopSalt: shopSaltOf(profileId),
     shopBought: Object.freeze({}),
+    shopRefreshes: Object.freeze({}),
     ownedPets: Object.freeze([]),
     petLevels: Object.freeze({}),
     activePet: null,

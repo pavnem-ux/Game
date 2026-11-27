@@ -434,7 +434,7 @@ function CardSynergyHint({
   );
 }
 
-const DAMAGE_NOTE = `Damage is an example for your current stats against an enemy with ${ALPHA_ENEMY_STATS.resistance} Resistance. Crits, target count, marks and Dodge are not guaranteed; the fight total is the sum of separate hits and ticks.`;
+const DAMAGE_NOTE = `Damage is an example for your current stats against an enemy with ${ALPHA_ENEMY_STATS.resistance} Armor. Crits, target count, marks and Dodge are not guaranteed; the fight total is the sum of separate hits and ticks.`;
 /** Readout context from the throttled snapshot only (stats already include passives and buffs). */
 function damageContext(world: GameplaySnapshot): DamageContext {
   const ranks = new Map(world.skills.owned.map((o) => [o.skillId, o.rank]));

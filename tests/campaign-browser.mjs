@@ -2,6 +2,7 @@ import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
 import { mkdir, readFile } from 'node:fs/promises';
 import { EXTENDED, screenshot } from './e2e-options.mjs';
+import { brand, goTo, sections, startMap } from './e2e-nav.mjs';
 
 /** Task 08 campaign UI (dev server): menu, pages, campaign runs, results, persistence. */
 const base = process.env.GAME_URL || 'http://127.0.0.1:5173';
@@ -37,23 +38,32 @@ try {
   await page.goto(base + '/?debug');
   await page.waitForFunction(() => !!window.__alpha);
   const state = () => page.evaluate(() => window.__alpha.state());
-  const nav = page.getByRole('navigation', { name: 'Main menu' });
+  const nav = brand(page);
 
   // 5.1 Main menu: navigation and Gold.
   await nav.waitFor();
-  // Task 13: hub + separate Equipment / Talents pages + the map path.
+  // Task 45: no top navigation; the hub tiles are the only way into the sections, and the hub has
+  // one battle button («To battle», no quick start).
+  assert.equal(await page.locator('.meta-nav').count(), 0, 'no top navigation');
   for (const tab of [
-    'Home',
     'Hero',
-    'Bag',
+    'Equipment',
     'Talents',
     'Shop',
     'Forge',
+    'Pets',
+    'Quests',
     'Campaign map',
     'Progress',
     'Settings',
   ])
-    assert.equal(await nav.getByRole('button', { name: tab, exact: true }).count(), 1, tab);
+    assert.equal(
+      await sections(page).getByRole('button', { name: tab, exact: true }).count(),
+      1,
+      tab,
+    );
+  assert.equal(await page.getByRole('button', { name: /^Start run/ }).count(), 0, 'no quick start');
+  assert.equal(await page.getByRole('button', { name: /To battle/ }).count(), 1);
   assert.equal(await page.getByLabel('Gold: 0').count(), 1);
   assert.equal(
     await page.getByLabel(/^Build version: v\d+\.\d+\.\d+ · ([0-9a-f]{7}|unknown)$/).count(),
@@ -64,7 +74,7 @@ try {
   assert.equal(saved.highestUnlockedMap, 1, 'a new profile is persisted on first launch');
   /** Task 13: open the map path, pick map `id` and press «To battle» in its side panel. */
   const openMap = async (id) => {
-    await nav.getByRole('button', { name: 'Campaign map', exact: true }).click();
+    await goTo(page, 'Campaign map');
     await page.getByRole('button', { name: new RegExp(`^Map ${id}: `) }).click();
     return page.getByRole('button', { name: `Play: map ${id}`, exact: true });
   };
@@ -76,21 +86,32 @@ try {
     .first()
     .click();
   assert.equal(await page.locator('.map-node').count(), 40);
-  assert.equal(
-    await nav
-      .getByRole('button', { name: 'Campaign map', exact: true })
-      .getAttribute('aria-current'),
-    'page',
-  );
+  await page.getByRole('heading', { name: 'Campaign map', level: 2 }).waitFor();
   await page.keyboard.press('Escape');
   await page.getByRole('heading', { name: 'The Last Light', level: 1 }).waitFor();
+  // Task 45: «← Home» on every non-hub page (Esc with a confirm dialog open: see the shop below).
+  for (const tab of [
+    'Hero',
+    'Equipment',
+    'Talents',
+    'Shop',
+    'Forge',
+    'Pets',
+    'Quests',
+    'Progress',
+    'Settings',
+  ]) {
+    await goTo(page, tab);
+    await page.getByRole('button', { name: '← Home', exact: true }).click();
+    await page.getByRole('heading', { name: 'The Last Light', level: 1 }).waitFor();
+  }
 
   // 5.2 Character page.
-  await nav.getByRole('button', { name: 'Hero', exact: true }).click();
-  // Task 13: a card's quick link opens the Bag (Task 41; was Equipment) for that class.
-  await page.getByRole('button', { name: 'Bag: Mage', exact: true }).click();
-  await page.getByRole('region', { name: 'Bag: Mage' }).waitFor();
-  await nav.getByRole('button', { name: 'Hero', exact: true }).click();
+  await goTo(page, 'Hero');
+  // Task 13: a card's quick link opens Equipment (Task 45 name) for that class.
+  await page.getByRole('button', { name: 'Equipment: Mage', exact: true }).click();
+  await page.getByRole('region', { name: 'Equipment: Mage' }).waitFor();
+  await goTo(page, 'Hero');
   const cards = page.locator('.character-card');
   assert.equal(await cards.count(), 4);
   assert.match(await cards.first().innerText(), /Level 1 \/ 50 · XP 0 \/ 106/);
@@ -107,7 +128,7 @@ try {
 
   // 5.2 Map path (Task 13): 40 nodes in 4 act regions; the side panel shows the lock reason,
   // recommended level, modifiers and the boss (hidden while locked); locked maps cannot start.
-  await nav.getByRole('button', { name: 'Campaign map', exact: true }).click();
+  await goTo(page, 'Campaign map');
   assert.equal(await page.locator('.map-node').count(), 40);
   for (const act of ['Act I · Forgotten Tales', 'Act II · Enchanted Lands'])
     assert.equal(await page.getByRole('region', { name: act, exact: true }).count(), 1, act);
@@ -195,6 +216,11 @@ try {
   // Task 11: Gold = coins collected in the run + victory bonus (24 on map 1 after Task 40's ×0.8).
   assert.match(text, /Coins\s+\d+/);
   assert.match(text, /Victory bonus\s+\+24/);
+  // Task 42: a victory always brings the boss item (Normal: Uncommon / Rare / Epic) — the Loot block.
+  assert.match(
+    await results.getByRole('group', { name: 'Loot' }).innerText(),
+    /Loot[\s\S]*(Uncommon|Rare|Epic) [\s\S]*L1/,
+  );
   // Task 19: Map 1, first victory → 6 map Ore. Task 24: a victory also pays the Ore banked by
   // activities this run (e.g. the thief's seeded 20% chance), shown as «(activities +N)»; the run
   // seed is random, so the total is 6 + N.
@@ -235,13 +261,13 @@ try {
   await page.waitForFunction(() => !!window.__alpha);
   await nav.waitFor();
   assert.equal(await page.getByLabel(`Gold: ${winGold}`).count(), 1);
-  await nav.getByRole('button', { name: 'Progress', exact: true }).click();
+  await goTo(page, 'Progress');
   assert.match(await page.locator('.progression-page').innerText(), /Maps cleared: 1 \/ 40/);
   assert.match(await page.locator('.recent-runs').innerText(), /Victory · map 1/);
   await screenshot(page, { path: 'artifacts/campaign-04-progression.png', fullPage: true });
   // Task 09 §1.5: talent screen (selected class = archer, level 2 → 1 point). Task 13: own page;
   // a node opens its ranks in the detail panel, which holds the «Learn» button.
-  await nav.getByRole('button', { name: 'Talents', exact: true }).click();
+  await goTo(page, 'Talents');
   const talents = page.getByRole('region', { name: 'Talents', exact: true });
   const detail = page.getByRole('region', { name: 'Talent details' });
   const pick = (item) => item.locator('.talent-orb').click();
@@ -278,7 +304,7 @@ try {
     .click();
   assert.match(await talents.innerText(), /Free points: 0 of 0/);
   await screenshot(page, { path: 'artifacts/campaign-12-talents.png', fullPage: true });
-  await nav.getByRole('button', { name: 'Hero', exact: true }).click();
+  await goTo(page, 'Hero');
   await page.getByRole('article', { name: /Mage/ }).getByRole('button', { name: 'Choose' }).click();
   await (await openMap(2)).click();
   await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
@@ -320,7 +346,7 @@ try {
   assert.equal(afterQuit.stats.runs, 2);
 
   // Reload during a run abandons it as well (committed on pagehide).
-  await page.getByRole('button', { name: 'Start run' }).click();
+  await startMap(page);
   await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
   await page.reload();
   await page.waitForFunction(() => !!window.__alpha);
@@ -331,7 +357,7 @@ try {
 
   // 5.5 Save Management: status, warning, export download, import (invalid → unchanged; valid →
   // confirm → replace), visible warning on a write failure.
-  await nav.getByRole('button', { name: 'Settings', exact: true }).click();
+  await goTo(page, 'Settings');
   const mgmt = page.getByRole('region', { name: 'Save management' });
   assert.match(await mgmt.innerText(), /Progress saved/);
   assert.match(await mgmt.innerText(), /Clearing site or browser data deletes it/);
@@ -356,7 +382,7 @@ try {
   await page.getByLabel('Save file').setInputFiles({
     name: 'newer.json',
     mimeType: 'application/json',
-    buffer: Buffer.from(JSON.stringify({ ...exported, schemaVersion: 12 })), // Task 41: v11 is current
+    buffer: Buffer.from(JSON.stringify({ ...exported, schemaVersion: 13 })), // Task 42: v12 is current
   });
   await page.getByText(/a newer version of the game/).waitFor();
   assert.equal(await stored(), before);
@@ -398,7 +424,7 @@ try {
       throw new DOMException('full', 'QuotaExceededError');
     };
   });
-  await nav.getByRole('button', { name: 'Hero', exact: true }).click();
+  await goTo(page, 'Hero');
   await page
     .getByRole('article', { name: /Warrior/ })
     .getByRole('button', { name: 'Choose' })
@@ -408,7 +434,7 @@ try {
   assert.match(await banner.innerText(), /NOT saved[\s\S]*storage is full/);
   await screenshot(page, { path: 'artifacts/campaign-08-save-warning.png' });
   await page.evaluate(() => window.__restoreStorage());
-  await nav.getByRole('button', { name: 'Settings', exact: true }).click();
+  await goTo(page, 'Settings');
   await page.getByRole('button', { name: 'Retry save' }).click();
   await page.getByText('Progress saved.', { exact: true }).first().waitFor();
   assert.equal(JSON.parse(await stored()).selectedClass, 'warrior');
@@ -439,7 +465,7 @@ try {
   // equipment and map steps and reopen it once the Map 10 run has started.
   await page.getByRole('button', { name: /DEV · Close/ }).click();
   // Task 40 / 41: shop → buy an item instance (confirmation, one atomic save) → Bag: equip, upgrade.
-  await nav.getByRole('button', { name: 'Shop', exact: true }).click();
+  await goTo(page, 'Shop');
   const slots = page.getByRole('group', { name: 'Shop slots' });
   assert.equal(await slots.getByRole('button').count(), 9); // All + 7 gear slots + Pets
   const goods = page.locator('.shop-rows-compact');
@@ -452,7 +478,7 @@ try {
   await slots.getByRole('button', { name: 'Armor' }).click();
   // Common armor at level 12 (band «Robe»): 40 max HP, 9 resistance; round(40 × (1 + 12/5)) = 136 Gold.
   const robe = page.getByRole('listitem', { name: 'Robe: 136 Gold' });
-  assert.match(await robe.innerText(), /\+40 max HP[\s\S]*\+9 resistance/);
+  assert.match(await robe.innerText(), /HP \+40[\s\S]*Armor \+9/); // Task 44 format
   await robe.getByRole('button', { name: /Buy · Gold 136/ }).click();
   // Task 13 keyboard: the confirm dialog focuses «Confirm»; Enter confirms.
   await page.getByRole('dialog', { name: /Buy “Robe” for 136 Gold\?/ }).waitFor();
@@ -461,11 +487,13 @@ try {
   await page.getByText('Bought: Robe.').waitFor();
   const bought = JSON.parse(await stored());
   assert.equal(bought.gold, devSave.gold - 136);
-  assert.equal(bought.items.length, 1);
-  assert.equal(bought.items[0].uid, 'i1');
-  assert.equal(bought.items[0].slot, 'armor');
-  assert.equal(bought.items[0].itemLevel, 12);
-  assert.deepEqual(bought.newItems, ['i1']); // Task 41: the «new» marker
+  // Task 42: the Map 1 victory above already brought the boss item (i1); the Robe is the next uid.
+  assert.equal(bought.items.length, 2);
+  const robeItem = bought.items[1];
+  assert.equal(robeItem.uid, 'i2');
+  assert.equal(robeItem.slot, 'armor');
+  assert.equal(robeItem.itemLevel, 12);
+  assert.ok(bought.newItems.includes('i2')); // Task 41: the «new» marker
   assert.deepEqual(bought.shopBought[bought.selectedClass], {
     level: 12,
     offers: ['armor:common'],
@@ -480,27 +508,27 @@ try {
   await page.getByRole('dialog').waitFor();
   await page.keyboard.press('Escape');
   assert.equal(await page.getByRole('dialog').count(), 0);
-  assert.equal(
-    await nav.getByRole('button', { name: 'Shop', exact: true }).getAttribute('aria-current'),
-    'page',
-  );
+  assert.equal(await page.locator('.shop-page').count(), 1, 'still in the shop');
+  assert.equal(await sections(page).count(), 0, 'Esc with a dialog open does not go to the hub');
   assert.equal(JSON.parse(await stored()).gold, bought.gold);
   await slots.getByRole('button', { name: 'Armor' }).click();
   await screenshot(page, { path: 'artifacts/campaign-13-shop.png', fullPage: true });
   // Task 41: the Bag — select the new item (its card clears «new»), equip it by uid.
-  await nav.getByRole('button', { name: 'Bag', exact: true }).click();
-  const bag = page.getByRole('region', { name: /^Bag:/ });
+  await goTo(page, 'Equipment');
+  const bag = page.getByRole('region', { name: /^Equipment:/ });
   await bag.getByRole('button', { name: /^Robe, L12, new/ }).click();
   const itemCard = bag.getByRole('group', { name: 'Item card' });
-  assert.match(await itemCard.innerText(), /Robe[\s\S]*Item level 12[\s\S]*\+40 max HP/);
+  assert.match(await itemCard.innerText(), /Robe[\s\S]*Item level 12[\s\S]*HP\s+\+40/);
+  // Task 44: the Bag «Stats» totals preview the open item (green «+40» on Max HP).
+  assert.match(await bag.getByRole('list', { name: 'Stats' }).innerText(), /Max HP[\s\S]*\+40/);
   await page.waitForFunction(
-    () => JSON.parse(localStorage.getItem('skazki.profile')).newItems.length === 0,
+    () => !JSON.parse(localStorage.getItem('skazki.profile')).newItems.includes('i2'),
   );
   // Task 22: «Equip» appears next to the selection — in the viewport without scrolling.
   await inViewport(itemCard.getByRole('button', { name: 'Equip' }), 'desktop «Equip»');
   await itemCard.getByRole('button', { name: 'Equip' }).click();
   await page.waitForFunction(
-    (c) => JSON.parse(localStorage.getItem('skazki.profile')).classes[c].loadout.armor === 'i1',
+    (c) => JSON.parse(localStorage.getItem('skazki.profile')).classes[c].loadout.armor === 'i2',
     bought.selectedClass,
   );
   // Slot upgrade: the Armor row → «Upgrade to +1» (254 Gold, 12 Ore; one save).
@@ -517,14 +545,14 @@ try {
   assert.equal(upgraded.ore, preUpgrade.ore - 12);
   await screenshot(page, { path: 'artifacts/campaign-14-equipment.png', fullPage: true });
   // Task 40: the forge only upgrades pets now (item upgrades are replaced by the new item model).
-  await nav.getByRole('button', { name: 'Forge', exact: true }).click();
+  await goTo(page, 'Forge');
   // No pet owned yet: the forge points to the shop; there is no item upgrade any more.
   await page
     .locator('.forge-screen')
     .getByText(/buy a pet in the shop/)
     .waitFor();
   assert.equal(await page.getByRole('group', { name: 'Item upgrade' }).count(), 0);
-  await nav.getByRole('button', { name: 'Bag', exact: true }).click();
+  await goTo(page, 'Equipment');
   await bag.getByRole('button', { name: 'Armor +1: Robe' }).waitFor();
   const goldBefore = JSON.parse(await stored()).gold;
   await (await openMap(10)).click();
@@ -603,7 +631,7 @@ try {
   // Task 08.5 §3.2: a crash mid-run shows the friendly screen, logs the error in its own key,
   // leaves the save byte-identical and «Back to the menu» recovers a working game.
   await page.evaluate(() => localStorage.removeItem('skazki.errors'));
-  await page.getByRole('button', { name: 'Start run' }).click();
+  await startMap(page);
   await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
   const saveBeforeCrash = await stored();
   page.once('pageerror', () => {}); // the simulated error is expected
@@ -622,7 +650,7 @@ try {
   await nav.waitFor();
   assert.equal(await stored(), saveBeforeCrash, 'recovery never writes the save');
   await page.waitForFunction(() => window.__alpha?.state().screen === 'menu');
-  await page.getByRole('button', { name: 'Start run' }).click();
+  await startMap(page);
   await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
   await page.getByRole('button', { name: 'Pause', exact: true }).click();
   await page.getByRole('button', { name: /Exit to menu · the run will not count/ }).click();
@@ -654,7 +682,7 @@ try {
   await page.getByRole('button', { name: /DEV · Close/ }).click();
 
   // Task 08.5 §5.3: «Screen shake» (on by default) lives in its own settings key.
-  await nav.getByRole('button', { name: 'Settings', exact: true }).click();
+  await goTo(page, 'Settings');
   const shake = page.getByRole('checkbox', { name: 'Screen shake' });
   assert.equal(await shake.isChecked(), true);
   const saveBeforeSetting = await stored();
@@ -682,7 +710,7 @@ try {
   await page.getByTestId('game-speed-choice').locator('label', { hasText: '×1' }).first().click();
   await page.reload();
   await page.waitForFunction(() => !!window.__alpha);
-  await nav.getByRole('button', { name: 'Settings', exact: true }).click();
+  await goTo(page, 'Settings');
   assert.equal(await page.getByRole('checkbox', { name: 'Screen shake' }).isChecked(), false);
   await page.getByRole('checkbox', { name: 'Screen shake' }).check();
   // Task 14: sound sliders and «Mute» persist in the settings key, never in the save.
@@ -691,7 +719,7 @@ try {
   assert.equal(await stored(), saveBeforeSetting, 'sound settings never touch the save');
   await page.reload();
   await page.waitForFunction(() => !!window.__alpha);
-  await nav.getByRole('button', { name: 'Settings', exact: true }).click();
+  await goTo(page, 'Settings');
   assert.equal(await page.getByRole('slider', { name: 'Music' }).inputValue(), '20');
   assert.equal(await page.getByRole('checkbox', { name: 'Mute' }).isChecked(), true);
   assert.equal(await page.getByRole('slider', { name: 'Music' }).isDisabled(), true);
@@ -701,7 +729,7 @@ try {
   const pagesTabs = [
     'Home',
     'Hero',
-    'Bag',
+    'Equipment',
     'Talents',
     'Shop',
     'Campaign map',
@@ -715,7 +743,7 @@ try {
   ]) {
     await page.setViewportSize({ width, height });
     for (const tab of pagesTabs) {
-      await nav.getByRole('button', { name: tab, exact: true }).click();
+      await goTo(page, tab);
       assert.ok(
         await page.evaluate(
           () =>
@@ -730,7 +758,7 @@ try {
   }
   // Reduced motion: motion tokens drop to 0 ms and the pulsing nodes stop.
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await nav.getByRole('button', { name: 'Campaign map', exact: true }).click();
+  await goTo(page, 'Campaign map');
   assert.equal(
     await page.evaluate(() =>
       getComputedStyle(document.querySelector('.meta-ui')).getPropertyValue('--dur').trim(),
@@ -760,25 +788,25 @@ try {
     for (const tab of [
       'Home',
       'Hero',
-      'Bag',
+      'Equipment',
       'Talents',
       'Shop',
       'Campaign map',
       'Progress',
       'Settings',
     ]) {
-      await nav.getByRole('button', { name: tab, exact: true }).click();
+      await goTo(page, tab);
       assert.ok(
         await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
         `${tab} fits a phone`,
       );
     }
-    await nav.getByRole('button', { name: 'Campaign map', exact: true }).click();
+    await goTo(page, 'Campaign map');
     await screenshot(page, { path: 'artifacts/campaign-09-maps-mobile.png', fullPage: true });
   }
   if (errors.length) throw new Error(errors.join('\n'));
   console.log(
-    'PASS campaign: menu/Gold, Character, Maps (lock/boss reveal), Map 1 win → results/rewards/unlock/save, reload keeps progress, Map 2 with another class (separate XP, shared Gold), quit/reload = abandoned without rewards, Save Management (export, invalid/newer import unchanged, confirm/cancel/replace, round-trip), write-failure warning + retry, DEV campaign tools (unlock/level/Gold, boss, forced Map 10 win, reset); 08.5: time scale, kill-all, stats panel, debug overlay, build label, report download, crash recovery (save untouched), report → save import; Task 13: hub «To battle»/Esc, quick links, map path panel, talent detail, paper doll, shop modal (Enter/Esc), widths 1024–1920, reduced motion.',
+    'PASS campaign: menu/Gold, Character, Maps (lock/boss reveal), Map 1 win → results/rewards/unlock/save, reload keeps progress, Map 2 with another class (separate XP, shared Gold), quit/reload = abandoned without rewards, Save Management (export, invalid/newer import unchanged, confirm/cancel/replace, round-trip), write-failure warning + retry, DEV campaign tools (unlock/level/Gold, boss, forced Map 10 win, reset); 08.5: time scale, kill-all, stats panel, debug overlay, build label, report download, crash recovery (save untouched), report → save import; Task 13: hub «To battle»/Esc, quick links; Task 45: hub tiles only (no top nav, no quick start), «← Home» on every page, Esc kept while a dialog is open, map path panel, talent detail, paper doll, shop modal (Enter/Esc), widths 1024–1920, reduced motion.',
   );
 } finally {
   await browser.close();

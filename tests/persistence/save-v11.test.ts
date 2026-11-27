@@ -6,7 +6,7 @@ import {
   prepareImport,
   exportProfile,
 } from '../../src/persistence';
-import { BAG_CAPACITY, EquipmentError, NO_SLOT_LEVELS, slotUpgradeCost } from '../../src/equipment';
+import { EquipmentError, bagCapacity, NO_SLOT_LEVELS, slotUpgradeCost } from '../../src/equipment';
 import {
   buyOffer,
   createProfile,
@@ -67,28 +67,28 @@ describe('Task 41 — slot upgrades, salvage, bag and «new» on the profile', (
     expect(s.items.map((i) => i.uid)).toEqual(['i2']);
     expect(s.newItems).toEqual(['i2']);
   });
-  it('bag: capacity 60 — the shop and grants refuse at the cap; new items are marked until seen', () => {
+  it('bag: at capacity (Task 42: base 25) the shop and grants refuse at the cap; new items are marked until seen', () => {
     let p: PlayerProfile = { ...createProfile('bag', NOW), gold: 1e6 };
-    for (let i = 0; i < BAG_CAPACITY; i++)
+    for (let i = 0; i < bagCapacity(0); i++)
       p = grantItem(p, { slot: 'ring', rarity: 'common', itemLevel: 1, characterClass: 'mage' });
-    expect(p.items).toHaveLength(60);
+    expect(p.items).toHaveLength(25);
     expect(fail(() => buyOffer(p, 'mage', 'ring:common'))).toBe('bag-full');
     expect(
       fail(() =>
         grantItem(p, { slot: 'ring', rarity: 'common', itemLevel: 1, characterClass: 'mage' }),
       ),
     ).toBe('bag-full');
-    expect(p.newItems).toHaveLength(60);
+    expect(p.newItems).toHaveLength(25);
     const seen = markItemsSeen(p, ['i1', 'i5', 'nope']);
-    expect(seen.newItems).toHaveLength(58);
+    expect(seen.newItems).toHaveLength(23);
     expect(markItemsSeen(seen, ['i1'])).toBe(seen); // nothing to clear → same profile
     const freed = salvageItems(p, ['i1']);
-    expect(buyOffer(freed, 'mage', 'ring:common').newItems.at(-1)).toBe('i61');
+    expect(buyOffer(freed, 'mage', 'ring:common').newItems.at(-1)).toBe('i26');
   });
   it('quests: «Upgrade any slot to +5 / +10» are back and read the highest slot level', () => {
     for (const id of ['forge.plus5', 'forge.plus10'])
       expect(QUEST_BY_ID.get(id)!.hidden).toBeUndefined();
-    expect(QUEST_BY_ID.get('forge.tier4')!.hidden).toBe(true);
+    expect(QUEST_BY_ID.get('forge.tier4')!.hidden).toBeUndefined(); // Task 42
     let p: PlayerProfile = { ...createProfile('q', NOW), gold: 1e6, ore: 1e6 };
     for (let n = 0; n < 5; n++) p = upgradeSlot(p, 'archer', 'pants');
     expect(questProgress(p, QUEST_BY_ID.get('forge.plus5')!).state).toBe('complete');
@@ -101,7 +101,7 @@ describe('Task 41 — slot upgrades, salvage, bag and «new» on the profile', (
 
 describe('Task 41 — save v11', () => {
   it('a v10 save migrates: slot levels 0, no «new» items; nothing else changes', () => {
-    expect(SAVE_SCHEMA_VERSION).toBe(11);
+    expect(SAVE_SCHEMA_VERSION).toBe(12); // then v11 → v12 (Task 42)
     const p = rich();
     const v10 = json(p);
     v10.schemaVersion = 10;
@@ -111,6 +111,7 @@ describe('Task 41 — save v11', () => {
     if (!r.ok) throw r.error;
     expect(r.migratedFrom).toBe(10);
     expect(json(r.profile)).toEqual({ ...json(p), newItems: [] });
+    expect(r.profile.schemaVersion).toBe(12);
     expect(Object.keys(migrateV10toV11(v10)).sort()).toEqual(
       [...Object.keys(v10), 'newItems'].sort(),
     );

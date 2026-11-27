@@ -1,3 +1,4 @@
+import { startMap } from './e2e-nav.mjs';
 import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
 import { EXTENDED, screenshot } from './e2e-options.mjs';
@@ -31,7 +32,7 @@ for (const [tag, viewport, touch] of [
     localStorage.setItem('skazki.profile', JSON.stringify(p));
   });
   await page.reload();
-  await page.getByRole('button', { name: /^Start run · map 25/ }).click();
+  await startMap(page, 25);
   await page.waitForFunction(() => window.__alpha?.state().screen === 'playing');
   await page
     .getByRole('button', { name: 'Hide' })
@@ -147,7 +148,7 @@ for (const [tag, viewport, touch] of [
     { shrine: 1, lantern: 1, thief: 0, nest: 1 },
     `${tag}: lifetime activity counters saved once`,
   );
-  assert.equal(profile.schemaVersion, 11); // Task 41
+  assert.equal(profile.schemaVersion, 12); // Task 42
 
   // Quests: the Activities group with its progress.
   await results.getByRole('button', { name: 'To menu' }).click();
@@ -166,5 +167,5 @@ for (const [tag, viewport, touch] of [
 await browser.close();
 assert.deepEqual(errors, [], 'no page errors');
 console.log(
-  'PASS activities: desktop + phone — spawn toast, shrine capture by walking (enchanted chest), lantern lit + banked Ore, stationary nest (wooden chest), fleeing thief escape at 20 s, victory pays activity Ore once, lifetime counters in the save (v11), Activities quest tab.',
+  'PASS activities: desktop + phone — spawn toast, shrine capture by walking (enchanted chest), lantern lit + banked Ore, stationary nest (wooden chest), fleeing thief escape at 20 s, victory pays activity Ore once, lifetime counters in the save (v12), Activities quest tab.',
 );

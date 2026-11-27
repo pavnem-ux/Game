@@ -34,45 +34,8 @@
   text-shadow: 0 0 14px var(--gold-glow);
   padding: 4px 6px;
 }
-.meta-nav {
-  display: flex;
-  gap: 2px;
-  flex: 1;
-  min-width: 0;
-  flex-wrap: wrap;
-}
-.meta-nav-item {
-  position: relative;
-  /* Task 41: short labels («Bag») keep a 44 px tap target. */
-  min-width: 44px;
-  border: 0;
-  background: none;
-  color: var(--text-muted);
-  font-size: var(--fs-s);
-  font-weight: 600;
-  padding: 8px 11px;
-  border-radius: var(--radius-m);
-  transition:
-    color var(--dur) var(--ease),
-    background var(--dur) var(--ease);
-}
-.meta-nav-item:hover {
-  color: var(--parchment-100);
-  background: rgba(255, 236, 196, 0.06);
-}
-.meta-nav-item.active {
-  color: var(--gold-300);
-}
-.meta-nav-item.active::after {
-  content: '';
-  position: absolute;
-  left: 11px;
-  right: 11px;
-  bottom: 2px;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--gold-400);
-  box-shadow: 0 0 8px var(--gold-glow);
+.meta-home {
+  flex: none;
 }
 .meta-content {
   flex: 1;
@@ -942,9 +905,14 @@
 .map-path-screen {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+  grid-template-rows: auto minmax(0, 1fr);
   gap: var(--sp-5);
   height: 100%;
   min-height: 0;
+}
+.map-path-head {
+  grid-column: 1 / -1;
+  margin-bottom: 0;
 }
 .meta-page-maps .meta-content {
   overflow: hidden;
@@ -1661,9 +1629,6 @@
   .talent-board {
     grid-template-columns: 1fr;
   }
-  .meta-nav-item {
-    padding: 8px 8px;
-  }
 }
 @media (max-width: 760px) {
   .forge-layout {
@@ -1810,50 +1775,41 @@
   }
 }
 
-/* ── Task 41: Bag (equipped + upgrade · bag grid · item card) ── */
+/* ── Task 41 / 45: Equipment (paper doll + upgrade + stats · bag grid + item card) ── */
 .bag-layout {
   display: grid;
-  grid-template-columns: minmax(250px, 0.8fr) minmax(0, 1.6fr) minmax(260px, 0.9fr);
+  grid-template-columns: minmax(320px, 400px) minmax(0, 1fr);
   gap: var(--sp-4);
   align-items: start;
 }
-.bag-slot-rows {
+.bag-side {
   display: grid;
-  gap: 4px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
+  grid-template-columns: minmax(0, 1.6fr) minmax(260px, 0.9fr);
+  gap: var(--sp-4);
+  align-items: start;
+  min-width: 0;
 }
-.bag-slot-row {
-  display: grid;
-  grid-template-columns: 74px 36px minmax(0, 1fr);
-  gap: var(--sp-2);
-  align-items: center;
-  width: 100%;
-  min-height: 36px;
-  padding: 6px var(--sp-2);
-  border: 1px solid transparent;
-  border-radius: var(--radius-m);
-  background: rgba(255, 236, 196, 0.03);
-  color: var(--text);
-  text-align: left;
-  font-size: var(--fs-s);
+.bag-equipped .paper-doll {
+  padding: var(--sp-3);
 }
-.bag-slot-row:hover {
-  background: rgba(255, 236, 196, 0.07);
+/* The slot level sits in the card corner, where the tier gem used to be. */
+.bag-equipped .doll-slot .kit-tier-gem {
+  display: none;
 }
-.bag-slot-row.selected {
-  border-color: var(--gold-400);
-  background: rgba(245, 196, 98, 0.12);
-}
-.bag-slot-name {
-  color: var(--text-muted);
-}
-.bag-slot-level {
+.doll-slot-level {
+  position: absolute;
+  top: 4px;
+  right: 6px;
   color: var(--gold-300);
-  font-weight: 600;
+  font-size: var(--fs-xs);
+  font-weight: 700;
 }
-.bag-slot-item {
+.bag-equipped .doll-slot-button {
+  width: 100%;
+  min-width: 0;
+  cursor: pointer;
+}
+.bag-equipped .doll-slot-button strong {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2005,20 +1961,11 @@
   font-size: var(--fs-s);
 }
 @media (max-width: 1300px) {
-  .bag-layout {
-    grid-template-columns: minmax(220px, 0.75fr) minmax(0, 1.3fr) minmax(230px, 0.9fr);
-    gap: var(--sp-3);
+  .bag-side {
+    grid-template-columns: 1fr;
   }
 }
-@media (max-width: 1100px) {
-  .bag-layout {
-    grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.4fr);
-  }
-  .bag-card {
-    grid-column: 1 / -1;
-  }
-}
-@media (max-width: 760px) {
+@media (max-width: 860px) {
   .bag-layout {
     grid-template-columns: 1fr;
   }
@@ -2113,4 +2060,90 @@
   .shop-slot-row {
     grid-template-columns: 1fr;
   }
+}
+
+/* Task 42: bag over capacity, reforge row */
+.bag-over {
+  color: var(--down);
+}
+.bag-reforge {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  align-items: center;
+}
+
+/* Task 43: Legendary effect text and the map's Legendary pool */
+.bag-legendary-effect {
+  margin: 0;
+  padding: 6px 8px;
+  border-left: 2px solid var(--tier-5);
+  color: var(--tier-5);
+  font-size: var(--fs-s);
+}
+.map-legendaries {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: baseline;
+}
+.map-legendary {
+  color: var(--tier-5);
+}
+.map-legendary.is-other {
+  opacity: 0.4;
+}
+
+/* Task 44: stat names explain themselves on hover / tap */
+.stat-name {
+  position: relative;
+  border-bottom: 1px dotted var(--text-faint);
+  cursor: help;
+}
+.stat-name:hover::after,
+.stat-name:focus::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 6px);
+  z-index: 40;
+  width: max-content;
+  max-width: 260px;
+  padding: 6px 9px;
+  border: 1px solid var(--ink-line-strong);
+  border-radius: var(--radius-m);
+  background: var(--night-900);
+  color: var(--text);
+  font-size: var(--fs-xs);
+  font-weight: 400;
+  line-height: 1.35;
+  white-space: normal;
+  pointer-events: none;
+}
+
+/* Task 44: Bag «Stats» totals */
+.bag-stats {
+  margin-top: var(--sp-3);
+  padding-top: var(--sp-2);
+  border-top: 1px solid var(--ink-line);
+}
+.bag-stats summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.bag-stats ul {
+  display: grid;
+  gap: 2px;
+  margin: var(--sp-2) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-s);
+}
+.bag-stats li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+.bag-stats-gear {
+  color: var(--text-muted);
 }

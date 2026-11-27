@@ -1,3 +1,4 @@
+import { legendaryDef } from '../equipment/legendaries';
 import { CHARACTER_CLASSES } from '../character-stats';
 import { ALPHA_WEAPONS, WEAPON_LABELS } from '../gameplay';
 import type { EnemyType } from '../gameplay';
@@ -165,7 +166,7 @@ export const EN = Object.freeze({
       label: 'Main menu',
       hub: 'Home',
       character: 'Hero',
-      equipment: 'Bag',
+      equipment: 'Equipment',
       talents: 'Talents',
       shop: 'Shop',
       forge: 'Forge',
@@ -175,13 +176,13 @@ export const EN = Object.freeze({
       progression: 'Progress',
       settings: 'Settings',
       back: 'Back',
+      home: '← Home',
     }),
     gold: (amount: string) => `Gold: ${amount}`,
     ore: (amount: string) => `Ore: ${amount}`,
     hub: Object.freeze({
       fight: 'To battle',
       fightHint: 'Open the campaign map',
-      quickStart: (mapId: number) => `Start run · map ${mapId}`,
       selected: 'Chosen hero',
       level: (level: number) => `Level ${level}`,
       campaign: (done: number, total: number) => `Maps cleared: ${done} of ${total}`,
@@ -205,7 +206,7 @@ export const EN = Object.freeze({
         next === null ? 'Maximum level' : `XP ${xp} / ${next}`,
       points: (n: number) => `Talent points: ${n}`,
       weapon: (name: string) => `Weapon: ${name}`,
-      toEquipment: 'Bag',
+      toEquipment: 'Equipment',
       toTalents: 'Talents',
       cardLabel: (name: string, level: number) => `${name}: level ${level}`,
     }),
@@ -216,14 +217,14 @@ export const EN = Object.freeze({
       attackSpeed: 'Attack speed',
       criticalChance: 'Crit chance',
       criticalDamage: 'Crit damage',
-      resistance: 'Resistance',
+      resistance: 'Armor',
       dodgeChance: 'Dodge',
       movementSpeed: 'Movement speed',
       cooldownReduction: 'Cooldown red.',
       areaSize: 'Area size',
     }),
     bag: Object.freeze({
-      title: 'Bag',
+      title: 'Equipment',
       equipped: 'Equipped',
       empty: 'Empty',
       all: 'All',
@@ -264,6 +265,16 @@ export const EN = Object.freeze({
       equippedMsg: (name: string) => `Equipped: ${name}.`,
       unequippedMsg: (name: string) => `Unequipped: ${name}.`,
       failed: 'The action failed.',
+      expand: 'Expand bag',
+      expandTitle: (price: string) => `Expand the bag by 10 for ${price} Gold?`,
+      expandText: 'The bag grows for the whole profile, forever.',
+      expanded: (capacity: number) => `The bag now holds ${capacity} items.`,
+      pickStat: 'Pick a stat',
+      reforge: 'Reforge',
+      reforgeTitle: (stat: string, price: string) => `Reforge “${stat}” for ${price} Gold?`,
+      reforgeText:
+        'It becomes a random other stat of this slot with a new value. This cannot be undone.',
+      reforged: (name: string) => `Reforged: ${name}.`,
     }),
     equipment: Object.freeze({
       title: 'Equipment',
@@ -500,6 +511,9 @@ export function damageSourceLabel(source: string): string {
       return EFFECT_LABELS[id] ?? 'Effect';
     case 'talent':
       return `Talent “${TALENT_CONFIG.nodes.get(source.slice('talent:'.length))?.name ?? 'talent'}”`;
+    // Task 43: Legendary effects (thorns, shockwave, spread Bleed) have their own row.
+    case 'legendary':
+      return legendaryDef(id)?.name ?? 'Legendary';
     case 'debug':
       return 'Debug';
     default:

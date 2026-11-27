@@ -1,5 +1,6 @@
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
+import { brand, goTo } from './e2e-nav.mjs';
 
 /**
  * Task 28: before / after screenshots of art pack 4 (synergy icons, talent branch emblems). Not
@@ -33,7 +34,7 @@ async function open({ viewport, isMobile = false, hasTouch = false }) {
   const command = (a) => page.evaluate((x) => window.__alpha.command(x), a);
   const state = () => page.evaluate(() => window.__alpha.state());
   const advance = (s) => page.evaluate((x) => window.__alpha.advance(x), s);
-  const nav = page.getByRole('navigation', { name: 'Main menu' });
+  const nav = brand(page);
   return { context, page, shot, command, state, advance, nav };
 }
 
@@ -66,7 +67,7 @@ async function talentProfile(page, cls, level = 30) {
     await talentProfile(page, cls);
     await page.goto(base + '/?debug');
     await nav.waitFor();
-    await nav.getByRole('button', { name: 'Talents', exact: true }).click();
+    await goTo(page, 'Talents');
     await page.getByRole('region', { name: 'Talents', exact: true }).waitFor();
     await page.waitForTimeout(500);
     await shot(`talents-${cls}`, { fullPage: true });
@@ -75,7 +76,7 @@ async function talentProfile(page, cls, level = 30) {
   await talentProfile(page, 'mage', 20);
   await page.goto(base + '/?debug');
   await nav.waitFor();
-  await nav.getByRole('button', { name: 'Talents', exact: true }).click();
+  await goTo(page, 'Talents');
   await page.locator('.talent-seal').waitFor();
   await page.waitForTimeout(500);
   await shot('talents-mage-level20', { fullPage: true });
@@ -92,7 +93,7 @@ async function talentProfile(page, cls, level = 30) {
   await talentProfile(page, 'warrior');
   await page.goto(base + '/?debug');
   await nav.waitFor();
-  await nav.getByRole('button', { name: 'Talents', exact: true }).evaluate((el) => el.click());
+  await goTo(page, 'Talents', 'dom');
   await page.getByRole('region', { name: 'Talents', exact: true }).waitFor();
   await page.waitForTimeout(500);
   await shot('phone-talents-warrior', { fullPage: true });

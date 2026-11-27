@@ -403,17 +403,19 @@ export class WeaponAttacks {
     });
     validatePoint(origin, 'launch origin');
     const direction = aimDirection(origin, target, w.fallbackDirection);
-    const bonus =
-      this.options.attackModifier?.({
-        entityId: w.entityId,
-        weaponId: w.weapon.id,
-        targetId,
-      })?.criticalChanceBonus ?? 0;
+    const modifier = this.options.attackModifier?.({
+      entityId: w.entityId,
+      weaponId: w.weapon.id,
+      targetId,
+    });
+    const bonus = modifier?.criticalChanceBonus ?? 0;
     const attack = this.core.createAttack({
       attackerId: w.entityId,
       damageType: w.weapon.damageType,
       coefficient: w.weapon.damageCoefficient,
       ...(bonus > 0 ? { criticalChanceBonus: bonus } : {}),
+      // Task 43: a guaranteed crit (Legendary) is set when the attack snapshot is created.
+      ...(modifier?.forceCritical ? { forceCritical: true } : {}),
     });
     if (w.weapon.pattern === 'projectile') {
       const id = `projectile-${this.nextProjectileId}`,

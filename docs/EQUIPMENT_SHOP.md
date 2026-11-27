@@ -10,8 +10,18 @@ Meta loop: collect coins in a campaign run → buy item instances in the Shop �
 Equipment screen → the next run starts with the stronger attributes.
 
 > Task 40 replaced the Task 11 / 19 tiered catalogue (130 fixed items, tier unlocks by cleared map,
-> the Forge item upgrades +0…+10). Sections §1–§3, §5–§7 describe the Task 40 model, §3a the Task 41 bag, slot upgrades and salvage; §4 (coins) and
+> the Forge item upgrades +0…+10). Sections §1–§3, §5–§7 describe the Task 40 model, §3a the Task 41 bag, slot upgrades and salvage, §3b the Task 42 drops, bag expansions, reforge and shop refresh; §4 (coins) and
 > §8.2 (Ore) still apply; the rest of §8 is kept as history.
+
+## Units (Task 44)
+
+In these docs «pp» (percentage points) marks stats that add to a percent: crit chance, crit damage,
+cooldown reduction, dodge. **In the game every such value is shown with «%»** («Crit chance +3.2%»),
+attack speed too («+3.4%», percent of the base speed 100), HP regen as «+0.36% max HP / s». Flat main
+stats are plain numbers: «Damage +14», «HP +60», «Armor +20» (the game says «Armor» for resistance).
+One formatter (`src/equipment/stat-format.ts`) is used by every screen; hovering or tapping a stat name
+shows a one-line explanation with the cap where one exists. The Bag «Stats» panel shows the class's
+run-start totals with the gear share and previews the open item.
 
 ## 1. Item instances (Task 40)
 
@@ -88,6 +98,12 @@ Robe → Leather Armor → Plate Armor), weapons L1–24 / 25–50 (e.g. Quick S
 Common items have the base name only; other rarities add the suffix of their strongest roll
 relative to its maximum («Sorcerer's Gloves of Speed»).
 
+**Legendary icons (Task 45).** A Legendary item uses its own icon,
+`public/assets/icons/items/legendary/<legendaryId>.webp` (128 px, manifest entries `item_<id>`,
+listed in `ITEM_TEMPLATE_IDS`). If the file is missing it falls back to the slot's band icon inside
+the Legendary frame (`ItemArt` in `src/gameplay-ui/item-view.tsx`). The same icon shows on the doll,
+in the bag grid, on the item card, in the shop, in Results «Loot» and in the loot toast.
+
 ## 2. Shop (Task 40)
 
 Per class, a **derived** stock at item level = the class level (`shopStock(salt, class, level)`):
@@ -153,27 +169,33 @@ Legendary 25.
   skipped).
 - Every salvage asks to confirm the total. Any Legendary in it asks a second, separate time.
 
-**Bag.** Capacity 60 owned items (starter weapons don't count).
+**Bag.** Capacity 60 owned items (starter weapons don't count) — Task 42 changed it to 25 + expansions, see §3b.
 
 - At the cap the shop refuses a purchase: «Bag is full — salvage something first». DEV grants are
   refused too.
 - New items are marked «new» (`profile.newItems`). Viewing an item's card clears the marker
   (saved).
 
-**Bag screen** (`src/gameplay-ui/meta/BagScreen.tsx`; replaces the Equipment page; nav and hub say
-«Bag»). It has three panels:
+**Equipment screen** (`src/gameplay-ui/meta/EquipmentScreen.tsx`, `EquipmentPage`; Task 41 built it
+as «Bag», Task 45 renamed it back to «Equipment» and restored the paper doll). Two columns on
+desktop (doll | bag + card); on narrow screens the doll, then the bag, then the card.
 
-- **Left — equipped.** 7 slot rows, each with its level `+N` and the item in rarity colour. A row
-  selects the slot and filters the bag. Below the rows: the slot's upgrade button with its cost,
-  the current bonuses and the next milestone. The button is disabled when Gold or Ore is short
-  (it says how much more is needed) or the slot is at +30.
-- **Middle — the bag grid.** `Bag · N / 60`.
+- **Left — the paper doll.** The class silhouette with its emblem; Helmet / Armor / Gloves on the
+  left, Amulet / Ring / Legs on the right, the wide Weapon card below, then the **Pet** card
+  (portrait, name and level or «No pet»; «Change →» opens Pets). Each slot card shows the slot
+  name, the item icon, the name in its rarity colour (or «Empty») and the slot level `+N` in the
+  corner. Clicking a card selects the slot and filters the bag to it. Under the doll: the selected
+  slot's upgrade button with its cost, the current bonuses and the next milestone (disabled when
+  Gold or Ore is short — it says how much more is needed — or at +30), then the collapsible
+  **Stats** panel (Task 44). The active pet's aura (hedgehog Armor, wolf attack / movement speed)
+  is part of the Stats values and shown as its own «(+N pet)» share next to «(+N gear)».
+- **Right, top — the bag grid.** `Bag · N / 60`.
   - Filters: rarity, slot. Sort: item level (default), rarity, newest.
   - Markers: «new», «better», «equipped».
   - «Select» enters multi-select mode for salvage.
   - Other classes' weapons are shown only with the Weapon filter plus «Show all classes».
   - The class's starter weapon is listed first so it can be re-equipped.
-- **Right — the item card.** Stats with the slot bonus and the difference to the worn item: green
+- **Right, below — the item card.** Stats with the slot bonus and the difference to the worn item: green
   better, red worse, «new» for a stat the worn item lacks. «Requires level N» when the class is
   too low; «Equipped by: …» when it's worn. Actions: Equip / Unequip, Salvage → N Ore.
 
@@ -198,6 +220,86 @@ changes. Validation:
 
 - slot levels are whole numbers 0–30 for the 7 known slots;
 - `newItems` are unique uids of owned items.
+
+## 3b. Drops, bag expansions, reforge, shop refresh (Task 42)
+
+Spec: [task-42-drops-reforge.md](task-42-drops-reforge.md) · progress:
+[task-42-progress.md](task-42-progress.md). All numbers are provisional, in `src/equipment/config.ts`
+(`BAG_RULES`, `DROP_RULES`, `REFORGE_RULES`, `SHOP_REFRESH_RULES`).
+
+**Bag capacity** (replaces Task 41's 60):
+
+- Base 25 items (starter weapons don't count; equipped items do).
+- +10 per Gold expansion, up to 5 (max 75): 5 000 / 12 000 / 25 000 / 40 000 / 60 000 Gold.
+- Expansions are account-wide (`profile.bagExpansions`). The Bag header shows «Expand bag · price»
+  with a confirmation; `Bag · 27 / 25` is red when over capacity.
+- Over capacity, or at capacity, the shop refuses purchases.
+
+**Drops** (`equipment/drops.ts`, `gameplay/loot.ts`): every draw comes from the run's own seeded
+`items` stream, deterministic at every game speed.
+
+- **Boss** (victory only): one guaranteed item, added to the loot when the run resolves.
+
+  | Difficulty  | Uncommon | Rare | Epic |
+  | ----------- | -------- | ---- | ---- |
+  | Normal      | 60%      | 35%  | 5%   |
+  | Hard        | 30%      | 55%  | 15%  |
+  | Nightmare   | 10%      | 55%  | 35%  |
+  | Elite Trial | 10%      | 55%  | 35%  |
+
+- **Elite kills**: a 5% chance of an item (Rare 80%, Epic 20%), rolled inside the once-per-death
+  reward. The item is kept on defeat too.
+- **Slot**: random among the 7; a weapon is always the played class's.
+- **Item level** = min(class level, cap). The cap is Normal 5 + map, Hard 10 + map, Nightmare / Trial
+  15 + map, never above 50.
+- `legendaryRoll` in `equipment/drops.ts` rolls the Task 43 Legendary for boss items (see §3c).
+- **In the run**: an elite's item lies on the ground with a pulsing glow in its rarity colour. It is
+  collected by walking over it (the pickup radius applies), and a short toast names it.
+- Items left on the ground are collected when the run ends (victory and defeat).
+- **Results**: a «Loot» block lists the items (icon, name in rarity colour, item level).
+
+**Loot into the profile** (`receiveLoot`): once per run, with the run result (run-ID
+deduplication). Abandoned runs grant nothing.
+
+- Each item gets the next `i<n>` uid and the «new» marker.
+- With a full bag, Common and Uncommon items are salvaged automatically (Ore paid, listed as
+  «auto-salvaged → N Ore»).
+- Rare and better always go in, even past capacity.
+
+**Reforge** (`equipment/reforge.ts`): Rare, Epic and Legendary items only.
+
+- Pick one secondary stat. It becomes a random stat of the slot's pool that the item doesn't have
+  yet, with a new value in the rarity's roll range. The item name suffix follows the new stats.
+- Cost: base × max(0.2, itemLevel / 50) × 1.25^n Gold. Base: Rare 300, Epic 450, Legendary 600;
+  n = the item's earlier reforges, saved on the instance as `reforges`.
+- The draw is seeded by the profile's shop salt, the uid and the reforge count, so the same state
+  always gives the same result.
+- A Legendary's `legendaryId` is never touched. No undo.
+
+**Shop refresh**: «Refresh stock» redraws the class's stock at the same level and clears its bought
+offers.
+
+- Cost: 2 × the Uncommon price at the class level, doubled for each further refresh at that level.
+  It resets on level-up.
+- The refresh count is part of the stock seed (`profile.shopRefreshes`); a count of 0 keeps the
+  Task 40 stock unchanged.
+
+**Quests**: `forge.tier4` is back as «Equip 7 items of Epic or better on one class» (same id and
+reward). Its counter is the best Epic+ count one class wears; it only grows.
+
+**Save v12** (`migrateV11toV12`): `bagExpansions: 0`, `shopRefreshes: {}`. Items have no reforge
+count yet (absent = 0).
+
+**DEV / QA**:
+
+- «Item drop: uncommon / rare / epic» puts an elite drop at the player.
+- «Boss item» forces the boss item's rarity.
+- «Bag expansions» sets 0–5.
+- Testing-controller commands: `elite-drop`, `boss-drop-rarity`.
+
+## 3c. Legendary items (Task 43)
+
+Ten Legendaries with unique effects drop only from bosses (each map has a pool of 3). Items, pools, chances and the effect engine rules: [LEGENDARIES.md](LEGENDARIES.md).
 
 ## 4. Gold coins in runs
 
@@ -411,3 +513,13 @@ slots; the Mage gets the magic helmet / gloves / pants), «Выдать руду
 - Not verified: the ore / upgrade economy against real play (no bot measurement — e.g. first
   victories on all 40 maps give 810 ore, a tier-5 item to +10 needs 140); how +10 gear affects late
   maps; the forge on real phones (emulated Chromium only).
+
+## Menu navigation (Task 45)
+
+The meta menu has no top navigation row. The top bar keeps the game title (click → hub) and the
+Gold / Ore badges. The hub tiles are the only way into the sections: Hero, Equipment, Talents, Shop,
+Forge, Pets, Quests, Campaign map, Progress, Settings. Every other page starts its header with
+«← Home»; Esc also returns to the hub unless a confirm dialog is open (then Esc closes the dialog).
+«To battle» (→ Campaign map → «To battle» on the map card) is the only way to start a run — the
+hub's quick-start button is gone. In-page links (Equipment → Shop, Hero → Equipment, the pet card
+→ Pets) stay.

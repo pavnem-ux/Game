@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  EquipmentError,
   NO_SLOT_LEVELS,
+  bagCapacity,
+  bagFull,
+  nextExpansionPrice,
   bagView,
   defaultLoadouts,
   equippedBy,
@@ -12,6 +16,8 @@ import {
 import type { GearSlot, ItemInstance, Loadouts, Rarity } from '../../src/equipment';
 import type { CharacterClass } from '../../src/character-stats';
 import { lcgStream } from '../../src/gameplay/rng';
+import { buyBagExpansion, createProfile } from '../../src/profile';
+import type { PlayerProfile } from '../../src/profile';
 
 let n = 0;
 const item = (slot: GearSlot, rarity: Rarity, itemLevel: number, c: CharacterClass = 'mage') =>
@@ -64,5 +70,32 @@ describe('Task 41 — bag', () => {
     expect(isBetter(helm, loadouts, all, 'mage', 0)).toBe(true); // empty helmet slot
     expect(isBetter(bow, loadouts, all, 'mage', 0)).toBe(false); // not the mage's weapon
     expect(isBetter(big, loadouts, all, 'mage', NO_SLOT_LEVELS.armor)).toBe(true);
+  });
+});
+
+describe('Task 42 — bag capacity and expansions', () => {
+  it('base 25, +10 per expansion up to 5 (75); prices 5k / 12k / 25k / 40k / 60k', () => {
+    expect([0, 1, 2, 3, 4, 5].map((e) => bagCapacity(e))).toEqual([25, 35, 45, 55, 65, 75]);
+    expect([0, 1, 2, 3, 4, 5].map(nextExpansionPrice)).toEqual([
+      5000,
+      12000,
+      25000,
+      40000,
+      60000,
+      null,
+    ]);
+    expect(() => bagCapacity(6)).toThrow(RangeError);
+    const items = Array.from({ length: 25 }, () => item('ring', 'common', 1));
+    expect(bagFull(items, 0)).toBe(true);
+    expect(bagFull(items, 1)).toBe(false);
+    expect(bagFull([...items, ...items], 0)).toBe(true); // over capacity is full too
+  });
+  it('buying an expansion: Gold for +1; refused without Gold or at 5', () => {
+    let p: PlayerProfile = { ...createProfile('x', '2026-11-27T00:00:00.000Z'), gold: 200_000 };
+    for (let i = 0; i < 5; i++) p = buyBagExpansion(p);
+    expect([p.bagExpansions, p.gold]).toEqual([5, 200_000 - 142_000]);
+    expect(() => buyBagExpansion(p)).toThrow(EquipmentError);
+    const poor = { ...createProfile('y', '2026-11-27T00:00:00.000Z'), gold: 4999 };
+    expect(() => buyBagExpansion(poor)).toThrow(EquipmentError);
   });
 });

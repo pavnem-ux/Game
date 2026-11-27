@@ -123,16 +123,20 @@ export function TalentBranchIcon(props: {
 export function ItemIconView({
   manifest,
   templateId,
+  fallback,
   size,
   level = 0,
 }: {
   manifest: ArtManifest | null;
   templateId: string;
+  /** Task 45: the icon used when `templateId` has none (a Legendary → its band icon). */
+  fallback?: string;
   size: IconSize;
   /** Forge upgrade level; > 0 shows the «+N» badge. */
   level?: number;
 }) {
-  const entry = itemIconEntry(manifest, templateId);
+  const entry =
+    itemIconEntry(manifest, templateId) ?? (fallback ? itemIconEntry(manifest, fallback) : null);
   if (!entry) return null;
   return (
     <span className={`item-icon item-icon-${size}`} aria-hidden="true">
@@ -141,7 +145,12 @@ export function ItemIconView({
     </span>
   );
 }
-export function ItemIcon(props: { templateId: string; size: IconSize; level?: number }) {
+export function ItemIcon(props: {
+  templateId: string;
+  fallback?: string;
+  size: IconSize;
+  level?: number;
+}) {
   return <ItemIconView manifest={useArtManifest()} {...props} />;
 }
 

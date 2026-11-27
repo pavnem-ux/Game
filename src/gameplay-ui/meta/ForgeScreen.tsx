@@ -13,6 +13,7 @@ import {
 } from '../../pets';
 import { PetPortrait } from '../pets/PetPortrait';
 import { petEffectLines, petLevelLabel } from '../pets/pet-text';
+import { HomeButton } from './HomeButton';
 
 const F = EN.meta.forge;
 
@@ -27,6 +28,7 @@ export function ForgePage() {
   return (
     <div className="forge-screen">
       <header className="meta-page-head">
+        <HomeButton />
         <h2 className="meta-title">{F.title}</h2>
         <span className="forge-wallet">
           <CurrencyBadge amount={profile.gold} />

@@ -1,14 +1,21 @@
 import type { CharacterClass } from '../character-stats';
 import {
-  AFFIX_RULES,
   RARITIES,
+  formatStatLine,
+  formatStatValue,
+  statExplanation,
+  statInfo,
+  statNumber as formatNumberPlain,
   RARITY_CONFIG,
   affixText,
   itemMainStats,
   itemName,
   slottedStats,
 } from '../equipment';
-import type { ItemInstance, Rarity } from '../equipment';
+import type { ItemInstance, Rarity, StatKey } from '../equipment';
+import { itemBandIconId, itemIconId } from '../equipment';
+import { ItemIcon } from './kit';
+import type { IconSize } from './kit/icon-sizes';
 
 /**
  * Task 40 item display helpers (presentation only, kept small until the bag screen of Task 41):
@@ -23,10 +30,8 @@ export const rarityColor = (rarity: Rarity) => RARITY_CONFIG[rarity].color;
 export function mainStatLines(item: ItemInstance, characterClass: CharacterClass): string[] {
   const m = itemMainStats(item, characterClass);
   const lines: string[] = [];
-  if (m.physicalDamage) lines.push(`+${m.physicalDamage} physical damage`);
-  if (m.magicalDamage) lines.push(`+${m.magicalDamage} magic damage`);
-  if (m.maxHp) lines.push(`+${m.maxHp} max HP`);
-  if (m.resistance) lines.push(`+${m.resistance} resistance`);
+  // Task 44: flat main stats as plain numbers («Damage +14», «HP +60», «Armor +20»).
+  for (const k of MAIN_KEYS) if (m[k]) lines.push(formatStatLine(k, m[k]));
   return lines;
 }
 /** Item level, main stats and secondary stats. */
@@ -66,19 +71,16 @@ export function ItemTitle({ item }: { item: ItemInstance }) {
 
 // ── Task 41: stats with the slot bonus and their difference to the worn item ──
 
-const MAIN_LABELS = {
-  physicalDamage: 'physical damage',
-  magicalDamage: 'magic damage',
-  maxHp: 'max HP',
-  resistance: 'resistance',
-} as const;
+const MAIN_KEYS = ['physicalDamage', 'magicalDamage', 'maxHp', 'resistance'] as const;
 /** A stat value as text: whole numbers plain, fractions with the given decimals. */
-export function statNumber(value: number, decimals = 1): string {
-  const r = Math.round(value * 10 ** decimals) / 10 ** decimals;
-  return Number.isInteger(r) ? String(r) : r.toFixed(decimals);
-}
+export const statNumber = formatNumberPlain;
 export interface StatLine {
-  readonly key: string;
+  readonly key: StatKey;
+  /** «Crit chance» (hover / tap explains it). */
+  readonly label: string;
+  /** «+3.2%». */
+  readonly value: string;
+  /** «Crit chance +3.2%». */
   readonly text: string;
   /** Difference to the worn item (null: the worn item lacks this stat → «new»; undefined: none). */
   readonly delta?: number | null;
@@ -97,28 +99,40 @@ export function slottedLines(
   const a = slottedStats(item, characterClass, slotLevel);
   const b = worn && worn.uid !== item.uid ? slottedStats(worn, characterClass, slotLevel) : null;
   const lines: StatLine[] = [];
-  for (const k of Object.keys(MAIN_LABELS) as (keyof typeof MAIN_LABELS)[]) {
+  const line = (key: StatKey, v: number, delta: number | null | undefined): StatLine => ({
+    key,
+    label: statInfo(key).label,
+    value: formatStatValue(key, v),
+    text: formatStatLine(key, v),
+    ...(delta !== undefined
+      ? { delta, deltaText: delta === null ? 'new' : formatStatValue(key, delta) }
+      : {}),
+  });
+  for (const k of MAIN_KEYS) {
     if (!a.main[k] && !(b && b.main[k])) continue;
-    const delta = b ? a.main[k] - b.main[k] : undefined;
-    lines.push({
-      key: k,
-      text: `+${statNumber(a.main[k])} ${MAIN_LABELS[k]}`,
-      ...(delta !== undefined ? { delta, deltaText: signed(delta, 1) } : {}),
-    });
+    lines.push(line(k, a.main[k], b ? a.main[k] - b.main[k] : undefined));
   }
   for (const af of a.affixes) {
-    const r = AFFIX_RULES[af.stat];
     const other = b?.affixes.find((x) => x.stat === af.stat);
-    const delta = b ? (other ? af.value - other.value : null) : undefined;
-    lines.push({
-      key: af.stat,
-      text: `+${statNumber(af.value, r.decimals)}${r.unit} ${r.label}`,
-      ...(delta !== undefined
-        ? { delta, deltaText: delta === null ? 'new' : signed(delta, r.decimals) }
-        : {}),
-    });
+    lines.push(line(af.stat, af.value, b ? (other ? af.value - other.value : null) : undefined));
   }
   return Object.freeze(lines);
 }
-const signed = (v: number, decimals: number) =>
-  `${v >= 0 ? '+' : '−'}${statNumber(Math.abs(v), decimals)}`;
+
+/**
+ * Task 44: a stat name that explains itself — hover (desktop) or tap / focus (mobile) shows a
+ * one-line explanation with the cap where one exists.
+ */
+export function StatName({ statKey }: { statKey: StatKey }) {
+  const tip = statExplanation(statKey);
+  return (
+    <span className="stat-name" tabIndex={0} data-tip={tip} title={tip} aria-label={tip}>
+      {statInfo(statKey).label}
+    </span>
+  );
+}
+
+/** Task 45: an item's icon — a Legendary's own art, else (or when missing) the slot's band icon. */
+export function ItemArt({ item, size }: { item: ItemInstance; size: IconSize }) {
+  return <ItemIcon templateId={itemIconId(item)} fallback={itemBandIconId(item)} size={size} />;
+}

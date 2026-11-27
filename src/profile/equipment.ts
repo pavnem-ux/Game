@@ -3,7 +3,15 @@ import {
   EquipmentError,
   GEAR_SLOTS,
   SLOT_UPGRADE_RULES,
+  bagCapacity,
+  refreshesAt,
+  shopRefreshCost,
+  canReforge,
+  reforgeCost,
+  reforgeItem,
   bagFull,
+  salvageOre,
+  nextExpansionPrice,
   equippedBy,
   salvageTotal,
   slotUpgradeCost,
@@ -15,6 +23,8 @@ import {
   unequip,
 } from '../equipment';
 import type {
+  AffixStat,
+  LegendaryId,
   EquipmentState,
   GearSlot,
   ItemInstance,
@@ -55,10 +65,43 @@ function withState(profile: PlayerProfile, s: EquipmentState): PlayerProfile {
     ) as PlayerProfile['classes'],
   });
 }
+/** Task 42: the class's whole stock at its level (with the refreshes bought at that level). */
+export function stockOf(profile: PlayerProfile, c: CharacterClass): readonly ShopOffer[] {
+  const level = profile.classes[c].level;
+  return shopStock(profile.shopSalt, c, level, refreshesAt(profile.shopRefreshes[c], level));
+}
+/** Task 42: Gold for the class's next shop refresh at its current level. */
+export const nextRefreshCost = (profile: PlayerProfile, c: CharacterClass) =>
+  shopRefreshCost(
+    profile.classes[c].level,
+    refreshesAt(profile.shopRefreshes[c], profile.classes[c].level),
+  );
+/**
+ * Task 42: a paid new stock for the class at the same level — the count joins the stock seed and
+ * the bought offers are cleared. One new profile (throws `gold`).
+ */
+export function refreshShop(profile: PlayerProfile, c: CharacterClass): PlayerProfile {
+  const progress = profile.classes[c];
+  if (!progress) throw new EquipmentError('unknown-class');
+  const cost = nextRefreshCost(profile, c);
+  if (profile.gold < cost) throw new EquipmentError('gold');
+  const done = refreshesAt(profile.shopRefreshes[c], progress.level);
+  const bought = { ...profile.shopBought };
+  delete bought[c];
+  return Object.freeze({
+    ...profile,
+    gold: profile.gold - cost,
+    shopBought: Object.freeze(bought),
+    shopRefreshes: Object.freeze({
+      ...profile.shopRefreshes,
+      [c]: Object.freeze({ level: progress.level, count: done + 1 }),
+    }),
+  });
+}
 /** The class's shop offers still for sale at its current level (derived, never stored). */
 export function shopOffersOf(profile: PlayerProfile, c: CharacterClass): readonly ShopOffer[] {
   const level = profile.classes[c].level;
-  return availableOffers(shopStock(profile.shopSalt, c, level), profile.shopBought[c], level);
+  return availableOffers(stockOf(profile, c), profile.shopBought[c], level);
 }
 /**
  * Adds an item instance to the owned list with the next uid (`i<n>`), marked «new» (Task 41).
@@ -68,7 +111,7 @@ function addItem(
   profile: PlayerProfile,
   make: (uid: string) => ItemInstance,
 ): { profile: PlayerProfile; item: ItemInstance } {
-  if (bagFull(profile.items)) throw new EquipmentError('bag-full');
+  if (bagFull(profile.items, profile.bagExpansions)) throw new EquipmentError('bag-full');
   const item = make(`i${profile.nextItemNumber}`);
   return {
     item,
@@ -93,11 +136,11 @@ export function buyOffer(
   if (level === undefined) throw new EquipmentError('unknown-class');
   const offer = shopOffersOf(profile, c).find((o) => o.id === offerId);
   if (!offer) {
-    const exists = shopStock(profile.shopSalt, c, level).some((o) => o.id === offerId);
+    const exists = stockOf(profile, c).some((o) => o.id === offerId);
     throw new EquipmentError(exists ? 'sold-out' : 'unknown-offer');
   }
   if (profile.gold < offer.price) throw new EquipmentError('gold');
-  if (bagFull(profile.items)) throw new EquipmentError('bag-full');
+  if (bagFull(profile.items, profile.bagExpansions)) throw new EquipmentError('bag-full');
   const prev = profile.shopBought[c];
   const bought = prev && prev.level === level ? prev.offers : [];
   const added = addItem(profile, (uid) => offerItem(offer, c, uid));
@@ -132,6 +175,8 @@ export function grantItem(
     rarity: Rarity;
     itemLevel: number;
     characterClass: CharacterClass;
+    /** Task 43 (DEV / QA): a Legendary's unique effect. */
+    legendaryId?: LegendaryId;
   }>,
 ): PlayerProfile {
   const seed = (profile.shopSalt ^ Math.imul(profile.nextItemNumber, 0x9e3779b1)) >>> 0;
@@ -142,6 +187,7 @@ export function grantItem(
       itemLevel: spec.itemLevel,
       rarity: spec.rarity,
       characterClass: spec.characterClass,
+      ...(spec.legendaryId ? { legendaryId: spec.legendaryId } : {}),
     }),
   ).profile;
 }
@@ -205,4 +251,97 @@ export function markItemsSeen(profile: PlayerProfile, uids: readonly string[]): 
     ...profile,
     newItems: Object.freeze(profile.newItems.filter((u) => !seen.has(u))),
   });
+}
+
+/** Task 42: buys the next bag expansion (+10 slots) for Gold — one new profile (throws `max` / `gold`). */
+export function buyBagExpansion(profile: PlayerProfile): PlayerProfile {
+  const price = nextExpansionPrice(profile.bagExpansions);
+  if (price === null) throw new EquipmentError('max');
+  if (profile.gold < price) throw new EquipmentError('gold');
+  return Object.freeze({
+    ...profile,
+    gold: profile.gold - price,
+    bagExpansions: profile.bagExpansions + 1,
+  });
+}
+
+/** Task 42: one item of a run's loot as it reached the profile. */
+export interface LootEntry {
+  /** The item with its profile uid (an auto-salvaged item keeps its run-local uid). */
+  readonly item: ItemInstance;
+  /** Ore paid when a full bag auto-salvaged it (Common / Uncommon only); null = in the bag. */
+  readonly salvagedOre: number | null;
+}
+/**
+ * Task 42 §3: a run's loot into the profile, in order. Each item gets the next uid and the «new»
+ * marker. When the bag is full, Common and Uncommon items are salvaged automatically (their Ore
+ * paid); Rare and better always go in, even past capacity (never lost).
+ */
+export function receiveLoot(
+  profile: PlayerProfile,
+  loot: readonly ItemInstance[],
+): { profile: PlayerProfile; loot: readonly LootEntry[] } {
+  const capacity = bagCapacity(profile.bagExpansions);
+  const items = [...profile.items];
+  const newItems = [...profile.newItems];
+  let next = profile.nextItemNumber;
+  let ore = profile.ore;
+  const entries: LootEntry[] = [];
+  for (const raw of loot) {
+    const low = raw.rarity === 'common' || raw.rarity === 'uncommon';
+    if (low && items.length >= capacity) {
+      const paid = salvageOre(raw);
+      ore += paid;
+      entries.push(Object.freeze({ item: raw, salvagedOre: paid }));
+      continue;
+    }
+    const item = Object.freeze({ ...raw, uid: `i${next++}` });
+    items.push(item);
+    newItems.push(item.uid);
+    entries.push(Object.freeze({ item, salvagedOre: null }));
+  }
+  return {
+    profile: Object.freeze({
+      ...profile,
+      items: Object.freeze(items),
+      newItems: Object.freeze(newItems),
+      nextItemNumber: next,
+      ore,
+    }),
+    loot: Object.freeze(entries),
+  };
+}
+
+/** A 32-bit seed for a profile action draw (FNV-1a of the parts). */
+function actionSeed(parts: readonly (string | number)[]): number {
+  let h = 0x811c9dc5;
+  for (const ch of parts.join(':')) {
+    h ^= ch.charCodeAt(0);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h >>> 0;
+}
+/**
+ * Task 42: reforges one secondary stat of an owned Rare+ item for Gold (seeded by the profile's
+ * shop salt, the uid and the item's reforge count, so the same state always gives the same
+ * result). One new profile; throws `not-owned` / `not-eligible` / `gold` (profile unchanged).
+ */
+export function reforgeProfileItem(
+  profile: PlayerProfile,
+  uid: string,
+  stat: AffixStat,
+  characterClass: CharacterClass,
+): PlayerProfile {
+  const index = profile.items.findIndex((i) => i.uid === uid);
+  if (index < 0) throw new EquipmentError('not-owned');
+  const item = profile.items[index];
+  if (!canReforge(item) || !item.affixes.some((a) => a.stat === stat))
+    throw new EquipmentError('not-eligible');
+  const cost = reforgeCost(item);
+  if (profile.gold < cost) throw new EquipmentError('gold');
+  const random = lcgStream(actionSeed([profile.shopSalt, uid, item.reforges ?? 0, 'reforge']));
+  const next = reforgeItem(random, item, stat, characterClass);
+  const items = [...profile.items];
+  items[index] = next;
+  return Object.freeze({ ...profile, gold: profile.gold - cost, items: Object.freeze(items) });
 }

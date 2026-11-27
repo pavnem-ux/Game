@@ -75,7 +75,7 @@ export const PET_CONFIG: Readonly<Record<PetId, PetDefinition>> = Object.freeze(
   hedgehog: def({
     id: 'hedgehog',
     name: 'Guardian Hedgehog',
-    role: 'Resistance and a shield',
+    role: 'Armor and a shield',
     source: { kind: 'shop', price: 2500 },
     params: { resistance: 6, barrierPercent: 5, interval: 10, barrierDuration: 1.5 },
     main: ['resistance', 'barrierPercent'],

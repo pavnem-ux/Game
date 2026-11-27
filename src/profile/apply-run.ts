@@ -1,3 +1,6 @@
+import { validateItem } from '../equipment';
+import { receiveLoot } from './equipment';
+import type { LootEntry } from './equipment';
 import { CHARACTER_CLASSES } from '../character-stats';
 import {
   CAMPAIGN_DIFFICULTIES,
@@ -38,6 +41,8 @@ export interface RunSummary {
   /** Task 39: the map's tier, and the tier this victory opened on the map (null if none). */
   readonly difficulty: CampaignDifficulty;
   readonly newlyUnlockedTier: CampaignDifficulty | null;
+  /** Task 42: the run's items as they reached the profile (empty for a duplicate). */
+  readonly loot: readonly LootEntry[];
   /** True if this run had already been applied: nothing changed. */
   readonly duplicate: boolean;
 }
@@ -100,7 +105,18 @@ export function validateRunResult(result: RunResult): void {
   if (result.quest !== undefined) validateRunQuestSummary(result.quest);
   if (result.difficulty !== undefined && !isCampaignDifficulty(result.difficulty))
     throw new TypeError('Unknown difficulty.');
+  if (result.loot !== undefined) {
+    if (!Array.isArray(result.loot) || result.loot.length > MAX_RUN_LOOT)
+      throw new RangeError('Invalid run loot.');
+    for (const raw of result.loot) {
+      const item = validateItem(raw);
+      if (item.slot === 'weapon' && item.characterClass !== result.characterClass)
+        throw new RangeError('A dropped weapon belongs to the played class.');
+    }
+  }
 }
+/** Task 42: a run's loot is bounded (elite drops + the boss item). */
+export const MAX_RUN_LOOT = 200;
 
 function summaryFromRecent(run: RecentRun): RunSummary {
   return Object.freeze({
@@ -118,6 +134,7 @@ function summaryFromRecent(run: RecentRun): RunSummary {
     newlyUnlockedMap: run.unlockedMap,
     difficulty: run.difficulty ?? 'normal',
     newlyUnlockedTier: run.unlockedTier ?? null,
+    loot: Object.freeze([]),
     duplicate: true,
   });
 }
@@ -147,6 +164,7 @@ export function applyRunResult(
           newlyUnlockedMap: null,
           difficulty: result.difficulty ?? 'normal',
           newlyUnlockedTier: null,
+          loot: Object.freeze([]),
           duplicate: true,
         });
     return Object.freeze({ profile, summary });
@@ -269,8 +287,13 @@ export function applyRunResult(
       ...(result.quest ? { quest: validateRunQuestSummary(result.quest) } : {}),
     }),
   });
+  // Task 42: the run's items, once per finalized run (same snapshot and run-ID de-duplication).
+  const looted =
+    finished && result.loot?.length
+      ? receiveLoot(next_, result.loot.map(validateItem))
+      : { profile: next_, loot: Object.freeze([]) as readonly LootEntry[] };
   return Object.freeze({
-    profile: next_,
+    profile: looted.profile,
     summary: Object.freeze({
       runId: result.runId,
       mapId: result.mapId,
@@ -286,6 +309,7 @@ export function applyRunResult(
       newlyUnlockedMap,
       difficulty: tier,
       newlyUnlockedTier,
+      loot: looted.loot,
       duplicate: false,
     }),
   });

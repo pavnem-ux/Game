@@ -5,3 +5,7 @@ export * from './stats';
 export * from './economy';
 export * from './slots';
 export * from './bag';
+export * from './drops';
+export * from './reforge';
+export * from './legendaries';
+export * from './stat-format';

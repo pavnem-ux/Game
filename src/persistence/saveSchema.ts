@@ -19,11 +19,12 @@ import {
   equipBlock,
   findOwned,
   isStarterUid,
+  BAG_RULES,
   NO_SLOT_LEVELS,
   validateItem,
   validateSlotLevels,
 } from '../equipment';
-import type { ItemInstance, Loadout, ShopBought, SlotLevels } from '../equipment';
+import type { ItemInstance, Loadout, ShopBought, ShopRefreshes, SlotLevels } from '../equipment';
 import { shopSaltOf } from '../profile/profile';
 import { PET_LEVEL_RULES, isPetId } from '../pets';
 import {
@@ -211,6 +212,13 @@ export function migrateV10toV11(data: Json): Json {
     : data.classes;
   return { ...data, classes, newItems: [] };
 }
+/**
+ * v11 → v12 (Task 42): no bag expansions, no shop refreshes; items have no reforge count yet
+ * (absent = 0). Nothing else changes.
+ */
+export function migrateV11toV12(data: Json): Json {
+  return { ...data, bagExpansions: 0, shopRefreshes: {} };
+}
 export const migrations: Readonly<Record<number, Migration>> = Object.freeze({
   1: migrateV1toV2,
   2: migrateV2toV3,
@@ -222,6 +230,7 @@ export const migrations: Readonly<Record<number, Migration>> = Object.freeze({
   8: migrateV8toV9,
   9: migrateV9toV10,
   10: migrateV10toV11,
+  11: migrateV11toV12,
 });
 
 export type SaveErrorCode =
@@ -451,6 +460,19 @@ export function normalizeProfile(data: Json, version = SAVE_SCHEMA_VERSION): Pla
       offers: Object.freeze(ids),
     });
   }
+  // Task 42: paid shop refreshes per class (level 1–50, count 1–64).
+  const refreshRaw = or(data.shopRefreshes, {});
+  if (!isObject(refreshRaw)) invalid('shopRefreshes');
+  const shopRefreshes: Partial<Record<CharacterClass, ShopRefreshes>> = {};
+  for (const [c, value] of Object.entries(refreshRaw as Json)) {
+    if (!CHARACTER_CLASSES.includes(c as CharacterClass) || !isObject(value))
+      invalid(`shopRefreshes.${c}`);
+    const v = value as Json;
+    shopRefreshes[c as CharacterClass] = Object.freeze({
+      level: int(v.level, `shopRefreshes.${c}.level`, 1, MAX_CLASS_LEVEL),
+      count: int(v.count, `shopRefreshes.${c}.count`, 1, 64),
+    });
+  }
   // Task 20: pets — known unique ids; levels 1–5 of owned pets (1 not kept); active pet owned.
   const petsRaw = or(data.ownedPets, []);
   if (!Array.isArray(petsRaw)) invalid('ownedPets');
@@ -547,9 +569,16 @@ export function normalizeProfile(data: Json, version = SAVE_SCHEMA_VERSION): Pla
     processedRunIds: Object.freeze(processedRunIds),
     items: Object.freeze(items),
     newItems: Object.freeze(newItems),
+    bagExpansions: int(
+      or(data.bagExpansions, 0),
+      'bagExpansions',
+      0,
+      BAG_RULES.expansionPrices.length,
+    ),
     nextItemNumber,
     shopSalt,
     shopBought: Object.freeze(shopBought),
+    shopRefreshes: Object.freeze(shopRefreshes),
     ownedPets: Object.freeze(ownedPets),
     petLevels: Object.freeze(petLevels),
     activePet: activeRaw as string | null,

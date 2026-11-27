@@ -1,5 +1,6 @@
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
+import { brand, goTo, startMap } from './e2e-nav.mjs';
 
 /**
  * Task 25: before / after screenshots of the art pack (not part of `test:e2e`). Needs a running dev
@@ -30,7 +31,7 @@ for (const [device, viewport, touch] of [
   const page = await context.newPage();
   page.on('pageerror', (e) => errors.push(`${device}: ${e.message}`));
   await page.goto(base + '/?debug');
-  const nav = page.getByRole('navigation', { name: 'Main menu' });
+  const nav = brand(page);
   /** Unlocks maps 1…mapId through a normal profile edit; the highest one is selected. */
   const unlock = async (mapId) => {
     await page.evaluate((id) => {
@@ -44,8 +45,7 @@ for (const [device, viewport, touch] of [
   };
   await nav.waitFor();
   await unlock(25);
-  const go = (label) =>
-    nav.getByRole('button', { name: label, exact: true }).evaluate((el) => el.click());
+  const go = (label) => goTo(page, label, 'dom');
   await go('Home');
   await page.waitForTimeout(400);
   await shot(page, `${device}-hub`);
@@ -60,7 +60,7 @@ for (const [device, viewport, touch] of [
   for (const mapId of [1, 25]) {
     await unlock(mapId);
     await go('Home');
-    await page.getByRole('button', { name: new RegExp(`^Start run · map ${mapId}\\b`) }).click();
+    await startMap(page, mapId);
     await page.waitForFunction(() => window.__alpha?.state().screen === 'playing');
     await page
       .getByRole('button', { name: 'Hide' })
@@ -128,7 +128,7 @@ for (const [device, viewport, touch] of [
   const page = await context.newPage();
   page.on('pageerror', (e) => errors.push(`biomes: ${e.message}`));
   await page.goto(base + '/?debug');
-  const nav = page.getByRole('navigation', { name: 'Main menu' });
+  const nav = brand(page);
   await nav.waitFor();
   for (const mapId of [1, 11, 21, 31]) {
     // Leave any run first (leaving saves the abandoned run), then edit the profile and reload.
@@ -142,7 +142,7 @@ for (const [device, viewport, touch] of [
     }, mapId);
     await page.goto(base + '/?debug');
     await nav.waitFor();
-    await page.getByRole('button', { name: new RegExp(`^Start run · map ${mapId}\\b`) }).click();
+    await startMap(page, mapId);
     await page.waitForFunction(() => window.__alpha?.state().screen === 'playing');
     await page
       .getByRole('button', { name: 'Hide' })

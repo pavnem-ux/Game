@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { mkdir, readFile } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
+import { brand, goTo, startMap } from './e2e-nav.mjs';
 
 /**
  * Task 23 §3: every screen in English at desktop 1280×720 and phone 844×390 (landscape, touch).
@@ -84,25 +85,17 @@ try {
       JSON.stringify({ ...save, gold: 12345, ore: 240 }),
     );
     await page.reload();
-    const nav = page.getByRole('navigation', { name: 'Main menu' });
+    const nav = brand(page);
     await nav.waitFor();
-    const go = async (label) => {
-      const b = nav.getByRole('button', { name: label, exact: true });
-      await b.evaluate((el) => el.click()); // the DEV toggle may overlap the row on phones
-    };
-    const tile = async (label) => {
-      await go('Home');
-      await page
-        .getByRole('navigation', { name: 'Sections' })
-        .getByRole('button', { name: new RegExp(`^${label}`) })
-        .click();
-    };
+    // Task 45: hub tiles only (a DOM click: the DEV toggle may overlap them on phones).
+    const go = (label) => goTo(page, label, 'dom');
+    const tile = (label) => goTo(page, label, 'dom');
 
     // ── Meta screens ──
     for (const [name, label] of [
       ['home', 'Home'],
       ['hero', 'Hero'],
-      ['equipment', 'Bag'],
+      ['equipment', 'Equipment'],
       ['talents', 'Talents'],
       ['shop', 'Shop'],
       ['forge', 'Forge'],
@@ -113,7 +106,7 @@ try {
       await go(label);
       await check(name);
     }
-    await go('Bag');
+    await go('Equipment');
     await page.locator('.bag-cell').first().click();
     await check('equipment-selected');
     await go('Shop');
@@ -130,7 +123,7 @@ try {
 
     // ── Run screens ──
     await go('Home');
-    await page.getByRole('button', { name: /^Start run · map/ }).click();
+    await startMap(page, undefined);
     await page.waitForFunction(() => window.__alpha?.state().screen === 'playing');
     await page
       .getByRole('button', { name: 'Hide' })

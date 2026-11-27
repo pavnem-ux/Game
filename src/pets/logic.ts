@@ -36,6 +36,21 @@ export function petParams(id: PetId, level: number): Readonly<Record<string, num
   for (const key of pet.main) out[key] = Math.round(pet.params[key] * k * 1e4) / 1e4;
   return Object.freeze(out);
 }
+/**
+ * Task 45: the stat aura of a pet at a level (hedgehog Resistance, wolf attack / movement speed;
+ * zeros for the others) — the same numbers the run's `PetRunner.modifiers()` adds.
+ */
+export function petAura(
+  id: PetId,
+  level: number,
+): Readonly<{ resistance: number; attackSpeed: number; movementSpeedPercent: number }> {
+  const p = petParams(id, level);
+  return Object.freeze({
+    resistance: id === 'hedgehog' ? p.resistance : 0,
+    attackSpeed: id === 'wolf' ? p.attackSpeed : 0,
+    movementSpeedPercent: id === 'wolf' ? p.movementSpeedPercent : 0,
+  });
+}
 /** Gold and ore to go from `toLevel − 1` to `toLevel` (2…5). */
 export function petUpgradeCost(toLevel: number): Readonly<{ gold: number; ore: number }> {
   if (!Number.isInteger(toLevel) || toLevel < 2 || toLevel > PET_LEVEL_RULES.maxLevel)

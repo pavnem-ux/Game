@@ -2003,7 +2003,6 @@ body {
 }
 /* Task 16: touch tap targets ≥ 44 px in menus and in-run dialogs (coarse pointers only). */
 @media (pointer: coarse) {
-  .meta-ui .meta-nav-item,
   .meta-ui .meta-brand,
   .meta-ui .kit-tab,
   .meta-ui .kit-button,
@@ -2018,7 +2017,7 @@ body {
     min-width: 44px;
   }
 }
-/* Task 16: menus on phones — no outer page chrome, one scrolling nav row, safe-area padding. */
+/* Task 16: menus on phones — no outer page chrome, safe-area padding (Task 45: no nav row). */
 @media (max-height: 560px), (max-width: 760px) {
   .alpha-shell .page-footer {
     display: none;
@@ -2028,36 +2027,11 @@ body {
     padding: max(6px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 6px
       max(12px, env(safe-area-inset-left));
   }
-  .meta-ui .meta-nav {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
-  }
-  .meta-ui .meta-nav::-webkit-scrollbar {
-    display: none;
-  }
-  .meta-ui .meta-nav-item {
-    flex: 0 0 auto;
-    white-space: nowrap;
-  }
   .meta-ui .meta-content {
     padding: 12px max(14px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom))
       max(14px, env(safe-area-inset-left));
   }
 }
-/* Narrow (portrait) phones: brand + Gold on the first row, the nav on its own full-width row. */
-@media (max-width: 760px) {
-  .meta-ui .meta-topbar {
-    flex-wrap: wrap;
-  }
-  .meta-ui .meta-nav {
-    order: 3;
-    flex: 1 1 100%;
-  }
-}
-
 /* ── Task 27: skill icons (art pack 3). Sizes: ICON_SIZES (kit/icon-sizes.ts) → --icon-* on :root. ── */
 .skill-icon {
   flex: none;
@@ -2469,4 +2443,41 @@ body {
   font: 600 10px/1.5 var(--font-sans, system-ui, sans-serif);
   letter-spacing: 0.12em;
   pointer-events: none;
+}
+
+/* Task 42: item pickup toast and the results Loot block */
+.loot-toast {
+  position: absolute;
+  top: 132px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 14px;
+  border-radius: 10px;
+  background: rgba(7, 11, 22, 0.85);
+  border: 1px solid currentColor;
+  font-weight: 600;
+  pointer-events: none;
+  animation: activity-toast-in 0.25s ease-out;
+  z-index: 30;
+}
+.results-loot {
+  margin: 10px 0;
+}
+.results-loot ul {
+  display: grid;
+  gap: 4px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.results-loot li {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.results-loot small {
+  color: #b2a88f;
+}
+.results-loot-salvaged {
+  font-style: italic;
 }

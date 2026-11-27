@@ -63,6 +63,8 @@ function v9Save() {
   for (const k of ITEM_FIELDS) delete data[k];
   // Task 41 fields (v11) did not exist in v9.
   delete data.newItems;
+  delete data.bagExpansions; // Task 42 (v12)
+  delete data.shopRefreshes;
   for (const c of Object.keys(data.classes)) delete data.classes[c].slotLevels;
   data.schemaVersion = 9;
   data.gold = 1234;
@@ -92,7 +94,7 @@ function v10Profile(): PlayerProfile {
 
 describe('Task 40 — save schema v10 (equipment reset)', () => {
   it('a v9 save migrates: equipment reset to the starter weapons, everything else kept', () => {
-    expect(SAVE_SCHEMA_VERSION).toBe(11); // then v10 → v11 (Task 41: slot levels, «new»)
+    expect(SAVE_SCHEMA_VERSION).toBe(12); // then v10 → v11 (Task 41), v11 → v12 (Task 42)
     const v9 = v9Save();
     const r = parseProfileJson(JSON.stringify(v9));
     if (!r.ok) throw r.error;
@@ -120,7 +122,8 @@ describe('Task 40 — save schema v10 (equipment reset)', () => {
     // Gold, Ore, maps, runs, pets, quests: unchanged.
     const { classes: _a, schemaVersion: _b, ...others } = json(p);
     const { classes: _a2, schemaVersion: _b2, ownedItems: _c, itemLevels: _d, ...othersOld } = v9;
-    for (const k of [...ITEM_FIELDS, 'newItems']) delete others[k];
+    for (const k of [...ITEM_FIELDS, 'newItems', 'bagExpansions', 'shopRefreshes'])
+      delete others[k];
     expect(others).toEqual(othersOld);
     expect(p.gold).toBe(1234);
     expect(p.ore).toBe(57);

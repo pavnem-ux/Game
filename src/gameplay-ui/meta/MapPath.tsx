@@ -1,3 +1,4 @@
+import { LEGENDARY_TEXT, legendaryChance, legendaryPool } from '../../equipment';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import {
   CAMPAIGN_ACTS,
@@ -12,6 +13,7 @@ import { campaignStore } from '../campaign-state';
 import { clock, factor, minutes } from '../campaign-format';
 import { BackgroundArt, BossPortrait, Button, Panel } from '../kit';
 import { EN } from '../strings-en';
+import { HomeButton } from './HomeButton';
 
 const M = EN.meta.maps;
 /** Path geometry (px): node spacing, act banner height, winding amplitude. */
@@ -57,6 +59,10 @@ export function MapPathPage() {
   const done = new Set(profile.completedMaps);
   return (
     <div className="map-path-screen">
+      <header className="meta-page-head map-path-head">
+        <HomeButton />
+        <h2 className="meta-title">{M.title}</h2>
+      </header>
       <div className="map-path-scroll" aria-label={M.title} role="region">
         <div className="map-path" style={{ height: PATH_HEIGHT }}>
           {CAMPAIGN_ACTS.map((a) => {
@@ -249,6 +255,20 @@ function MapPanel({ map: base }: { map: CampaignMap }) {
         <dd className="map-boss">
           <BossPortrait bossId={map.bossId} locked={!unlocked} size="bossPanel" />
           <span>♚ {unlocked ? map.bossName : M.bossHidden}</span>
+        </dd>
+        {/* Task 43: the boss's Legendary pool (other classes' weapons dimmed). */}
+        <dt>Legendaries</dt>
+        <dd className="map-legendaries" aria-label="Legendary pool">
+          {legendaryPool(map.id).map((l) => (
+            <span
+              key={l.id}
+              className={`map-legendary ${l.slot === 'weapon' && l.characterClass !== cls ? 'is-other' : ''}`}
+              title={LEGENDARY_TEXT[l.id]}
+            >
+              {l.name}
+            </span>
+          ))}
+          <small> · boss item {legendaryChance(tier)}% chance</small>
         </dd>
         <dt>{M.best}</dt>
         <dd>

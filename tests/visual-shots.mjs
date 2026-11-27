@@ -1,5 +1,6 @@
 import { chromium } from 'playwright-core';
 import { mkdir } from 'node:fs/promises';
+import { startMap } from './e2e-nav.mjs';
 
 /**
  * Task 18: arena screenshots for the visual before/after comparison (maps 1, 15, 25, 35 and a boss
@@ -31,7 +32,7 @@ if (quality)
 await page.goto(base + '/?debug');
 await page.waitForFunction(() => !!window.__alpha);
 await page.getByRole('button', { name: 'Warrior Sword', exact: false }).click();
-await page.getByRole('button', { name: 'Start run' }).click();
+await startMap(page);
 await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
 const command = (a) => page.evaluate((x) => window.__alpha.command(x), a);
 const advance = (s) => page.evaluate((x) => window.__alpha.advance(x), s);

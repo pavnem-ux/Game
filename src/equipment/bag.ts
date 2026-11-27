@@ -1,6 +1,6 @@
 import { CHARACTER_CLASSES } from '../character-stats';
 import type { CharacterClass } from '../character-stats';
-import { BAG_CAPACITY, GEAR_SLOTS, RARITIES, SALVAGE_ORE } from './config';
+import { BAG_RULES, GEAR_SLOTS, RARITIES, SALVAGE_ORE } from './config';
 import type { GearSlot, Rarity } from './config';
 import type { ItemInstance } from './items';
 import { findOwned } from './logic';
@@ -12,7 +12,22 @@ import { slottedStats } from './slots';
  * «better» comparison shared by the Bag and the Shop.
  */
 export const bagCount = (items: readonly ItemInstance[]) => items.length;
-export const bagFull = (items: readonly ItemInstance[]) => items.length >= BAG_CAPACITY;
+/** Task 42: bag capacity with `expansions` Gold expansions bought (25 … 75). */
+export function bagCapacity(expansions = 0): number {
+  if (
+    !Number.isInteger(expansions) ||
+    expansions < 0 ||
+    expansions > BAG_RULES.expansionPrices.length
+  )
+    throw new RangeError(`Invalid bag expansions: ${String(expansions)}.`);
+  return BAG_RULES.base + BAG_RULES.perExpansion * expansions;
+}
+/** Full (or over capacity, Task 42 §3): the shop refuses purchases. */
+export const bagFull = (items: readonly ItemInstance[], expansions = 0) =>
+  items.length >= bagCapacity(expansions);
+/** Gold price of the next bag expansion, null when all 5 are bought. */
+export const nextExpansionPrice = (expansions: number): number | null =>
+  BAG_RULES.expansionPrices[expansions] ?? null;
 /** The classes whose loadout holds this uid (in class order). */
 export function equippedBy(loadouts: Loadouts, uid: string): readonly CharacterClass[] {
   return CHARACTER_CLASSES.filter((c) => GEAR_SLOTS.some((s) => loadouts[c][s] === uid));

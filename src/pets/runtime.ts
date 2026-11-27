@@ -1,6 +1,6 @@
 import { PET_CONFIG, PET_FOLLOW } from './config';
 import type { PetId } from './config';
-import { petLevelFactor, petParams } from './logic';
+import { petAura, petLevelFactor, petParams } from './logic';
 
 /**
  * Task 20 pet runtime (framework-free). One pet per run, created at world start (or by the debug
@@ -118,15 +118,7 @@ export class PetRunner {
     return this.nextActionAt;
   }
   modifiers(): PetModifiers {
-    const p = this.params;
-    if (this.id === 'hedgehog') return Object.freeze({ ...NONE, resistance: p.resistance });
-    if (this.id === 'wolf')
-      return Object.freeze({
-        ...NONE,
-        attackSpeed: p.attackSpeed,
-        movementSpeedPercent: p.movementSpeedPercent,
-      });
-    return NONE;
+    return petAura(this.id, this.level);
   }
   /** Kitten: extra share of collected coins (%), 0 for the other pets. */
   get coinPercent(): number {

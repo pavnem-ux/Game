@@ -15,7 +15,9 @@ import {
   STARTER_WEAPONS,
   WEAPON_BANDS,
 } from './config';
-import type { AffixStat, GearSlot, GearTemplate, Rarity } from './config';
+import { checkLegendaryFit, legendaryDef } from './legendaries';
+import { formatStatLine } from './stat-format';
+import type { AffixStat, GearSlot, GearTemplate, LegendaryId, Rarity } from './config';
 
 /**
  * Task 40 item instances (pure). Two items of the same slot, level and rarity can differ by their
@@ -37,6 +39,8 @@ export interface ItemInstance {
   readonly affixes: readonly ItemAffix[];
   /** Task 43 (unused until then): the Legendary unique effect. */
   readonly legendaryId?: string;
+  /** Task 42: how many times this item was reforged (absent = 0). */
+  readonly reforges?: number;
 }
 /** Flat main stats of an item (whole numbers). */
 export interface MainStats {
@@ -159,8 +163,14 @@ export function generateItem(
     rarity: Rarity;
     characterClass: CharacterClass;
     stats?: readonly AffixStat[];
+    /** Task 43: the unique effect of a Legendary (checked against the slot / class). */
+    legendaryId?: LegendaryId;
   }>,
 ): ItemInstance {
+  if (spec.legendaryId !== undefined) {
+    if (spec.rarity !== 'legendary') throw new RangeError('Only a Legendary has a unique effect.');
+    checkLegendaryFit(spec.legendaryId, spec.slot, spec.characterClass);
+  }
   validateLevel(spec.itemLevel);
   if (!RARITIES.includes(spec.rarity)) throw new RangeError('Unknown rarity.');
   if (!GEAR_SLOTS.includes(spec.slot)) throw new RangeError('Unknown slot.');
@@ -191,6 +201,7 @@ export function generateItem(
     itemLevel: spec.itemLevel,
     rarity: spec.rarity,
     affixes: Object.freeze(affixes),
+    ...(spec.legendaryId !== undefined ? { legendaryId: spec.legendaryId } : {}),
   });
 }
 
@@ -219,18 +230,27 @@ export function dominantAffix(item: ItemInstance): AffixStat | null {
 /** «Plate Gauntlets of Fury» (Common: no suffix; starter weapons keep their own names). */
 export function itemName(item: ItemInstance): string {
   if (isStarterUid(item.uid)) return STARTER_WEAPONS[item.characterClass!].name;
+  // Task 43: a Legendary with a unique effect has its own name (no stat suffix).
+  const legendary = item.legendaryId ? legendaryDef(item.legendaryId) : null;
+  if (legendary) return legendary.name;
   const base = bandTemplate(item).name;
   const top = dominantAffix(item);
   return top ? `${base} ${AFFIX_RULES[top].suffix}` : base;
 }
 /** Template id whose art is the item's icon (starter weapons: their own id). */
 export function itemIconId(item: ItemInstance): string {
+  // Task 45: a Legendary with a unique effect has its own icon (`item_<legendaryId>`).
+  if (item.legendaryId && legendaryDef(item.legendaryId)) return item.legendaryId;
+  return itemBandIconId(item);
+}
+/** The slot's band icon (Task 40): the fallback when a Legendary icon is missing. */
+export function itemBandIconId(item: ItemInstance): string {
   return isStarterUid(item.uid) ? item.uid : bandTemplate(item).id;
 }
 /** «+3.4% Crit damage» style text of a secondary stat. */
 export function affixText(affix: ItemAffix): string {
-  const r = AFFIX_RULES[affix.stat];
-  return `+${affix.value.toFixed(r.decimals)}${r.unit} ${r.label}`;
+  // Task 44: the one stat formatter («Crit chance +3.2%»).
+  return formatStatLine(affix.stat, affix.value);
 }
 
 // ── Validation ──
@@ -272,8 +292,17 @@ export function validateItem(raw: unknown): ItemInstance {
       throw new RangeError('Secondary stat value out of range.');
     return Object.freeze({ stat, value: a.value });
   });
-  if (v.legendaryId !== undefined && (typeof v.legendaryId !== 'string' || !v.legendaryId))
-    throw new RangeError('Invalid legendary id.');
+  // Task 43: a unique effect only on a Legendary of the right slot (and class for weapons).
+  if (v.legendaryId !== undefined) {
+    if (typeof v.legendaryId !== 'string' || v.rarity !== 'legendary')
+      throw new RangeError('Invalid legendary id.');
+    checkLegendaryFit(v.legendaryId, v.slot as GearSlot, v.characterClass);
+  }
+  if (
+    v.reforges !== undefined &&
+    (!Number.isSafeInteger(v.reforges) || v.reforges < 1 || v.reforges > MAX_REFORGES)
+  )
+    throw new RangeError('Invalid reforge count.');
   return Object.freeze({
     uid: v.uid,
     slot: v.slot as GearSlot,
@@ -282,8 +311,11 @@ export function validateItem(raw: unknown): ItemInstance {
     rarity: v.rarity as Rarity,
     affixes: Object.freeze(affixes),
     ...(v.legendaryId !== undefined ? { legendaryId: v.legendaryId } : {}),
+    ...(v.reforges !== undefined ? { reforges: v.reforges } : {}),
   });
 }
+/** Task 42: a sanity bound on the saved reforge count (cost grows ×1.25 each time). */
+export const MAX_REFORGES = 1000;
 
 /** Startup validation of the item configuration. */
 export function validateEquipmentConfig(): void {

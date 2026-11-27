@@ -178,28 +178,28 @@ export const AFFIX_RULES: Readonly<
   attackSpeed: Object.freeze({
     max: 10,
     label: 'Attack speed',
-    unit: '',
+    unit: '%',
     suffix: 'of Speed',
     decimals: 1,
   }),
   criticalChance: Object.freeze({
     max: 6,
     label: 'Crit chance',
-    unit: ' pp',
+    unit: '%',
     suffix: 'of Precision',
     decimals: 1,
   }),
   criticalDamage: Object.freeze({
     max: 25,
     label: 'Crit damage',
-    unit: ' pp',
+    unit: '%',
     suffix: 'of Fury',
     decimals: 1,
   }),
   cooldownReduction: Object.freeze({
     max: 5,
     label: 'Cooldown reduction',
-    unit: ' pp',
+    unit: '%',
     suffix: 'of Haste',
     decimals: 1,
   }),
@@ -227,14 +227,14 @@ export const AFFIX_RULES: Readonly<
   hpRegenPercent: Object.freeze({
     max: 0.5,
     label: 'HP regen',
-    unit: '% max HP/s',
+    unit: '% max HP / s',
     suffix: 'of Renewal',
     decimals: 2,
   }),
   dodgeChance: Object.freeze({
     max: 4,
     label: 'Dodge',
-    unit: ' pp',
+    unit: '%',
     suffix: 'of Evasion',
     decimals: 1,
   }),
@@ -485,5 +485,118 @@ export const SALVAGE_ORE: Readonly<Record<Rarity, number>> = Object.freeze({
   epic: 8,
   legendary: 25,
 });
-/** Owned items the bag holds (starter weapons don't count). */
-export const BAG_CAPACITY = 60;
+/**
+ * Task 42 (replaces Task 41's 60): owned items the bag holds — base 25 (starter weapons don't
+ * count; equipped items do), +10 per Gold expansion, up to 5 expansions (75). Account-wide.
+ */
+export const BAG_RULES = Object.freeze({
+  base: 25,
+  perExpansion: 10,
+  expansionPrices: Object.freeze([5000, 12000, 25000, 40000, 60000]),
+});
+
+// ── Task 42: item drops (PROVISIONAL; docs/task-42-drops-reforge.md) ──
+
+export type DropDifficulty = 'normal' | 'hard' | 'nightmare' | 'trial';
+/**
+ * Boss (victory only): one guaranteed item, rarity weights by difficulty. Elites: a chance per kill
+ * (kept on defeat) with their own rarity weights. Item level = min(class level, cap), cap =
+ * capOffset[difficulty] + map id, never above 50.
+ */
+export const DROP_RULES = Object.freeze({
+  bossRarity: Object.freeze({
+    normal: Object.freeze({ uncommon: 60, rare: 35, epic: 5 }),
+    hard: Object.freeze({ uncommon: 30, rare: 55, epic: 15 }),
+    nightmare: Object.freeze({ uncommon: 10, rare: 55, epic: 35 }),
+    trial: Object.freeze({ uncommon: 10, rare: 55, epic: 35 }),
+  }) as Readonly<Record<DropDifficulty, Readonly<Partial<Record<Rarity, number>>>>>,
+  eliteChance: 0.05,
+  eliteRarity: Object.freeze({ rare: 80, epic: 20 }) as Readonly<Partial<Record<Rarity, number>>>,
+  capOffset: Object.freeze({ normal: 5, hard: 10, nightmare: 15, trial: 15 }) as Readonly<
+    Record<DropDifficulty, number>
+  >,
+});
+
+/**
+ * Task 42 reforge (Rare and better): one secondary stat is replaced by a random stat of the slot's
+ * pool the item doesn't have, rolled in the rarity's range. Cost = base × max(minLevelShare,
+ * itemLevel / 50) × growth^n Gold (rounded), n = the item's earlier reforges.
+ */
+export const REFORGE_RULES = Object.freeze({
+  base: Object.freeze({ rare: 300, epic: 450, legendary: 600 }) as Readonly<
+    Partial<Record<Rarity, number>>
+  >,
+  minLevelShare: 0.2,
+  growth: 1.25,
+});
+/**
+ * Task 42 shop refresh: a new stock for the same class level. Cost = firstFactor × the Uncommon
+ * price at the class level, doubled for each further refresh at that level (resets on level-up).
+ */
+export const SHOP_REFRESH_RULES = Object.freeze({ firstFactor: 2, growth: 2 });
+
+// ── Task 43: Legendary items (PROVISIONAL; docs/LEGENDARIES.md) ──
+
+export type LegendaryId =
+  | 'barrow_crown'
+  | 'leshy_bark'
+  | 'ash_wolf_stride'
+  | 'millwheel_gauntlets'
+  | 'mourner_heart'
+  | 'water_tsar_ring'
+  | 'warden_edge'
+  | 'frost_warlord_staff'
+  | 'thunder_kite_bow'
+  | 'mire_serpent_fangs';
+/**
+ * The 10 Legendaries in pool order (the index matters for the map pools) and every number of their
+ * unique effects. A weapon belongs to one class.
+ */
+export const LEGENDARY_RULES = Object.freeze({
+  items: Object.freeze([
+    { id: 'barrow_crown', name: 'Crown of the Barrow King', slot: 'helmet' },
+    { id: 'leshy_bark', name: 'Bark of the Old Leshy', slot: 'armor' },
+    { id: 'ash_wolf_stride', name: 'Stride of the Ash Wolf', slot: 'pants' },
+    { id: 'millwheel_gauntlets', name: 'Millwheel Gauntlets', slot: 'gloves' },
+    { id: 'mourner_heart', name: 'Heart of the Mourner', slot: 'amulet' },
+    { id: 'water_tsar_ring', name: 'Ring of the Water Tsar', slot: 'ring' },
+    { id: 'warden_edge', name: 'Edge of the Warden', slot: 'weapon', characterClass: 'warrior' },
+    {
+      id: 'frost_warlord_staff',
+      name: 'Staff of the Frost Warlord',
+      slot: 'weapon',
+      characterClass: 'mage',
+    },
+    {
+      id: 'thunder_kite_bow',
+      name: 'Bow of the Thunder Kite',
+      slot: 'weapon',
+      characterClass: 'archer',
+    },
+    {
+      id: 'mire_serpent_fangs',
+      name: 'Fangs of the Mire Serpent',
+      slot: 'weapon',
+      characterClass: 'rogue',
+    },
+  ] as const) as readonly Readonly<{
+    id: LegendaryId;
+    name: string;
+    slot: GearSlot;
+    characterClass?: CharacterClass;
+  }>[],
+  /** Boss items only: the chance (percent) the boss item becomes a Legendary, by difficulty. */
+  bossChance: Object.freeze({ normal: 0.5, hard: 1, nightmare: 3, trial: 3 }) as Readonly<
+    Record<DropDifficulty, number>
+  >,
+  crown: Object.freeze({ hpBelow: 30, barrier: 30, barrierSeconds: 10, cooldown: 60 }),
+  bark: Object.freeze({ resistanceShare: 150, radius: 120, cooldown: 1 }),
+  stride: Object.freeze({ movementSpeedPercent: 15, moveSeconds: 3, stopSeconds: 0.2 }),
+  millwheel: Object.freeze({ everyAttacks: 30, radius: 200, weaponShare: 100 }),
+  heart: Object.freeze({ maxBarrier: 20, barrierSeconds: 10 }),
+  ring: Object.freeze({ healPerCrystal: 0.3, maxPerSecond: 3 }),
+  warden: Object.freeze({ everyHits: 5, multiplier: 2 }),
+  frost: Object.freeze({ slow: 0.2, seconds: 2, bonusPercent: 20 }),
+  kite: Object.freeze({ distance: 300, bonusPercent: 30 }),
+  mire: Object.freeze({ targets: 2, radius: 250 }),
+});

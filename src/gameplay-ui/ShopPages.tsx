@@ -13,10 +13,9 @@ import {
   itemIconId,
   itemName,
   offerItem,
-  shopStock,
 } from '../equipment';
 import type { GearSlot, ShopOffer } from '../equipment';
-import { equipmentStateOf, shopOffersOf } from '../profile';
+import { equipmentStateOf, nextRefreshCost, shopOffersOf, stockOf } from '../profile';
 import { campaignStore } from './campaign-state';
 import { PET_CONFIG, PET_IDS, checkPetPurchase, petLevel } from '../pets';
 import type { PetId } from '../pets';
@@ -32,8 +31,9 @@ import {
   TierFrame,
   disabledReason,
 } from './kit';
-import { rarityColor, rarityTier, slottedLines } from './item-view';
+import { ItemArt, StatName, rarityColor, rarityTier, slottedLines } from './item-view';
 import { EN, formatNumber } from './strings-en';
+import { HomeButton } from './meta/HomeButton';
 
 /**
  * Task 40 shop: Common and Uncommon items at item level = the class level — per slot one Common
@@ -63,13 +63,16 @@ export function ShopPage() {
   const [shopClass, setShopClass] = useState<CharacterClass>(profile?.selectedClass ?? 'warrior');
   const [confirming, setConfirming] = useState<ShopOffer | null>(null);
   const [message, setMessage] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
   if (!profile) return <p className="campaign-empty">Profile unavailable.</p>;
   const level = profile.classes[shopClass].level;
+  const refreshCost = nextRefreshCost(profile, shopClass);
   const preview = (o: ShopOffer) => offerItem(o, shopClass, 'preview');
   const slots = tab === 'all' ? GEAR_SLOTS : tab === 'pets' ? [] : [tab];
   return (
     <div className="campaign-page shop-page">
       <header className="meta-page-head">
+        <HomeButton />
         <h2 className="meta-title">Shop</h2>
         <Tabs
           label="Shop slots"
@@ -116,7 +119,21 @@ export function ShopPage() {
             {level >= ITEM_LEVEL_RANGE.max
               ? `Item level ${level}`
               : `Item level ${level} · new stock at level ${level + 1}`}
-            {bagFull(profile.items) && ` · ${REFUSALS['bag-full']}`}
+            {bagFull(profile.items, profile.bagExpansions) && ` · ${REFUSALS['bag-full']}`}{' '}
+            <Button
+              size="s"
+              variant="ghost"
+              disabledReason={profile.gold < refreshCost ? 'Not enough Gold' : null}
+              onClick={() => {
+                setRefreshing(true);
+                setMessage('');
+              }}
+            >
+              Refresh stock ·{' '}
+              <span className="price-badge">
+                <CurrencyIcon kind="gold" label="Gold" /> {formatNumber(refreshCost)}
+              </span>
+            </Button>
           </p>
           {message && (
             <p className="shop-message" role="status">
@@ -137,6 +154,23 @@ export function ShopPage() {
             ))}
           </div>
         </>
+      )}
+      {refreshing && (
+        <ConfirmModal
+          title={`Refresh the ${CLASS_LABELS[shopClass]}'s stock for ${formatNumber(refreshCost)} Gold?`}
+          onConfirm={() => {
+            const refused = campaignStore.refreshShop(shopClass);
+            uiSound(refused ? 'ui-error' : 'ui-buy');
+            setRefreshing(false);
+            setMessage(refused ? (REFUSALS[refused] ?? 'Refresh failed.') : 'New stock arrived.');
+          }}
+          onCancel={() => setRefreshing(false)}
+        >
+          <p>
+            Every offer at this level is redrawn (bought offers come back as new ones). The next
+            refresh at this level costs twice as much.
+          </p>
+        </ConfirmModal>
       )}
       {confirming && (
         <ConfirmModal
@@ -173,15 +207,13 @@ function OfferRow({
 }) {
   const profile = useCampaign().progression.profile!;
   const progress = profile.classes[characterClass];
-  const stock = shopStock(profile.shopSalt, characterClass, progress.level).filter(
-    (o) => o.slot === slot,
-  );
+  const stock = stockOf(profile, characterClass).filter((o) => o.slot === slot);
   const open = new Set(shopOffersOf(profile, characterClass).map((o) => o.id));
   const loadouts = equipmentStateOf(profile).loadouts;
   const wornUid = progress.loadout[slot];
   const worn = wornUid ? findOwned(profile.items, wornUid, characterClass) : null;
   const slotLevel = progress.slotLevels[slot];
-  const full = bagFull(profile.items);
+  const full = bagFull(profile.items, profile.bagExpansions);
   return (
     <section className="shop-slot-row" aria-label={SLOT_LABELS[slot]}>
       <h4 className="shop-slot-label">{SLOT_LABELS[slot]}</h4>
@@ -207,7 +239,7 @@ function OfferRow({
             >
               <TierFrame tier={rarityTier(item.rarity)} className="shop-offer">
                 <div className="shop-offer-head">
-                  <ItemIcon templateId={itemIconId(item)} size="itemSmall" />
+                  <ItemArt item={item} size="itemSmall" />
                   <strong style={{ color: rarityColor(item.rarity) }}>{name}</strong>
                   <small>L{item.itemLevel}</small>
                   {better && <span className="bag-marker better">better</span>}
@@ -216,7 +248,7 @@ function OfferRow({
                   {main.map((l, i) => (
                     <span key={l.key}>
                       {i > 0 && ' · '}
-                      {l.text}
+                      <StatName statKey={l.key} /> {l.value}
                       {l.deltaText !== undefined && l.delta !== 0 && (
                         <span className={`bag-delta ${l.delta! > 0 ? 'up' : 'down'}`}>
                           {' '}
@@ -226,7 +258,11 @@ function OfferRow({
                     </span>
                   ))}
                 </p>
-                {affix && <p className="shop-offer-line affix">{affix.text}</p>}
+                {affix && (
+                  <p className="shop-offer-line affix">
+                    <StatName statKey={affix.key} /> {affix.value}
+                  </p>
+                )}
                 <Button
                   variant="primary"
                   size="s"

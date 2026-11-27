@@ -10,8 +10,8 @@ import { alphaBridge } from './store';
 import { campaignDebug } from './campaign-debug';
 import type { AlphaState } from './store';
 import { ENEMY_KINDS } from '../gameplay';
-import { GEAR_SLOTS, RARITIES, SLOT_LABELS } from '../equipment';
-import type { GearSlot, Rarity } from '../equipment';
+import { LEGENDARIES, GEAR_SLOTS, RARITIES, SLOT_LABELS } from '../equipment';
+import type { GearSlot, LegendaryId, Rarity } from '../equipment';
 import { PET_CONFIG, PET_IDS } from '../pets';
 import { QUESTS } from '../quests';
 import type { EnemyKind } from '../gameplay';
@@ -239,6 +239,30 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
         <button onClick={() => campaignDebug.equipBestTier(characterClass)}>
           Legendary set at class level ({CLASS_LABELS[characterClass]})
         </button>
+        {/* Task 43: any Legendary (its unique effect) at the chosen item level. */}
+        <label>
+          Legendary
+          <select
+            aria-label="Debug legendary"
+            defaultValue=""
+            onChange={(e) => {
+              if (e.target.value)
+                campaignDebug.grantLegendary(
+                  characterClass,
+                  e.target.value as LegendaryId,
+                  grantLevel,
+                );
+              e.target.value = '';
+            }}
+          >
+            <option value="">Grant at item level {grantLevel}…</option>
+            {LEGENDARIES.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.name}
+              </option>
+            ))}
+          </select>
+        </label>
         {/* Task 40: grant a random item of a slot, rarity and item level (validated save). */}
         <label>
           Slot
@@ -298,6 +322,24 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
           />
         </label>
         <button onClick={() => campaignDebug.grantOre(debugOre)}>Grant Ore</button>
+        {/* Task 42: bag expansions (0–5). */}
+        <label>
+          Bag expansions
+          <select
+            aria-label="Debug bag expansions"
+            onChange={(e) => campaignDebug.setBagExpansions(Number(e.target.value))}
+            defaultValue=""
+          >
+            <option value="" disabled>
+              set…
+            </option>
+            {[0, 1, 2, 3, 4, 5].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+        </label>
       </fieldset>
       {/* Task 21 §1.6: quests (validated saves; DEV/QA only). */}
       <fieldset aria-label="Quest Debug">
@@ -717,6 +759,30 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
             >
               Spawn chest
             </button>
+            {/* Task 42: item drops — an elite drop at the player; force the boss item rarity. */}
+            {(['uncommon', 'rare', 'epic'] as const).map((r) => (
+              <button key={r} onClick={() => send({ type: 'elite-drop', rarity: r })}>
+                Item drop: {r}
+              </button>
+            ))}
+            <button onClick={() => send({ type: 'legendary-drop', enabled: true })}>
+              Boss item: Legendary
+            </button>
+            <label>
+              Boss item
+              <select
+                aria-label="Debug boss item rarity"
+                defaultValue=""
+                onChange={(e) => send({ type: 'boss-drop-rarity', rarity: e.target.value || null })}
+              >
+                <option value="">By difficulty</option>
+                {RARITIES.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+            </label>
             {BUFF_IDS.map((b) => (
               <button key={b} onClick={() => send({ type: 'buff', buff: b })}>
                 Buff: {BUFFS[b].name}

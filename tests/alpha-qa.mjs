@@ -4,6 +4,7 @@ import { spawn } from 'node:child_process';
 import { mkdir, readFile } from 'node:fs/promises';
 import { checkSkillsAccess } from './skills-ui-browser.mjs';
 import { checkQaTools } from './qa-tools-browser.mjs';
+import { startMap } from './e2e-nav.mjs';
 
 await mkdir('artifacts', { recursive: true });
 const html = await readFile('dist-qa/index.html', 'utf8');
@@ -51,7 +52,7 @@ try {
   await page.waitForFunction(() => !!window.__alpha);
   await page.getByText('QA PREVIEW', { exact: false }).waitFor();
   await page.getByRole('button', { name: 'Mage Staff', exact: false }).click();
-  await page.getByRole('button', { name: 'Start run' }).click();
+  await startMap(page);
   const state = () => page.evaluate(() => window.__alpha.state());
   const command = (action) => page.evaluate((a) => window.__alpha.command(a), action);
   await command({ type: 'clear-enemies' });

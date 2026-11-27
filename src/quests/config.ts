@@ -230,10 +230,10 @@ const FORGE = [
   q(
     'forge.tier4',
     'forge',
-    'Equip one hero with 7 items of tier 4 or higher',
+    // Task 42: `tier` is the rarity rank (1 Common … 4 Epic … 5 Legendary).
+    'Equip 7 items of Epic or better on one class',
     { kind: 'tier-loadout', tier: 4, items: 7 },
     { gold: 3000 },
-    true,
   ),
 ];
 
