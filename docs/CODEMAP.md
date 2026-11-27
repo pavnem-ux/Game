@@ -45,7 +45,8 @@ workflow: [TASK_WORKFLOW.md](TASK_WORKFLOW.md).
 ## Meta progression and saves
 
 - `src/profile/` — `profile.ts` (`PlayerProfile`, schema version), `class-xp.ts`, `rewards.ts`
-  (`runRewards`), `apply-run.ts` (idempotent by run id), `equipment.ts` (`buyOffer`, `equipItem`, `grantItem`, `upgradeSlot`, `salvageItems`, `markItemsSeen`), `pets.ts`, `quests.ts`,
+  (`runRewards`), `apply-run.ts` (idempotent by run id), `equipment.ts` (`buyOffer`, `equipItem`, `grantItem`, `upgradeSlot`, `salvageItems`, `markItemsSeen`,
+  Task 42 `receiveLoot`, `reforgeProfileItem`, `refreshShop`, `buyBagExpansion`), `pets.ts`, `quests.ts`,
   `recommended-level.ts`.
 - `src/persistence/` — `saveSchema.ts` (parse, migrations, `normalizeProfile`), `saveStore.ts`
   (keys `skazki.profile` / `.backup` / `.quarantine`), `progressionService.ts`, `transfer.ts`.
@@ -53,7 +54,8 @@ workflow: [TASK_WORKFLOW.md](TASK_WORKFLOW.md).
   pools, name bands, shop rules), `items.ts` (`ItemInstance`, `generateItem`, `itemName`,
   `validateItem`), `logic.ts` (loadouts by uid, level gate, seeded `shopStock`), `stats.ts`
   (`gearModifiers`, `permanentStats`), `economy.ts` (`COIN_RULES`, Ore), Task 41 `slots.ts` (slot
-  upgrade levels / multipliers / costs) and `bag.ts` (capacity, salvage, «better», `bagView`).
+  upgrade levels / multipliers / costs) and `bag.ts` (capacity, salvage, «better», `bagView`), Task 42 `drops.ts` (boss / elite rolls,
+  item level caps) and `reforge.ts`.
 - `src/quests/` — `config.ts`, `counters.ts`, `logic.ts`.
 
 ## UI

@@ -15,7 +15,7 @@ PR: https://github.com/pavnem-ux/Game/pull/42 (draft, into `items-rework`)
 - [x] 5 Shop refresh: paid redraw per class and level, count in the seed
 - [x] 6 Quest forge.tier4 back; save version bump; DEV / QA hooks
 - [x] 7 UI: Bag header expand, reforge on the card, shop refresh button, run pickups / toast / Loot
-- [ ] 8 Delivery: docs, e2e, final checks, PR ready
+- [x] 8 Delivery: docs, e2e, final checks, PR ready
 
 ## Decisions / blockers
 

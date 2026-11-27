@@ -10,7 +10,7 @@ Meta loop: collect coins in a campaign run → buy item instances in the Shop �
 Equipment screen → the next run starts with the stronger attributes.
 
 > Task 40 replaced the Task 11 / 19 tiered catalogue (130 fixed items, tier unlocks by cleared map,
-> the Forge item upgrades +0…+10). Sections §1–§3, §5–§7 describe the Task 40 model, §3a the Task 41 bag, slot upgrades and salvage; §4 (coins) and
+> the Forge item upgrades +0…+10). Sections §1–§3, §5–§7 describe the Task 40 model, §3a the Task 41 bag, slot upgrades and salvage, §3b the Task 42 drops, bag expansions, reforge and shop refresh; §4 (coins) and
 > §8.2 (Ore) still apply; the rest of §8 is kept as history.
 
 ## 1. Item instances (Task 40)
@@ -153,7 +153,7 @@ Legendary 25.
   skipped).
 - Every salvage asks to confirm the total. Any Legendary in it asks a second, separate time.
 
-**Bag.** Capacity 60 owned items (starter weapons don't count).
+**Bag.** Capacity 60 owned items (starter weapons don't count) — Task 42 changed it to 25 + expansions, see §3b.
 
 - At the cap the shop refuses a purchase: «Bag is full — salvage something first». DEV grants are
   refused too.
@@ -198,6 +198,82 @@ changes. Validation:
 
 - slot levels are whole numbers 0–30 for the 7 known slots;
 - `newItems` are unique uids of owned items.
+
+## 3b. Drops, bag expansions, reforge, shop refresh (Task 42)
+
+Spec: [task-42-drops-reforge.md](task-42-drops-reforge.md) · progress:
+[task-42-progress.md](task-42-progress.md). All numbers are provisional, in `src/equipment/config.ts`
+(`BAG_RULES`, `DROP_RULES`, `REFORGE_RULES`, `SHOP_REFRESH_RULES`).
+
+**Bag capacity** (replaces Task 41's 60):
+
+- Base 25 items (starter weapons don't count; equipped items do).
+- +10 per Gold expansion, up to 5 (max 75): 5 000 / 12 000 / 25 000 / 40 000 / 60 000 Gold.
+- Expansions are account-wide (`profile.bagExpansions`). The Bag header shows «Expand bag · price»
+  with a confirmation; `Bag · 27 / 25` is red when over capacity.
+- Over capacity, or at capacity, the shop refuses purchases.
+
+**Drops** (`equipment/drops.ts`, `gameplay/loot.ts`): every draw comes from the run's own seeded
+`items` stream, deterministic at every game speed.
+
+- **Boss** (victory only): one guaranteed item, added to the loot when the run resolves.
+
+  | Difficulty  | Uncommon | Rare | Epic |
+  | ----------- | -------- | ---- | ---- |
+  | Normal      | 60%      | 35%  | 5%   |
+  | Hard        | 30%      | 55%  | 15%  |
+  | Nightmare   | 10%      | 55%  | 35%  |
+  | Elite Trial | 10%      | 55%  | 35%  |
+
+- **Elite kills**: a 5% chance of an item (Rare 80%, Epic 20%), rolled inside the once-per-death
+  reward. The item is kept on defeat too.
+- **Slot**: random among the 7; a weapon is always the played class's.
+- **Item level** = min(class level, cap). The cap is Normal 5 + map, Hard 10 + map, Nightmare / Trial
+  15 + map, never above 50.
+- `legendaryRoll` in `equipment/drops.ts` is the hook where the Task 43 Legendary roll plugs in.
+- **In the run**: an elite's item lies on the ground with a pulsing glow in its rarity colour. It is
+  collected by walking over it (the pickup radius applies), and a short toast names it.
+- Items left on the ground are collected when the run ends (victory and defeat).
+- **Results**: a «Loot» block lists the items (icon, name in rarity colour, item level).
+
+**Loot into the profile** (`receiveLoot`): once per run, with the run result (run-ID
+deduplication). Abandoned runs grant nothing.
+
+- Each item gets the next `i<n>` uid and the «new» marker.
+- With a full bag, Common and Uncommon items are salvaged automatically (Ore paid, listed as
+  «auto-salvaged → N Ore»).
+- Rare and better always go in, even past capacity.
+
+**Reforge** (`equipment/reforge.ts`): Rare, Epic and Legendary items only.
+
+- Pick one secondary stat. It becomes a random stat of the slot's pool that the item doesn't have
+  yet, with a new value in the rarity's roll range. The item name suffix follows the new stats.
+- Cost: base × max(0.2, itemLevel / 50) × 1.25^n Gold. Base: Rare 300, Epic 450, Legendary 600;
+  n = the item's earlier reforges, saved on the instance as `reforges`.
+- The draw is seeded by the profile's shop salt, the uid and the reforge count, so the same state
+  always gives the same result.
+- A Legendary's `legendaryId` is never touched. No undo.
+
+**Shop refresh**: «Refresh stock» redraws the class's stock at the same level and clears its bought
+offers.
+
+- Cost: 2 × the Uncommon price at the class level, doubled for each further refresh at that level.
+  It resets on level-up.
+- The refresh count is part of the stock seed (`profile.shopRefreshes`); a count of 0 keeps the
+  Task 40 stock unchanged.
+
+**Quests**: `forge.tier4` is back as «Equip 7 items of Epic or better on one class» (same id and
+reward). Its counter is the best Epic+ count one class wears; it only grows.
+
+**Save v12** (`migrateV11toV12`): `bagExpansions: 0`, `shopRefreshes: {}`. Items have no reforge
+count yet (absent = 0).
+
+**DEV / QA**:
+
+- «Item drop: uncommon / rare / epic» puts an elite drop at the player.
+- «Boss item» forces the boss item's rarity.
+- «Bag expansions» sets 0–5.
+- Testing-controller commands: `elite-drop`, `boss-drop-rarity`.
 
 ## 4. Gold coins in runs
 
