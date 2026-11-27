@@ -55,15 +55,7 @@ export const UNIVERSAL_SKILLS: readonly SkillDefinition[] = Object.freeze([
     [10, 20, 32, 44, 60],
     '%',
   ),
-  stat(
-    'swiftness',
-    'Swiftness',
-    '➹',
-    'Movement speed',
-    'movementSpeed',
-    [5, 10, 15, 20, 26],
-    '%',
-  ),
+  stat('swiftness', 'Swiftness', '➹', 'Movement speed', 'movementSpeed', [5, 10, 15, 20, 26], '%'),
   stat(
     'toxic_mastery',
     'Toxic Mastery',
