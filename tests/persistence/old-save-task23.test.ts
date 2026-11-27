@@ -59,6 +59,7 @@ const MIGRATED = () => {
               ['nextItemNumber', 1],
               ['shopSalt', shopSaltOf(p.profileId)],
               ['shopBought', {}],
+              ['shopRefreshes', {}],
             ]
           : k === 'itemLevels'
             ? []

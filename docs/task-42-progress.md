@@ -12,7 +12,7 @@ PR: https://github.com/pavnem-ux/Game/pull/42 (draft, into `items-rework`)
 - [x] 2 Drops: seeded per-run item stream; boss (victory) + elite 5% rolls; item level caps; pickups in the run
 - [x] 3 Run end: loot into the profile once (full bag: auto-salvage Common/Uncommon, Rare+ past capacity); Loot on results
 - [x] 4 Reforge: one secondary stat, cost by rarity / level / count, saved count
-- [ ] 5 Shop refresh: paid redraw per class and level, count in the seed
+- [x] 5 Shop refresh: paid redraw per class and level, count in the seed
 - [ ] 6 Quest forge.tier4 back; save version bump; DEV / QA hooks
 - [ ] 7 UI: Bag header expand, reforge on the card, shop refresh button, run pickups / toast / Loot
 - [ ] 8 Delivery: docs, e2e, final checks, PR ready

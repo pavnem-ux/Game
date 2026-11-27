@@ -3,7 +3,7 @@ import type { CharacterClass } from '../character-stats';
 import type { ClassProgress } from './class-xp';
 import { NEW_CLASS_PROGRESS } from './class-xp';
 import { NO_SLOT_LEVELS, defaultLoadout } from '../equipment';
-import type { ItemInstance, ShopBought } from '../equipment';
+import type { ItemInstance, ShopBought, ShopRefreshes } from '../equipment';
 import type { RunOutcome, RunStatsSummary } from './rewards';
 import { NO_QUEST_COUNTERS } from '../quests/counters';
 import type { QuestCounters } from '../quests/counters';
@@ -105,6 +105,8 @@ export interface PlayerProfile {
   readonly shopSalt: number;
   /** Task 40: shop offers bought per class at its current level (reset on level-up). */
   readonly shopBought: Readonly<Partial<Record<CharacterClass, ShopBought>>>;
+  /** Task 42: paid shop refreshes per class at its current level (reset on level-up). */
+  readonly shopRefreshes: Readonly<Partial<Record<CharacterClass, ShopRefreshes>>>;
   /** Task 20: unlocked pets (account-wide), in unlock order. */
   readonly ownedPets: readonly string[];
   /** Task 20: pet level 2–5 per owned pet id; absent = level 1. */
@@ -156,6 +158,7 @@ export function createProfile(profileId: string, createdAt: string): PlayerProfi
     nextItemNumber: 1,
     shopSalt: shopSaltOf(profileId),
     shopBought: Object.freeze({}),
+    shopRefreshes: Object.freeze({}),
     ownedPets: Object.freeze([]),
     petLevels: Object.freeze({}),
     activePet: null,

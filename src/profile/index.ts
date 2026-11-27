@@ -36,6 +36,9 @@ export {
   reforgeProfileItem,
   salvageItems,
   shopOffersOf,
+  nextRefreshCost,
+  refreshShop,
+  stockOf,
   unequipSlot,
   upgradeSlot,
 } from './equipment';

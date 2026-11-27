@@ -24,7 +24,7 @@ import {
   validateItem,
   validateSlotLevels,
 } from '../equipment';
-import type { ItemInstance, Loadout, ShopBought, SlotLevels } from '../equipment';
+import type { ItemInstance, Loadout, ShopBought, ShopRefreshes, SlotLevels } from '../equipment';
 import { shopSaltOf } from '../profile/profile';
 import { PET_LEVEL_RULES, isPetId } from '../pets';
 import {
@@ -452,6 +452,19 @@ export function normalizeProfile(data: Json, version = SAVE_SCHEMA_VERSION): Pla
       offers: Object.freeze(ids),
     });
   }
+  // Task 42: paid shop refreshes per class (level 1–50, count 1–64).
+  const refreshRaw = or(data.shopRefreshes, {});
+  if (!isObject(refreshRaw)) invalid('shopRefreshes');
+  const shopRefreshes: Partial<Record<CharacterClass, ShopRefreshes>> = {};
+  for (const [c, value] of Object.entries(refreshRaw as Json)) {
+    if (!CHARACTER_CLASSES.includes(c as CharacterClass) || !isObject(value))
+      invalid(`shopRefreshes.${c}`);
+    const v = value as Json;
+    shopRefreshes[c as CharacterClass] = Object.freeze({
+      level: int(v.level, `shopRefreshes.${c}.level`, 1, MAX_CLASS_LEVEL),
+      count: int(v.count, `shopRefreshes.${c}.count`, 1, 64),
+    });
+  }
   // Task 20: pets — known unique ids; levels 1–5 of owned pets (1 not kept); active pet owned.
   const petsRaw = or(data.ownedPets, []);
   if (!Array.isArray(petsRaw)) invalid('ownedPets');
@@ -557,6 +570,7 @@ export function normalizeProfile(data: Json, version = SAVE_SCHEMA_VERSION): Pla
     nextItemNumber,
     shopSalt,
     shopBought: Object.freeze(shopBought),
+    shopRefreshes: Object.freeze(shopRefreshes),
     ownedPets: Object.freeze(ownedPets),
     petLevels: Object.freeze(petLevels),
     activePet: activeRaw as string | null,

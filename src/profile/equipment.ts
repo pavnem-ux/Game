@@ -4,6 +4,8 @@ import {
   GEAR_SLOTS,
   SLOT_UPGRADE_RULES,
   bagCapacity,
+  refreshesAt,
+  shopRefreshCost,
   canReforge,
   reforgeCost,
   reforgeItem,
@@ -62,10 +64,43 @@ function withState(profile: PlayerProfile, s: EquipmentState): PlayerProfile {
     ) as PlayerProfile['classes'],
   });
 }
+/** Task 42: the class's whole stock at its level (with the refreshes bought at that level). */
+export function stockOf(profile: PlayerProfile, c: CharacterClass): readonly ShopOffer[] {
+  const level = profile.classes[c].level;
+  return shopStock(profile.shopSalt, c, level, refreshesAt(profile.shopRefreshes[c], level));
+}
+/** Task 42: Gold for the class's next shop refresh at its current level. */
+export const nextRefreshCost = (profile: PlayerProfile, c: CharacterClass) =>
+  shopRefreshCost(
+    profile.classes[c].level,
+    refreshesAt(profile.shopRefreshes[c], profile.classes[c].level),
+  );
+/**
+ * Task 42: a paid new stock for the class at the same level — the count joins the stock seed and
+ * the bought offers are cleared. One new profile (throws `gold`).
+ */
+export function refreshShop(profile: PlayerProfile, c: CharacterClass): PlayerProfile {
+  const progress = profile.classes[c];
+  if (!progress) throw new EquipmentError('unknown-class');
+  const cost = nextRefreshCost(profile, c);
+  if (profile.gold < cost) throw new EquipmentError('gold');
+  const done = refreshesAt(profile.shopRefreshes[c], progress.level);
+  const bought = { ...profile.shopBought };
+  delete bought[c];
+  return Object.freeze({
+    ...profile,
+    gold: profile.gold - cost,
+    shopBought: Object.freeze(bought),
+    shopRefreshes: Object.freeze({
+      ...profile.shopRefreshes,
+      [c]: Object.freeze({ level: progress.level, count: done + 1 }),
+    }),
+  });
+}
 /** The class's shop offers still for sale at its current level (derived, never stored). */
 export function shopOffersOf(profile: PlayerProfile, c: CharacterClass): readonly ShopOffer[] {
   const level = profile.classes[c].level;
-  return availableOffers(shopStock(profile.shopSalt, c, level), profile.shopBought[c], level);
+  return availableOffers(stockOf(profile, c), profile.shopBought[c], level);
 }
 /**
  * Adds an item instance to the owned list with the next uid (`i<n>`), marked «new» (Task 41).
@@ -100,7 +135,7 @@ export function buyOffer(
   if (level === undefined) throw new EquipmentError('unknown-class');
   const offer = shopOffersOf(profile, c).find((o) => o.id === offerId);
   if (!offer) {
-    const exists = shopStock(profile.shopSalt, c, level).some((o) => o.id === offerId);
+    const exists = stockOf(profile, c).some((o) => o.id === offerId);
     throw new EquipmentError(exists ? 'sold-out' : 'unknown-offer');
   }
   if (profile.gold < offer.price) throw new EquipmentError('gold');

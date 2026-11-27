@@ -1,7 +1,13 @@
 import { CHARACTER_CLASSES } from '../character-stats';
 import type { CharacterClass } from '../character-stats';
 import { lcgStream } from '../gameplay/rng';
-import { GEAR_SLOTS, ITEM_LEVEL_RANGE, SHARED_SLOTS, SHOP_RULES } from './config';
+import {
+  GEAR_SLOTS,
+  ITEM_LEVEL_RANGE,
+  SHARED_SLOTS,
+  SHOP_REFRESH_RULES,
+  SHOP_RULES,
+} from './config';
 import type { AffixStat, GearSlot, Rarity } from './config';
 import { affixPool, generateItem, isStarterUid, starterWeapon } from './items';
 import type { ItemInstance } from './items';
@@ -167,9 +173,10 @@ export function shopPrice(rarity: 'common' | 'uncommon', level: number, slot: Ge
   );
 }
 /** 32-bit hash of the shop draw inputs (FNV-1a). */
-function shopSeed(salt: number, c: CharacterClass, level: number): number {
+function shopSeed(salt: number, c: CharacterClass, level: number, refreshes: number): number {
   let h = 0x811c9dc5 ^ (salt >>> 0);
-  for (const ch of `${c}:${level}`) {
+  // Task 42: the refresh count is part of the seed (0 keeps the Task 40 stock unchanged).
+  for (const ch of refreshes > 0 ? `${c}:${level}:r${refreshes}` : `${c}:${level}`) {
     h ^= ch.charCodeAt(0);
     h = Math.imul(h, 0x01000193) >>> 0;
   }
@@ -184,9 +191,10 @@ export function shopStock(
   salt: number,
   c: CharacterClass,
   classLevel: number,
+  refreshes = 0,
 ): readonly ShopOffer[] {
   const level = Math.min(ITEM_LEVEL_RANGE.max, Math.max(ITEM_LEVEL_RANGE.min, classLevel));
-  const random = lcgStream(shopSeed(salt, c, level));
+  const random = lcgStream(shopSeed(salt, c, level, refreshes));
   const offers: ShopOffer[] = [];
   for (const slot of ['weapon', ...SHARED_SLOTS] as GearSlot[]) {
     offers.push(
@@ -235,4 +243,21 @@ export function offerItem(offer: ShopOffer, c: CharacterClass, uid: string): Ite
     characterClass: c,
     ...(offer.stat ? { stats: [offer.stat] } : {}),
   });
+}
+
+/** Task 42: refreshes bought for a class at a class level (they reset on level-up). */
+export interface ShopRefreshes {
+  readonly level: number;
+  readonly count: number;
+}
+/** Refreshes in effect at the class's current level. */
+export const refreshesAt = (r: ShopRefreshes | undefined, classLevel: number) =>
+  r && r.level === classLevel ? r.count : 0;
+/** Gold for the next refresh: 2 × the Uncommon price at the level, ×2 per earlier refresh. */
+export function shopRefreshCost(classLevel: number, done: number): number {
+  return (
+    SHOP_REFRESH_RULES.firstFactor *
+    shopPrice('uncommon', classLevel, 'helmet') *
+    SHOP_REFRESH_RULES.growth ** done
+  );
 }

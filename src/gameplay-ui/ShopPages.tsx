@@ -13,10 +13,9 @@ import {
   itemIconId,
   itemName,
   offerItem,
-  shopStock,
 } from '../equipment';
 import type { GearSlot, ShopOffer } from '../equipment';
-import { equipmentStateOf, shopOffersOf } from '../profile';
+import { equipmentStateOf, shopOffersOf, stockOf } from '../profile';
 import { campaignStore } from './campaign-state';
 import { PET_CONFIG, PET_IDS, checkPetPurchase, petLevel } from '../pets';
 import type { PetId } from '../pets';
@@ -173,9 +172,7 @@ function OfferRow({
 }) {
   const profile = useCampaign().progression.profile!;
   const progress = profile.classes[characterClass];
-  const stock = shopStock(profile.shopSalt, characterClass, progress.level).filter(
-    (o) => o.slot === slot,
-  );
+  const stock = stockOf(profile, characterClass).filter((o) => o.slot === slot);
   const open = new Set(shopOffersOf(profile, characterClass).map((o) => o.id));
   const loadouts = equipmentStateOf(profile).loadouts;
   const wornUid = progress.loadout[slot];
