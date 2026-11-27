@@ -25,7 +25,7 @@ import type { CampaignDifficulty } from '../campaign/config';
  * v10 (Task 40, items-rework branch): item instances `items` + `nextItemNumber`, loadouts by uid,
  * `shopSalt`, `shopBought`; `ownedItems` / `itemLevels` (old tiers, Forge) removed (migrateV9toV10).
  */
-export const PROFILE_SCHEMA_VERSION = 11;
+export const PROFILE_SCHEMA_VERSION = 12;
 export const MAX_RECENT_RUNS = 20;
 export const MAX_PROCESSED_RUN_IDS = 50;
 

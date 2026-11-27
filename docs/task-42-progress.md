@@ -13,7 +13,7 @@ PR: https://github.com/pavnem-ux/Game/pull/42 (draft, into `items-rework`)
 - [x] 3 Run end: loot into the profile once (full bag: auto-salvage Common/Uncommon, Rare+ past capacity); Loot on results
 - [x] 4 Reforge: one secondary stat, cost by rarity / level / count, saved count
 - [x] 5 Shop refresh: paid redraw per class and level, count in the seed
-- [ ] 6 Quest forge.tier4 back; save version bump; DEV / QA hooks
+- [x] 6 Quest forge.tier4 back; save version bump; DEV / QA hooks
 - [ ] 7 UI: Bag header expand, reforge on the card, shop refresh button, run pickups / toast / Loot
 - [ ] 8 Delivery: docs, e2e, final checks, PR ready
 
@@ -23,3 +23,4 @@ PR: https://github.com/pavnem-ux/Game/pull/42 (draft, into `items-rework`)
 - Run loot uses temporary uids (`drop-<n>`); the profile assigns real `i<n>` uids when the result is applied. The boss item is granted when the run resolves as a victory with the boss killed. `legendaryRoll` in `equipment/drops.ts` is the Task 43 hook (draws nothing today).
 - Loot reaches the profile in drop order; the bag-full check is made per item as it is added (auto-salvage Ore goes to the profile Ore, listed per item in the summary, not in `oreGained`). Abandoned runs grant no loot. The Loot block on the results screen is part of step 7 (UI).
 - Reforge draws come from a stream seeded by (shop salt, uid, reforge count): the same profile state always gives the same result (no wall clock).
+- `forge.tier4` keeps its goal shape (`tier: 4` now means the rarity rank: Epic); the counter is the best Epic+ count one class wears, updated after every gear action. A counter value kept from the old tier system stays (only matters for saves that wore 7 old tier-4 items and never claimed).

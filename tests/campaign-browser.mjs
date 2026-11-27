@@ -356,7 +356,7 @@ try {
   await page.getByLabel('Save file').setInputFiles({
     name: 'newer.json',
     mimeType: 'application/json',
-    buffer: Buffer.from(JSON.stringify({ ...exported, schemaVersion: 12 })), // Task 41: v11 is current
+    buffer: Buffer.from(JSON.stringify({ ...exported, schemaVersion: 13 })), // Task 42: v12 is current
   });
   await page.getByText(/a newer version of the game/).waitFor();
   assert.equal(await stored(), before);

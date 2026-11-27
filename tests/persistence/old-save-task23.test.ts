@@ -29,7 +29,7 @@ const MIGRATED = () => {
   const p = JSON.parse(SAVE);
   const out = {
     ...p,
-    schemaVersion: 11,
+    schemaVersion: 12,
     // Task 40 (v9 → v10): equipment resets — every class back to its starter weapon.
     classes: Object.fromEntries(
       Object.entries(p.classes as Record<string, Record<string, unknown>>).map(([c, v]) => [

@@ -99,7 +99,7 @@ describe('Task 39 — save v9', () => {
     const r = parseProfileJson(JSON.stringify(v8));
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.profile.schemaVersion).toBe(11); // … then v9 → v10 (Task 40), v10 → v11 (Task 41)
+    expect(r.profile.schemaVersion).toBe(12); // … then v9 → v10 (Task 40), … v11 → v12 (Task 42)
     expect(isTierUnlocked(r.profile, 1, 'hard')).toBe(true);
     expect(isTierUnlocked(r.profile, 1, 'nightmare')).toBe(false);
   });

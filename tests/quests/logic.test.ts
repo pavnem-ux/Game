@@ -145,17 +145,29 @@ describe('Task 21 §1.2 — completion condition of each group', () => {
     expect(state(s, 'chests.100')).toBe('complete');
     expect(state(s, 'chests.300')).toBe('in-progress');
   });
-  // Task 40: the Forge item upgrades are gone. Task 41 brings back «+5 / +10» as slot upgrades
-  // (save-v11 test); `forge.tier4` stays hidden and never claimable until Task 42 retargets it.
-  it('forge.tier4: hidden, never complete, not claimable', () => {
-    const forge = ['forge.tier4'];
-    for (const id of forge) expect(QUEST_BY_ID.get(id)!.hidden).toBe(true);
-    const p = base({ questCounters: counters({ bestTierLoadout: 7 }) });
-    expect(allQuestProgress(p).some((q) => forge.includes(q.quest.id))).toBe(false);
-    expect(claimableQuests(p).some((id) => forge.includes(id))).toBe(false);
-    for (const id of forge) expect(() => claimQuest(p, id)).toThrow(QuestError);
-    // The loadout counter no longer grows (no tiers).
-    expect(withLoadoutCounter(p)).toBe(p);
+  // Task 42: `forge.tier4` is back as «Equip 7 items of Epic or better on one class»; its counter
+  // is the best number of Epic+ items one class wears (it only grows).
+  it('forge.tier4: visible again; the counter counts Epic+ items on one class', () => {
+    expect(QUESTS.some((q) => q.hidden)).toBe(false);
+    const epic = (uid: string, rarity = 'epic') => ({ uid, rarity });
+    const items = [epic('i1'), epic('i2', 'legendary'), epic('i3', 'rare'), epic('i4')];
+    const p0 = base({});
+    const loadout = {
+      ...p0.classes.mage.loadout,
+      ring: 'i1',
+      amulet: 'i2',
+      armor: 'i3',
+      helmet: 'i4',
+    };
+    const p = { ...p0, items, classes: { ...p0.classes, mage: { ...p0.classes.mage, loadout } } };
+    const counted = withLoadoutCounter(p);
+    expect(counted.questCounters.bestTierLoadout).toBe(3);
+    expect(withLoadoutCounter(counted)).toBe(counted); // nothing grew → same profile
+    const seven = base({ questCounters: counters({ bestTierLoadout: 7 }) });
+    expect(claimableQuests(seven)).toContain('forge.tier4');
+    expect(allQuestProgress(seven).find((q) => q.quest.id === 'forge.tier4')!.state).toBe(
+      'complete',
+    );
   });
 });
 
@@ -325,8 +337,8 @@ describe('Task 21 — store claim and debug tools', () => {
   });
   it('debug completes every quest through valid saves; counters; reset', () => {
     for (const q of QUESTS) expect(debug.campaignDebug.completeQuest(q.id), q.id).toBe(true);
-    // Task 40: the hidden Forge quest (Task 41: only `forge.tier4` left) is never claimable.
-    expect(claimableQuests(profile()).length + profile().questsClaimed.length).toBe(57);
+    // Task 42: no hidden quests any more (forge.tier4 is back).
+    expect(claimableQuests(profile()).length + profile().questsClaimed.length).toBe(58);
     expect(debug.campaignDebug.addQuestCounter('swift', 7)).toBe(true);
     expect(debug.campaignDebug.addQuestCounter('swift', -1)).toBe(false);
     expect(debug.campaignDebug.resetQuests()).toBe(true);

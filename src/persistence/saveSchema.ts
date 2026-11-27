@@ -212,6 +212,13 @@ export function migrateV10toV11(data: Json): Json {
     : data.classes;
   return { ...data, classes, newItems: [] };
 }
+/**
+ * v11 → v12 (Task 42): no bag expansions, no shop refreshes; items have no reforge count yet
+ * (absent = 0). Nothing else changes.
+ */
+export function migrateV11toV12(data: Json): Json {
+  return { ...data, bagExpansions: 0, shopRefreshes: {} };
+}
 export const migrations: Readonly<Record<number, Migration>> = Object.freeze({
   1: migrateV1toV2,
   2: migrateV2toV3,
@@ -223,6 +230,7 @@ export const migrations: Readonly<Record<number, Migration>> = Object.freeze({
   8: migrateV8toV9,
   9: migrateV9toV10,
   10: migrateV10toV11,
+  11: migrateV11toV12,
 });
 
 export type SaveErrorCode =

@@ -298,6 +298,24 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
           />
         </label>
         <button onClick={() => campaignDebug.grantOre(debugOre)}>Grant Ore</button>
+        {/* Task 42: bag expansions (0–5). */}
+        <label>
+          Bag expansions
+          <select
+            aria-label="Debug bag expansions"
+            onChange={(e) => campaignDebug.setBagExpansions(Number(e.target.value))}
+            defaultValue=""
+          >
+            <option value="" disabled>
+              set…
+            </option>
+            {[0, 1, 2, 3, 4, 5].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+        </label>
       </fieldset>
       {/* Task 21 §1.6: quests (validated saves; DEV/QA only). */}
       <fieldset aria-label="Quest Debug">
@@ -717,6 +735,27 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
             >
               Spawn chest
             </button>
+            {/* Task 42: item drops — an elite drop at the player; force the boss item rarity. */}
+            {(['uncommon', 'rare', 'epic'] as const).map((r) => (
+              <button key={r} onClick={() => send({ type: 'elite-drop', rarity: r })}>
+                Item drop: {r}
+              </button>
+            ))}
+            <label>
+              Boss item
+              <select
+                aria-label="Debug boss item rarity"
+                defaultValue=""
+                onChange={(e) => send({ type: 'boss-drop-rarity', rarity: e.target.value || null })}
+              >
+                <option value="">By difficulty</option>
+                {RARITIES.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+            </label>
             {BUFF_IDS.map((b) => (
               <button key={b} onClick={() => send({ type: 'buff', buff: b })}>
                 Buff: {BUFFS[b].name}

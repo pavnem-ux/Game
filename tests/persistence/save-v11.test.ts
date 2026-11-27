@@ -88,7 +88,7 @@ describe('Task 41 — slot upgrades, salvage, bag and «new» on the profile', (
   it('quests: «Upgrade any slot to +5 / +10» are back and read the highest slot level', () => {
     for (const id of ['forge.plus5', 'forge.plus10'])
       expect(QUEST_BY_ID.get(id)!.hidden).toBeUndefined();
-    expect(QUEST_BY_ID.get('forge.tier4')!.hidden).toBe(true);
+    expect(QUEST_BY_ID.get('forge.tier4')!.hidden).toBeUndefined(); // Task 42
     let p: PlayerProfile = { ...createProfile('q', NOW), gold: 1e6, ore: 1e6 };
     for (let n = 0; n < 5; n++) p = upgradeSlot(p, 'archer', 'pants');
     expect(questProgress(p, QUEST_BY_ID.get('forge.plus5')!).state).toBe('complete');
@@ -101,7 +101,7 @@ describe('Task 41 — slot upgrades, salvage, bag and «new» on the profile', (
 
 describe('Task 41 — save v11', () => {
   it('a v10 save migrates: slot levels 0, no «new» items; nothing else changes', () => {
-    expect(SAVE_SCHEMA_VERSION).toBe(11);
+    expect(SAVE_SCHEMA_VERSION).toBe(12); // then v11 → v12 (Task 42)
     const p = rich();
     const v10 = json(p);
     v10.schemaVersion = 10;
@@ -111,6 +111,7 @@ describe('Task 41 — save v11', () => {
     if (!r.ok) throw r.error;
     expect(r.migratedFrom).toBe(10);
     expect(json(r.profile)).toEqual({ ...json(p), newItems: [] });
+    expect(r.profile.schemaVersion).toBe(12);
     expect(Object.keys(migrateV10toV11(v10)).sort()).toEqual(
       [...Object.keys(v10), 'newItems'].sort(),
     );
