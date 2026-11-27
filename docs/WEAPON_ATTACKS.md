@@ -188,3 +188,8 @@ WeaponStatusAdapter принимает отдельные успешные Weapo
 ### Интеграция Task 06
 
 Добавлены `peekBoundary(end)`, `advanceToBoundary(time)`, `resolveBoundary()` для одного общего scheduler; они вызывают те же расчёты/strike/flight resolvers, что прежний update. `setBody` принимает optional velocity для swept relative-motion collision при интеграции, `removeBody` убирает target geometry, не отменяя старые flights. При ненулевой velocity caller обязан обновлять тела на границах через stepping API; standalone fixed-body update не управляет внешним движением. Новая альфа использует отдельный provisional catalog, Character Stats и существующий WeaponStatusAdapter. [Полный контракт общей хронологии](PLAYABLE_COMBAT_ALPHA.md).
+
+## Task 43 — гарантированный крит
+
+`attackModifier` может вернуть `forceCritical: true` (аддитивно, рядом с `criticalChanceBonus`):
+снимок атаки создаётся с флагом Core `forceCritical`.

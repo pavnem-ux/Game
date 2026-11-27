@@ -13,7 +13,7 @@ PR: https://github.com/pavnem-ux/Game/pull/43 (draft, into `items-rework`)
 - [x] 3 Effects A: Crown (barrier), Heart (overheal barrier), Ring (crystal heal), Stride (+15% move, guaranteed crit)
 - [x] 4 Effects B: Bark (thorns), Millwheel (shockwave), Warden (5th hit ×2), Frost Warlord (Chill), Thunder Kite (range), Mire Serpent (Bleed spread)
 - [x] 5 UI: card effect text, Legendary naming / frame, map pool on the map card; DEV grant / force drop
-- [ ] 6 Delivery: docs/LEGENDARIES.md, tests, final checks, PR ready
+- [x] 6 Delivery: docs/LEGENDARIES.md, tests, final checks, PR ready
 
 ## Decisions / blockers
 

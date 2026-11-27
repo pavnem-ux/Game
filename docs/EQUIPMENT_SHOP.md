@@ -230,7 +230,7 @@ Spec: [task-42-drops-reforge.md](task-42-drops-reforge.md) · progress:
 - **Slot**: random among the 7; a weapon is always the played class's.
 - **Item level** = min(class level, cap). The cap is Normal 5 + map, Hard 10 + map, Nightmare / Trial
   15 + map, never above 50.
-- `legendaryRoll` in `equipment/drops.ts` is the hook where the Task 43 Legendary roll plugs in.
+- `legendaryRoll` in `equipment/drops.ts` rolls the Task 43 Legendary for boss items (see §3c).
 - **In the run**: an elite's item lies on the ground with a pulsing glow in its rarity colour. It is
   collected by walking over it (the pickup radius applies), and a short toast names it.
 - Items left on the ground are collected when the run ends (victory and defeat).
@@ -274,6 +274,10 @@ count yet (absent = 0).
 - «Boss item» forces the boss item's rarity.
 - «Bag expansions» sets 0–5.
 - Testing-controller commands: `elite-drop`, `boss-drop-rarity`.
+
+## 3c. Legendary items (Task 43)
+
+Ten Legendaries with unique effects drop only from bosses (each map has a pool of 3). Items, pools, chances and the effect engine rules: [LEGENDARIES.md](LEGENDARIES.md).
 
 ## 4. Gold coins in runs
 

@@ -156,3 +156,9 @@ mitigation/расходования барьера. Default-поведение �
 Единственная запись HP остаётся в Core. QA-only подкласс использует hook, чтобы предотвратить
 потерю HP игрока без изменения stats/Dodge/рассчитанного damage; его реализация отсутствует
 в Production. [Контракт и изоляция](SKILLS_PAUSE_QA.md).
+
+## Task 43 — `forceCritical`
+
+`AttackRequest.forceCritical?: boolean` (аддитивно): атака всегда критическая (Legendary «Stride of
+the Ash Wolf»). Единственный бросок крита всё равно выполняется, поэтому последовательность seeded
+RNG не меняется. Вместе с `noCritical` запрещено (RangeError).
