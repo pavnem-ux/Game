@@ -1,3 +1,4 @@
+import { RARITY_CONFIG } from '../equipment';
 import { FLOATING_LIMITS, FloatingNumbers, HitFlashes, shakeFor } from './game-feel';
 import type { FloatingKind } from './game-feel';
 import { uiSettings } from '../gameplay-ui/ui-settings';
@@ -589,6 +590,7 @@ export class AlphaScene extends Phaser.Scene {
       }
     for (const c of s.crystals) L.add(c.x, c.y, 44, 0.6);
     for (const pile of s.coins.piles) L.add(pile.x, pile.y, 40, 0.55);
+    for (const p of s.loot?.pickups ?? []) L.add(p.x, p.y, 70, 0.8);
     // Task 20: the pet carries a small light (the firefly a bigger, warmer one).
     if (s.pet && this.petDraw) {
       const firefly = s.pet.id === 'firefly';
@@ -1352,6 +1354,16 @@ export class AlphaScene extends Phaser.Scene {
         const d = this.artSprites.pickup(coinArt.key, pickupArtSize('coin', r));
         this.units.item(d.texture, pile.x, pile.y, d.scale);
       } else this.units.item('coin', pile.x, pile.y, r / 6 / ART_SCALE);
+    }
+    // Task 42: item pickups — a pulsing glow in the rarity colour (Uncommon green, Rare blue, Epic
+    // purple); collected by walking over them.
+    for (const p of s.loot?.pickups ?? []) {
+      const color = Number.parseInt(RARITY_CONFIG[p.item.rarity].color.slice(1), 16);
+      const pulse = 0.5 + 0.5 * Math.sin(s.time * 4 + p.x * 0.03);
+      const lg = this.graphics;
+      lg.fillStyle(color, 0.16 + 0.14 * pulse).fillCircle(p.x, p.y, 24);
+      lg.lineStyle(2, color, 0.9).strokeCircle(p.x, p.y, 11 + 2 * pulse);
+      lg.fillStyle(color, 0.95).fillCircle(p.x, p.y, 6);
     }
     // Task 12: chests (original shapes): wooden — brown box with an iron band; enchanted — violet
     // box with a glowing rune. Blinking (alpha flicker) in the last 5 s of their life.

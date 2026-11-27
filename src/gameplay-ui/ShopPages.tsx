@@ -15,7 +15,7 @@ import {
   offerItem,
 } from '../equipment';
 import type { GearSlot, ShopOffer } from '../equipment';
-import { equipmentStateOf, shopOffersOf, stockOf } from '../profile';
+import { equipmentStateOf, nextRefreshCost, shopOffersOf, stockOf } from '../profile';
 import { campaignStore } from './campaign-state';
 import { PET_CONFIG, PET_IDS, checkPetPurchase, petLevel } from '../pets';
 import type { PetId } from '../pets';
@@ -62,8 +62,10 @@ export function ShopPage() {
   const [shopClass, setShopClass] = useState<CharacterClass>(profile?.selectedClass ?? 'warrior');
   const [confirming, setConfirming] = useState<ShopOffer | null>(null);
   const [message, setMessage] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
   if (!profile) return <p className="campaign-empty">Profile unavailable.</p>;
   const level = profile.classes[shopClass].level;
+  const refreshCost = nextRefreshCost(profile, shopClass);
   const preview = (o: ShopOffer) => offerItem(o, shopClass, 'preview');
   const slots = tab === 'all' ? GEAR_SLOTS : tab === 'pets' ? [] : [tab];
   return (
@@ -115,7 +117,21 @@ export function ShopPage() {
             {level >= ITEM_LEVEL_RANGE.max
               ? `Item level ${level}`
               : `Item level ${level} · new stock at level ${level + 1}`}
-            {bagFull(profile.items, profile.bagExpansions) && ` · ${REFUSALS['bag-full']}`}
+            {bagFull(profile.items, profile.bagExpansions) && ` · ${REFUSALS['bag-full']}`}{' '}
+            <Button
+              size="s"
+              variant="ghost"
+              disabledReason={profile.gold < refreshCost ? 'Not enough Gold' : null}
+              onClick={() => {
+                setRefreshing(true);
+                setMessage('');
+              }}
+            >
+              Refresh stock ·{' '}
+              <span className="price-badge">
+                <CurrencyIcon kind="gold" label="Gold" /> {formatNumber(refreshCost)}
+              </span>
+            </Button>
           </p>
           {message && (
             <p className="shop-message" role="status">
@@ -136,6 +152,23 @@ export function ShopPage() {
             ))}
           </div>
         </>
+      )}
+      {refreshing && (
+        <ConfirmModal
+          title={`Refresh the ${CLASS_LABELS[shopClass]}'s stock for ${formatNumber(refreshCost)} Gold?`}
+          onConfirm={() => {
+            const refused = campaignStore.refreshShop(shopClass);
+            uiSound(refused ? 'ui-error' : 'ui-buy');
+            setRefreshing(false);
+            setMessage(refused ? (REFUSALS[refused] ?? 'Refresh failed.') : 'New stock arrived.');
+          }}
+          onCancel={() => setRefreshing(false)}
+        >
+          <p>
+            Every offer at this level is redrawn (bought offers come back as new ones). The next
+            refresh at this level costs twice as much.
+          </p>
+        </ConfirmModal>
       )}
       {confirming && (
         <ConfirmModal

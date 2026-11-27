@@ -2114,3 +2114,14 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Task 42: bag over capacity, reforge row */
+.bag-over {
+  color: var(--down);
+}
+.bag-reforge {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  align-items: center;
+}

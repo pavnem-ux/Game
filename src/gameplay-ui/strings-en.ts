@@ -264,6 +264,16 @@ export const EN = Object.freeze({
       equippedMsg: (name: string) => `Equipped: ${name}.`,
       unequippedMsg: (name: string) => `Unequipped: ${name}.`,
       failed: 'The action failed.',
+      expand: 'Expand bag',
+      expandTitle: (price: string) => `Expand the bag by 10 for ${price} Gold?`,
+      expandText: 'The bag grows for the whole profile, forever.',
+      expanded: (capacity: number) => `The bag now holds ${capacity} items.`,
+      pickStat: 'Pick a stat',
+      reforge: 'Reforge',
+      reforgeTitle: (stat: string, price: string) => `Reforge “${stat}” for ${price} Gold?`,
+      reforgeText:
+        'It becomes a random other stat of this slot with a new value. This cannot be undone.',
+      reforged: (name: string) => `Reforged: ${name}.`,
     }),
     equipment: Object.freeze({
       title: 'Equipment',

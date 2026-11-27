@@ -14,7 +14,7 @@ PR: https://github.com/pavnem-ux/Game/pull/42 (draft, into `items-rework`)
 - [x] 4 Reforge: one secondary stat, cost by rarity / level / count, saved count
 - [x] 5 Shop refresh: paid redraw per class and level, count in the seed
 - [x] 6 Quest forge.tier4 back; save version bump; DEV / QA hooks
-- [ ] 7 UI: Bag header expand, reforge on the card, shop refresh button, run pickups / toast / Loot
+- [x] 7 UI: Bag header expand, reforge on the card, shop refresh button, run pickups / toast / Loot
 - [ ] 8 Delivery: docs, e2e, final checks, PR ready
 
 ## Decisions / blockers
@@ -24,3 +24,4 @@ PR: https://github.com/pavnem-ux/Game/pull/42 (draft, into `items-rework`)
 - Loot reaches the profile in drop order; the bag-full check is made per item as it is added (auto-salvage Ore goes to the profile Ore, listed per item in the summary, not in `oreGained`). Abandoned runs grant no loot. The Loot block on the results screen is part of step 7 (UI).
 - Reforge draws come from a stream seeded by (shop salt, uid, reforge count): the same profile state always gives the same result (no wall clock).
 - `forge.tier4` keeps its goal shape (`tier: 4` now means the rarity rank: Epic); the counter is the best Epic+ count one class wears, updated after every gear action. A counter value kept from the old tier system stays (only matters for saves that wore 7 old tier-4 items and never claimed).
+- In-run item pickups are drawn as a pulsing glow in the rarity colour (no new art); the pickup toast shows only while the run is active.

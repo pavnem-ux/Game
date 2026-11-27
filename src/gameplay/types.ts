@@ -140,7 +140,12 @@ export interface GameplaySnapshot {
   /** Task 11: coins; Task 20 `petBonus` = coins added by the kitten (already in `collected`). */
   readonly coins: Readonly<{ collected: number; piles: readonly CoinPile[]; petBonus?: number }>;
   /** Task 42: item pickups on the ground and the items collected this run (campaign only). */
-  readonly loot?: Readonly<{ pickups: readonly LootPickup[]; collected: readonly ItemInstance[] }>;
+  readonly loot?: Readonly<{
+    pickups: readonly LootPickup[];
+    collected: readonly ItemInstance[];
+    /** The latest item picked up from the ground (HUD toast). */
+    last: Readonly<{ item: ItemInstance; time: number }> | null;
+  }>;
   /** Task 20: the run's pet for rendering / HUD (null = none). Positions only. */
   readonly pet?: PetSnapshot | null;
   readonly spawning: Readonly<{

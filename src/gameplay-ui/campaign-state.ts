@@ -2,7 +2,10 @@ import type { CharacterClass } from '../character-stats';
 import { getCampaignMap } from '../campaign';
 import type { CampaignDifficulty } from '../campaign';
 import {
+  buyBagExpansion,
   buyOffer,
+  reforgeProfileItem,
+  refreshShop,
   markItemsSeen,
   salvageItems,
   upgradeSlot,
@@ -21,7 +24,7 @@ import { PetError, isPetId, petLevel } from '../pets';
 import { QuestError, claimableQuests } from '../quests';
 import type { RunQuestSummary } from '../quests';
 import type { PetId } from '../pets';
-import type { GearSlot } from '../equipment';
+import type { AffixStat, GearSlot } from '../equipment';
 import {
   createProgressionService,
   createSaveStore,
@@ -331,6 +334,18 @@ export const campaignStore = {
   /** Task 20 forge: pet level +1 (Gold, ore and the level in one validated save). */
   upgradePet(petId: string): string | null {
     return gearChange((p) => upgradeProfilePet(p, petId));
+  },
+  /** Task 42: buy the next bag expansion (+10) for Gold (one save). */
+  buyBagExpansion(): string | null {
+    return gearChange((p) => buyBagExpansion(p));
+  },
+  /** Task 42: reforge one secondary stat of an item (Gold and the new stat in one save). */
+  reforgeItem(uid: string, stat: AffixStat, characterClass: CharacterClass): string | null {
+    return gearChange((p) => reforgeProfileItem(p, uid, stat, characterClass));
+  },
+  /** Task 42: a paid new shop stock for a class at its level (one save). */
+  refreshShop(characterClass: CharacterClass): string | null {
+    return gearChange((p) => refreshShop(p, characterClass));
   },
   /** Task 41: upgrade one slot of a class by a level (Gold, Ore and the level in one save). */
   upgradeSlot(characterClass: CharacterClass, slot: GearSlot): string | null {

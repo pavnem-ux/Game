@@ -83,7 +83,7 @@ import {
   eliteDropRarity,
   rollDropItem,
 } from '../equipment';
-import type { Loadout, Rarity } from '../equipment';
+import type { ItemInstance, Loadout, Rarity } from '../equipment';
 import { RunCoins } from './coins';
 import { RunLoot } from './loot';
 import { BUFFS, CHEST_RULES, RunChests, buffModifiers, chestGold } from './chests';
@@ -136,6 +136,7 @@ export class GameplayWorld {
   private readonly loot = new RunLoot();
   private readonly itemRandom: () => number;
   private forcedBossRarity: Rarity | null = null;
+  private lastLoot: Readonly<{ item: ItemInstance; time: number }> | null = null;
   /** Task 12: chests and their buffs (campaign runs only; own seeded stream). */
   private readonly chests: RunChests | null;
   /** Task 24: map activities (campaign runs only; own seeded stream). */
@@ -620,6 +621,7 @@ export class GameplayWorld {
             loot: Object.freeze({
               pickups: this.loot.getPickups(),
               collected: this.loot.collected,
+              last: this.lastLoot,
             }),
           }
         : {}),
@@ -1790,7 +1792,12 @@ export class GameplayWorld {
     // Task 42: item pickups use the same reach (pickup radius applies); none after the run ended.
     if (this.campaignMap && this.campaignRun.status === 'active') {
       const items = this.loot.collect(this.body, this.body.radius, this.pickupScale);
-      if (items.length) this.record('progression', items);
+      if (items.length) {
+        this.record('progression', items);
+        const e = items[items.length - 1];
+        if (e.type === 'item-collected')
+          this.lastLoot = Object.freeze({ item: e.item, time: this.clock });
+      }
     }
     // Task 12 debug: auto-collect everything once per second (measurement only; off by default).
     if (this.autoCollectAt !== null && this.clock >= this.autoCollectAt - 1e-9) {
