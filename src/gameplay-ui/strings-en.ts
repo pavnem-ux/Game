@@ -217,7 +217,7 @@ export const EN = Object.freeze({
       attackSpeed: 'Attack speed',
       criticalChance: 'Crit chance',
       criticalDamage: 'Crit damage',
-      resistance: 'Resistance',
+      resistance: 'Armor',
       dodgeChance: 'Dodge',
       movementSpeed: 'Movement speed',
       cooldownReduction: 'Cooldown red.',

@@ -31,7 +31,7 @@ import {
   TierFrame,
   disabledReason,
 } from './kit';
-import { rarityColor, rarityTier, slottedLines } from './item-view';
+import { StatName, rarityColor, rarityTier, slottedLines } from './item-view';
 import { EN, formatNumber } from './strings-en';
 
 /**
@@ -246,7 +246,7 @@ function OfferRow({
                   {main.map((l, i) => (
                     <span key={l.key}>
                       {i > 0 && ' · '}
-                      {l.text}
+                      <StatName statKey={l.key} /> {l.value}
                       {l.deltaText !== undefined && l.delta !== 0 && (
                         <span className={`bag-delta ${l.delta! > 0 ? 'up' : 'down'}`}>
                           {' '}
@@ -256,7 +256,11 @@ function OfferRow({
                     </span>
                   ))}
                 </p>
-                {affix && <p className="shop-offer-line affix">{affix.text}</p>}
+                {affix && (
+                  <p className="shop-offer-line affix">
+                    <StatName statKey={affix.key} /> {affix.value}
+                  </p>
+                )}
                 <Button
                   variant="primary"
                   size="s"

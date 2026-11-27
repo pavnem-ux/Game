@@ -16,6 +16,7 @@ import {
   WEAPON_BANDS,
 } from './config';
 import { checkLegendaryFit, legendaryDef } from './legendaries';
+import { formatStatLine } from './stat-format';
 import type { AffixStat, GearSlot, GearTemplate, LegendaryId, Rarity } from './config';
 
 /**
@@ -242,8 +243,8 @@ export function itemIconId(item: ItemInstance): string {
 }
 /** «+3.4% Crit damage» style text of a secondary stat. */
 export function affixText(affix: ItemAffix): string {
-  const r = AFFIX_RULES[affix.stat];
-  return `+${affix.value.toFixed(r.decimals)}${r.unit} ${r.label}`;
+  // Task 44: the one stat formatter («Crit chance +3.2%»).
+  return formatStatLine(affix.stat, affix.value);
 }
 
 // ── Validation ──

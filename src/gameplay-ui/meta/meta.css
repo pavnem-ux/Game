@@ -2146,3 +2146,30 @@
 .map-legendary.is-other {
   opacity: 0.4;
 }
+
+/* Task 44: stat names explain themselves on hover / tap */
+.stat-name {
+  position: relative;
+  border-bottom: 1px dotted var(--text-faint);
+  cursor: help;
+}
+.stat-name:hover::after,
+.stat-name:focus::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 6px);
+  z-index: 40;
+  width: max-content;
+  max-width: 260px;
+  padding: 6px 9px;
+  border: 1px solid var(--ink-line-strong);
+  border-radius: var(--radius-m);
+  background: var(--night-900);
+  color: var(--text);
+  font-size: var(--fs-xs);
+  font-weight: 400;
+  line-height: 1.35;
+  white-space: normal;
+  pointer-events: none;
+}

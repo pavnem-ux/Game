@@ -17,7 +17,7 @@ const R = LEGENDARY_RULES;
 /** The unique effect text shown on the item card. */
 export const LEGENDARY_TEXT: Readonly<Record<LegendaryId, string>> = Object.freeze({
   barrow_crown: `When HP drops below ${R.crown.hpBelow}%: a barrier of ${R.crown.barrier}% max HP. Cooldown ${R.crown.cooldown} s.`,
-  leshy_bark: `When hit: thorns deal ${R.bark.resistanceShare}% of your resistance to enemies within ${R.bark.radius}. At most once per ${R.bark.cooldown} s.`,
+  leshy_bark: `When hit: thorns deal ${R.bark.resistanceShare}% of your Armor to enemies within ${R.bark.radius}. At most once per ${R.bark.cooldown} s.`,
   ash_wolf_stride: `+${R.stride.movementSpeedPercent}% movement speed. After ${R.stride.moveSeconds} s of moving without stopping, the next attack is a guaranteed crit.`,
   millwheel_gauntlets: `Every ${R.millwheel.everyAttacks}th basic weapon attack releases a shockwave: radius ${R.millwheel.radius}, ${R.millwheel.weaponShare}% of weapon damage.`,
   mourner_heart: `Healing above max HP becomes a barrier, up to ${R.heart.maxBarrier}% of max HP.`,

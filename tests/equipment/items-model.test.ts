@@ -90,7 +90,7 @@ describe('Task 40 §4 — secondary stats', () => {
     expect(affixMax('criticalChance', 1)).toBeCloseTo(AFFIX_RULES.criticalChance.max * 0.3, 12);
     expect(affixMax('criticalChance', 50)).toBeCloseTo(AFFIX_RULES.criticalChance.max, 12);
     expect(affixValue('criticalChance', 10, 0.75)).toBe(1.9); // rounded to the stat's decimals
-    expect(affixText({ stat: 'criticalChance', value: 1.9 })).toBe('+1.9 pp Crit chance');
+    expect(affixText({ stat: 'criticalChance', value: 1.9 })).toBe('Crit chance +1.9%'); // Task 44
   });
   it('pools: 6 distinct stats per slot; the weapon’s class damage follows the damage type', () => {
     for (const slot of GEAR_SLOTS) {

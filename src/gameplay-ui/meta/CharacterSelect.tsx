@@ -17,7 +17,7 @@ const KEY_STATS: readonly (readonly [keyof CombatAttributes, string, (v: number)
   ['maxHp', S.maxHp, (v) => String(displayHp(v, v).max)],
   ['physicalDamage', S.physicalDamage, (v) => String(Math.round(v))],
   ['magicalDamage', S.magicalDamage, (v) => String(Math.round(v))],
-  ['attackSpeed', S.attackSpeed, (v) => String(Math.round(v))],
+  ['attackSpeed', S.attackSpeed, (v) => `${Math.round(v)}%`],
   ['criticalChance', S.criticalChance, (v) => `${Math.round(v)}%`],
   ['resistance', S.resistance, (v) => String(Math.round(v))],
 ];

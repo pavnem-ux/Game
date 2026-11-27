@@ -38,7 +38,14 @@ import { campaignStore } from '../campaign-state';
 import { Button, ConfirmModal, CurrencyIcon, ItemIcon, Panel, Tabs, TierFrame } from '../kit';
 import { EN, formatNumber } from '../strings-en';
 import { REFUSALS } from '../ShopPages';
-import { rarityColor, rarityLabel, rarityTier, slottedLines, statNumber } from '../item-view';
+import {
+  StatName,
+  rarityColor,
+  rarityLabel,
+  rarityTier,
+  slottedLines,
+  statNumber,
+} from '../item-view';
 
 const B = EN.meta.bag;
 type SlotFilter = GearSlot | 'all';
@@ -487,7 +494,9 @@ function ItemCard({
       <ul className="bag-card-stats">
         {lines.map((l) => (
           <li key={l.key}>
-            <span>{l.text}</span>
+            <span>
+              <StatName statKey={l.key} /> {l.value}
+            </span>
             {l.deltaText !== undefined && (
               <span
                 className={`bag-delta ${l.delta === null ? 'new' : l.delta! > 0 ? 'up' : l.delta! < 0 ? 'down' : 'same'}`}
