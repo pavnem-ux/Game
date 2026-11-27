@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { defaultLoadout } from '../../src/equipment';
+import { NO_SLOT_LEVELS, defaultLoadout } from '../../src/equipment';
 import { shopSaltOf } from '../../src/profile';
 import type { CharacterClass } from '../../src/character-stats';
 import {
@@ -29,12 +29,12 @@ const MIGRATED = () => {
   const p = JSON.parse(SAVE);
   const out = {
     ...p,
-    schemaVersion: 10,
+    schemaVersion: 11,
     // Task 40 (v9 → v10): equipment resets — every class back to its starter weapon.
     classes: Object.fromEntries(
       Object.entries(p.classes as Record<string, Record<string, unknown>>).map(([c, v]) => [
         c,
-        { ...v, loadout: defaultLoadout(c as CharacterClass) },
+        { ...v, loadout: defaultLoadout(c as CharacterClass), slotLevels: NO_SLOT_LEVELS },
       ]),
     ),
     questCounters: {
@@ -54,6 +54,7 @@ const MIGRATED = () => {
         : k === 'ownedItems'
           ? [
               ['items', []],
+              ['newItems', []],
               ['nextItemNumber', 1],
               ['shopSalt', shopSaltOf(p.profileId)],
               ['shopBought', {}],

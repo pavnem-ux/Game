@@ -3,6 +3,9 @@ import { getCampaignMap } from '../campaign';
 import type { CampaignDifficulty } from '../campaign';
 import {
   buyOffer,
+  markItemsSeen,
+  salvageItems,
+  upgradeSlot,
   equipItem,
   isMapUnlocked,
   isTierUnlocked,
@@ -327,6 +330,20 @@ export const campaignStore = {
   upgradePet(petId: string): string | null {
     return gearChange((p) => upgradeProfilePet(p, petId));
   },
+  /** Task 41: upgrade one slot of a class by a level (Gold, Ore and the level in one save). */
+  upgradeSlot(characterClass: CharacterClass, slot: GearSlot): string | null {
+    return gearChange((p) => upgradeSlot(p, characterClass, slot));
+  },
+  /** Task 41: salvage unequipped items for Ore (removed and paid in one save). */
+  salvageItems(uids: readonly string[]): string | null {
+    return gearChange((p) => salvageItems(p, uids));
+  },
+  /** Task 41: viewing an item's card clears its «new» marker (saved; no write when nothing changes). */
+  markItemsSeen(uids: readonly string[]): string | null {
+    const profile = ensure().progression.profile;
+    if (!profile || !profile.newItems.some((u) => uids.includes(u))) return null;
+    return gearChange((p) => markItemsSeen(p, uids));
+  },
   /** Task 11: unequip a slot (weapon → starter weapon, other slots → empty). */
   unequipSlot(characterClass: CharacterClass, slot: GearSlot): string | null {
     return gearChange((p) => unequipSlot(p, characterClass, slot));
@@ -465,7 +482,11 @@ export const campaignStore = {
         // Task 09: the class's talents apply from run start; changes affect the next run.
         talents: { ranks: profile.classes[cls].talents },
         // Task 11: this class's own loadout; changes apply to the next run.
-        equipment: { loadout: profile.classes[cls].loadout, items: profile.items },
+        equipment: {
+          loadout: profile.classes[cls].loadout,
+          items: profile.items,
+          slotLevels: profile.classes[cls].slotLevels,
+        },
         // Task 20: the profile's one active pet comes with whichever class starts the run.
         pet: activePetOf(profile),
         campaign: { mapId, runId: generateRunId(), difficulty },

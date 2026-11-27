@@ -10,7 +10,7 @@ Meta loop: collect coins in a campaign run → buy item instances in the Shop �
 Equipment screen → the next run starts with the stronger attributes.
 
 > Task 40 replaced the Task 11 / 19 tiered catalogue (130 fixed items, tier unlocks by cleared map,
-> the Forge item upgrades +0…+10). Sections §1–§3, §5–§7 describe the Task 40 model; §4 (coins) and
+> the Forge item upgrades +0…+10). Sections §1–§3, §5–§7 describe the Task 40 model, §3a the Task 41 bag, slot upgrades and salvage; §4 (coins) and
 > §8.2 (Ore) still apply; the rest of §8 is kept as history.
 
 ## 1. Item instances (Task 40)
@@ -125,6 +125,79 @@ main stats as the additive flats `flatPhysicalDamage` / `flatMagicalDamage` / `f
 
 Changes apply from the next run (`GameplayOptions.equipment = { loadout, items }`, validated and
 read only at world start).
+
+## 3a. Bag, slot upgrades and salvage (Task 41)
+
+Spec: [task-41-bag-slots.md](task-41-bag-slots.md) · progress: [task-41-progress.md](task-41-progress.md).
+Numbers are provisional and live in `src/equipment/config.ts` (`SLOT_UPGRADE_RULES`,
+`SALVAGE_ORE`, `BAG_CAPACITY`); rules in `slots.ts` and `bag.ts`.
+
+**Slot upgrades.** Each class has its own level 0–30 for each of the 7 slots
+(`ClassProgress.slotLevels`). The bonus belongs to the slot, not the item: it applies to whatever
+is slotted (the starter weapon included) and stays when the item changes.
+
+- Every level: the slotted item's main stat ×(1 + 0.04 · level) (+30 → ×2.2).
+- Milestones +5 … +30: its secondary stats ×(1 + 0.2 · milestones) (+30 → ×2.2).
+- Both are applied to the item's own stats in `gearModifiers` (`slottedStats`), before every
+  percent modifier and the central caps. The values are not rounded; the UI rounds.
+- Cost of level n: Gold 250 + 4n², Ore 8 + 4n (+1: 254 / 12; +10: 650 / 48; +30: 3 850 / 128).
+- No class-level gate.
+- The upgrade is one validated save.
+- Runs receive the levels as `GameplayOptions.equipment.slotLevels`.
+
+**Salvage.** Salvaging removes an item and pays Ore: Common 0, Uncommon 1, Rare 3, Epic 8,
+Legendary 25.
+
+- An item equipped by any class is locked: the card shows «Equipped by: …».
+- Bulk actions: salvage the marked items, or «Salvage all Common and Uncommon» (equipped items are
+  skipped).
+- Every salvage asks to confirm the total. Any Legendary in it asks a second, separate time.
+
+**Bag.** Capacity 60 owned items (starter weapons don't count).
+
+- At the cap the shop refuses a purchase: «Bag is full — salvage something first». DEV grants are
+  refused too.
+- New items are marked «new» (`profile.newItems`). Viewing an item's card clears the marker
+  (saved).
+
+**Bag screen** (`src/gameplay-ui/meta/BagScreen.tsx`; replaces the Equipment page; nav and hub say
+«Bag»). It has three panels:
+
+- **Left — equipped.** 7 slot rows, each with its level `+N` and the item in rarity colour. A row
+  selects the slot and filters the bag. Below the rows: the slot's upgrade button with its cost,
+  the current bonuses and the next milestone. The button is disabled when Gold or Ore is short
+  (it says how much more is needed) or the slot is at +30.
+- **Middle — the bag grid.** `Bag · N / 60`.
+  - Filters: rarity, slot. Sort: item level (default), rarity, newest.
+  - Markers: «new», «better», «equipped».
+  - «Select» enters multi-select mode for salvage.
+  - Other classes' weapons are shown only with the Weapon filter plus «Show all classes».
+  - The class's starter weapon is listed first so it can be re-equipped.
+- **Right — the item card.** Stats with the slot bonus and the difference to the worn item: green
+  better, red worse, «new» for a stat the worn item lacks. «Requires level N» when the class is
+  too low; «Equipped by: …» when it's worn. Actions: Equip / Unequip, Salvage → N Ore.
+
+«Better» means: every main value ≥ the worn item's (slot bonus included) and at least one is
+higher. An empty slot makes any fitting item better.
+
+**Shop layout** (§5a):
+
+- «All» first: one compact row per slot, with its 4 offers side by side (2 columns on narrow
+  screens).
+- Each card: name, item level, main stat with its difference to the worn item, the secondary stat,
+  a «better» marker, price + Buy.
+- A bought offer stays as a «Sold out» placeholder.
+- One short header line: «Item level N · new stock at level N+1». Gold and Ore are shown in the
+  header.
+
+**Quests.** `forge.plus5` / `forge.plus10` are back as «Upgrade any slot to +5 / +10» (goal
+`slot-level`: the highest slot level of any class). `forge.tier4` stays hidden.
+
+**Save v11** (`migrateV10toV11`): every class gets slot levels 0; `newItems: []`. Nothing else
+changes. Validation:
+
+- slot levels are whole numbers 0–30 for the 7 known slots;
+- `newItems` are unique uids of owned items.
 
 ## 4. Gold coins in runs
 

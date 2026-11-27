@@ -69,7 +69,11 @@ export class EquipmentError extends Error {
       | 'unknown-class'
       | 'sold-out'
       | 'gold'
-      | 'unknown-offer',
+      | 'unknown-offer'
+      | 'bag-full'
+      | 'equipped'
+      | 'ore'
+      | 'max',
   ) {
     super(`Equipment action refused: ${reason}.`);
     this.name = 'EquipmentError';

@@ -1,5 +1,13 @@
 import type { CharacterClass } from '../character-stats';
-import { RARITIES, RARITY_CONFIG, affixText, itemMainStats, itemName } from '../equipment';
+import {
+  AFFIX_RULES,
+  RARITIES,
+  RARITY_CONFIG,
+  affixText,
+  itemMainStats,
+  itemName,
+  slottedStats,
+} from '../equipment';
 import type { ItemInstance, Rarity } from '../equipment';
 
 /**
@@ -55,3 +63,62 @@ export function ItemTitle({ item }: { item: ItemInstance }) {
     </>
   );
 }
+
+// ── Task 41: stats with the slot bonus and their difference to the worn item ──
+
+const MAIN_LABELS = {
+  physicalDamage: 'physical damage',
+  magicalDamage: 'magic damage',
+  maxHp: 'max HP',
+  resistance: 'resistance',
+} as const;
+/** A stat value as text: whole numbers plain, fractions with the given decimals. */
+export function statNumber(value: number, decimals = 1): string {
+  const r = Math.round(value * 10 ** decimals) / 10 ** decimals;
+  return Number.isInteger(r) ? String(r) : r.toFixed(decimals);
+}
+export interface StatLine {
+  readonly key: string;
+  readonly text: string;
+  /** Difference to the worn item (null: the worn item lacks this stat → «new»; undefined: none). */
+  readonly delta?: number | null;
+  readonly deltaText?: string;
+}
+/**
+ * The card lines of `item` in the class's slot (slot bonuses applied), each with its difference
+ * to `worn` (the item the class wears there, also with the bonus).
+ */
+export function slottedLines(
+  item: ItemInstance,
+  characterClass: CharacterClass,
+  slotLevel: number,
+  worn: ItemInstance | null,
+): readonly StatLine[] {
+  const a = slottedStats(item, characterClass, slotLevel);
+  const b = worn && worn.uid !== item.uid ? slottedStats(worn, characterClass, slotLevel) : null;
+  const lines: StatLine[] = [];
+  for (const k of Object.keys(MAIN_LABELS) as (keyof typeof MAIN_LABELS)[]) {
+    if (!a.main[k] && !(b && b.main[k])) continue;
+    const delta = b ? a.main[k] - b.main[k] : undefined;
+    lines.push({
+      key: k,
+      text: `+${statNumber(a.main[k])} ${MAIN_LABELS[k]}`,
+      ...(delta !== undefined ? { delta, deltaText: signed(delta, 1) } : {}),
+    });
+  }
+  for (const af of a.affixes) {
+    const r = AFFIX_RULES[af.stat];
+    const other = b?.affixes.find((x) => x.stat === af.stat);
+    const delta = b ? (other ? af.value - other.value : null) : undefined;
+    lines.push({
+      key: af.stat,
+      text: `+${statNumber(af.value, r.decimals)}${r.unit} ${r.label}`,
+      ...(delta !== undefined
+        ? { delta, deltaText: delta === null ? 'new' : signed(delta, r.decimals) }
+        : {}),
+    });
+  }
+  return Object.freeze(lines);
+}
+const signed = (v: number, decimals: number) =>
+  `${v >= 0 ? '+' : '−'}${statNumber(Math.abs(v), decimals)}`;

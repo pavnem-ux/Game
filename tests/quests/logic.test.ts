@@ -145,10 +145,10 @@ describe('Task 21 §1.2 — completion condition of each group', () => {
     expect(state(s, 'chests.100')).toBe('complete');
     expect(state(s, 'chests.300')).toBe('in-progress');
   });
-  // Task 40: the Forge is gone — its three quests are kept (ids, claims) but hidden and never
-  // claimable until Tasks 41–42 retarget them.
-  it('forge quests: hidden, never complete, not claimable; existing claims stay valid', () => {
-    const forge = ['forge.plus5', 'forge.plus10', 'forge.tier4'];
+  // Task 40: the Forge item upgrades are gone. Task 41 brings back «+5 / +10» as slot upgrades
+  // (save-v11 test); `forge.tier4` stays hidden and never claimable until Task 42 retargets it.
+  it('forge.tier4: hidden, never complete, not claimable', () => {
+    const forge = ['forge.tier4'];
     for (const id of forge) expect(QUEST_BY_ID.get(id)!.hidden).toBe(true);
     const p = base({ questCounters: counters({ bestTierLoadout: 7 }) });
     expect(allQuestProgress(p).some((q) => forge.includes(q.quest.id))).toBe(false);
@@ -325,8 +325,8 @@ describe('Task 21 — store claim and debug tools', () => {
   });
   it('debug completes every quest through valid saves; counters; reset', () => {
     for (const q of QUESTS) expect(debug.campaignDebug.completeQuest(q.id), q.id).toBe(true);
-    // Task 40: the 3 hidden Forge quests are never claimable.
-    expect(claimableQuests(profile()).length + profile().questsClaimed.length).toBe(55);
+    // Task 40: the hidden Forge quest (Task 41: only `forge.tier4` left) is never claimable.
+    expect(claimableQuests(profile()).length + profile().questsClaimed.length).toBe(57);
     expect(debug.campaignDebug.addQuestCounter('swift', 7)).toBe(true);
     expect(debug.campaignDebug.addQuestCounter('swift', -1)).toBe(false);
     expect(debug.campaignDebug.resetQuests()).toBe(true);

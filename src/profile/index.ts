@@ -30,8 +30,11 @@ export {
   equipItem,
   equipmentStateOf,
   grantItem,
+  markItemsSeen,
+  salvageItems,
   shopOffersOf,
   unequipSlot,
+  upgradeSlot,
 } from './equipment';
 export { shopSaltOf } from './profile';
 export { buyProfilePet, setProfileActivePet, upgradeProfilePet } from './pets';
