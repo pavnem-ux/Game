@@ -79,6 +79,8 @@ import {
   validateSlotLevels,
   RARITIES,
   bossDropRarity,
+  classLegendaryPool,
+  legendaryRoll,
   dropItemLevel,
   eliteDropRarity,
   rollDropItem,
@@ -136,6 +138,7 @@ export class GameplayWorld {
   private readonly loot = new RunLoot();
   private readonly itemRandom: () => number;
   private forcedBossRarity: Rarity | null = null;
+  private forcedLegendary = false;
   private lastLoot: Readonly<{ item: ItemInstance; time: number }> | null = null;
   /** Task 12: chests and their buffs (campaign runs only; own seeded stream). */
   private readonly chests: RunChests | null;
@@ -1452,13 +1455,24 @@ export class GameplayWorld {
   private grantBossItem() {
     const map = this.campaignMap!;
     const rarity = this.forcedBossRarity ?? bossDropRarity(this.itemRandom, map.tier);
-    const item = rollDropItem(this.itemRandom, this.dropSpec(rarity));
+    // Task 43: the boss item may become a Legendary of the map's pool (boss items only).
+    const legendaryId = this.forcedLegendary
+      ? (classLegendaryPool(map.id, this.options.characterClass)[0]?.id ?? null)
+      : legendaryRoll(this.itemRandom, map.tier, map.id, this.options.characterClass);
+    const item = rollDropItem(this.itemRandom, {
+      ...this.dropSpec(legendaryId ? 'legendary' : rarity),
+      ...(legendaryId ? { legendaryId } : {}),
+    });
     this.record('progression', [this.loot.grant(item)]);
   }
   /** Task 42 DEV / QA: force the boss item's rarity (null = the difficulty table). */
   debugForceBossDropRarity(rarity: Rarity | null): void {
     if (rarity !== null && !RARITIES.includes(rarity)) throw new RangeError('Unknown rarity.');
     this.forcedBossRarity = rarity;
+  }
+  /** Task 43 DEV / QA: the boss item is a Legendary of the map's pool (its first fitting entry). */
+  debugForceLegendaryDrop(enabled: boolean): void {
+    this.forcedLegendary = enabled;
   }
   /** Task 42 DEV / QA: an elite item drop of a rarity at the player (seeded like a real drop). */
   debugSpawnEliteDrop(rarity: Rarity): boolean {

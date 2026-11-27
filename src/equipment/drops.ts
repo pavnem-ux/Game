@@ -1,7 +1,8 @@
 import type { CharacterClass } from '../character-stats';
 import type { RandomSource } from '../combat-core';
 import { DROP_RULES, GEAR_SLOTS, ITEM_LEVEL_RANGE, RARITIES } from './config';
-import type { DropDifficulty, Rarity } from './config';
+import type { DropDifficulty, LegendaryId, Rarity } from './config';
+import { classLegendaryPool, legendaryChance, legendaryDef } from './legendaries';
 import { generateItem } from './items';
 import type { ItemInstance } from './items';
 
@@ -32,21 +33,31 @@ function pick(random: RandomSource, weights: Readonly<Partial<Record<Rarity, num
   return entries[entries.length - 1][0];
 }
 /**
- * Task 43 hook: the Legendary roll plugs in here (it may upgrade a drop's rarity). Until then it
- * never changes the rarity and draws nothing, so seeded sequences stay stable.
+ * Task 43: the Legendary roll of a boss item (elite drops never become Legendary). One draw for the
+ * chance; on success a second picks uniformly from the map's pool without other classes' weapons.
  */
-export function legendaryRoll(_random: RandomSource, rarity: Rarity): Rarity {
-  return rarity;
+export function legendaryRoll(
+  random: RandomSource,
+  difficulty: DropDifficulty,
+  mapId: number,
+  characterClass: CharacterClass,
+): LegendaryId | null {
+  if (!(random() * 100 < legendaryChance(difficulty))) return null;
+  const pool = classLegendaryPool(mapId, characterClass);
+  return pool[Math.min(pool.length - 1, Math.floor(random() * pool.length))].id;
 }
 /** The boss item's rarity for a difficulty (one draw). */
 export const bossDropRarity = (random: RandomSource, difficulty: DropDifficulty): Rarity =>
-  legendaryRoll(random, pick(random, DROP_RULES.bossRarity[difficulty]));
+  pick(random, DROP_RULES.bossRarity[difficulty]);
 /** An elite kill's item rarity, or null (one draw; a second only when it drops). */
 export function eliteDropRarity(random: RandomSource): Rarity | null {
   if (!(random() < DROP_RULES.eliteChance)) return null;
-  return legendaryRoll(random, pick(random, DROP_RULES.eliteRarity));
+  return pick(random, DROP_RULES.eliteRarity);
 }
-/** A dropped item: a random slot (one draw), then the Task 40 generation from the same stream. */
+/**
+ * A dropped item: a random slot (one draw), then the Task 40 generation from the same stream.
+ * Task 43: a Legendary takes its own slot (no slot draw) and its unique effect.
+ */
 export function rollDropItem(
   random: RandomSource,
   spec: Readonly<{
@@ -54,8 +65,13 @@ export function rollDropItem(
     rarity: Rarity;
     itemLevel: number;
     characterClass: CharacterClass;
+    legendaryId?: LegendaryId;
   }>,
 ): ItemInstance {
+  if (spec.legendaryId) {
+    const def = legendaryDef(spec.legendaryId)!;
+    return generateItem(random, { ...spec, rarity: 'legendary', slot: def.slot });
+  }
   const slot =
     GEAR_SLOTS[Math.min(GEAR_SLOTS.length - 1, Math.floor(random() * GEAR_SLOTS.length))];
   return generateItem(random, { ...spec, slot });

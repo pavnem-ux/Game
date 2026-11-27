@@ -91,6 +91,19 @@ describe('Task 42 — drops in the run', () => {
     expect(l.collected.map((i) => i.rarity)).toEqual(['rare', 'epic']);
     expect(new Set(l.collected.map((i) => i.uid)).size).toBe(2);
   });
+  it('Task 43: the boss item can be a Legendary of the map pool; elite drops never are', () => {
+    const w = world(4);
+    w.debugForceLegendaryDrop(true);
+    w.debugForceOutcome('victory');
+    const boss = loot(w).collected.at(-1)!;
+    // Map 3 pool #2 Stride, #5 Ring, #8 Thunder Kite (Archer) → the Rogue's first fitting is Stride.
+    expect(boss).toMatchObject({
+      rarity: 'legendary',
+      legendaryId: 'ash_wolf_stride',
+      slot: 'pants',
+    });
+    expect(boss.itemLevel).toBe(8);
+  });
   it('a defeat keeps the elite items (no boss item); walking over a pickup collects it', () => {
     const w = world(6);
     expect(w.debugSpawnEliteDrop('epic')).toBe(true); // at the player → next step collects it

@@ -7,3 +7,4 @@ export * from './slots';
 export * from './bag';
 export * from './drops';
 export * from './reforge';
+export * from './legendaries';
