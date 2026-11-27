@@ -3,7 +3,9 @@ import {
   EquipmentError,
   GEAR_SLOTS,
   SLOT_UPGRADE_RULES,
+  bagCapacity,
   bagFull,
+  salvageOre,
   nextExpansionPrice,
   equippedBy,
   salvageTotal,
@@ -218,4 +220,51 @@ export function buyBagExpansion(profile: PlayerProfile): PlayerProfile {
     gold: profile.gold - price,
     bagExpansions: profile.bagExpansions + 1,
   });
+}
+
+/** Task 42: one item of a run's loot as it reached the profile. */
+export interface LootEntry {
+  /** The item with its profile uid (an auto-salvaged item keeps its run-local uid). */
+  readonly item: ItemInstance;
+  /** Ore paid when a full bag auto-salvaged it (Common / Uncommon only); null = in the bag. */
+  readonly salvagedOre: number | null;
+}
+/**
+ * Task 42 §3: a run's loot into the profile, in order. Each item gets the next uid and the «new»
+ * marker. When the bag is full, Common and Uncommon items are salvaged automatically (their Ore
+ * paid); Rare and better always go in, even past capacity (never lost).
+ */
+export function receiveLoot(
+  profile: PlayerProfile,
+  loot: readonly ItemInstance[],
+): { profile: PlayerProfile; loot: readonly LootEntry[] } {
+  const capacity = bagCapacity(profile.bagExpansions);
+  const items = [...profile.items];
+  const newItems = [...profile.newItems];
+  let next = profile.nextItemNumber;
+  let ore = profile.ore;
+  const entries: LootEntry[] = [];
+  for (const raw of loot) {
+    const low = raw.rarity === 'common' || raw.rarity === 'uncommon';
+    if (low && items.length >= capacity) {
+      const paid = salvageOre(raw);
+      ore += paid;
+      entries.push(Object.freeze({ item: raw, salvagedOre: paid }));
+      continue;
+    }
+    const item = Object.freeze({ ...raw, uid: `i${next++}` });
+    items.push(item);
+    newItems.push(item.uid);
+    entries.push(Object.freeze({ item, salvagedOre: null }));
+  }
+  return {
+    profile: Object.freeze({
+      ...profile,
+      items: Object.freeze(items),
+      newItems: Object.freeze(newItems),
+      nextItemNumber: next,
+      ore,
+    }),
+    loot: Object.freeze(entries),
+  };
 }

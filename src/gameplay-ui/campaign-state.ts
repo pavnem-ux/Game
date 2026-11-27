@@ -132,6 +132,8 @@ export function runResultFrom(
     activityOre: world.activities?.ore ?? 0,
     // Task 39: the map's tier (Normal is the default and is left out).
     ...(c.difficulty && c.difficulty !== 'normal' ? { difficulty: c.difficulty } : {}),
+    // Task 42: items collected this run (into the profile once, with the result).
+    ...(world.loot?.collected.length ? { loot: world.loot.collected } : {}),
   });
 }
 
