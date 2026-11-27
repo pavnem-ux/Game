@@ -51,15 +51,14 @@ export type QuestGoal =
   | Readonly<{ kind: 'synergies-opened'; count: number }>
   | Readonly<{ kind: 'synergies-awakened'; count: number }>
   | Readonly<{ kind: 'chests'; count: number }>
-  | Readonly<{ kind: 'item-level'; level: number }>
+  /** Task 41: any class's slot upgraded to this level (was the Task 19 item level). */
+  | Readonly<{ kind: 'slot-level'; level: number }>
   | Readonly<{ kind: 'tier-loadout'; tier: number; items: number }>
   /** Task 24: map activities of one type completed (lifetime). */
   | Readonly<{ kind: 'activities'; activity: CountedActivityType; count: number }>;
 export interface QuestReward {
   readonly gold?: number;
   readonly ore?: number;
-  /** Shop item id to unlock (owned already → its shop price in Gold). */
-  readonly item?: string;
   /** Pet to unlock (owned already → its shop price, quest-only pets 2000 Gold). */
   readonly pet?: PetId;
 }
@@ -69,7 +68,14 @@ export interface QuestDefinition {
   readonly title: string;
   readonly goal: QuestGoal;
   readonly reward: QuestReward;
+  /**
+   * Task 40: kept (ids, claims) but hidden and not claimable — the Forge quests can't be completed
+   * in the new item model until Tasks 41–42 retarget them.
+   */
+  readonly hidden?: true;
 }
+/** Task 40: quest Gold rewards ×0.8 (rounded), with the map Gold (provisional). */
+export const QUEST_GOLD_SCALE = 0.8;
 /** Gold given instead of an already-owned quest-only pet. */
 export const QUEST_PET_FALLBACK_GOLD = 2000;
 
@@ -79,8 +85,19 @@ const q = (
   title: string,
   goal: QuestGoal,
   reward: QuestReward,
+  hidden = false,
 ): QuestDefinition =>
-  Object.freeze({ id, group, title, goal: Object.freeze(goal), reward: Object.freeze(reward) });
+  Object.freeze({
+    id,
+    group,
+    title,
+    goal: Object.freeze(goal),
+    reward: Object.freeze({
+      ...reward,
+      ...(reward.gold !== undefined ? { gold: Math.round(reward.gold * QUEST_GOLD_SCALE) } : {}),
+    }),
+    ...(hidden ? { hidden: true as const } : {}),
+  });
 const CLASS_NAMES: Readonly<Record<CharacterClass, string>> = {
   warrior: 'Warrior',
   mage: 'Mage',
@@ -93,13 +110,7 @@ const CAMPAIGN = [5, 10, 15, 20, 25, 30, 35, 40].map((mapId, i) => {
   const gold = [300, 600, 900, 1200, 1500, 1800, 2100, 2500][i];
   const ore = [10, 20, 30, 40, 50, 60, 70, 100][i];
   const extra: Partial<QuestReward> =
-    mapId === 10
-      ? { pet: 'firefly' }
-      : mapId === 20
-        ? { item: 'ring_precision-t3' }
-        : mapId === 40
-          ? { pet: 'wolf' }
-          : {};
+    mapId === 10 ? { pet: 'firefly' } : mapId === 40 ? { pet: 'wolf' } : {};
   return q(
     `campaign.map${mapId}`,
     'campaign',
@@ -205,21 +216,22 @@ const FORGE = [
   q(
     'forge.plus5',
     'forge',
-    'Upgrade any item to +5',
-    { kind: 'item-level', level: 5 },
+    'Upgrade any slot to +5',
+    { kind: 'slot-level', level: 5 },
     { ore: 20 },
   ),
   q(
     'forge.plus10',
     'forge',
-    'Upgrade any item to +10',
-    { kind: 'item-level', level: 10 },
+    'Upgrade any slot to +10',
+    { kind: 'slot-level', level: 10 },
     { ore: 60 },
   ),
   q(
     'forge.tier4',
     'forge',
-    'Equip one hero with 7 items of tier 4 or higher',
+    // Task 42: `tier` is the rarity rank (1 Common … 4 Epic … 5 Legendary).
+    'Equip 7 items of Epic or better on one class',
     { kind: 'tier-loadout', tier: 4, items: 7 },
     { gold: 3000 },
   ),

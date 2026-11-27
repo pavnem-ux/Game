@@ -39,13 +39,13 @@ describe('Task 11 §1.4 — coin Gold is applied exactly once with the run resul
     const storage = new MemoryStorage();
     const svc = open(storage);
     const first = svc.commitRun(result({}), NOW);
-    expect(first.summary).toMatchObject({ goldGained: 37 + 30, duplicate: false });
+    expect(first.summary).toMatchObject({ goldGained: 37 + 24, duplicate: false });
     expect(svc.commitRun(result({}), NOW).summary.duplicate).toBe(true);
-    expect(svc.getState().profile!.gold).toBe(67);
+    expect(svc.getState().profile!.gold).toBe(61);
     const reloaded = open(storage);
-    expect(reloaded.getState().profile!.gold).toBe(67);
+    expect(reloaded.getState().profile!.gold).toBe(61);
     expect(reloaded.commitRun(result({ coins: 999 }), NOW).summary.duplicate).toBe(true);
-    expect(reloaded.getState().profile!.gold).toBe(67);
+    expect(reloaded.getState().profile!.gold).toBe(61);
   });
   it('defeat pays 50% of the coins; abandoned pays nothing; invalid coin counts are rejected', () => {
     const svc = open(new MemoryStorage());

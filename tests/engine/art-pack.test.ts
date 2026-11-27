@@ -43,7 +43,7 @@ import {
   decorEntriesForAct,
 } from '../../src/engine/visuals/art-registry';
 import { GEAR_TEMPLATES, STARTER_WEAPONS } from '../../src/equipment/config';
-import { SHOP_ITEMS } from '../../src/equipment/items';
+import { SHARED_BANDS, WEAPON_BANDS } from '../../src/equipment/config';
 import { PET_IDS } from '../../src/pets/config';
 import { SKILL_CATALOG, SYNERGY_RULES } from '../../src/skills';
 import { TALENT_CATALOG_DATA } from '../../src/talents';
@@ -474,9 +474,9 @@ describe('Task 30 — packs 5 + 6: item icons and pet sprites', () => {
       expect([e!.width, e!.height, e!.kind]).toEqual([128, 128, 'item-icon']);
     }
     expect(itemIconEntries(manifest)).toHaveLength(30);
-    // Every tier of a template shares the template's icon.
-    for (const item of SHOP_ITEMS)
-      expect(itemIconEntry(manifest, item.templateId), item.id).not.toBeNull();
+    // Task 40: every item-level band base (the icon of an item) has its art.
+    for (const bands of [...Object.values(SHARED_BANDS), ...Object.values(WEAPON_BANDS)])
+      for (const [, id] of bands) expect(itemIconEntry(manifest, id), id).not.toBeNull();
   });
   it('every pet id (6) has a 256 px sprite pinned at the feet', () => {
     expect(PET_IDS).toHaveLength(6);

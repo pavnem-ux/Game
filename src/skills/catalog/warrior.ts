@@ -175,7 +175,7 @@ export const WARRIOR_SKILLS: readonly SkillDefinition[] = Object.freeze([
     kind: 'auto',
     maxRank: 5,
     icon: '❢',
-    description: 'A war cry boosts Attack speed and Resistance for a while.',
+    description: 'A war cry boosts Attack speed and Armor for a while.',
     tags: ['skill', 'buff'],
     targeting: 'self',
     ranks: cumulativeRanks(
@@ -197,8 +197,8 @@ export const WARRIOR_SKILLS: readonly SkillDefinition[] = Object.freeze([
       { counterRadius: 140, counterCoefficient: 0.8 },
     ),
     rankSummaries: [
-      'With enemies nearby: +20 Attack speed and +10 Resistance for 4 s.',
-      'Stronger buff: +30 Attack speed, +15 Resistance.',
+      'With enemies nearby: +20% Attack speed and +10 Armor for 4 s.',
+      'Stronger buff: +30% Attack speed, +15 Armor.',
       'The cry slows enemies within radius 140 for 1.5 s (no Stun).',
       'Duration 4 → 6 s.',
       'The cry strikes back at nearby enemies, if there are any.',

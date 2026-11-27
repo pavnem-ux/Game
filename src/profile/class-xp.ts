@@ -1,5 +1,5 @@
 import { PERMANENT_LEVEL_RANGE } from '../character-stats';
-import type { Loadout } from '../equipment';
+import type { Loadout, SlotLevels } from '../equipment';
 
 /**
  * Task 08 permanent class XP (pure). Level L → L+1 costs 100 + 50·(L − 1) XP. Overflow carries
@@ -24,6 +24,8 @@ export interface ClassProgressCore {
 export interface ClassProgress extends ClassProgressCore {
   /** Task 11: this class's equipment (starter weapon + empty slots by default). */
   readonly loadout: Loadout;
+  /** Task 41: this class's slot upgrade levels 0–30 (stay forever, whatever item is slotted). */
+  readonly slotLevels: SlotLevels;
 }
 export const NEW_CLASS_PROGRESS: ClassProgressCore = Object.freeze({
   xp: 0,
@@ -36,7 +38,8 @@ export const NEW_CLASS_PROGRESS: ClassProgressCore = Object.freeze({
 export function xpToNextLevel(level: number): number | null {
   if (!Number.isInteger(level) || level < 1 || level > MAX_CLASS_LEVEL)
     throw new RangeError(`Invalid class level: ${level}.`);
-  return level >= MAX_CLASS_LEVEL ? null : 100 + 50 * (level - 1);
+  // Task 40: 100 + 6·L² (was 100 + 50·(L − 1)); 247 450 XP from level 1 to 50. PROVISIONAL.
+  return level >= MAX_CLASS_LEVEL ? null : 100 + 6 * level * level;
 }
 
 export interface ClassXpResult<P extends ClassProgressCore = ClassProgress> {

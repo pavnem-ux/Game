@@ -4,6 +4,8 @@ import type { BuffId, ChestContent } from '../gameplay/chests';
 import { nextEventCountdown } from './next-event';
 import { BuffIcon } from './kit';
 import { EN, formatNumber } from './strings-en';
+import { itemName } from '../equipment';
+import { rarityColor, rarityLabel } from './item-view';
 
 /** Task 12: seconds a chest pickup popup stays on screen. */
 const PICKUP_POPUP = 2.5;
@@ -45,8 +47,22 @@ export function CampaignHud({ world }: { world: GameplaySnapshot }) {
       : null;
   const notice = world.activities?.notice;
   const toast = notice && world.time - notice.time < ACTIVITY_TOAST ? notice : null;
+  // Task 42: a short toast naming the item just picked up.
+  const loot = world.loot?.last;
+  const lootToast =
+    loot && c.status === 'active' && world.time - loot.time < ACTIVITY_TOAST ? loot : null;
   return (
     <>
+      {lootToast && (
+        <div
+          key={`loot-${lootToast.item.uid}`}
+          className="loot-toast"
+          role="status"
+          style={{ color: rarityColor(lootToast.item.rarity) }}
+        >
+          {rarityLabel(lootToast.item.rarity)} {itemName(lootToast.item)}
+        </div>
+      )}
       {toast && (
         <div
           key={`${toast.kind}-${toast.time}`}

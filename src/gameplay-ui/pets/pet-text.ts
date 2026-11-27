@@ -22,7 +22,7 @@ export function petEffectLines(id: PetId, level: number): readonly string[] {
       ];
     case 'hedgehog':
       return [
-        `Aura: +${n(p.resistance)} Resistance`,
+        `Aura: +${n(p.resistance)} Armor`,
         `Every ${n(p.interval)} s a shield of ${n(p.barrierPercent)}% max health for ${n(p.barrierDuration)} s`,
       ];
     case 'kitten':
@@ -32,7 +32,7 @@ export function petEffectLines(id: PetId, level: number): readonly string[] {
       ];
     case 'wolf':
       return [
-        `Aura: +${n(p.attackSpeed)} Attack speed`,
+        `Aura: +${n(p.attackSpeed)}% Attack speed`,
         `+${n(p.movementSpeedPercent)}% Movement speed`,
       ];
   }

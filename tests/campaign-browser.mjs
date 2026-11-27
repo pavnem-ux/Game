@@ -45,7 +45,7 @@ try {
   for (const tab of [
     'Home',
     'Hero',
-    'Equipment',
+    'Bag',
     'Talents',
     'Shop',
     'Forge',
@@ -87,13 +87,13 @@ try {
 
   // 5.2 Character page.
   await nav.getByRole('button', { name: 'Hero', exact: true }).click();
-  // Task 13: a card's quick link opens Equipment for that class (without selecting it).
-  await page.getByRole('button', { name: 'Equipment: Mage', exact: true }).click();
-  await page.getByRole('region', { name: 'Equipment: Mage' }).waitFor();
+  // Task 13: a card's quick link opens the Bag (Task 41; was Equipment) for that class.
+  await page.getByRole('button', { name: 'Bag: Mage', exact: true }).click();
+  await page.getByRole('region', { name: 'Bag: Mage' }).waitFor();
   await nav.getByRole('button', { name: 'Hero', exact: true }).click();
   const cards = page.locator('.character-card');
   assert.equal(await cards.count(), 4);
-  assert.match(await cards.first().innerText(), /Level 1 \/ 50 · XP 0 \/ 100/);
+  assert.match(await cards.first().innerText(), /Level 1 \/ 50 · XP 0 \/ 106/);
   assert.equal(await cards.first().getByLabel('Talent points: 0').count(), 1);
   await page
     .getByRole('article', { name: /Archer/ })
@@ -192,9 +192,14 @@ try {
   );
   const text = await results.innerText();
   assert.match(text, /\+150 XP/);
-  // Task 11: Gold = coins collected in the run + victory bonus (30 on map 1).
+  // Task 11: Gold = coins collected in the run + victory bonus (24 on map 1 after Task 40's ×0.8).
   assert.match(text, /Coins\s+\d+/);
-  assert.match(text, /Victory bonus\s+\+30/);
+  assert.match(text, /Victory bonus\s+\+24/);
+  // Task 42: a victory always brings the boss item (Normal: Uncommon / Rare / Epic) — the Loot block.
+  assert.match(
+    await results.getByRole('group', { name: 'Loot' }).innerText(),
+    /Loot[\s\S]*(Uncommon|Rare|Epic) [\s\S]*L1/,
+  );
   // Task 19: Map 1, first victory → 6 map Ore. Task 24: a victory also pays the Ore banked by
   // activities this run (e.g. the thief's seeded 20% chance), shown as «(activities +N)»; the run
   // seed is random, so the total is 6 + N.
@@ -219,7 +224,7 @@ try {
   await screenshot(page, { path: 'artifacts/campaign-03-victory.png' });
   const afterWin = await page.evaluate(() => JSON.parse(localStorage.getItem('skazki.profile')));
   const winGold = afterWin.gold;
-  assert.ok(winGold >= 30, 'victory pays at least the bonus');
+  assert.ok(winGold >= 24, 'victory pays at least the bonus');
   assert.match(text, new RegExp(`Gold\\s+\\+${winGold}`));
   assert.equal(afterWin.highestUnlockedMap, 2);
   assert.equal(afterWin.classes.archer.level, 2);
@@ -356,7 +361,7 @@ try {
   await page.getByLabel('Save file').setInputFiles({
     name: 'newer.json',
     mimeType: 'application/json',
-    buffer: Buffer.from(JSON.stringify({ ...exported, schemaVersion: 10 })), // Task 39: v9 is current
+    buffer: Buffer.from(JSON.stringify({ ...exported, schemaVersion: 13 })), // Task 42: v12 is current
   });
   await page.getByText(/a newer version of the game/).waitFor();
   assert.equal(await stored(), before);
@@ -422,7 +427,7 @@ try {
   await devProfile.getByRole('button', { name: /Set level/ }).click();
   await page.getByLabel('Debug gold').fill('500');
   await devProfile.getByRole('button', { name: 'Grant Gold' }).click();
-  // Task 19: ore for the forge step below (Map 1 was won above: first victory ×3 = 6 ore, plus any
+  // Task 19: Ore grant (Map 1 was won above: first victory ×3 = 6 ore, plus any
   // Ore banked by activities in that run — Task 24 — exactly as the results screen paid it).
   const oreBefore = JSON.parse(await stored()).ore;
   assert.equal(oreBefore, Number(victoryOre[1]));
@@ -438,31 +443,47 @@ try {
   // Task 13: the DEV panel covers the right side of the redesigned pages; close it for the shop,
   // equipment and map steps and reopen it once the Map 10 run has started.
   await page.getByRole('button', { name: /DEV · Close/ }).click();
-  // Task 11: shop → buy (with confirmation, one atomic save) → equip on the Character screen.
+  // Task 40 / 41: shop → buy an item instance (confirmation, one atomic save) → Bag: equip, upgrade.
   await nav.getByRole('button', { name: 'Shop', exact: true }).click();
   const slots = page.getByRole('group', { name: 'Shop slots' });
-  assert.equal(await slots.getByRole('button').count(), 8); // Task 19: + Helmet, Gloves, Legs; Task 20: + Pets
+  assert.equal(await slots.getByRole('button').count(), 9); // All + 7 gear slots + Pets
+  const goods = page.locator('.shop-rows-compact');
+  // Task 41: «All» first — per slot one Common and three Uncommon offers at the class level (12).
+  assert.equal(await goods.locator('.shop-cell').count(), 28);
   assert.match(
-    await page.getByRole('listitem', { name: /^Uncommon Heavy Sword:/ }).innerText(),
-    /Unlocks after map 8/,
+    await page.locator('.shop-level-line').innerText(),
+    /Item level 12 · new stock at level 13/,
   );
   await slots.getByRole('button', { name: 'Armor' }).click();
-  const plate = page.getByRole('listitem', { name: /^Common Plate Armor:/ });
-  await plate.getByRole('button', { name: /Buy · Gold 80/ }).click();
+  // Common armor at level 12 (band «Robe»): 40 max HP, 9 resistance; round(40 × (1 + 12/5)) = 136 Gold.
+  const robe = page.getByRole('listitem', { name: 'Robe: 136 Gold' });
+  assert.match(await robe.innerText(), /HP \+40[\s\S]*Armor \+9/); // Task 44 format
+  await robe.getByRole('button', { name: /Buy · Gold 136/ }).click();
   // Task 13 keyboard: the confirm dialog focuses «Confirm»; Enter confirms.
-  await page.getByRole('dialog', { name: /Buy “Common Plate Armor” for 80 Gold\?/ }).waitFor();
+  await page.getByRole('dialog', { name: /Buy “Robe” for 136 Gold\?/ }).waitFor();
   assert.equal(await page.evaluate(() => document.activeElement?.textContent), 'Confirm');
   await page.keyboard.press('Enter');
-  await page.getByText('Bought: Common Plate Armor.').waitFor();
+  await page.getByText('Bought: Robe.').waitFor();
   const bought = JSON.parse(await stored());
-  assert.equal(bought.gold, devSave.gold - 80);
-  assert.deepEqual(bought.ownedItems, ['plate-t1']);
+  assert.equal(bought.gold, devSave.gold - 136);
+  // Task 42: the Map 1 victory above already brought the boss item (i1); the Robe is the next uid.
+  assert.equal(bought.items.length, 2);
+  const robeItem = bought.items[1];
+  assert.equal(robeItem.uid, 'i2');
+  assert.equal(robeItem.slot, 'armor');
+  assert.equal(robeItem.itemLevel, 12);
+  assert.ok(bought.newItems.includes('i2')); // Task 41: the «new» marker
+  assert.deepEqual(bought.shopBought[bought.selectedClass], {
+    level: 12,
+    offers: ['armor:common'],
+  });
+  // The bought offer is gone until the class levels up (a greyed placeholder keeps the row).
+  assert.equal(await page.getByRole('listitem', { name: 'Robe: 136 Gold' }).count(), 0);
+  assert.equal(await page.getByRole('listitem', { name: 'Robe: sold out' }).count(), 1);
+  assert.equal(await goods.locator('.shop-cell:not(.sold)').count(), 3);
   // Esc cancels the dialog (no purchase) and stays in the shop (it does not go back to the hub).
   await slots.getByRole('button', { name: 'Amulet' }).click();
-  await page
-    .getByRole('listitem', { name: /^Common Amulet of Might:/ })
-    .getByRole('button', { name: /Buy/ })
-    .click();
+  await goods.locator('.shop-cell').first().getByRole('button', { name: /Buy/ }).click();
   await page.getByRole('dialog').waitFor();
   await page.keyboard.press('Escape');
   assert.equal(await page.getByRole('dialog').count(), 0);
@@ -473,66 +494,47 @@ try {
   assert.equal(JSON.parse(await stored()).gold, bought.gold);
   await slots.getByRole('button', { name: 'Armor' }).click();
   await screenshot(page, { path: 'artifacts/campaign-13-shop.png', fullPage: true });
-  await nav.getByRole('button', { name: 'Equipment', exact: true }).click();
-  const gear = page.getByRole('region', { name: /^Equipment:/ });
-  await gear.getByRole('button', { name: /^Common Plate Armor/ }).click();
-  const preview = gear.getByRole('group', { name: 'Equipment preview' });
-  assert.match(await preview.innerText(), /Health\s+\+\d+/);
-  // Task 22: «Equip» appears next to the selection — in the viewport without scrolling.
-  await inViewport(preview.getByRole('button', { name: 'Equip' }), 'desktop «Equip»');
-  await preview.getByRole('button', { name: 'Equip' }).click();
+  // Task 41: the Bag — select the new item (its card clears «new»), equip it by uid.
+  await nav.getByRole('button', { name: 'Bag', exact: true }).click();
+  const bag = page.getByRole('region', { name: /^Bag:/ });
+  await bag.getByRole('button', { name: /^Robe, L12, new/ }).click();
+  const itemCard = bag.getByRole('group', { name: 'Item card' });
+  assert.match(await itemCard.innerText(), /Robe[\s\S]*Item level 12[\s\S]*HP\s+\+40/);
+  // Task 44: the Bag «Stats» totals preview the open item (green «+40» on Max HP).
+  assert.match(await bag.getByRole('list', { name: 'Stats' }).innerText(), /Max HP[\s\S]*\+40/);
   await page.waitForFunction(
-    (c) =>
-      JSON.parse(localStorage.getItem('skazki.profile')).classes[c].loadout.armor === 'plate-t1',
+    () => !JSON.parse(localStorage.getItem('skazki.profile')).newItems.includes('i2'),
+  );
+  // Task 22: «Equip» appears next to the selection — in the viewport without scrolling.
+  await inViewport(itemCard.getByRole('button', { name: 'Equip' }), 'desktop «Equip»');
+  await itemCard.getByRole('button', { name: 'Equip' }).click();
+  await page.waitForFunction(
+    (c) => JSON.parse(localStorage.getItem('skazki.profile')).classes[c].loadout.armor === 'i2',
     bought.selectedClass,
   );
+  // Slot upgrade: the Armor row → «Upgrade to +1» (254 Gold, 12 Ore; one save).
+  await bag.getByRole('button', { name: 'Armor +0: Robe' }).click();
+  const preUpgrade = JSON.parse(await stored());
+  await bag
+    .getByRole('group', { name: 'Slot upgrade' })
+    .getByRole('button', { name: /Upgrade to \+1/ })
+    .click();
+  await bag.getByRole('button', { name: 'Armor +1: Robe' }).waitFor();
+  const upgraded = JSON.parse(await stored());
+  assert.equal(upgraded.classes[bought.selectedClass].slotLevels.armor, 1);
+  assert.equal(upgraded.gold, preUpgrade.gold - 254);
+  assert.equal(upgraded.ore, preUpgrade.ore - 12);
   await screenshot(page, { path: 'artifacts/campaign-14-equipment.png', fullPage: true });
-  // Task 19: forge from the item preview («To the forge») → «Upgrade» (one save) → +1.
-  await gear.getByRole('button', { name: 'Unequip: Armor' }).click();
-  await gear.getByRole('button', { name: /^Common Plate Armor/ }).click();
-  await gear
-    .getByRole('group', { name: 'Equipment preview' })
-    .getByRole('button', { name: /To the forge/ })
-    .click();
-  const forge = page.getByRole('group', { name: 'Item upgrade' });
-  await forge.getByText('Common Plate Armor', { exact: true }).waitFor();
-  const preForge = JSON.parse(await stored());
-  await forge.getByRole('button', { name: /Upgrade to \+1/ }).click();
-  await forge.getByRole('heading', { name: 'Common Plate Armor +1' }).waitFor();
-  const forged = JSON.parse(await stored());
-  assert.deepEqual(forged.itemLevels, { 'plate-t1': 1 });
-  assert.equal(forged.gold, preForge.gold - 8);
-  assert.equal(forged.ore, preForge.ore - 1);
-  assert.match(await forge.innerText(), /Health\s+\+5\.25%\s+\+5\.5%/);
-  await screenshot(page, { path: 'artifacts/campaign-14b-forge.png', fullPage: true });
-  await nav.getByRole('button', { name: 'Equipment', exact: true }).click();
-  await gear.getByRole('button', { name: /^Common Plate Armor \+1/ }).click();
-  await gear
-    .getByRole('group', { name: 'Equipment preview' })
-    .getByRole('button', { name: 'Equip' })
-    .click();
-  await gear.getByRole('button', { name: 'Armor: Common Plate Armor +1' }).waitFor();
-  // Task 22: the equipped item's details → «Upgrade in the forge» opens the forge on that item;
-  // the forge mode switch toggles Items / Pets; «Back to equipment» returns.
-  await gear.getByRole('button', { name: /^Armor: Common Plate Armor \+1, details/ }).click();
-  const equippedPanel = gear.getByRole('group', { name: 'Equipped item' });
-  assert.match(await equippedPanel.innerText(), /Common Plate Armor \+1[\s\S]*Health \+5\.3%/);
-  await equippedPanel.getByRole('button', { name: /Upgrade in the forge/ }).click();
-  await forge.getByRole('heading', { name: 'Common Plate Armor +1' }).waitFor();
-  const modes = page.getByRole('group', { name: 'Forge sections' });
-  await modes.getByRole('button', { name: /Pets/ }).click();
-  assert.equal(
-    await modes.getByRole('button', { name: /Pets/ }).getAttribute('aria-pressed'),
-    'true',
-  );
-  await modes.getByRole('button', { name: /Items/ }).click();
-  await page.getByRole('group', { name: 'Item upgrade' }).waitFor();
-  await page.getByRole('button', { name: /Back to equipment/ }).click();
-  await gear.getByRole('button', { name: /^Armor: Common Plate Armor \+1/ }).waitFor();
-  assert.equal(
-    await nav.getByRole('button', { name: 'Equipment', exact: true }).getAttribute('aria-current'),
-    'page',
-  );
+  // Task 40: the forge only upgrades pets now (item upgrades are replaced by the new item model).
+  await nav.getByRole('button', { name: 'Forge', exact: true }).click();
+  // No pet owned yet: the forge points to the shop; there is no item upgrade any more.
+  await page
+    .locator('.forge-screen')
+    .getByText(/buy a pet in the shop/)
+    .waitFor();
+  assert.equal(await page.getByRole('group', { name: 'Item upgrade' }).count(), 0);
+  await nav.getByRole('button', { name: 'Bag', exact: true }).click();
+  await bag.getByRole('button', { name: 'Armor +1: Robe' }).waitFor();
   const goldBefore = JSON.parse(await stored()).gold;
   await (await openMap(10)).click();
   await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
@@ -708,7 +710,7 @@ try {
   const pagesTabs = [
     'Home',
     'Hero',
-    'Equipment',
+    'Bag',
     'Talents',
     'Shop',
     'Campaign map',
@@ -767,7 +769,7 @@ try {
     for (const tab of [
       'Home',
       'Hero',
-      'Equipment',
+      'Bag',
       'Talents',
       'Shop',
       'Campaign map',

@@ -37,6 +37,9 @@ import type { RunStatModifiers } from './stats';
 import { SynergyResolver } from './synergies';
 import { PetRunner } from '../pets/runtime';
 import type { PetDamageType, PetEvent, PetHost, Point2 } from '../pets/runtime';
+import { LegendaryCombat, legendarySource } from '../talents/legendary';
+import type { LegendaryHost } from '../talents/legendary';
+import type { LegendaryId } from '../equipment/config';
 import type { PetId } from '../pets/config';
 import type {
   BonusRewardId,
@@ -99,10 +102,18 @@ export interface SkillHost {
    * damage-over-time effects still apply; absent = nobody is immune.
    */
   controlImmune?(targetId: string): boolean;
+  /** Task 40 (optional): extra damage factor of the player's hits on this target (gear elite damage). */
+  targetDamageScale?(targetId: string): number;
   /** Task 20 (optional): the run's active pet (validated by the world). */
   readonly pet?: Readonly<{ id: PetId; level: number }> | null;
   /** Task 20 (optional): pet actions for run statistics and rendering. */
   recordPet?(event: PetEvent): void;
+  /** Task 43 (optional): Legendary effects of the items the run's class wears. */
+  readonly legendaries?: readonly LegendaryId[];
+  /** Task 43 (optional): the basic weapon's damage coefficient (Millwheel shockwave). */
+  readonly basicWeaponCoefficient?: number;
+  /** Task 43 (optional): the target is an elite or the boss (Edge of the Warden). */
+  isEliteOrBoss?(id: string): boolean;
 }
 /** Target state captured immediately before a hit; synergies and kill rules read only this. */
 export interface PreHit {
@@ -241,6 +252,8 @@ export class SkillEngine {
   readonly talents: TalentRuntime;
   /** Task 09.1: talent combat hooks (direct-hit bonuses, crit, DoT, reactions). */
   readonly talentCombat: TalentCombat;
+  /** Task 43: Legendary effects (on the talent runtime: cooldowns, proc guard). */
+  readonly legendary: LegendaryCombat;
   // ── TalentEngine view (read-only helpers for talent handlers) ──
   get statuses() {
     return this.host.statuses;
@@ -340,7 +353,13 @@ export class SkillEngine {
   /** Task 09.1: talent healing of the player through Combat Core (never revives). */
   healPlayer(amount: number): void {
     if (!(amount > 0) || !this.host.core.getEntity(this.host.playerId).alive) return;
-    this.host.forwardCombat(this.host.core.heal(this.host.playerId, amount).events);
+    const result = this.host.core.heal(this.host.playerId, amount);
+    this.host.forwardCombat(result.events);
+    this.notePlayerHealed(amount, result.healed);
+  }
+  /** Task 43: a heal of the player resolved by Core (`requested` vs `healed`: Heart overflow). */
+  notePlayerHealed(requested: number, healed: number): void {
+    if (this.legendary.any) this.legendary.onPlayerHealed(requested, healed);
   }
   /** Task 09.1: player HP last seen by talent threshold rules (percent of Max HP). */
   private playerHpSeen = 100;
@@ -355,6 +374,8 @@ export class SkillEngine {
     const now = p.maxHp > 0 ? (p.currentHp / p.maxHp) * 100 : 0;
     const before = this.playerHpSeen;
     this.playerHpSeen = now;
+    // Task 43: Crown of the Barrow King (HP threshold), independent of talents.
+    if (now !== before && this.legendary.any) this.legendary.onPlayerHpChanged(before, now, damage);
     if (!this.talents.anyActive) return;
     if (now !== before) this.talentCombat.onPlayerHpChanged(before, now, damage);
     const key = JSON.stringify(this.talentCombat.conditionalStats());
@@ -408,19 +429,31 @@ export class SkillEngine {
   /** Task 09.1: the player took real direct damage (world forwards Core damage events). */
   onPlayerDirectDamage(attackerId: string): void {
     this.talentCombat.onPlayerDirectDamage(attackerId);
+    // Task 43: Bark of the Old Leshy thorns.
+    if (this.legendary.any && this.host.core.getEntity(this.host.playerId).alive)
+      this.legendary.onPlayerDirectDamage();
   }
   /** Task 09.1: a dodge by the player (enemy direct attack missed). */
   onPlayerDodged(attackerId: string): void {
     this.talentCombat.onPlayerDodged(attackerId);
   }
   /** Task 09.1: crit-chance bonus for the player's equipped weapon at strike creation. */
-  weaponAttackBonus(weaponId?: string): { criticalChanceBonus?: number } {
+  weaponAttackBonus(weaponId?: string): { criticalChanceBonus?: number; forceCritical?: boolean } {
     const bonus =
       weaponId === OFFHAND_WEAPON.id
         ? this.talentCombat.offhandCritChance()
         : this.talentCombat.critChance(new Set(BASIC_TAGS[this.host.characterClass]));
-    return bonus > 0 ? { criticalChanceBonus: bonus } : {};
+    // Task 43 (Stride): the basic weapon's next attack can be a guaranteed crit.
+    const forced =
+      weaponId === this.host.basicWeaponId &&
+      this.legendary.any &&
+      this.legendary.takeGuaranteedCrit();
+    return {
+      ...(bonus > 0 ? { criticalChanceBonus: bonus } : {}),
+      ...(forced ? { forceCritical: true } : {}),
+    };
   }
+
   /** Task 09.1: attributes an attack snapshot to a talent (run stats source `talent:<node>`). */
   tagTalentAttack(attackId: string, nodeId: string): void {
     this.tagAttack(attackId, `talent:${nodeId}`);
@@ -448,7 +481,70 @@ export class SkillEngine {
       host.characterClass,
     );
     this.synergies = new SynergyResolver(this);
+    this.legendary = new LegendaryCombat(this.legendaryHost, host.legendaries ?? []);
     if (host.pet) this.setPet(host.pet);
+  }
+  private readonly legendaryHost: LegendaryHost = {
+    talents: () => this.talents,
+    now: () => this.clock,
+    player: () => this.host.core.getEntity(this.host.playerId),
+    playerPosition: () => this.playerPosition(),
+    enemyPosition: (id) => this.enemyPosition(id),
+    enemiesInCircle: (center, radius) => this.inCircle(center, radius),
+    strike: (id, targetId, baseDamage, type) =>
+      this.legendaryStrike(id, targetId, baseDamage, type),
+    weaponDamage: () => {
+      const p = this.host.core.getEntity(this.host.playerId);
+      const type: DamageType = this.host.characterClass === 'mage' ? 'magical' : 'physical';
+      const stat = type === 'physical' ? p.physicalDamage : p.magicalDamage;
+      return { damage: stat * (this.host.basicWeaponCoefficient ?? 1), type };
+    },
+    barrier: () => (this.barrierUntil === null ? 0 : this.host.core.getBarrier(this.host.playerId)),
+    grantBarrier: (amount, duration) => this.grantBarrier(amount, duration),
+    heal: (amount) => this.healPlayer(amount),
+    slow: (targetId, strength, duration) => this.slow(targetId, strength, duration),
+    isEliteOrBoss: (id) => this.host.isEliteOrBoss?.(id) ?? false,
+    applyBleed: (targetId, rawDamagePerTick, duration, originId) => {
+      if (!this.host.core.getEntity(targetId).alive) return;
+      const result = this.host.statuses.apply({
+        effectType: 'bleed',
+        rawDamagePerTick,
+        duration,
+        probabilityPercent: 100,
+        targetId,
+        sourceId: this.host.playerId,
+        originId,
+      });
+      this.host.recordStatus(result.events);
+    },
+    currentSource: () => this.source,
+  };
+  /**
+   * Task 43: a Legendary hit — exact pre-resistance base damage, never critical, `procs=false`,
+   * attributed to `legendary:<id>` and tagged `legendary` + `secondary` (never triggers anything).
+   */
+  private legendaryStrike(
+    id: LegendaryId,
+    targetId: string,
+    baseDamage: number,
+    type: DamageType,
+  ): void {
+    const p = this.host.core.getEntity(this.host.playerId);
+    const stat = type === 'physical' ? p.physicalDamage : p.magicalDamage;
+    if (!(stat > 0) || !(baseDamage > 0) || !this.host.core.getEntity(targetId).alive) return;
+    const source = legendarySource(id);
+    this.withSource(source, () => {
+      const attack = this.host.core.createAttack({
+        attackerId: this.host.playerId,
+        damageType: type,
+        coefficient: baseDamage / stat,
+        noCritical: true,
+      });
+      this.tagAttack(attack.id, source);
+      this.hit(targetId, attack, new Set<CombatTag>(['legendary', 'secondary', type]), {
+        procs: false,
+      });
+    });
   }
 
   // ───────────────────────────── Task 20 pets ─────────────────────────────
@@ -697,7 +793,7 @@ export class SkillEngine {
   ): number {
     if (attack.attackerId !== this.host.playerId) return 1;
     if (limit && this.counted(limit.key, targetId) >= limit.max) return 0;
-    let multiplier = 1;
+    let multiplier = this.host.targetDamageScale?.(targetId) ?? 1;
     const mark = this.activeMark(targetId);
     if (mark?.kind === 'hunter')
       multiplier *= 1 + getSkill('hunters_mark').ranks[mark.rank - 1].bonusPercent / 100;
@@ -706,6 +802,8 @@ export class SkillEngine {
     multiplier *= this.synergies.focusMultiplier(targetId);
     // Task 09.1: talent direct-hit / crit-damage bonuses (never on talent or secondary hits).
     multiplier *= this.talentCombat.hitMultiplier(attack, targetId, tags, targets);
+    // Task 43: Legendary direct-hit bonuses (Warden, Frost Warlord, Thunder Kite).
+    multiplier *= this.legendary.directMultiplier(targetId, tags);
     return multiplier;
   }
   damageModifier(context: DamageModifierContext): number {
@@ -886,11 +984,15 @@ export class SkillEngine {
     criticalChanceBonus = 0,
   ): AttackSnapshot {
     const critBonus = criticalChanceBonus + this.talentCombat.critChance(tags);
+    // Task 43 (Stride): a guaranteed crit is set when the attack snapshot is created.
+    const forced =
+      this.legendary.any && this.isDirectSource() && this.legendary.takeGuaranteedCrit();
     const attack = this.host.core.createAttack({
       attackerId: this.host.playerId,
       damageType,
       coefficient: coefficient * this.elementalMultiplier(tags),
       ...(critBonus > 0 ? { criticalChanceBonus: critBonus } : {}),
+      ...(forced ? { forceCritical: true } : {}),
     });
     if (this.source) this.tagAttack(attack.id, this.source);
     return attack;
@@ -933,6 +1035,10 @@ export class SkillEngine {
       hit = this.hit(targetId, attack, tags, { procs: false });
     });
     return hit;
+  }
+  /** Task 43: the current attribution is a direct source (basic weapon or a skill). */
+  private isDirectSource(): boolean {
+    return !this.source || this.source.startsWith('skill:');
   }
   /** Task 08.5: which skill/synergy created this attack snapshot (undefined = not the engine). */
   attackSource(attackId: string): string | undefined {
@@ -1056,10 +1162,15 @@ export class SkillEngine {
   /** Multishot: extra arrows for each basic bow attack. */
   onBasicAttack(event: AttackStartedEvent): void {
     if (event.weaponId !== this.host.basicWeaponId) return;
+    // Task 43: Millwheel Gauntlets count basic weapon attacks.
+    this.legendary.onBasicAttack();
     ABILITIES.multishot?.onBasicAttack?.(event, this);
   }
   private afterHit(hit: HitInfo) {
     const killed = hit.result.events.some((e) => e.type === 'death' && e.entityId === hit.targetId);
+    // Task 43: Frost Warlord's Chill after a landed direct hit on a living target.
+    if (hit.result.status === 'hit' && !killed && this.legendary.any)
+      this.legendary.onDirectHitLanded(hit.targetId, hit.tags);
     // Task 09.1: direct-hit reactions (Archer focus/kill rules); secondary hits are ignored.
     if (hit.result.status === 'hit')
       this.talentCombat.onDirectHit({ targetId: hit.targetId, tags: hit.tags, killed });
@@ -1113,7 +1224,10 @@ export class SkillEngine {
     );
     if (fromPlayer.length === 0) return;
     // No recursion: a kill whose player contribution came only from synergy-applied stacks never procs.
-    const procs = fromPlayer.some((s) => !s.originId?.startsWith('synergy:'));
+    // Task 43: a kill by Legendary-spread stacks alone never procs either.
+    const procs = fromPlayer.some(
+      (s) => !s.originId?.startsWith('synergy:') && !s.originId?.startsWith('legendary:'),
+    );
     const pre: PreHit = Object.freeze({
       targetId,
       effects,
@@ -1146,9 +1260,26 @@ export class SkillEngine {
       ABILITIES.battle_fury?.onMeleeKill?.(this);
     this.synergies.onKill(targetId, pre, cause);
   }
+  /**
+   * Task 43: status groups removed by the world; a Bleed removed because its target died feeds
+   * Fangs of the Mire Serpent (at the target's last position).
+   */
+  onStatusesRemoved(events: readonly StatusEvent[]): void {
+    if (!this.legendary.has('mire_serpent_fangs')) return;
+    for (const e of events)
+      if (
+        e.type === 'status-removed' &&
+        e.reason === 'target-dead' &&
+        e.group.effectType === 'bleed'
+      ) {
+        const at = this.deaths.get(e.group.targetId);
+        if (at) this.legendary.onBleedTargetDied(e.group, at);
+      }
+  }
   /** World notifies before unregistering a dead enemy so kill rules know its last position. */
   noteDeath(id: string, position: Point): void {
     this.geometry = null;
+    this.legendary.forget(id); // Task 43: per-target Legendary state (bounded)
     this.deaths.set(id, Object.freeze({ x: position.x, y: position.y }));
   }
 

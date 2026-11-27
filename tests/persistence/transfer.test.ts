@@ -34,7 +34,7 @@ const win = (runId: string) => ({
   eliteKills: 4,
   bossKilled: true,
   runLevel: 7,
-  // Task 11: Gold = collected coins + victory bonus; 45 + 30 = 75 on map 1.
+  // Task 11: Gold = collected coins + victory bonus; 45 + 24 = 69 on map 1 (Task 40: victory Gold ×0.8).
   coins: 45,
 });
 
@@ -59,7 +59,7 @@ describe('export / import (Task 08 §1.4, step 4.4)', () => {
     expect(b.replaceProfile(imported.ok ? imported.profile : (null as never)).ok).toBe(true);
     expect(b.getState().profile).toMatchObject({
       profileId: 'pid',
-      gold: 75,
+      gold: 69,
       highestUnlockedMap: 2,
     });
     // Imported processed ids still block duplicate rewards.
@@ -72,7 +72,7 @@ describe('export / import (Task 08 §1.4, step 4.4)', () => {
       JSON.stringify({ schemaVersion: 1, profileId: 'x', createdAt: NOW, gold: -3 }),
       'invalid',
     ],
-    ['newer version', JSON.stringify({ schemaVersion: 10 }), 'newer-version'],
+    ['newer version', JSON.stringify({ schemaVersion: 13 }), 'newer-version'],
     ['not an object', '[1,2,3]', 'not-an-object'],
     ['too large', `"${'x'.repeat(1_000_001)}"`, 'invalid'],
   ])('%s: rejected; the current save stays unchanged', (_label, text, code) => {
@@ -84,7 +84,7 @@ describe('export / import (Task 08 §1.4, step 4.4)', () => {
     expect(r.ok).toBe(false);
     expect(!r.ok && r.error.code).toBe(code);
     expect(s.data.get(SAVE_KEY)).toBe(before);
-    expect(a.getState().profile!.gold).toBe(75);
+    expect(a.getState().profile!.gold).toBe(69);
   });
   it('a previous valid save becomes the backup when an import replaces it', () => {
     const s = new FakeStorage();

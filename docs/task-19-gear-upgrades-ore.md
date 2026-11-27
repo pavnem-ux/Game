@@ -3,6 +3,9 @@
 Repo: pavnem-ux/Game. Base: latest `main` with Task 16 merged. Branch `task-19-gear`.
 Progress: `docs/task-19-progress.md`.
 
+> Task 40 status: §1.2 (Ore) still applies; §1.1, §1.3–§1.5 (tiered items, the Forge item upgrades,
+> `itemLevels`, their debug tools) are replaced by the Task 40 items model — kept here as history.
+
 ## Rules
 
 1. Session start: read this file + progress file, `git status`, `git log --oneline -5`. Continue from the
@@ -16,6 +19,8 @@ Progress: `docs/task-19-progress.md`.
 ## 1. Spec
 
 ### 1.1 New slots (shared by all classes): Шлем, Перчатки, Штаны → 7 slots total
+
+> **Replaced by Task 40** ([task-40-items-model.md](task-40-items-model.md), [EQUIPMENT_SHOP.md](EQUIPMENT_SHOP.md)): the 7 slots stay; the tiered templates are now only names / icons of item-level bands.
 
 Two-stat templates (first stat ×1.0, second ×0.6 of the existing tier-1 base values), 5 tiers each, same
 tier multipliers, unlock rules and prices as existing non-weapon items:
@@ -34,6 +39,8 @@ tier multipliers, unlock rules and prices as existing non-weapon items:
 
 ### 1.3 Upgrades («Кузница»)
 
+> **Replaced by Task 40** ([task-40-items-model.md](task-40-items-model.md), [EQUIPMENT_SHOP.md](EQUIPMENT_SHOP.md)): item upgrades are removed; the Forge upgrades pets only.
+
 - Every owned item (incl. weapons) has an upgrade level +0…+10, shared by all classes (items are
   account-wide unlocks). Each level adds +5% of the item's base stats (+10 = ×1.5). Always succeeds — no
   failure, no downgrade, no randomness.
@@ -45,11 +52,15 @@ tier multipliers, unlock rules and prices as existing non-weapon items:
 
 ### 1.4 Save
 
+> **Replaced by Task 40** ([task-40-items-model.md](task-40-items-model.md), [EQUIPMENT_SHOP.md](EQUIPMENT_SHOP.md)): save v10 drops `itemLevels` / `ownedItems` and resets equipment.
+
 - Schema v5 + migration: `ore: 0`, `itemLevels: {}`, per-class loadout gains `helmet`, `gloves`, `pants`
   (empty). Nothing else changes. Validation: level 0–10, only owned items, ore ≥ 0. Export/import, backup
   and bug reports include the new fields. Invalid data never overwrites a valid save.
 
 ### 1.5 Debug (dev/QA only)
+
+> **Replaced by Task 40** ([task-40-items-model.md](task-40-items-model.md), [EQUIPMENT_SHOP.md](EQUIPMENT_SHOP.md)): «Grant item» and «Legendary set at class level» replace these tools.
 
 Grant ore, set item level, unlock all new items.
 

@@ -4,57 +4,47 @@ import { NO_MODIFIERS, composeRunStats } from '../skills/stats';
 import type { RunStatModifiers } from '../skills/stats';
 import { talentLoadout } from '../talents';
 import type { TalentRanks } from '../talents';
-import { GEAR_SLOTS } from './config';
-import { findItem, isEligible } from './items';
-import { loadoutStats } from './logic';
+import { GOLD_FIND_CAP, LEGENDARY_RULES } from './config';
+import { slottedStats } from './slots';
+import type { SlotLevels } from './slots';
+import type { ItemInstance } from './items';
+import { equippedItems } from './logic';
 import type { Loadout } from './logic';
-import { NO_ITEM_LEVELS, UPGRADE_RULES, isUpgradeable } from './upgrades';
-import type { ItemLevels } from './upgrades';
 
 /**
- * Task 11 §1.3 gear in the attribute pipeline: gear stats are run-modifier points, summed with the
- * talent stat layer into one permanent layer, then composed with the class attributes by
- * `composeRunStats` — central caps once, never stored as final stats.
+ * Task 40 gear in the attribute pipeline: main stats are FLAT modifiers (added to the class
+ * attributes before every percent modifier), secondary stats are run-modifier points; both join the
+ * talent stat layer in one permanent layer composed once by `composeRunStats` (central caps once).
+ * Gold find from gear is capped at 25% here. Task 41: the class's slot levels scale the slotted
+ * item's own stats (main every level, secondary at milestones) before everything else (additive
+ * optional parameter: absent = level 0 everywhere, the Task 40 behaviour).
  */
 export function gearModifiers(
   loadout: Loadout | null | undefined,
-  levels: ItemLevels = NO_ITEM_LEVELS,
+  items: readonly ItemInstance[],
+  characterClass: CharacterClass,
+  slotLevels?: SlotLevels,
 ): RunStatModifiers {
   const m: Record<keyof RunStatModifiers, number> = { ...NO_MODIFIERS };
   if (loadout)
-    for (const [stat, v] of Object.entries(loadoutStats(loadout, levels)))
-      m[stat as keyof RunStatModifiers] += v as number;
+    for (const item of equippedItems(loadout, items, characterClass)) {
+      const { main, affixes } = slottedStats(item, characterClass, slotLevels?.[item.slot] ?? 0);
+      m.flatPhysicalDamage += main.physicalDamage;
+      m.flatMagicalDamage += main.magicalDamage;
+      m.flatMaxHp += main.maxHp;
+      m.resistance += main.resistance;
+      for (const a of affixes) m[a.stat] += a.value;
+      // Task 43: Stride of the Ash Wolf's movement speed (a gear modifier; caps once).
+      if (item.legendaryId === 'ash_wolf_stride')
+        m.movementSpeedPercent += LEGENDARY_RULES.stride.movementSpeedPercent;
+    }
+  m.goldFindPercent = Math.min(GOLD_FIND_CAP, m.goldFindPercent);
   return Object.freeze(m);
 }
 export function addModifiers(a: RunStatModifiers, b: RunStatModifiers): RunStatModifiers {
   const m = { ...a } as Record<keyof RunStatModifiers, number>;
   for (const k of Object.keys(b) as (keyof RunStatModifiers)[]) m[k] += b[k];
   return Object.freeze(m);
-}
-/** Rejects a loadout with unknown items or items the class cannot use in that slot. */
-export function validateLoadout(characterClass: CharacterClass, loadout: Loadout): void {
-  for (const slot of GEAR_SLOTS) {
-    const id = loadout[slot];
-    if (id === null) {
-      if (slot === 'weapon') throw new RangeError('The weapon slot cannot be empty.');
-      continue;
-    }
-    const item = findItem(id);
-    if (!item || !isEligible(item, characterClass, slot))
-      throw new RangeError(`Item ${id} cannot be equipped by ${characterClass} in ${slot}.`);
-  }
-}
-/** Task 19: rejects item levels that are not whole numbers 1–10 of known upgradeable items. */
-export function validateItemLevels(levels: unknown): ItemLevels {
-  if (!levels || typeof levels !== 'object' || Array.isArray(levels))
-    throw new RangeError('Item levels must be an object.');
-  for (const [id, level] of Object.entries(levels)) {
-    const item = findItem(id);
-    if (!item || !isUpgradeable(item)) throw new RangeError(`Item ${id} cannot have a level.`);
-    if (!Number.isInteger(level) || level < 1 || level > UPGRADE_RULES.maxLevel)
-      throw new RangeError(`Invalid level of ${id}.`);
-  }
-  return levels as ItemLevels;
 }
 /**
  * Final permanent stats of a class (Character screen): class level + talents + gear, composed once.
@@ -65,9 +55,99 @@ export function permanentStats(
   level: number,
   talents: TalentRanks,
   loadout: Loadout | null,
-  itemLevels: ItemLevels = NO_ITEM_LEVELS,
+  items: readonly ItemInstance[] = [],
+  slotLevels?: SlotLevels,
 ): CombatAttributes {
   const primary = calculateCharacterStats(characterClass, level).primaryAttributes;
   const talentMods = talentLoadout(characterClass, level, talents).modifiers;
-  return composeRunStats(primary, addModifiers(talentMods, gearModifiers(loadout, itemLevels)));
+  return composeRunStats(
+    primary,
+    addModifiers(talentMods, gearModifiers(loadout, items, characterClass, slotLevels)),
+  );
+}
+
+/** Task 44: one line of the Bag «Stats» panel (final run-start value and the gear share). */
+export interface StatSummaryLine {
+  readonly key: StatSummaryKey;
+  readonly label: string;
+  readonly value: number;
+  /** The part that comes from gear (final with gear − final without gear). */
+  readonly gear: number;
+  /** «%» or '' (plain number). */
+  readonly unit: '%' | '';
+  readonly decimals: number;
+}
+export type StatSummaryKey =
+  | 'damage'
+  | 'maxHp'
+  | 'resistance'
+  | 'attackSpeed'
+  | 'criticalChance'
+  | 'criticalDamage'
+  | 'cooldownReduction'
+  | 'dodgeChance'
+  | 'movementSpeed'
+  | 'pickupRadiusPercent'
+  | 'runXpPercent'
+  | 'goldFindPercent';
+/**
+ * Task 44 (display only): the class's final run-start values — damage of its type, max HP, armor,
+ * attack speed, crit chance / damage, cooldown reduction, dodge, movement speed (composed once
+ * with the caps) and the gear run stats (pickup radius, run XP, gold find) — each with its gear
+ * share. No rule changes: the same functions the run uses.
+ */
+export function statSummary(
+  characterClass: CharacterClass,
+  level: number,
+  talents: TalentRanks,
+  loadout: Loadout | null,
+  items: readonly ItemInstance[] = [],
+  slotLevels?: SlotLevels,
+): readonly StatSummaryLine[] {
+  const withGear = permanentStats(characterClass, level, talents, loadout, items, slotLevels);
+  const without = permanentStats(characterClass, level, talents, null, items);
+  const talentMods = talentLoadout(characterClass, level, talents).modifiers;
+  const gear = gearModifiers(loadout, items, characterClass, slotLevels);
+  const damageKey = characterClass === 'mage' ? 'magicalDamage' : 'physicalDamage';
+  const combat = (
+    key: StatSummaryKey,
+    stat: keyof CombatAttributes,
+    label: string,
+    unit: '%' | '',
+    decimals: number,
+  ): StatSummaryLine =>
+    Object.freeze({
+      key,
+      label,
+      value: withGear[stat],
+      gear: withGear[stat] - without[stat],
+      unit,
+      decimals,
+    });
+  const runStat = (
+    key: 'pickupRadiusPercent' | 'runXpPercent' | 'goldFindPercent',
+    label: string,
+  ): StatSummaryLine =>
+    Object.freeze({
+      key,
+      label,
+      value: talentMods[key] + gear[key],
+      gear: gear[key],
+      unit: '%',
+      decimals: 1,
+    });
+  return Object.freeze([
+    combat('damage', damageKey, 'Damage', '', 0),
+    combat('maxHp', 'maxHp', 'Max HP', '', 0),
+    combat('resistance', 'resistance', 'Armor', '', 0),
+    combat('attackSpeed', 'attackSpeed', 'Attack speed', '%', 1),
+    combat('criticalChance', 'criticalChance', 'Crit chance', '%', 1),
+    combat('criticalDamage', 'criticalDamage', 'Crit damage', '%', 0),
+    combat('cooldownReduction', 'cooldownReduction', 'Cooldown reduction', '%', 1),
+    combat('dodgeChance', 'dodgeChance', 'Dodge', '%', 1),
+    combat('movementSpeed', 'movementSpeed', 'Movement speed', '%', 0),
+    runStat('pickupRadiusPercent', 'Pickup radius'),
+    runStat('runXpPercent', 'Run XP'),
+    runStat('goldFindPercent', 'Gold find'),
+  ]);
 }

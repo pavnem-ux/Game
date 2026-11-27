@@ -1,0 +1,101 @@
+import { describe, expect, it } from 'vitest';
+import {
+  EquipmentError,
+  NO_SLOT_LEVELS,
+  bagCapacity,
+  bagFull,
+  nextExpansionPrice,
+  bagView,
+  defaultLoadouts,
+  equippedBy,
+  generateItem,
+  isBetter,
+  lowRaritySalvage,
+  salvageTotal,
+} from '../../src/equipment';
+import type { GearSlot, ItemInstance, Loadouts, Rarity } from '../../src/equipment';
+import type { CharacterClass } from '../../src/character-stats';
+import { lcgStream } from '../../src/gameplay/rng';
+import { buyBagExpansion, createProfile } from '../../src/profile';
+import type { PlayerProfile } from '../../src/profile';
+
+let n = 0;
+const item = (slot: GearSlot, rarity: Rarity, itemLevel: number, c: CharacterClass = 'mage') =>
+  generateItem(lcgStream(++n), { uid: `i${n}`, slot, rarity, itemLevel, characterClass: c });
+const wear = (l: Loadouts, c: CharacterClass, i: ItemInstance): Loadouts => ({
+  ...l,
+  [c]: { ...l[c], [i.slot]: i.uid },
+});
+
+/** Task 41 — bag rules (pure). */
+describe('Task 41 — bag', () => {
+  const ring = item('ring', 'legendary', 5);
+  const armor = item('armor', 'uncommon', 3);
+  const helm = item('helmet', 'common', 1);
+  const staff = item('weapon', 'rare', 2, 'mage');
+  const bow = item('weapon', 'epic', 9, 'archer');
+  const items = [ring, armor, helm, staff, bow];
+  const loadouts = wear(wear(defaultLoadouts(), 'warrior', armor), 'mage', armor);
+  it('salvage: Ore by rarity; equipped items are skipped by «all Common and Uncommon»', () => {
+    expect(salvageTotal([ring, armor, helm, staff, bow])).toBe(25 + 1 + 0 + 3 + 8);
+    expect(equippedBy(loadouts, armor.uid)).toEqual(['warrior', 'mage']);
+    expect(lowRaritySalvage(items, loadouts)).toEqual([helm.uid]);
+  });
+  it('view: filters, sort, other classes’ weapons only with Weapon + «Show all classes»', () => {
+    const f = { characterClass: 'mage' as const, rarity: 'all' as const, slot: 'all' as const };
+    const ids = (v: readonly ItemInstance[]) => v.map((i) => i.uid);
+    expect(ids(bagView(items, { ...f, showAllClasses: true, sort: 'level' }))).toEqual(
+      ids([ring, armor, staff, helm]),
+    );
+    expect(ids(bagView(items, { ...f, showAllClasses: false, sort: 'rarity' }))).toEqual(
+      ids([ring, staff, armor, helm]),
+    );
+    expect(ids(bagView(items, { ...f, showAllClasses: false, sort: 'newest' }))).toEqual(
+      ids([staff, helm, armor, ring]),
+    );
+    const weapons = { ...f, slot: 'weapon' as const, sort: 'level' as const };
+    expect(ids(bagView(items, { ...weapons, showAllClasses: false }))).toEqual([staff.uid]);
+    expect(ids(bagView(items, { ...weapons, showAllClasses: true }))).toEqual([bow.uid, staff.uid]);
+    expect(
+      ids(bagView(items, { ...f, rarity: 'uncommon', showAllClasses: false, sort: 'level' })),
+    ).toEqual([armor.uid]);
+  });
+  it('«better»: higher main stat than the worn item (empty slot → better; worn item → no)', () => {
+    const big = item('armor', 'common', 10);
+    const small = item('armor', 'common', 1);
+    const all = [...items, big, small];
+    expect(isBetter(big, loadouts, all, 'mage', 0)).toBe(true);
+    expect(isBetter(small, loadouts, all, 'mage', 0)).toBe(false);
+    expect(isBetter(armor, loadouts, all, 'mage', 0)).toBe(false); // the worn item itself
+    expect(isBetter(helm, loadouts, all, 'mage', 0)).toBe(true); // empty helmet slot
+    expect(isBetter(bow, loadouts, all, 'mage', 0)).toBe(false); // not the mage's weapon
+    expect(isBetter(big, loadouts, all, 'mage', NO_SLOT_LEVELS.armor)).toBe(true);
+  });
+});
+
+describe('Task 42 — bag capacity and expansions', () => {
+  it('base 25, +10 per expansion up to 5 (75); prices 5k / 12k / 25k / 40k / 60k', () => {
+    expect([0, 1, 2, 3, 4, 5].map((e) => bagCapacity(e))).toEqual([25, 35, 45, 55, 65, 75]);
+    expect([0, 1, 2, 3, 4, 5].map(nextExpansionPrice)).toEqual([
+      5000,
+      12000,
+      25000,
+      40000,
+      60000,
+      null,
+    ]);
+    expect(() => bagCapacity(6)).toThrow(RangeError);
+    const items = Array.from({ length: 25 }, () => item('ring', 'common', 1));
+    expect(bagFull(items, 0)).toBe(true);
+    expect(bagFull(items, 1)).toBe(false);
+    expect(bagFull([...items, ...items], 0)).toBe(true); // over capacity is full too
+  });
+  it('buying an expansion: Gold for +1; refused without Gold or at 5', () => {
+    let p: PlayerProfile = { ...createProfile('x', '2026-11-27T00:00:00.000Z'), gold: 200_000 };
+    for (let i = 0; i < 5; i++) p = buyBagExpansion(p);
+    expect([p.bagExpansions, p.gold]).toEqual([5, 200_000 - 142_000]);
+    expect(() => buyBagExpansion(p)).toThrow(EquipmentError);
+    const poor = { ...createProfile('y', '2026-11-27T00:00:00.000Z'), gold: 4999 };
+    expect(() => buyBagExpansion(poor)).toThrow(EquipmentError);
+  });
+});

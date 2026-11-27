@@ -26,14 +26,20 @@ export function createAttackSnapshot(
   nonNegative(baseDamage, 'calculated base damage');
   if (request.noCritical !== undefined && typeof request.noCritical !== 'boolean')
     throw new TypeError('noCritical must be a boolean.');
+  if (request.forceCritical !== undefined && typeof request.forceCritical !== 'boolean')
+    throw new TypeError('forceCritical must be a boolean.');
+  if (request.noCritical && request.forceCritical)
+    throw new RangeError('An attack cannot be both non-critical and always critical.');
   // Exactly one draw per attack; a bonus never exceeds the central Crit Chance cap.
   // Task 09.1: a `noCritical` attack draws nothing and is never critical.
-  const critical = request.noCritical
+  // Task 43: a `forceCritical` attack keeps its draw (same sequence) and is always critical.
+  const rolled = request.noCritical
     ? false
     : rollChance(
         Math.min(COMBAT_ATTRIBUTE_CAPS.criticalChance, attacker.criticalChance + bonus),
         random,
       );
+  const critical = request.forceCritical === true || rolled;
   const rawDamage = critical
     ? calculateCriticalDamage(baseDamage, attacker.criticalDamage)
     : baseDamage;

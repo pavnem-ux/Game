@@ -39,9 +39,9 @@ const zero: PrimaryAttributes = {
   agility: 0,
 };
 
-function expectValues(actual: CombatAttributes, values: readonly number[]) {
+function expectValues(actual: CombatAttributes, values: readonly number[], digits = 10) {
   expect(Object.keys(actual).sort()).toEqual([...combatKeys].sort());
-  combatKeys.forEach((key, i) => expect(actual[key], key).toBeCloseTo(values[i], 10));
+  combatKeys.forEach((key, i) => expect(actual[key], key).toBeCloseTo(values[i], digits));
 }
 
 describe('approved class snapshots', () => {
@@ -52,29 +52,45 @@ describe('approved class snapshots', () => {
       expect(snapshot.characterClass).toBe(characterClass);
       expect(snapshot.permanentLevel).toBe(level);
       expect(Object.keys(snapshot.primaryAttributes).sort()).toEqual([...primaryKeys].sort());
-      primaryKeys.forEach((key, i) => {
-        expect(snapshot.primaryAttributes[key], key).toBe(primary[i]);
-        expect(Number.isInteger(snapshot.primaryAttributes[key])).toBe(true);
-      });
-      expectValues(snapshot.combatAttributes, combat);
+      // Task 40: growth ×2/15 makes attributes fractional (shown rounded in the UI).
+      primaryKeys.forEach((key, i) =>
+        expect(snapshot.primaryAttributes[key], key).toBeCloseTo(primary[i], 5),
+      );
+      expectValues(snapshot.combatAttributes, combat, 5);
     },
   );
   // Explicit table from specification, independent of progression and conversion implementation.
+  // Task 40: level 50 = start + 49 × growth × 2/15 (e.g. Warrior strength 3 + 49 × 0.4 = 22.6;
+  // HP 100 + 22.6 × 10 = 326).
   const level50: Record<CharacterClass, readonly number[]> = {
-    warrior: [1600, 760, 260, 300, 125, 20, 225, 125, 10, 5, 115],
-    mage: [1100, 260, 1260, 150, 149.5, 29.8, 249.5, 125, 10, 25, 175],
-    archer: [600, 1260, 260, 300, 150, 30, 250, 150, 15, 5, 115],
-    rogue: [1100, 760, 260, 250, 175, 40, 275, 175, 20, 5, 115],
+    warrior: [
+      326, 123, 47.666667, 45.2, 103.766667, 11.506667, 203.766667, 103.766667, 5.753333, 0.753333,
+      102.26,
+    ],
+    mage: [
+      250.666667, 47.666667, 198.333333, 22.6, 107.033333, 12.813333, 207.033333, 103.766667,
+      5.753333, 3.766667, 111.3,
+    ],
+    archer: [
+      175.333333, 198.333333, 47.666667, 45.2, 107.533333, 13.013333, 207.533333, 107.533333,
+      6.506667, 0.753333, 102.26,
+    ],
+    rogue: [
+      250.666667, 123, 47.666667, 37.666667, 111.3, 14.52, 211.3, 111.3, 7.26, 0.753333, 102.26,
+    ],
   };
   it.each(CHARACTER_CLASSES)('%s reproduces every level-50 reference value', (id) =>
-    expectValues(calculateCharacterStats(id, 50).combatAttributes, level50[id]),
+    expectValues(calculateCharacterStats(id, 50).combatAttributes, level50[id], 5),
   );
   it.each(CHARACTER_CLASSES)('%s grows automatically at every level after level 1', (id) => {
     for (let level = 2; level <= 50; level++) {
       const previous = calculatePrimaryAttributes(id, level - 1),
         current = calculatePrimaryAttributes(id, level);
       for (const key of primaryKeys)
-        expect(current[key] - previous[key]).toBe(CLASS_STATS_CONFIG[id].growthPerLevel[key]);
+        expect(current[key] - previous[key]).toBeCloseTo(
+          CLASS_STATS_CONFIG[id].growthPerLevel[key],
+          10,
+        );
     }
   });
   it('is deterministic and returns independent immutable snapshots', () => {
@@ -128,9 +144,10 @@ describe('conversion isolation and precision', () => {
   });
   it('retains fractional percentages without display rounding', () => {
     const result = calculateCharacterStats('mage', 50).combatAttributes;
-    expect(result.attackSpeed).toBe(149.5);
-    expect(result.criticalChance).toBeCloseTo(29.8, 12);
-    expect(result.criticalDamage).toBe(249.5);
+    // Task 40: dexterity 1 + 49 × 2 × 2/15 = 14.0667 → attack speed 100 + 0.5 × that.
+    expect(result.attackSpeed).toBeCloseTo(107.033333, 5);
+    expect(result.criticalChance).toBeCloseTo(12.813333, 5);
+    expect(result.criticalDamage).toBeCloseTo(207.033333, 5);
     expect(deriveUncappedCombatAttributes({ ...zero, intelligence: 1 }).cooldownReduction).toBe(
       0.1,
     );

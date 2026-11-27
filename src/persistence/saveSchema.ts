@@ -15,13 +15,17 @@ import type { ClassProgress, MapBest, PlayerProfile, RecentRun, RunStatsSummary 
 import { validateTalentRanks } from '../talents';
 import {
   GEAR_SLOTS,
-  UPGRADE_RULES,
   defaultLoadout,
-  findItem,
-  isEligible,
-  isUpgradeable,
+  equipBlock,
+  findOwned,
+  isStarterUid,
+  BAG_RULES,
+  NO_SLOT_LEVELS,
+  validateItem,
+  validateSlotLevels,
 } from '../equipment';
-import type { Loadout } from '../equipment';
+import type { ItemInstance, Loadout, ShopBought, ShopRefreshes, SlotLevels } from '../equipment';
+import { shopSaltOf } from '../profile/profile';
 import { PET_LEVEL_RULES, isPetId } from '../pets';
 import {
   ACTIVITY_COUNTER_TYPES,
@@ -29,8 +33,8 @@ import {
   NO_QUEST_COUNTERS,
   QUEST_BY_ID,
   SYNERGY_IDS,
+  legacyTierItemsWorn,
   questProgress,
-  tierItemsWorn,
 } from '../quests';
 import type { ActivityCounts, QuestCounters } from '../quests';
 
@@ -125,7 +129,7 @@ export function migrateV6toV7(data: Json): Json {
   if (isObject(data.classes))
     for (const value of Object.values(data.classes))
       if (isObject(value) && isObject(value.loadout))
-        best = Math.max(best, tierItemsWorn(value.loadout as unknown as Loadout));
+        best = Math.max(best, legacyTierItemsWorn(value.loadout as Json));
   return {
     ...data,
     questCounters: { ...NO_QUEST_COUNTERS, bestTierLoadout: best },
@@ -148,6 +152,73 @@ export function migrateV7toV8(data: Json): Json {
 export function migrateV8toV9(data: Json): Json {
   return { ...data, mapTiers: {} };
 }
+/**
+ * v9 → v10 (Task 40, items-rework branch rule): everything is kept except equipment. Owned items,
+ * loadouts and Forge levels reset — every class gets its starter weapon, other slots empty; the
+ * new item fields start empty and the shop salt is derived from the profile id. Class XP above the
+ * new (steeper at low levels) cost of its level is clamped to one XP short of the next level, so
+ * levels never change. Gold, Ore, maps, talents, quests, pets and settings are kept.
+ */
+export function migrateV9toV10(data: Json): Json {
+  const { ownedItems: _o, itemLevels: _l, ...rest } = data;
+  void _o;
+  void _l;
+  const classes = isObject(data.classes)
+    ? Object.fromEntries(
+        Object.entries(data.classes).map(([id, value]) => {
+          if (!isObject(value) || !CHARACTER_CLASSES.includes(id as CharacterClass))
+            return [id, value];
+          const level = value.level;
+          const cost =
+            Number.isInteger(level) &&
+            (level as number) >= 1 &&
+            (level as number) <= MAX_CLASS_LEVEL
+              ? xpToNextLevel(level as number)
+              : null;
+          const xp =
+            typeof value.xp === 'number' && cost !== null && value.xp >= cost ? cost - 1 : value.xp;
+          return [
+            id,
+            {
+              ...value,
+              ...(xp === undefined ? {} : { xp }),
+              loadout: defaultLoadout(id as CharacterClass),
+            },
+          ];
+        }),
+      )
+    : data.classes;
+  return {
+    ...rest,
+    classes,
+    items: [],
+    nextItemNumber: 1,
+    shopSalt: typeof data.profileId === 'string' ? shopSaltOf(data.profileId) : 0,
+    shopBought: {},
+  };
+}
+/**
+ * v10 → v11 (Task 41): every class gets slot levels 0 in all seven slots and the profile an empty
+ * «new» list (existing items are not new). Nothing else changes.
+ */
+export function migrateV10toV11(data: Json): Json {
+  const classes = isObject(data.classes)
+    ? Object.fromEntries(
+        Object.entries(data.classes).map(([id, value]) => [
+          id,
+          isObject(value) ? { ...value, slotLevels: { ...NO_SLOT_LEVELS } } : value,
+        ]),
+      )
+    : data.classes;
+  return { ...data, classes, newItems: [] };
+}
+/**
+ * v11 → v12 (Task 42): no bag expansions, no shop refreshes; items have no reforge count yet
+ * (absent = 0). Nothing else changes.
+ */
+export function migrateV11toV12(data: Json): Json {
+  return { ...data, bagExpansions: 0, shopRefreshes: {} };
+}
 export const migrations: Readonly<Record<number, Migration>> = Object.freeze({
   1: migrateV1toV2,
   2: migrateV2toV3,
@@ -157,6 +228,9 @@ export const migrations: Readonly<Record<number, Migration>> = Object.freeze({
   6: migrateV6toV7,
   7: migrateV7toV8,
   8: migrateV8toV9,
+  9: migrateV9toV10,
+  10: migrateV10toV11,
+  11: migrateV11toV12,
 });
 
 export type SaveErrorCode =
@@ -210,28 +284,42 @@ function talentRanks(c: CharacterClass, level: number, raw: unknown, what: strin
   const r = validateTalentRanks(c, level, raw);
   return r.ok ? r.ranks : invalid(what);
 }
-/** Task 11: a class loadout — known ids, right slot and class, owned (starter always owned). */
-function loadout(raw: unknown, c: CharacterClass, owned: ReadonlySet<string>): Loadout {
+/**
+ * Task 40: a class loadout — owned instance uids (or the class's starter weapon), right slot and
+ * class, item level ≤ the class level.
+ */
+function loadout(
+  raw: unknown,
+  c: CharacterClass,
+  items: readonly ItemInstance[],
+  level: number,
+): Loadout {
   if (raw === undefined) return defaultLoadout(c);
   if (!isObject(raw)) invalid(`classes.${c}.loadout`);
   const v = raw as Json;
   const out: Record<string, string | null> = {};
   for (const slot of GEAR_SLOTS) {
-    const id = or(v[slot], slot === 'weapon' ? defaultLoadout(c).weapon : null);
+    const uid = or(v[slot], slot === 'weapon' ? defaultLoadout(c).weapon : null);
     const what = `classes.${c}.loadout.${slot}`;
-    if (id === null) {
+    if (uid === null) {
       if (slot === 'weapon') invalid(what); // the weapon slot always holds a weapon
       out[slot] = null;
       continue;
     }
-    const item = typeof id === 'string' ? findItem(id) : null;
-    if (!item || !isEligible(item, c, slot)) invalid(what);
-    if (!item!.starter && !owned.has(item!.id)) invalid(`${what} (not owned)`);
-    out[slot] = item!.id;
+    const item = typeof uid === 'string' ? findOwned(items, uid, c) : null;
+    if (!item || item.slot !== slot || equipBlock(item, c, level)) invalid(what);
+    out[slot] = item!.uid;
   }
   return Object.freeze(out as Record<(typeof GEAR_SLOTS)[number], string | null>);
 }
-function classProgress(raw: unknown, c: string, owned: ReadonlySet<string>): ClassProgress {
+function slotLevels(raw: unknown, what: string): SlotLevels {
+  try {
+    return validateSlotLevels(raw);
+  } catch {
+    return invalid(what);
+  }
+}
+function classProgress(raw: unknown, c: string, items: readonly ItemInstance[]): ClassProgress {
   const v = isObject(raw) ? raw : raw === undefined ? {} : invalid(`classes.${c}`);
   const level = int(
     or(v.level, NEW_CLASS_PROGRESS.level),
@@ -246,7 +334,8 @@ function classProgress(raw: unknown, c: string, owned: ReadonlySet<string>): Cla
     level,
     lifetimeXp: int(or(v.lifetimeXp, 0), `classes.${c}.lifetimeXp`),
     talents: talentRanks(c as CharacterClass, level, or(v.talents, {}), `classes.${c}.talents`),
-    loadout: loadout(v.loadout, c as CharacterClass, owned),
+    loadout: loadout(v.loadout, c as CharacterClass, items, level),
+    slotLevels: slotLevels(or(v.slotLevels, {}), `classes.${c}.slotLevels`),
   });
 }
 function mapBest(raw: unknown, key: string): MapBest {
@@ -321,25 +410,68 @@ function recentRun(raw: unknown, i: number): RecentRun {
 /** Validates current-version data, filling defaults for missing fields. Throws SaveDataError. */
 export function normalizeProfile(data: Json, version = SAVE_SCHEMA_VERSION): PlayerProfile {
   if (data.schemaVersion !== version) invalid('schemaVersion');
-  // Task 11: owned shop items first (known, buyable ids, no duplicates); loadouts check them.
-  const ownedRaw = or(data.ownedItems, []);
-  if (!Array.isArray(ownedRaw)) invalid('ownedItems');
-  const ownedItems = (ownedRaw as unknown[]).map((id, i) => {
-    const item = typeof id === 'string' ? findItem(id) : null;
-    if (!item || item.starter) invalid(`ownedItems[${i}]`);
-    return item!.id;
+  // Task 40: owned item instances first (valid, unique uids `i<n>` below the next number);
+  // loadouts check them.
+  const nextItemNumber = int(or(data.nextItemNumber, 1), 'nextItemNumber', 1);
+  const itemsRaw = or(data.items, []);
+  if (!Array.isArray(itemsRaw)) invalid('items');
+  const items = (itemsRaw as unknown[]).map((raw, i) => {
+    let item: ItemInstance;
+    try {
+      item = validateItem(raw);
+    } catch {
+      return invalid(`items[${i}]`);
+    }
+    const m = /^i([1-9][0-9]*)$/.exec(item.uid);
+    if (!m || Number(m[1]) >= nextItemNumber || isStarterUid(item.uid)) invalid(`items[${i}].uid`);
+    return item;
   });
-  if (new Set(ownedItems).size !== ownedItems.length) invalid('ownedItems (duplicates)');
-  const owned = new Set(ownedItems);
-  // Task 19: forge levels 0–10 of owned (upgradeable) items only; +0 entries are not kept.
-  const levelsRaw = or(data.itemLevels, {});
-  if (!isObject(levelsRaw)) invalid('itemLevels');
-  const itemLevels: Record<string, number> = {};
-  for (const [id, level] of Object.entries(levelsRaw as Json)) {
-    const item = findItem(id);
-    if (!item || !isUpgradeable(item) || !owned.has(id)) invalid(`itemLevels.${id}`);
-    if (int(level, `itemLevels.${id}`, 0, UPGRADE_RULES.maxLevel) > 0)
-      itemLevels[id] = level as number;
+  if (new Set(items.map((i) => i.uid)).size !== items.length) invalid('items (duplicate uids)');
+  // Task 41: the «new» markers — unique uids of owned items.
+  const newRaw = or(data.newItems, []);
+  if (!Array.isArray(newRaw)) invalid('newItems');
+  const owned = new Set(items.map((i) => i.uid));
+  const newItems = (newRaw as unknown[]).map((uid, i) =>
+    typeof uid === 'string' && owned.has(uid) ? uid : invalid(`newItems[${i}]`),
+  );
+  if (new Set(newItems).size !== newItems.length) invalid('newItems (duplicates)');
+  const shopSalt = int(
+    or(data.shopSalt, shopSaltOf(String(data.profileId))),
+    'shopSalt',
+    0,
+    0xffffffff,
+  );
+  const boughtRaw = or(data.shopBought, {});
+  if (!isObject(boughtRaw)) invalid('shopBought');
+  const shopBought: Partial<Record<CharacterClass, ShopBought>> = {};
+  for (const [c, value] of Object.entries(boughtRaw as Json)) {
+    if (!CHARACTER_CLASSES.includes(c as CharacterClass) || !isObject(value))
+      invalid(`shopBought.${c}`);
+    const v = value as Json;
+    const offers = Array.isArray(v.offers) ? v.offers : invalid(`shopBought.${c}.offers`);
+    const ids = (offers as unknown[]).map((id, i) =>
+      typeof id === 'string' && /^[a-z]+:(common|uncommon:[a-zA-Z]+)$/.test(id)
+        ? id
+        : invalid(`shopBought.${c}.offers[${i}]`),
+    );
+    if (new Set(ids).size !== ids.length) invalid(`shopBought.${c}.offers (duplicates)`);
+    shopBought[c as CharacterClass] = Object.freeze({
+      level: int(v.level, `shopBought.${c}.level`, 1, MAX_CLASS_LEVEL),
+      offers: Object.freeze(ids),
+    });
+  }
+  // Task 42: paid shop refreshes per class (level 1–50, count 1–64).
+  const refreshRaw = or(data.shopRefreshes, {});
+  if (!isObject(refreshRaw)) invalid('shopRefreshes');
+  const shopRefreshes: Partial<Record<CharacterClass, ShopRefreshes>> = {};
+  for (const [c, value] of Object.entries(refreshRaw as Json)) {
+    if (!CHARACTER_CLASSES.includes(c as CharacterClass) || !isObject(value))
+      invalid(`shopRefreshes.${c}`);
+    const v = value as Json;
+    shopRefreshes[c as CharacterClass] = Object.freeze({
+      level: int(v.level, `shopRefreshes.${c}.level`, 1, MAX_CLASS_LEVEL),
+      count: int(v.count, `shopRefreshes.${c}.count`, 1, 64),
+    });
   }
   // Task 20: pets — known unique ids; levels 1–5 of owned pets (1 not kept); active pet owned.
   const petsRaw = or(data.ownedPets, []);
@@ -363,7 +495,7 @@ export function normalizeProfile(data: Json, version = SAVE_SCHEMA_VERSION): Pla
   if (!isObject(classesRaw)) invalid('classes');
   const classes = Object.freeze(
     Object.fromEntries(
-      CHARACTER_CLASSES.map((c) => [c, classProgress((classesRaw as Json)[c], c, owned)]),
+      CHARACTER_CLASSES.map((c) => [c, classProgress((classesRaw as Json)[c], c, items)]),
     ) as Record<CharacterClass, ClassProgress>,
   );
   const highestUnlockedMap = mapId(or(data.highestUnlockedMap, 1), 'highestUnlockedMap');
@@ -435,8 +567,18 @@ export function normalizeProfile(data: Json, version = SAVE_SCHEMA_VERSION): Pla
     }),
     recentRuns: Object.freeze((recentRaw as unknown[]).map(recentRun)),
     processedRunIds: Object.freeze(processedRunIds),
-    ownedItems: Object.freeze(ownedItems),
-    itemLevels: Object.freeze(itemLevels),
+    items: Object.freeze(items),
+    newItems: Object.freeze(newItems),
+    bagExpansions: int(
+      or(data.bagExpansions, 0),
+      'bagExpansions',
+      0,
+      BAG_RULES.expansionPrices.length,
+    ),
+    nextItemNumber,
+    shopSalt,
+    shopBought: Object.freeze(shopBought),
+    shopRefreshes: Object.freeze(shopRefreshes),
     ownedPets: Object.freeze(ownedPets),
     petLevels: Object.freeze(petLevels),
     activePet: activeRaw as string | null,
@@ -444,8 +586,12 @@ export function normalizeProfile(data: Json, version = SAVE_SCHEMA_VERSION): Pla
     questsClaimed: Object.freeze(questsClaimed),
   });
   // Task 21: a claimed quest must be complete in this very profile (no claim of an incomplete one).
+  // Task 40: the hidden Forge quests keep their claims (they can't be re-measured without the Forge).
   for (const id of questsClaimed)
-    if (questProgress({ ...profile, questsClaimed: [] }, QUEST_BY_ID.get(id)!).state !== 'complete')
+    if (
+      !QUEST_BY_ID.get(id)!.hidden &&
+      questProgress({ ...profile, questsClaimed: [] }, QUEST_BY_ID.get(id)!).state !== 'complete'
+    )
       invalid(`questsClaimed.${id} (incomplete)`);
   return profile;
 }

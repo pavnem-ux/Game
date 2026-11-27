@@ -1,3 +1,4 @@
+import { legendaryDef } from '../equipment/legendaries';
 import { CHARACTER_CLASSES } from '../character-stats';
 import { ALPHA_WEAPONS, WEAPON_LABELS } from '../gameplay';
 import type { EnemyType } from '../gameplay';
@@ -165,7 +166,7 @@ export const EN = Object.freeze({
       label: 'Main menu',
       hub: 'Home',
       character: 'Hero',
-      equipment: 'Equipment',
+      equipment: 'Bag',
       talents: 'Talents',
       shop: 'Shop',
       forge: 'Forge',
@@ -205,7 +206,7 @@ export const EN = Object.freeze({
         next === null ? 'Maximum level' : `XP ${xp} / ${next}`,
       points: (n: number) => `Talent points: ${n}`,
       weapon: (name: string) => `Weapon: ${name}`,
-      toEquipment: 'Equipment',
+      toEquipment: 'Bag',
       toTalents: 'Talents',
       cardLabel: (name: string, level: number) => `${name}: level ${level}`,
     }),
@@ -216,11 +217,64 @@ export const EN = Object.freeze({
       attackSpeed: 'Attack speed',
       criticalChance: 'Crit chance',
       criticalDamage: 'Crit damage',
-      resistance: 'Resistance',
+      resistance: 'Armor',
       dodgeChance: 'Dodge',
       movementSpeed: 'Movement speed',
       cooldownReduction: 'Cooldown red.',
       areaSize: 'Area size',
+    }),
+    bag: Object.freeze({
+      title: 'Bag',
+      equipped: 'Equipped',
+      empty: 'Empty',
+      all: 'All',
+      count: (n: number, max: number) => `Bag · ${n} / ${max}`,
+      select: 'Select',
+      sortLevel: 'Item level',
+      sortRarity: 'Rarity',
+      sortNewest: 'Newest',
+      allClasses: 'Show all classes',
+      markerNew: 'new',
+      markerBetter: 'better',
+      markerEquipped: 'equipped',
+      noItems: 'No items here. Buy some in the shop.',
+      pick: 'Select an item or a slot to see its card.',
+      requires: (level: number) => `Requires level ${level}`,
+      equippedBy: (names: string) => `Equipped by: ${names}`,
+      salvageOne: (ore: number) => `Salvage → ${ore} Ore`,
+      salvageMarked: (n: number, ore: number) => `Salvage marked (${n}) → ${ore} Ore`,
+      salvageLow: (ore: number) => `Salvage all Common and Uncommon → ${ore} Ore`,
+      markFirst: 'Mark items to salvage first',
+      nothingLow: 'No unequipped Common or Uncommon items',
+      confirmTitle: (n: number, ore: number) =>
+        `Salvage ${n} item${n === 1 ? '' : 's'} for ${ore} Ore?`,
+      confirmText: 'Salvaged items are gone for good.',
+      confirmLegendary: (n: number) =>
+        `This includes ${n} Legendary item${n === 1 ? '' : 's'}. Salvage anyway?`,
+      confirm: 'Salvage',
+      salvaged: (n: number, ore: number) => `Salvaged ${n} item${n === 1 ? '' : 's'}: +${ore} Ore.`,
+      upgrade: (level: number) => `Upgrade to +${level} · `,
+      upgraded: (slot: string, level: number) => `${slot} upgraded to +${level}.`,
+      maxed: 'The slot is at +30',
+      needGold: (n: number) => `Need ${n} more Gold`,
+      needOre: (n: number) => `Need ${n} more Ore`,
+      bonuses: (main: string, secondary: string) =>
+        `Main stat ×${main} · secondary stats ×${secondary}`,
+      nextMilestone: (level: number) => `Next milestone at +${level}`,
+      allMilestones: 'Every milestone reached',
+      equippedMsg: (name: string) => `Equipped: ${name}.`,
+      unequippedMsg: (name: string) => `Unequipped: ${name}.`,
+      failed: 'The action failed.',
+      expand: 'Expand bag',
+      expandTitle: (price: string) => `Expand the bag by 10 for ${price} Gold?`,
+      expandText: 'The bag grows for the whole profile, forever.',
+      expanded: (capacity: number) => `The bag now holds ${capacity} items.`,
+      pickStat: 'Pick a stat',
+      reforge: 'Reforge',
+      reforgeTitle: (stat: string, price: string) => `Reforge “${stat}” for ${price} Gold?`,
+      reforgeText:
+        'It becomes a random other stat of this slot with a new value. This cannot be undone.',
+      reforged: (name: string) => `Reforged: ${name}.`,
     }),
     equipment: Object.freeze({
       title: 'Equipment',
@@ -241,7 +295,7 @@ export const EN = Object.freeze({
       starter: 'Starter',
       unequipFailed: 'Could not unequip the item.',
       equipFailed: 'Could not equip.',
-      upgradeInForge: 'Upgrade in the forge',
+      needsLevel: (level: number) => `Needs class level ${level}`,
       close: 'Close',
     }),
     talents: Object.freeze({
@@ -342,6 +396,7 @@ export const EN = Object.freeze({
     shop: Object.freeze({
       lockedOverlay: (mapId: number) => `unlocks after map ${mapId}`,
       owned: 'Owned',
+      soldOut: 'Sold out until the next level',
       equippedStamp: 'Equipped',
     }),
     maps: Object.freeze({
@@ -379,11 +434,12 @@ export const EN = Object.freeze({
         hard: 'All monsters: +50% health and damage. Victory Gold and Ore ×1.5.',
         nightmare: 'All monsters: +100% health and damage. Victory Gold and Ore ×2.',
         trial:
-          'No ordinary enemies. 5 elites every 30 seconds (×3), the boss at 3:00 (×3). Victory Gold and Ore ×2.',
+          'No ordinary enemies. 5 elites every 30 seconds (×3), the boss at 3:00 (×3). Victory Ore ×2, class XP ×0.2.',
       }),
       tierLocked: (previous: string) => `Win on ${previous} first`,
       tierUnlocked: (name: string) => `${name} unlocked on this map`,
-      rewardScaled: (scale: number) => ` · Gold and Ore ×${scale}`,
+      rewardScaled: (gold: number, ore: number, xp: number) =>
+        ` · Gold ×${gold} · Ore ×${ore}${xp !== 1 ? ` · class XP ×${xp}` : ''}`,
       select: 'Select',
       close: 'Close',
     }),
@@ -455,6 +511,9 @@ export function damageSourceLabel(source: string): string {
       return EFFECT_LABELS[id] ?? 'Effect';
     case 'talent':
       return `Talent “${TALENT_CONFIG.nodes.get(source.slice('talent:'.length))?.name ?? 'talent'}”`;
+    // Task 43: Legendary effects (thorns, shockwave, spread Bleed) have their own row.
+    case 'legendary':
+      return legendaryDef(id)?.name ?? 'Legendary';
     case 'debug':
       return 'Debug';
     default:

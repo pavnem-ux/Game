@@ -160,6 +160,8 @@ describe('Task 12 Phase 3 — opening and contents', () => {
   it('wooden gold: a coin pile of max(5, 2% victory Gold) at the chest, collected by the normal pickup', () => {
     expect(chestGold(75)).toBe(5);
     expect(chestGold(750)).toBe(15);
+    // Task 40: map 40's victory Gold is 600 (750 × 0.8) → 12.
+    expect(getCampaignMap(40).victoryGold).toBe(600);
     const w = world(1, 40);
     const id = w.debugSpawnChest('wooden', 'gold')!;
     const events = walkTo(w, id);
@@ -168,7 +170,7 @@ describe('Task 12 Phase 3 — opening and contents', () => {
       amount: chestGold(getCampaignMap(40).victoryGold),
     });
     step(w, 0.2);
-    expect(w.getSnapshot().coins.collected).toBe(chestGold(750));
+    expect(w.getSnapshot().coins.collected).toBe(chestGold(600));
   });
   it('«Magnet» collects every crystal and coin on the map once (level-ups resolve normally)', () => {
     const w = world();

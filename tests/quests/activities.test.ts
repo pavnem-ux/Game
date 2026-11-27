@@ -45,14 +45,14 @@ describe('Task 24 Phase 4 — activity quests', () => {
   it('8 quests: cleanse 10/50 shrines, defend 10/40 lanterns, catch 10/50 thieves, destroy 10/50 nests', () => {
     const list = QUESTS.filter((q) => q.group === 'activities');
     expect(list.map((q) => [q.id, q.title, q.reward])).toEqual([
-      ['activities.shrine.10', 'Cleanse 10 shrines', { gold: 500, ore: 15 }],
-      ['activities.shrine.50', 'Cleanse 50 shrines', { gold: 1500, ore: 40 }],
-      ['activities.lantern.10', 'Defend 10 lanterns', { gold: 500, ore: 15 }],
-      ['activities.lantern.40', 'Defend 40 lanterns', { gold: 1500, ore: 40 }],
-      ['activities.thief.10', 'Catch 10 thieves', { gold: 500, ore: 15 }],
-      ['activities.thief.50', 'Catch 50 thieves', { gold: 1500, ore: 40 }],
-      ['activities.nest.10', 'Destroy 10 nests', { gold: 500, ore: 15 }],
-      ['activities.nest.50', 'Destroy 50 nests', { gold: 1500, ore: 40 }],
+      ['activities.shrine.10', 'Cleanse 10 shrines', { gold: 400, ore: 15 }],
+      ['activities.shrine.50', 'Cleanse 50 shrines', { gold: 1200, ore: 40 }],
+      ['activities.lantern.10', 'Defend 10 lanterns', { gold: 400, ore: 15 }],
+      ['activities.lantern.40', 'Defend 40 lanterns', { gold: 1200, ore: 40 }],
+      ['activities.thief.10', 'Catch 10 thieves', { gold: 400, ore: 15 }],
+      ['activities.thief.50', 'Catch 50 thieves', { gold: 1200, ore: 40 }],
+      ['activities.nest.10', 'Destroy 10 nests', { gold: 400, ore: 15 }],
+      ['activities.nest.50', 'Destroy 50 nests', { gold: 1200, ore: 40 }],
     ]);
   });
   it('counters grow once per finalized run (victory and defeat; abandoned adds nothing; duplicates ignored)', () => {
@@ -72,7 +72,7 @@ describe('Task 24 Phase 4 — activity quests', () => {
     expect(claimableQuests(p)).not.toContain('activities.shrine.50');
     const before = { gold: p.gold, ore: p.ore };
     const claimed = claimQuest(p, 'activities.shrine.10');
-    expect(claimed.gold - before.gold).toBe(500);
+    expect(claimed.gold - before.gold).toBe(400); // Task 40: 500 × 0.8;
     expect(claimed.ore - before.ore).toBe(15);
     expect(() => claimQuest(claimed, 'activities.shrine.10')).toThrow();
     expect(() => claimQuest(p, 'activities.nest.10')).toThrow();
@@ -111,7 +111,7 @@ describe('Task 24 Phase 4 — save v8', () => {
     const r = parseProfile(v7);
     expect(r.ok).toBe(true);
     if (r.ok) {
-      expect(r.profile.schemaVersion).toBe(9); // Task 39: … then v8 → v9 (empty mapTiers)
+      expect(r.profile.schemaVersion).toBe(12); // … then v8 → v9 (mapTiers), … v11 → v12
       expect(r.profile.questCounters.activities).toEqual(activities());
       expect({ ...r.profile, schemaVersion: 7, questCounters: counters7 }).toEqual(v7);
     }

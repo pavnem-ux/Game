@@ -306,7 +306,7 @@ const PROFILES: Readonly<Record<string, (p: SkillParams, h: Helpers) => Spec[]>>
     info(
       'buff',
       'buff',
-      `+${p.attackSpeed} Attack speed and +${p.resistance} Resistance for ${fmt(p.duration)} s`,
+      `+${p.attackSpeed}% Attack speed and +${p.resistance} Armor for ${fmt(p.duration)} s`,
     ),
     ...(p.disruptSlow > 0
       ? [
@@ -644,7 +644,7 @@ const PASSIVE_TEXT: Readonly<Record<string, (p: SkillParams) => string>> = {
   power: (p) => `+${p.damagePercent}% Physical and Magic damage (already in your stats)`,
   haste: (p) => `+${p.attackSpeed} Attack Speed`,
   vitality: (p) => `+${p.maxHpPercent}% Max HP`,
-  fortitude: (p) => `+${p.resistance} Resistance`,
+  fortitude: (p) => `+${p.resistance} Armor`,
   precision: (p) => `+${p.criticalChance} Crit chance (cap 75%)`,
   deadly_strikes: (p) => `+${p.criticalDamage} Crit damage`,
   swiftness: (p) => `+${p.movementSpeed} Movement Speed`,

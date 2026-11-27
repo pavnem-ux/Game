@@ -9,7 +9,7 @@ import { Backdrop, BackgroundArt, CurrencyBadge, OreBadge } from './kit';
 import { EN } from './strings-en';
 import { HubPage } from './meta/Hub';
 import { CharacterSelectPage } from './meta/CharacterSelect';
-import { EquipmentPage } from './meta/EquipmentScreen';
+import { BagPage } from './meta/BagScreen';
 import { TalentsPage } from './meta/TalentsScreen';
 import { MapPathPage } from './meta/MapPath';
 import { ForgePage } from './meta/ForgeScreen';
@@ -96,7 +96,7 @@ export function CampaignMenu() {
       <div className="meta-content" key={ui.page}>
         {ui.page === 'hub' && <HubPage />}
         {ui.page === 'character' && <CharacterSelectPage />}
-        {ui.page === 'equipment' && <EquipmentPage />}
+        {ui.page === 'equipment' && <BagPage />}
         {ui.page === 'talents' && <TalentsPage />}
         {ui.page === 'maps' && <MapPathPage />}
         {ui.page === 'shop' && <ShopPage />}

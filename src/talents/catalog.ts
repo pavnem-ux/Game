@@ -58,14 +58,14 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       name: 'Hidden Precision',
       superpower: false,
       ranks: [
-        { text: 'Dagger crit chance +3 pp.', status: 'pending', refs: [] },
+        { text: 'Dagger crit chance +3%.', status: 'pending', refs: [] },
         {
-          text: 'Bonus +5 pp; against enemies with Bleed an extra +2 pp.',
+          text: 'Bonus +5%; against enemies with Bleed an extra +2%.',
           status: 'pending',
           refs: [],
         },
         {
-          text: 'Bonus +7 pp; against enemies with 5+ Bleed another +3 pp.',
+          text: 'Bonus +7%; against enemies with 5+ Bleed another +3%.',
           status: 'pending',
           refs: [],
         },
@@ -109,10 +109,10 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       name: 'Final Blow',
       superpower: false,
       ranks: [
-        { text: 'Dagger crit damage +10 pp.', status: 'pending', refs: [] },
-        { text: '+18 pp; against bleeding targets another +7 pp.', status: 'pending', refs: [] },
+        { text: 'Dagger crit damage +10%.', status: 'pending', refs: [] },
+        { text: '+18%; against bleeding targets another +7%.', status: 'pending', refs: [] },
         {
-          text: '+28 pp; against targets below 30% HP another +12 pp.',
+          text: '+28%; against targets below 30% HP another +12%.',
           status: 'pending',
           refs: [],
         },
@@ -127,12 +127,12 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       superpower: false,
       ranks: [
         {
-          text: 'Dodge against direct hits +2 pp (the overall cap still applies).',
+          text: 'Dodge against direct hits +2% (the overall cap still applies).',
           status: 'pending',
           refs: [],
         },
-        { text: '+4 pp; movement speed +3%.', status: 'pending', refs: [] },
-        { text: '+6 pp; movement speed +5%.', status: 'pending', refs: [] },
+        { text: '+4%; movement speed +3%.', status: 'pending', refs: [] },
+        { text: '+6%; movement speed +5%.', status: 'pending', refs: [] },
       ],
     },
     {
@@ -339,12 +339,12 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
           refs: [],
         },
         {
-          text: '+10%; ice skill Slow +3 pp within the cap.',
+          text: '+10%; ice skill Slow +3% within the cap.',
           status: 'pending',
           refs: [],
         },
         {
-          text: '+16%; ice skill Slow +5 pp within the cap.',
+          text: '+16%; ice skill Slow +5% within the cap.',
           status: 'pending',
           refs: [],
         },
@@ -400,9 +400,9 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       name: 'Arcane Flow',
       superpower: false,
       ranks: [
-        { text: 'Cooldown reduction +3 pp.', status: 'pending', refs: [] },
-        { text: '+5 pp; magic damage +3%.', status: 'pending', refs: [] },
-        { text: '+8 pp; magic damage +5%.', status: 'pending', refs: [] },
+        { text: 'Cooldown reduction +3%.', status: 'pending', refs: [] },
+        { text: '+5%; magic damage +3%.', status: 'pending', refs: [] },
+        { text: '+8%; magic damage +5%.', status: 'pending', refs: [] },
       ],
     },
     {
@@ -413,9 +413,9 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       name: 'Arcane Precision',
       superpower: false,
       ranks: [
-        { text: 'Magic skill crit chance +3 pp.', status: 'pending', refs: [] },
-        { text: '+5 pp; crit damage +10 pp.', status: 'pending', refs: [] },
-        { text: '+8 pp; crit damage +20 pp.', status: 'pending', refs: [] },
+        { text: 'Magic skill crit chance +3%.', status: 'pending', refs: [] },
+        { text: '+5%; crit damage +10%.', status: 'pending', refs: [] },
+        { text: '+8%; crit damage +20%.', status: 'pending', refs: [] },
       ],
     },
     {
@@ -448,8 +448,8 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
           status: 'pending',
           refs: [],
         },
-        { text: '+10%; while HP is above 70%, also CDR +3 pp.', status: 'pending', refs: [] },
-        { text: '+15%; while HP is above 70%, also CDR +5 pp.', status: 'pending', refs: [] },
+        { text: '+10%; while HP is above 70%, also CDR +3%.', status: 'pending', refs: [] },
+        { text: '+15%; while HP is above 70%, also CDR +5%.', status: 'pending', refs: [] },
       ],
     },
     {
@@ -545,9 +545,9 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
           status: 'pending',
           refs: ['C1'],
         },
-        { text: "+18%; this skill's crit damage +15 pp.", status: 'pending', refs: ['C1'] },
+        { text: "+18%; this skill's crit damage +15%.", status: 'pending', refs: ['C1'] },
         {
-          text: '+28%; crit damage +25 pp; the caps still apply.',
+          text: '+28%; crit damage +25%; the caps still apply.',
           status: 'pending',
           refs: ['C1'],
         },
@@ -618,17 +618,17 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       superpower: false,
       ranks: [
         {
-          text: 'If you have Battle Fury, its damage per stack rises by +1 percentage point (max = Battle Fury maxStacks × 1 pp, C6).',
+          text: 'If you have Battle Fury, its damage per stack rises by +1 percentage point (max = Battle Fury maxStacks × 1%, C6).',
           status: 'pending',
           refs: ['C6'],
         },
         {
-          text: '+2 pp; max physical damage bonus from the talent +16 pp.',
+          text: '+2%; max physical damage bonus from the talent +16%.',
           status: 'pending',
           refs: ['C6'],
         },
         {
-          text: '+3 pp; max bonus from the talent +24 pp.',
+          text: '+3%; max bonus from the talent +24%.',
           status: 'pending',
           refs: ['C6'],
         },
@@ -643,8 +643,8 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       superpower: false,
       ranks: [
         { text: 'Max HP +8%.', status: 'pending', refs: [] },
-        { text: '+14%; Resistance +2 pts.', status: 'pending', refs: [] },
-        { text: '+22%; Resistance +4 pts.', status: 'pending', refs: [] },
+        { text: '+14%; Armor +2.', status: 'pending', refs: [] },
+        { text: '+22%; Armor +4.', status: 'pending', refs: [] },
       ],
     },
     {
@@ -655,7 +655,7 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       name: 'Impenetrable',
       superpower: false,
       ranks: [
-        { text: 'Resistance +4 pts.', status: 'pending', refs: [] },
+        { text: 'Armor +4.', status: 'pending', refs: [] },
         {
           text: '+7 pts; direct-hit damage reduced by an extra 2%.',
           status: 'pending',
@@ -714,7 +714,7 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       name: 'Indomitable',
       superpower: false,
       ranks: [
-        { text: 'With HP below 30%, Resistance +5 pts.', status: 'pending', refs: ['C3'] },
+        { text: 'With HP below 30%, Armor +5.', status: 'pending', refs: ['C3'] },
         {
           text: '+9 pts; restores 3% Max HP when triggered, CD 30 s.',
           status: 'pending',
@@ -757,8 +757,8 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       superpower: false,
       ranks: [
         { text: 'Second sword attack speed +8%.', status: 'pending', refs: ['G7'] },
-        { text: '+15%; its crit chance +3 pp.', status: 'pending', refs: ['G7'] },
-        { text: '+22%; its crit chance +6 pp.', status: 'pending', refs: ['G7'] },
+        { text: '+15%; its crit chance +3%.', status: 'pending', refs: ['G7'] },
+        { text: '+22%; its crit chance +6%.', status: 'pending', refs: ['G7'] },
       ],
     },
     {
@@ -811,9 +811,9 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       name: 'Keen Eye',
       superpower: false,
       ranks: [
-        { text: 'Direct arrow crit chance +3 pp.', status: 'pending', refs: [] },
-        { text: '+5 pp; arrow crit damage +8 pp.', status: 'pending', refs: [] },
-        { text: '+8 pp; crit damage +16 pp.', status: 'pending', refs: [] },
+        { text: 'Direct arrow crit chance +3%.', status: 'pending', refs: [] },
+        { text: '+5%; arrow crit damage +8%.', status: 'pending', refs: [] },
+        { text: '+8%; crit damage +16%.', status: 'pending', refs: [] },
       ],
     },
     {
@@ -883,9 +883,9 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       name: 'Perfect Shot',
       superpower: false,
       ranks: [
-        { text: 'Crit damage against targets below 30% HP +15 pp.', status: 'pending', refs: [] },
-        { text: '+25 pp; crit chance against them +3 pp.', status: 'pending', refs: [] },
-        { text: '+40 pp; crit chance +5 pp.', status: 'pending', refs: [] },
+        { text: 'Crit damage against targets below 30% HP +15%.', status: 'pending', refs: [] },
+        { text: '+25%; crit chance against them +3%.', status: 'pending', refs: [] },
+        { text: '+40%; crit chance +5%.', status: 'pending', refs: [] },
       ],
     },
     {
@@ -910,12 +910,12 @@ export const TALENT_CATALOG_DATA: TalentCatalogData = {
       superpower: false,
       ranks: [
         {
-          text: 'Multishot extra arrow damage +5 pp of the basic arrow (if you have the skill).',
+          text: 'Multishot extra arrow damage +5% of the basic arrow (if you have the skill).',
           status: 'pending',
           refs: [],
         },
-        { text: '+10 pp.', status: 'pending', refs: [] },
-        { text: '+15 pp; per-target hit limits still apply.', status: 'pending', refs: [] },
+        { text: '+10%.', status: 'pending', refs: [] },
+        { text: '+15%; per-target hit limits still apply.', status: 'pending', refs: [] },
       ],
     },
     {

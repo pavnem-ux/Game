@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react';
 import { CHARACTER_CLASSES } from '../../character-stats';
 import type { CombatAttributes } from '../../character-stats';
 import { CLASS_LABELS, WEAPON_LABELS } from '../../gameplay';
-import { findItem, itemDisplayName, itemLevel, permanentStats } from '../../equipment';
+import { findOwned, isStarterUid, itemName, permanentStats } from '../../equipment';
 import { xpToNextLevel } from '../../profile';
 import { availableTalentPoints } from '../../talents';
 import { campaignStore } from '../campaign-state';
@@ -17,7 +17,7 @@ const KEY_STATS: readonly (readonly [keyof CombatAttributes, string, (v: number)
   ['maxHp', S.maxHp, (v) => String(displayHp(v, v).max)],
   ['physicalDamage', S.physicalDamage, (v) => String(Math.round(v))],
   ['magicalDamage', S.magicalDamage, (v) => String(Math.round(v))],
-  ['attackSpeed', S.attackSpeed, (v) => String(Math.round(v))],
+  ['attackSpeed', S.attackSpeed, (v) => `${Math.round(v)}%`],
   ['criticalChance', S.criticalChance, (v) => `${Math.round(v)}%`],
   ['resistance', S.resistance, (v) => String(Math.round(v))],
 ];
@@ -34,7 +34,7 @@ export function CharacterSelectPage() {
   const stats = Object.fromEntries(
     CHARACTER_CLASSES.map((c) => {
       const p = profile.classes[c];
-      return [c, permanentStats(c, p.level, p.talents, p.loadout, profile.itemLevels)];
+      return [c, permanentStats(c, p.level, p.talents, p.loadout, profile.items)];
     }),
   ) as Record<string, CombatAttributes>;
   const best = Object.fromEntries(
@@ -48,7 +48,7 @@ export function CharacterSelectPage() {
           const p = profile.classes[c];
           const next = xpToNextLevel(p.level);
           const selected = profile.selectedClass === c;
-          const weapon = findItem(p.loadout.weapon ?? '');
+          const weapon = findOwned(profile.items, p.loadout.weapon ?? '', c);
           const free = availableTalentPoints(p.level, p.talents);
           return (
             <article
@@ -95,9 +95,7 @@ export function CharacterSelectPage() {
               </dl>
               <p className="character-weapon">
                 {C.weapon(
-                  weapon && !weapon.starter
-                    ? itemDisplayName(weapon, itemLevel(profile.itemLevels, weapon.id))
-                    : WEAPON_LABELS[c],
+                  weapon && !isStarterUid(weapon.uid) ? itemName(weapon) : WEAPON_LABELS[c],
                 )}
               </p>
               <div className="character-actions">

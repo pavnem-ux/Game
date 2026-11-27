@@ -45,19 +45,24 @@ workflow: [TASK_WORKFLOW.md](TASK_WORKFLOW.md).
 ## Meta progression and saves
 
 - `src/profile/` — `profile.ts` (`PlayerProfile`, schema version), `class-xp.ts`, `rewards.ts`
-  (`runRewards`), `apply-run.ts` (idempotent by run id), `equipment.ts`, `pets.ts`, `quests.ts`,
+  (`runRewards`), `apply-run.ts` (idempotent by run id), `equipment.ts` (`buyOffer`, `equipItem`, `grantItem`, `upgradeSlot`, `salvageItems`, `markItemsSeen`,
+  Task 42 `receiveLoot`, `reforgeProfileItem`, `refreshShop`, `buyBagExpansion`), `pets.ts`, `quests.ts`,
   `recommended-level.ts`.
 - `src/persistence/` — `saveSchema.ts` (parse, migrations, `normalizeProfile`), `saveStore.ts`
   (keys `skazki.profile` / `.backup` / `.quarantine`), `progressionService.ts`, `transfer.ts`.
-- `src/equipment/` — `config.ts`, `items.ts` (`SHOP_ITEMS`), `logic.ts` (purchase / equip),
-  `stats.ts` (`gearModifiers`, `permanentStats`), `economy.ts` (`COIN_RULES`), `upgrades.ts`
-  (forge, Ore).
+- `src/equipment/` — Task 40 items model: `config.ts` (rarities, main / secondary stat rules, slot
+  pools, name bands, shop rules), `items.ts` (`ItemInstance`, `generateItem`, `itemName`,
+  `validateItem`), `logic.ts` (loadouts by uid, level gate, seeded `shopStock`), `stats.ts`
+  (`gearModifiers`, `permanentStats`), `economy.ts` (`COIN_RULES`, Ore), Task 41 `slots.ts` (slot
+  upgrade levels / multipliers / costs) and `bag.ts` (capacity, salvage, «better», `bagView`), Task 42 `drops.ts` (boss / elite rolls,
+  item level caps) and `reforge.ts`, Task 43 `legendaries.ts` (catalogue, pools); effects in
+  `src/talents/legendary.ts` ([LEGENDARIES.md](LEGENDARIES.md)).
 - `src/quests/` — `config.ts`, `counters.ts`, `logic.ts`.
 
 ## UI
 
 - `src/gameplay-ui/meta/` — `Hub.tsx`, `CharacterSelect.tsx`, `EquipmentScreen.tsx`,
-  `TalentsScreen.tsx`, `ForgeScreen.tsx`, `PetsScreen.tsx`, `QuestsScreen.tsx`, `MapPath.tsx`;
+  `TalentsScreen.tsx`, `BagScreen.tsx` (Task 41: equipped slots + upgrade, bag grid, item card), `ForgeScreen.tsx`, `PetsScreen.tsx`, `QuestsScreen.tsx`, `MapPath.tsx`;
   styles `meta.css`. Shop: `ShopPages.tsx`; settings / saves: `SaveManagement.tsx`.
 - `src/gameplay-ui/kit/` — design tokens and components (`components.tsx`, `logic.ts`), art icons
   (`SkillIcon.tsx`, `ArtIcon.tsx` incl. `ItemIcon`, `BuffIcon`, lazy `BackgroundArt`, `Emblem`, `BossPortrait`, `CurrencyIcon.tsx`, `ClassPortrait.tsx`, `ClassEmblem.tsx` — pack art with the SVG fallback),

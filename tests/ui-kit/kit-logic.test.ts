@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { calculateCharacterStats } from '../../src/character-stats';
-import { permanentStats } from '../../src/equipment';
+import { defaultLoadout, offerItem, permanentStats } from '../../src/equipment';
 import {
   Button,
   CompareList,
@@ -40,18 +40,27 @@ describe('Task 13 UI kit — compare tooltip values', () => {
     const crit = compareStats(base, { ...base, criticalChance: base.criticalChance + 1.26 });
     expect(crit.map((r) => r.text)).toEqual(['+1.3']);
   });
-  it('matches the equipment pipeline: equipping a plate shows its HP and resistance gain', () => {
+  // Task 40: an item instance — a Common level-10 armor: +35 HP (10 + 2.5·10), +8 resistance (2 + 0.6·10).
+  it('matches the equipment pipeline: equipping an armor shows its HP and resistance gain', () => {
     const progress = { level: 10, talents: {} };
-    const loadout = { weapon: 'starter_sword', armor: null, amulet: null, ring: null };
-    const before = permanentStats('warrior', progress.level, progress.talents, loadout);
-    const after = permanentStats('warrior', progress.level, progress.talents, {
-      ...loadout,
-      armor: 'plate-t1',
-    });
+    const armor = offerItem(
+      { id: 'armor:common', slot: 'armor', rarity: 'common', itemLevel: 10, stat: null, price: 0 },
+      'warrior',
+      'i1',
+    );
+    const loadout = { ...defaultLoadout('warrior') };
+    const before = permanentStats('warrior', progress.level, progress.talents, loadout, [armor]);
+    const after = permanentStats(
+      'warrior',
+      progress.level,
+      progress.talents,
+      { ...loadout, armor: 'i1' },
+      [armor],
+    );
     const rows = compareStats(before, after);
     expect(rows.map((r) => r.key)).toEqual(['maxHp', 'resistance']);
     expect(rows.every((r) => r.direction === 'up')).toBe(true);
-    expect(rows[1].text).toBe('+2');
+    expect(rows[1].text).toBe('+8');
   });
   it('renders the compare list with green/red classes, or the empty text', () => {
     const html = renderToStaticMarkup(

@@ -44,7 +44,11 @@ describe('independent permanent class progression', () => {
     expect(Object.keys(data.classes.mage)).toEqual(['permanentLevel']);
     expect(getSelectedCharacterStats(data).primaryAttributes.strength).toBe(3);
     const selected = selectCharacterClass(data, 'mage');
-    expect(getSelectedCharacterStats(selected).primaryAttributes.intelligence).toBe(250);
+    // Task 40: Mage intelligence 5 + 49 × 5 × 2/15 at level 50.
+    expect(getSelectedCharacterStats(selected).primaryAttributes.intelligence).toBeCloseTo(
+      5 + (49 * 5 * 2) / 15,
+      10,
+    );
   });
   it('returns deeply immutable progression without sharing mutable class records', () => {
     const data = createCharacterProgression();

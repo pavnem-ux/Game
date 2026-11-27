@@ -1,3 +1,4 @@
+import { NO_SLOT_LEVELS } from '../../src/equipment';
 import { describe, expect, it } from 'vitest';
 import {
   SAVE_SCHEMA_VERSION,
@@ -36,9 +37,21 @@ const code = (raw: unknown) => {
 };
 
 describe('saveSchema (Task 08 §1.4, step 4.1)', () => {
-  it('v9 is current (Task 39 map tiers) and the migrations map upgrades v1 → … → v9', () => {
-    expect(SAVE_SCHEMA_VERSION).toBe(9);
-    expect(Object.keys(migrations)).toEqual(['1', '2', '3', '4', '5', '6', '7', '8']);
+  it('v12 is current (Task 42 bag expansions, refreshes) and the migrations map upgrades v1 → … → v12', () => {
+    expect(SAVE_SCHEMA_VERSION).toBe(12);
+    expect(Object.keys(migrations)).toEqual([
+      '1',
+      '2',
+      '3',
+      '4',
+      '5',
+      '6',
+      '7',
+      '8',
+      '9',
+      '10',
+      '11',
+    ]);
   });
   it('a valid profile round-trips through JSON unchanged', () => {
     const p = played();
@@ -72,6 +85,8 @@ describe('saveSchema (Task 08 §1.4, step 4.1)', () => {
         amulet: null,
         ring: null,
       },
+      // Task 41: missing slot levels default to 0.
+      slotLevels: NO_SLOT_LEVELS,
     });
     expect(r.profile.stats.runs).toBe(0);
     expect(r.profile.recentRuns).toEqual([]);
@@ -114,7 +129,7 @@ describe('saveSchema (Task 08 §1.4, step 4.1)', () => {
     expect(code([base])).toBe('not-an-object');
   });
   it('newer-version and malformed JSON are reported with distinct codes', () => {
-    expect(code({ ...json(played()), schemaVersion: 10 })).toBe('newer-version');
+    expect(code({ ...json(played()), schemaVersion: 13 })).toBe('newer-version');
     const bad = parseProfileJson('{"schemaVersion": 1,');
     expect(!bad.ok && bad.error.code).toBe('malformed-json');
   });

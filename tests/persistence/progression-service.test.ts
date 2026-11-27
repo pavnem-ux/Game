@@ -43,7 +43,7 @@ const result = (over: Partial<RunResult> = {}): RunResult => ({
   eliteKills: 4,
   bossKilled: true,
   runLevel: 8,
-  // Task 11: Gold = collected coins + victory bonus; 45 + 30 = 75 on map 1.
+  // Task 11: Gold = collected coins + victory bonus; 45 + 24 = 69 on map 1 (Task 40: victory Gold ×0.8).
   coins: 45,
   ...over,
 });
@@ -61,23 +61,23 @@ describe('autosave wiring (Task 08 §1.4, step 4.3)', () => {
     const svc = service(s);
     const writes = s.writes;
     const first = svc.commitRun(result(), '2026-11-02T12:05:00.000Z');
-    expect(first).toMatchObject({ saved: true, summary: { goldGained: 75, duplicate: false } });
+    expect(first).toMatchObject({ saved: true, summary: { goldGained: 69, duplicate: false } });
     // Backup copy + main write = one snapshot commit (two keys, one change).
     expect(s.writes - writes).toBe(2);
     const w2 = s.writes;
     const again = svc.commitRun(result());
     expect(again.summary.duplicate).toBe(true);
     expect(s.writes).toBe(w2);
-    expect(svc.getState().profile!.gold).toBe(75);
+    expect(svc.getState().profile!.gold).toBe(69);
   });
   it('progress survives a reload (restart browser) without duplicate rewards', () => {
     const s = new FakeStorage();
     service(s).commitRun(result({ runId: 'persist-me' }));
     const reloaded = service(s);
     expect(reloaded.getState().status.load).toBe('loaded');
-    expect(reloaded.getState().profile!).toMatchObject({ gold: 75, highestUnlockedMap: 2 });
+    expect(reloaded.getState().profile!).toMatchObject({ gold: 69, highestUnlockedMap: 2 });
     expect(reloaded.commitRun(result({ runId: 'persist-me' })).summary.duplicate).toBe(true);
-    expect(reloaded.getState().profile!.gold).toBe(75);
+    expect(reloaded.getState().profile!.gold).toBe(69);
   });
   it('write failure: in-memory progress kept, visible warning, never claims saved; retry recovers', () => {
     const s = new FakeStorage();
@@ -88,13 +88,13 @@ describe('autosave wiring (Task 08 §1.4, step 4.3)', () => {
     const r = svc.commitRun(result());
     expect(r).toMatchObject({ saved: false, failure: 'quota' });
     expect(svc.getState().status).toMatchObject({ state: 'unsaved', failure: 'quota' });
-    expect(svc.getState().profile!.gold).toBe(75); // still in memory for this session
+    expect(svc.getState().profile!.gold).toBe(69); // still in memory for this session
     expect(JSON.parse(s.data.get(SAVE_KEY)!).gold).toBe(0); // not on disk
     expect(seen).toContain('unsaved');
     s.fail = false;
     expect(svc.retrySave()).toBe(true);
     expect(svc.getState().status.state).toBe('saved');
-    expect(JSON.parse(s.data.get(SAVE_KEY)!).gold).toBe(75);
+    expect(JSON.parse(s.data.get(SAVE_KEY)!).gold).toBe(69);
   });
   it('storage unavailable: playable in memory, status not-persisted, results never saved', () => {
     const svc = service(null);
@@ -130,7 +130,7 @@ describe('autosave wiring (Task 08 §1.4, step 4.3)', () => {
     const r = svc.replaceProfile(createProfile('other', '2026-11-02T00:00:00.000Z'));
     expect(r.ok).toBe(false);
     expect(svc.getState().profile!.profileId).toBe('pid');
-    expect(svc.getState().profile!.gold).toBe(75);
+    expect(svc.getState().profile!.gold).toBe(69);
   });
   it('run ids are unique', () => {
     const ids = new Set(Array.from({ length: 200 }, generateRunId));

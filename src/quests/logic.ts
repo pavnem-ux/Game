@@ -1,6 +1,3 @@
-import { CHARACTER_CLASSES } from '../character-stats';
-import { findItem } from '../equipment/items';
-import { GEAR_SLOTS } from '../equipment/config';
 import type { Loadout } from '../equipment/logic';
 import { PET_CONFIG } from '../pets/config';
 import { QUESTS, QUEST_BY_ID, QUEST_PET_FALLBACK_GOLD } from './config';
@@ -17,10 +14,13 @@ export interface QuestProfileView {
   readonly gold: number;
   readonly ore: number;
   readonly completedMaps: readonly number[];
-  readonly classes: Readonly<Record<string, Readonly<{ level: number; loadout: Loadout }>>>;
+  readonly classes: Readonly<
+    Record<
+      string,
+      Readonly<{ level: number; loadout: Loadout; slotLevels?: Readonly<Record<string, number>> }>
+    >
+  >;
   readonly stats: Readonly<{ enemiesKilled: number }>;
-  readonly ownedItems: readonly string[];
-  readonly itemLevels: Readonly<Record<string, number>>;
   readonly ownedPets: readonly string[];
   readonly questCounters: QuestCounters;
   readonly questsClaimed: readonly string[];
@@ -32,19 +32,17 @@ export interface QuestProgress {
   readonly target: number;
   readonly state: QuestState;
 }
-/** Tier-4+ items one loadout wears (starter weapons are tier 0). */
-export function tierItemsWorn(loadout: Loadout, tier = 4): number {
+/**
+ * Tier-4+ items one OLD (pre-Task 40) loadout wore — legacy save migration v6 → v7 only. Old item
+ * ids were `<template>-t<tier>` (starter weapons tier 0).
+ */
+export function legacyTierItemsWorn(loadout: Readonly<Record<string, unknown>>, tier = 4): number {
   let n = 0;
-  for (const slot of GEAR_SLOTS) {
-    const id = loadout[slot];
-    const item = id ? findItem(id) : null;
-    if (item && item.tier >= tier) n++;
+  for (const id of Object.values(loadout)) {
+    const m = typeof id === 'string' ? /-t([1-5])$/.exec(id) : null;
+    if (m && Number(m[1]) >= tier) n++;
   }
   return n;
-}
-/** The best tier-4+ loadout of the profile right now (any class). */
-export function bestTierLoadoutNow(p: Pick<QuestProfileView, 'classes'>): number {
-  return Math.max(0, ...CHARACTER_CLASSES.map((c) => tierItemsWorn(p.classes[c].loadout)));
 }
 function measure(p: QuestProfileView, goal: QuestGoal): { current: number; target: number } {
   const c = p.questCounters ?? NO_QUEST_COUNTERS;
@@ -68,16 +66,17 @@ function measure(p: QuestProfileView, goal: QuestGoal): { current: number; targe
       return { current: c.synergiesAwakened.length, target: goal.count };
     case 'chests':
       return { current: c.chestsOpened, target: goal.count };
-    case 'item-level':
+    // Task 41: the highest slot upgrade of any class (slot levels never drop).
+    case 'slot-level':
       return {
-        current: Math.max(0, ...Object.values(p.itemLevels)),
+        current: Math.max(
+          0,
+          ...Object.values(p.classes).flatMap((c) => Object.values(c.slotLevels ?? {})),
+        ),
         target: goal.level,
       };
     case 'tier-loadout':
-      return {
-        current: Math.max(c.bestTierLoadout, bestTierLoadoutNow(p)),
-        target: goal.items,
-      };
+      return { current: Math.min(c.bestTierLoadout, goal.items), target: goal.items };
     case 'activities':
       return { current: (c.activities ?? NO_ACTIVITY_COUNTS)[goal.activity], target: goal.count };
   }
@@ -91,8 +90,9 @@ export function questProgress(p: QuestProfileView, quest: QuestDefinition): Ques
       : 'in-progress';
   return Object.freeze({ quest, current: Math.min(current, target), target, state });
 }
+/** Visible quests only (Task 40: the hidden Forge quests are left out). */
 export const allQuestProgress = (p: QuestProfileView): readonly QuestProgress[] =>
-  Object.freeze(QUESTS.map((quest) => questProgress(p, quest)));
+  Object.freeze(QUESTS.filter((q) => !q.hidden).map((quest) => questProgress(p, quest)));
 /** Quests completed but not yet claimed (hub badge). */
 export const claimableQuests = (p: QuestProfileView): readonly string[] =>
   allQuestProgress(p)
@@ -106,27 +106,21 @@ export class QuestError extends Error {
     this.name = 'QuestError';
   }
 }
-/** What a claim gives now: Gold (incl. owned-reward fallbacks), ore, the item / pet unlocked. */
+/** What a claim gives now: Gold (incl. the owned-pet fallback), ore, the pet unlocked. */
 export interface QuestPayout {
   readonly gold: number;
   readonly ore: number;
-  readonly item: string | null;
   readonly pet: string | null;
-  /** Gold paid instead of an already-owned item / pet. */
+  /** Gold paid instead of an already-owned pet. */
   readonly fallbackGold: number;
 }
 export function questPayout(
-  p: Pick<QuestProfileView, 'ownedItems' | 'ownedPets'>,
+  p: Pick<QuestProfileView, 'ownedPets'>,
   quest: QuestDefinition,
 ): QuestPayout {
   const r = quest.reward;
   let fallbackGold = 0;
-  let item: string | null = null;
   let pet: string | null = null;
-  if (r.item) {
-    if (p.ownedItems.includes(r.item)) fallbackGold += findItem(r.item)!.price;
-    else item = r.item;
-  }
   if (r.pet) {
     if (p.ownedPets.includes(r.pet)) {
       const source = PET_CONFIG[r.pet].source;
@@ -136,7 +130,6 @@ export function questPayout(
   return Object.freeze({
     gold: (r.gold ?? 0) + fallbackGold,
     ore: r.ore ?? 0,
-    item,
     pet,
     fallbackGold,
   });
@@ -144,7 +137,7 @@ export function questPayout(
 /** Claims a completed quest once: rewards and the claim mark in one new profile view. */
 export function claimQuest<P extends QuestProfileView>(p: P, questId: string): P {
   const quest = QUEST_BY_ID.get(questId);
-  if (!quest) throw new QuestError('unknown');
+  if (!quest || quest.hidden) throw new QuestError('unknown');
   const progress = questProgress(p, quest);
   if (progress.state === 'claimed') throw new QuestError('claimed');
   if (progress.state !== 'complete') throw new QuestError('incomplete');
@@ -153,19 +146,32 @@ export function claimQuest<P extends QuestProfileView>(p: P, questId: string): P
     ...p,
     gold: p.gold + pay.gold,
     ore: p.ore + pay.ore,
-    ownedItems: pay.item ? Object.freeze([...p.ownedItems, pay.item]) : p.ownedItems,
     ownedPets: pay.pet ? Object.freeze([...p.ownedPets, pay.pet]) : p.ownedPets,
     questsClaimed: Object.freeze([...p.questsClaimed, questId]),
   });
 }
-/** After a gear action: keeps the best tier-4+ loadout ever worn (the counter never decreases). */
-export function withLoadoutCounter<P extends QuestProfileView>(p: P): P {
-  const now = bestTierLoadoutNow(p);
+/**
+ * After a gear action. Task 42: the best number of Epic-or-better items one class wears (the
+ * `forge.tier4` counter, max 7) — it only grows. Unchanged profile when nothing grew.
+ */
+export function withLoadoutCounter<
+  P extends QuestProfileView & {
+    readonly items?: readonly Readonly<{ uid: string; rarity: string }>[];
+  },
+>(p: P): P {
+  const rank = new Map((p.items ?? []).map((i) => [i.uid, RARITY_RANK.indexOf(i.rarity) + 1]));
+  let best = 0;
+  for (const c of Object.values(p.classes)) {
+    let n = 0;
+    for (const uid of Object.values(c.loadout)) if (uid && (rank.get(uid) ?? 0) >= 4) n++;
+    best = Math.max(best, n);
+  }
   const c = p.questCounters ?? NO_QUEST_COUNTERS;
-  return now > c.bestTierLoadout
-    ? Object.freeze({ ...p, questCounters: Object.freeze({ ...c, bestTierLoadout: now }) })
-    : p;
+  if (best <= c.bestTierLoadout) return p;
+  return Object.freeze({ ...p, questCounters: Object.freeze({ ...c, bestTierLoadout: best }) });
 }
+/** Rarity order for the loadout counter (rank 1 Common … 5 Legendary). */
+const RARITY_RANK = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
 
 /** Number of quests: Task 21's 50 + Task 24's 8 activity quests. */
 export const QUEST_COUNT = 58;
@@ -186,11 +192,9 @@ export function validateQuestConfig(list: readonly QuestDefinition[] = QUESTS): 
     if (g.kind === 'class-level' && !(positive(g.level) && g.level <= 50))
       throw new Error(`Quest ${quest.id}: level.`);
     const r = quest.reward;
-    if (!r.gold && !r.ore && !r.item && !r.pet) throw new Error(`Quest ${quest.id}: no reward.`);
+    if (!r.gold && !r.ore && !r.pet) throw new Error(`Quest ${quest.id}: no reward.`);
     for (const v of [r.gold, r.ore])
       if (v !== undefined && !positive(v)) throw new Error(`Quest ${quest.id}: reward amount.`);
-    if (r.item && (!findItem(r.item) || findItem(r.item)!.starter))
-      throw new Error(`Quest ${quest.id}: unknown item.`);
     if (r.pet && !(r.pet in PET_CONFIG)) throw new Error(`Quest ${quest.id}: unknown pet.`);
   }
 }
