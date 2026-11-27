@@ -4,6 +4,7 @@ import type { ItemInstance, Loadout, SlotLevels } from '../equipment';
 import type { PetId } from '../pets';
 import type { PetEvent, PetSnapshot } from '../pets/runtime';
 import type { CoinEvent, CoinPile } from './coins';
+import type { LootEvent, LootPickup } from './loot';
 import type { RunStatsSnapshot } from './run-stats';
 import type { ExperienceEvent, RunProgression, XpCrystal } from './experience';
 import type { SpawnSettings, ViewportSize } from './spawning';
@@ -96,6 +97,7 @@ export interface WorldEvent {
     | SkillEvent
     | CampaignEvent
     | CoinEvent
+    | LootEvent
     | ChestEvent
     | ActivityEvent
     | DashEvent
@@ -137,6 +139,8 @@ export interface GameplaySnapshot {
   /** Task 11: coins collected this run and the piles on the ground (campaign runs only). */
   /** Task 11: coins; Task 20 `petBonus` = coins added by the kitten (already in `collected`). */
   readonly coins: Readonly<{ collected: number; piles: readonly CoinPile[]; petBonus?: number }>;
+  /** Task 42: item pickups on the ground and the items collected this run (campaign only). */
+  readonly loot?: Readonly<{ pickups: readonly LootPickup[]; collected: readonly ItemInstance[] }>;
   /** Task 20: the run's pet for rendering / HUD (null = none). Positions only. */
   readonly pet?: PetSnapshot | null;
   readonly spawning: Readonly<{

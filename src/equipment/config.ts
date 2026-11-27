@@ -494,3 +494,25 @@ export const BAG_RULES = Object.freeze({
   perExpansion: 10,
   expansionPrices: Object.freeze([5000, 12000, 25000, 40000, 60000]),
 });
+
+// ── Task 42: item drops (PROVISIONAL; docs/task-42-drops-reforge.md) ──
+
+export type DropDifficulty = 'normal' | 'hard' | 'nightmare' | 'trial';
+/**
+ * Boss (victory only): one guaranteed item, rarity weights by difficulty. Elites: a chance per kill
+ * (kept on defeat) with their own rarity weights. Item level = min(class level, cap), cap =
+ * capOffset[difficulty] + map id, never above 50.
+ */
+export const DROP_RULES = Object.freeze({
+  bossRarity: Object.freeze({
+    normal: Object.freeze({ uncommon: 60, rare: 35, epic: 5 }),
+    hard: Object.freeze({ uncommon: 30, rare: 55, epic: 15 }),
+    nightmare: Object.freeze({ uncommon: 10, rare: 55, epic: 35 }),
+    trial: Object.freeze({ uncommon: 10, rare: 55, epic: 35 }),
+  }) as Readonly<Record<DropDifficulty, Readonly<Partial<Record<Rarity, number>>>>>,
+  eliteChance: 0.05,
+  eliteRarity: Object.freeze({ rare: 80, epic: 20 }) as Readonly<Partial<Record<Rarity, number>>>,
+  capOffset: Object.freeze({ normal: 5, hard: 10, nightmare: 15, trial: 15 }) as Readonly<
+    Record<DropDifficulty, number>
+  >,
+});
