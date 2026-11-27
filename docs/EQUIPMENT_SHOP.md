@@ -98,6 +98,12 @@ Robe → Leather Armor → Plate Armor), weapons L1–24 / 25–50 (e.g. Quick S
 Common items have the base name only; other rarities add the suffix of their strongest roll
 relative to its maximum («Sorcerer's Gloves of Speed»).
 
+**Legendary icons (Task 45).** A Legendary item uses its own icon,
+`public/assets/icons/items/legendary/<legendaryId>.webp` (128 px, manifest entries `item_<id>`,
+listed in `ITEM_TEMPLATE_IDS`). If the file is missing it falls back to the slot's band icon inside
+the Legendary frame (`ItemArt` in `src/gameplay-ui/item-view.tsx`). The same icon shows on the doll,
+in the bag grid, on the item card, in the shop, in Results «Loot» and in the loot toast.
+
 ## 2. Shop (Task 40)
 
 Per class, a **derived** stock at item level = the class level (`shopStock(salt, class, level)`):
@@ -170,20 +176,26 @@ Legendary 25.
 - New items are marked «new» (`profile.newItems`). Viewing an item's card clears the marker
   (saved).
 
-**Bag screen** (`src/gameplay-ui/meta/BagScreen.tsx`; replaces the Equipment page; nav and hub say
-«Bag»). It has three panels:
+**Equipment screen** (`src/gameplay-ui/meta/EquipmentScreen.tsx`, `EquipmentPage`; Task 41 built it
+as «Bag», Task 45 renamed it back to «Equipment» and restored the paper doll). Two columns on
+desktop (doll | bag + card); on narrow screens the doll, then the bag, then the card.
 
-- **Left — equipped.** 7 slot rows, each with its level `+N` and the item in rarity colour. A row
-  selects the slot and filters the bag. Below the rows: the slot's upgrade button with its cost,
-  the current bonuses and the next milestone. The button is disabled when Gold or Ore is short
-  (it says how much more is needed) or the slot is at +30.
-- **Middle — the bag grid.** `Bag · N / 60`.
+- **Left — the paper doll.** The class silhouette with its emblem; Helmet / Armor / Gloves on the
+  left, Amulet / Ring / Legs on the right, the wide Weapon card below, then the **Pet** card
+  (portrait, name and level or «No pet»; «Change →» opens Pets). Each slot card shows the slot
+  name, the item icon, the name in its rarity colour (or «Empty») and the slot level `+N` in the
+  corner. Clicking a card selects the slot and filters the bag to it. Under the doll: the selected
+  slot's upgrade button with its cost, the current bonuses and the next milestone (disabled when
+  Gold or Ore is short — it says how much more is needed — or at +30), then the collapsible
+  **Stats** panel (Task 44). The active pet's aura (hedgehog Armor, wolf attack / movement speed)
+  is part of the Stats values and shown as its own «(+N pet)» share next to «(+N gear)».
+- **Right, top — the bag grid.** `Bag · N / 60`.
   - Filters: rarity, slot. Sort: item level (default), rarity, newest.
   - Markers: «new», «better», «equipped».
   - «Select» enters multi-select mode for salvage.
   - Other classes' weapons are shown only with the Weapon filter plus «Show all classes».
   - The class's starter weapon is listed first so it can be re-equipped.
-- **Right — the item card.** Stats with the slot bonus and the difference to the worn item: green
+- **Right, below — the item card.** Stats with the slot bonus and the difference to the worn item: green
   better, red worse, «new» for a stat the worn item lacks. «Requires level N» when the class is
   too low; «Equipped by: …» when it's worn. Actions: Equip / Unequip, Salvage → N Ore.
 
@@ -501,3 +513,13 @@ slots; the Mage gets the magic helmet / gloves / pants), «Выдать руду
 - Not verified: the ore / upgrade economy against real play (no bot measurement — e.g. first
   victories on all 40 maps give 810 ore, a tier-5 item to +10 needs 140); how +10 gear affects late
   maps; the forge on real phones (emulated Chromium only).
+
+## Menu navigation (Task 45)
+
+The meta menu has no top navigation row. The top bar keeps the game title (click → hub) and the
+Gold / Ore badges. The hub tiles are the only way into the sections: Hero, Equipment, Talents, Shop,
+Forge, Pets, Quests, Campaign map, Progress, Settings. Every other page starts its header with
+«← Home»; Esc also returns to the hub unless a confirm dialog is open (then Esc closes the dialog).
+«To battle» (→ Campaign map → «To battle» on the map card) is the only way to start a run — the
+hub's quick-start button is gone. In-page links (Equipment → Shop, Hero → Equipment, the pet card
+→ Pets) stay.

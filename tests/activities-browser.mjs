@@ -1,3 +1,4 @@
+import { startMap } from './e2e-nav.mjs';
 import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
 import { EXTENDED, screenshot } from './e2e-options.mjs';
@@ -31,7 +32,7 @@ for (const [tag, viewport, touch] of [
     localStorage.setItem('skazki.profile', JSON.stringify(p));
   });
   await page.reload();
-  await page.getByRole('button', { name: /^Start run · map 25/ }).click();
+  await startMap(page, 25);
   await page.waitForFunction(() => window.__alpha?.state().screen === 'playing');
   await page
     .getByRole('button', { name: 'Hide' })

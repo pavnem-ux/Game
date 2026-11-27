@@ -2,6 +2,7 @@ import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { EXTENDED, screenshot } from './e2e-options.mjs';
+import { startMap } from './e2e-nav.mjs';
 const base = process.env.GAME_URL || 'http://127.0.0.1:5173';
 await mkdir('artifacts', { recursive: true });
 const browser = await chromium.launch({
@@ -18,7 +19,7 @@ try {
   await page.getByRole('heading', { name: 'The Last Light', level: 1 }).waitFor(); // Task 13 hub
   await screenshot(page, { path: 'artifacts/alpha-01-selection.png' });
   await page.getByRole('button', { name: 'Warrior Sword', exact: false }).click();
-  await page.getByRole('button', { name: 'Start run' }).click();
+  await startMap(page);
   await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
   const state = () => page.evaluate(() => window.__alpha.state());
   const command = (action) => page.evaluate((a) => window.__alpha.command(a), action);
@@ -478,7 +479,7 @@ try {
     mobile.on('pageerror', (e) => errors.push(e.message));
     await mobile.goto(base + '/?debug');
     await mobile.waitForFunction(() => !!window.__alpha);
-    await mobile.getByRole('button', { name: 'Start run' }).click();
+    await startMap(mobile);
     // Task 16: in portrait a phone shows «Rotate your device» and the run pauses.
     await mobile.getByText('Rotate your device').first().waitFor();
     await mobile.waitForFunction(() => window.__alpha.state().screen === 'paused');

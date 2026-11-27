@@ -1,5 +1,6 @@
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
+import { brand, startMap } from './e2e-nav.mjs';
 
 /**
  * Task 26: before / after screenshots of art pack 2 (biome grounds, pickups, currency icons). Not
@@ -28,7 +29,7 @@ page.on('pageerror', (e) => errors.push(e.message));
 const shot = (name, clip) =>
   page.screenshot({ path: `${out}/${tag}-${name}.jpg`, type: 'jpeg', quality: 72, clip });
 const full = { x: 0, y: 0, width: 1280, height: 720 };
-const nav = page.getByRole('navigation', { name: 'Main menu' });
+const nav = brand(page);
 /** Leaves any run, then unlocks maps 1…mapId through a normal profile edit (highest = selected). */
 async function unlock(mapId) {
   await page.goto(base + '/?debug');
@@ -61,7 +62,7 @@ async function takeOffers() {
 
 for (const mapId of [1, 15, 25, 35]) {
   await unlock(mapId);
-  await page.getByRole('button', { name: new RegExp(`^Start run · map ${mapId}\\b`) }).click();
+  await startMap(page, mapId);
   await page.waitForFunction(() => window.__alpha?.state().screen === 'playing');
   await page
     .getByRole('button', { name: 'Hide' })
@@ -100,7 +101,7 @@ for (const mapId of [1, 15, 25, 35]) {
 // Hub (Gold / Ore badges) and the results screen of a won map.
 await unlock(2);
 await shot('hub', full);
-await page.getByRole('button', { name: /^Start run · map 2\b/ }).click();
+await startMap(page, 2);
 await page.waitForFunction(() => window.__alpha?.state().screen === 'playing');
 await command({ type: 'campaign-force', outcome: 'victory' });
 const results = page.getByRole('dialog', { name: 'Victory.' });

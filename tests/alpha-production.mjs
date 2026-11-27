@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { readFile, readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
+import { startMap } from './e2e-nav.mjs';
 // Cloudflare Workers Builds uploads only dist/ (wrangler.jsonc assets.directory). SPA fallback
 // comes from assets.not_found_handling; a root 404.html is still kept out of the artifact.
 async function listFiles(directory, prefix = '') {
@@ -76,7 +77,7 @@ try {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('http://127.0.0.1:4179/?debug');
-  await page.getByRole('button', { name: 'Start run' }).waitFor();
+  await page.locator('.hub-fight').waitFor();
   assert.equal(await page.getByRole('button', { name: /DEV ·/ }).count(), 0);
   assert.equal(await page.evaluate(() => typeof window.__alpha), 'undefined');
   assert.equal(await page.evaluate(() => typeof window.__survivors), 'undefined');
@@ -84,7 +85,7 @@ try {
   assert.equal(await page.getByRole('button', { name: /QA ·/ }).count(), 0);
   assert.equal(await page.getByText('QA PREVIEW', { exact: false }).count(), 0);
   await page.getByRole('button', { name: 'Mage Staff', exact: false }).click();
-  await page.getByRole('button', { name: 'Start run' }).click();
+  await startMap(page);
   await page.getByRole('progressbar', { name: 'Health' }).waitFor();
   await page.getByRole('progressbar', { name: 'Run XP' }).waitFor();
   await page.getByRole('button', { name: 'Pause', exact: true }).click();
@@ -189,7 +190,7 @@ try {
   // models that fallback locally.
   const nested = await page.goto('http://127.0.0.1:4179/alpha/routing-check?debug');
   assert.equal(nested.status(), 200);
-  await page.getByRole('button', { name: 'Start run' }).waitFor();
+  await page.locator('.hub-fight').waitFor();
   assert.equal(await page.getByRole('button', { name: /DEV ·/ }).count(), 0);
   assert.equal(await page.evaluate(() => typeof window.__alpha), 'undefined');
   assert.equal(await page.getByRole('checkbox', { name: 'God Mode', exact: true }).count(), 0);
@@ -197,7 +198,7 @@ try {
   await page.getByRole('button', { name: 'Enter the ruins' }).waitFor();
   assert.equal(await page.evaluate(() => typeof window.__survivors), 'undefined');
   await page.goto('http://127.0.0.1:4179/?debug&qa=true&VITE_ENABLE_QA=true');
-  await page.getByRole('button', { name: 'Start run' }).waitFor();
+  await page.locator('.hub-fight').waitFor();
   assert.equal(await page.getByRole('button', { name: /(?:QA|DEV) ·/ }).count(), 0);
   assert.equal(await page.evaluate(() => typeof window.__alpha), 'undefined');
   assert.deepEqual(errors, []);

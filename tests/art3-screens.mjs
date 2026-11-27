@@ -1,5 +1,6 @@
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
+import { brand, startMap } from './e2e-nav.mjs';
 
 /**
  * Task 27: before / after screenshots of art pack 3 (skill icons). Not part of `test:e2e`; needs a
@@ -59,7 +60,7 @@ async function session({ viewport, deviceScaleFactor, isMobile, hasTouch, prefix
     }
   }
 
-  const nav = page.getByRole('navigation', { name: 'Main menu' });
+  const nav = brand(page);
   await page.clock.install();
   await page.goto(base + '/?debug');
   await nav.waitFor();
@@ -71,7 +72,7 @@ async function session({ viewport, deviceScaleFactor, isMobile, hasTouch, prefix
   });
   await page.goto(base + '/?debug');
   await nav.waitFor();
-  await page.getByRole('button', { name: /^Start run · map 2\b/ }).click();
+  await startMap(page, 2);
   await page.waitForFunction(() => window.__alpha?.state().screen === 'playing');
   // Only `__alpha.advance` moves the world from here on (no level-ups between steps and shots).
   await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 500);

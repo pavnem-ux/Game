@@ -1,5 +1,6 @@
 import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
+import { brand, goTo, sections, startMap } from './e2e-nav.mjs';
 
 /**
  * Task 16 mobile e2e (Chromium device emulation with touch): touch joystick moves the hero, the
@@ -150,7 +151,7 @@ for (const viewport of [
 const MENU_PAGES = [
   'Home',
   'Hero',
-  'Bag',
+  'Equipment',
   'Talents',
   'Shop',
   'Forge',
@@ -178,10 +179,9 @@ for (const viewport of [
 ]) {
   const tag = `${viewport.width}×${viewport.height}`;
   const { context, page, state, command, advance, touch } = await open(viewport);
-  // Start a map from the hub (touch tap on «Start run · map N»).
-  const start = page.getByRole('button', { name: /^Start run · map/ });
-  await tapTarget(start, `${tag} hub start`);
-  await start.tap();
+  // Start a map from the hub (Task 45: tap «To battle», then the map's «Play» button).
+  await tapTarget(page.locator('.hub-fight'), `${tag} hub «To battle»`);
+  await startMap(page, undefined, 'tap');
   await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
   await command({ type: 'protection', enabled: true });
   await page.getByRole('button', { name: 'Hide' }).click();
@@ -231,13 +231,20 @@ for (const viewport of [
   }
   await page.locator('.results-actions').getByRole('button', { name: 'To menu' }).tap();
   await page.waitForFunction(() => window.__alpha.state().screen === 'menu');
-  // Menus: every screen opens without horizontal scroll; nav items are tap targets.
+  // Menus: every screen opens from its hub tile without horizontal scroll; tiles, the title and
+  // «← Home» are tap targets (Task 45: no top nav).
+  await tapTarget(brand(page), `${tag} title`);
   for (const name of MENU_PAGES) {
-    const nav = page.locator('.meta-nav').getByRole('button', { name, exact: true });
-    await nav.scrollIntoViewIfNeeded();
-    await tapTarget(nav, `${tag} nav «${name}»`);
-    await nav.tap();
+    if (name !== 'Home') {
+      await goTo(page, 'Home', 'tap');
+      const tile = sections(page).getByRole('button', { name, exact: true });
+      await tile.scrollIntoViewIfNeeded();
+      await tapTarget(tile, `${tag} tile «${name}»`);
+    }
+    await goTo(page, name, 'tap');
     await page.waitForTimeout(150);
+    if (name !== 'Home')
+      await tapTarget(page.getByRole('button', { name: '← Home', exact: true }), `${tag} «← Home»`);
     await noHorizontalScroll(page, `${tag} ${name}`);
   }
   // Task 40: equip by touch — own a Common helmet instance (item level 1), select it, «Equip».
@@ -252,9 +259,7 @@ for (const viewport of [
   await page.waitForFunction(() => !!window.__alpha);
   // Task 41: the Bag — tap the item, tap «Equip» on its card, then the slot row shows it.
   // (Mobile is frozen: on a phone the card sits under the bag, so it is scrolled into view.)
-  const navTo = (name) => page.locator('.meta-nav').getByRole('button', { name, exact: true });
-  await navTo('Bag').scrollIntoViewIfNeeded();
-  await navTo('Bag').tap();
+  await goTo(page, 'Equipment', 'tap');
   const helmCard = page.getByRole('button', { name: /^Hunter's Hood, L1/ });
   await helmCard.scrollIntoViewIfNeeded();
   await helmCard.tap();
@@ -281,9 +286,7 @@ for (const viewport of [
   });
   await page.reload();
   await page.waitForFunction(() => !!window.__alpha);
-  const nav = (name) => page.locator('.meta-nav').getByRole('button', { name, exact: true });
-  await nav('Shop').scrollIntoViewIfNeeded();
-  await nav('Shop').tap();
+  await goTo(page, 'Shop', 'tap');
   const petsTab = page.getByRole('group', { name: 'Shop slots' }).getByRole('button', {
     name: 'Pets',
   });
@@ -311,8 +314,7 @@ for (const viewport of [
   );
   await noHorizontalScroll(page, `${tag} shop pets`);
   // «Pets» page from the hub tile: make the owlet the active pet.
-  await nav('Home').scrollIntoViewIfNeeded();
-  await nav('Home').tap();
+  await goTo(page, 'Home', 'tap');
   const tile = page.locator('.hub-tile', { hasText: 'A companion on every run' }); // «Forge» mentions pets too
   await tile.scrollIntoViewIfNeeded();
   await tile.tap();
@@ -327,8 +329,7 @@ for (const viewport of [
   );
   await noHorizontalScroll(page, `${tag} pets page`);
   // Forge (pets only since Task 40) → upgrade to level 2 (500 Gold, 10 ore).
-  await nav('Forge').scrollIntoViewIfNeeded();
-  await nav('Forge').tap();
+  await goTo(page, 'Forge', 'tap');
   const upPet = page.getByRole('button', { name: /Upgrade to level 2/ });
   await upPet.scrollIntoViewIfNeeded();
   await tapTarget(upPet, `${tag} upgrade pet`);
@@ -342,9 +343,8 @@ for (const viewport of [
   assert.equal(afterPet.ore, beforePet.ore - 10, `${tag}: pet upgrade ore`);
   await noHorizontalScroll(page, `${tag} forge pets`);
   // A run brings the active pet (any class).
-  await nav('Home').scrollIntoViewIfNeeded();
-  await nav('Home').tap();
-  await page.getByRole('button', { name: /^Start run · map/ }).tap();
+  await goTo(page, 'Home', 'tap');
+  await startMap(page, undefined, 'tap');
   await page.waitForFunction(() => window.__alpha.state().screen === 'playing');
   assert.deepEqual(
     await page.evaluate(() => {
@@ -363,8 +363,7 @@ for (const viewport of [
   assert.match(await toast.innerText(), /Win on map 5/, `${tag}: quest toast`);
   await page.locator('.results-actions').getByRole('button', { name: 'To menu' }).tap();
   await page.waitForFunction(() => window.__alpha.state().screen === 'menu');
-  await nav('Home').scrollIntoViewIfNeeded();
-  await nav('Home').tap();
+  await goTo(page, 'Home', 'tap');
   const questsTile = page.locator('.hub-tile', { hasText: 'Quests' });
   await questsTile.scrollIntoViewIfNeeded();
   assert.ok(
@@ -392,5 +391,5 @@ for (const viewport of [
 await browser.close();
 if (errors.length) throw new Error(errors.join('\n'));
 console.log(
-  'PASS mobile: touch joystick, dash button (= Space), multi-touch; 844×390 and 768×1024: run from the hub, move, dash, pick a card, results, all menu screens without horizontal scroll, tap targets ≥ 44 px; Task 41 Bag: equip an item instance by touch; Task 20 pets (buy, activate, upgrade, run with the pet) by touch; Task 21 quest toast, hub badge, claim by touch.',
+  'PASS mobile: touch joystick, dash button (= Space), multi-touch; 844×390 and 768×1024: run from the hub, move, dash, pick a card, results, all menu screens without horizontal scroll, tap targets ≥ 44 px; Task 45 Equipment: equip an item instance by touch, hub tiles + «← Home»; Task 20 pets (buy, activate, upgrade, run with the pet) by touch; Task 21 quest toast, hub badge, claim by touch.',
 );

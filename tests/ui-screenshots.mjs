@@ -1,5 +1,6 @@
 import { chromium } from 'playwright-core';
 import { mkdir, readFile } from 'node:fs/promises';
+import { brand, goTo } from './e2e-nav.mjs';
 
 /**
  * Task 13: screenshots of every meta screen with the showcase profile
@@ -40,10 +41,10 @@ try {
       localStorage.setItem('skazki.profile', json);
     }, profile);
     await page.goto(base + '/');
-    const nav = page.getByRole('navigation', { name: 'Main menu' });
+    const nav = brand(page);
     await nav.waitFor();
     for (const [file, label] of pages) {
-      await nav.getByRole('button', { name: label, exact: true }).click();
+      await goTo(page, label);
       await page.waitForTimeout(350); // let entry transitions settle
       const path = `artifacts/ui/${prefix}-${file}-${width}x${height}.png`;
       await page.screenshot({ path, fullPage: true });

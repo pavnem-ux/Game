@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright-core';
 import { EXTENDED } from './e2e-options.mjs';
+import { brand, goTo } from './e2e-nav.mjs';
 
 /**
  * Task 25 e2e: the art pack is rendering only.
@@ -123,10 +124,9 @@ async function portraits(withArt, viewport, touch) {
   if (!withArt)
     await page.route('**/assets/manifest.json', (route) => route.fulfill({ status: 404 }));
   await page.goto(base + '/');
-  const nav = page.getByRole('navigation', { name: 'Main menu' });
+  const nav = brand(page);
   await nav.waitFor();
-  const go = (label) =>
-    nav.getByRole('button', { name: label, exact: true }).evaluate((el) => el.click());
+  const go = (label) => goTo(page, label, 'dom');
   /** Loaded portrait images (natural size > 0) and SVG emblems inside `selector`. */
   const shown = (selector) =>
     page.evaluate(async (sel) => {
@@ -249,10 +249,10 @@ async function talentEmblems(withArt, viewport, touch) {
   if (!withArt)
     await page.route('**/assets/manifest.json', (route) => route.fulfill({ status: 404 }));
   await page.goto(base + '/');
-  const nav = page.getByRole('navigation', { name: 'Main menu' });
+  const nav = brand(page);
   await nav.waitFor();
   // The default profile's selected class is the warrior (branches 5 + 5 + 4 nodes).
-  await nav.getByRole('button', { name: 'Talents', exact: true }).evaluate((el) => el.click());
+  await goTo(page, 'Talents', 'dom');
   await page.locator('.talent-column').nth(2).waitFor();
   if (withArt) await page.locator('.talent-orb.has-art img').nth(13).waitFor();
   else await page.waitForTimeout(500);

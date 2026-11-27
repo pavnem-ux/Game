@@ -61,8 +61,10 @@ workflow: [TASK_WORKFLOW.md](TASK_WORKFLOW.md).
 
 ## UI
 
-- `src/gameplay-ui/meta/` — `Hub.tsx`, `CharacterSelect.tsx`, `EquipmentScreen.tsx`,
-  `TalentsScreen.tsx`, `BagScreen.tsx` (Task 41: equipped slots + upgrade, bag grid, item card), `ForgeScreen.tsx`, `PetsScreen.tsx`, `QuestsScreen.tsx`, `MapPath.tsx`;
+- `src/gameplay-ui/meta/` — `Hub.tsx` (the tiles are the only section navigation, Task 45),
+  `CharacterSelect.tsx`, `EquipmentScreen.tsx` (Task 45 `EquipmentPage`: paper doll + pet card, slot
+  upgrade, Stats; bag grid; item card), `TalentsScreen.tsx`, `ForgeScreen.tsx`, `PetsScreen.tsx`,
+  `QuestsScreen.tsx`, `MapPath.tsx`, `HomeButton.tsx` («← Home» in every page header);
   styles `meta.css`. Shop: `ShopPages.tsx`; settings / saves: `SaveManagement.tsx`.
 - `src/gameplay-ui/kit/` — design tokens and components (`components.tsx`, `logic.ts`), art icons
   (`SkillIcon.tsx`, `ArtIcon.tsx` incl. `ItemIcon`, `BuffIcon`, lazy `BackgroundArt`, `Emblem`, `BossPortrait`, `CurrencyIcon.tsx`, `ClassPortrait.tsx`, `ClassEmblem.tsx` — pack art with the SVG fallback),
@@ -109,5 +111,7 @@ workflow: [TASK_WORKFLOW.md](TASK_WORKFLOW.md).
 - `npm run test:e2e:extended` (opt-in) — mobile viewports and screenshot capture:
   `tests/mobile-browser.mjs`, `english-screens.mjs`.
 - `npm run test:production` (`tests/alpha-production.mjs`), `npm run test:qa` (`alpha-qa.mjs`).
+- `tests/e2e-nav.mjs` — shared browser helpers for the hub-only menu (Task 45): `goTo(page, label)`
+  (title → hub → tile), `startMap(page, mapId)` (hub «To battle» → «Play: map N»).
 - Manual scripts (not in any suite): `tests/*-screens.mjs`, `*-shots.mjs`, `*-fps.mjs`,
   `ui-screenshots.mjs`, `skills-ui-browser.mjs`, `qa-tools-browser.mjs`.
