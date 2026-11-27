@@ -457,7 +457,7 @@ try {
   await slots.getByRole('button', { name: 'Armor' }).click();
   // Common armor at level 12 (band «Robe»): 40 max HP, 9 resistance; round(40 × (1 + 12/5)) = 136 Gold.
   const robe = page.getByRole('listitem', { name: 'Robe: 136 Gold' });
-  assert.match(await robe.innerText(), /\+40 max HP[\s\S]*\+9 resistance/);
+  assert.match(await robe.innerText(), /HP \+40[\s\S]*Armor \+9/); // Task 44 format
   await robe.getByRole('button', { name: /Buy · Gold 136/ }).click();
   // Task 13 keyboard: the confirm dialog focuses «Confirm»; Enter confirms.
   await page.getByRole('dialog', { name: /Buy “Robe” for 136 Gold\?/ }).waitFor();
@@ -499,7 +499,9 @@ try {
   const bag = page.getByRole('region', { name: /^Bag:/ });
   await bag.getByRole('button', { name: /^Robe, L12, new/ }).click();
   const itemCard = bag.getByRole('group', { name: 'Item card' });
-  assert.match(await itemCard.innerText(), /Robe[\s\S]*Item level 12[\s\S]*\+40 max HP/);
+  assert.match(await itemCard.innerText(), /Robe[\s\S]*Item level 12[\s\S]*HP\s+\+40/);
+  // Task 44: the Bag «Stats» totals preview the open item (green «+40» on Max HP).
+  assert.match(await bag.getByRole('list', { name: 'Stats' }).innerText(), /Max HP[\s\S]*\+40/);
   await page.waitForFunction(
     () => !JSON.parse(localStorage.getItem('skazki.profile')).newItems.includes('i2'),
   );

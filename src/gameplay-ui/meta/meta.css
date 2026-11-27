@@ -2173,3 +2173,30 @@
   white-space: normal;
   pointer-events: none;
 }
+
+/* Task 44: Bag «Stats» totals */
+.bag-stats {
+  margin-top: var(--sp-3);
+  padding-top: var(--sp-2);
+  border-top: 1px solid var(--ink-line);
+}
+.bag-stats summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.bag-stats ul {
+  display: grid;
+  gap: 2px;
+  margin: var(--sp-2) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-s);
+}
+.bag-stats li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+.bag-stats-gear {
+  color: var(--text-muted);
+}

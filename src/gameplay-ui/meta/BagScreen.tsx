@@ -8,6 +8,7 @@ import {
   LEGENDARY_TEXT,
   isLegendaryId,
   bagCapacity,
+  statSummary,
   canReforge,
   nextExpansionPrice,
   reforgeCost,
@@ -32,7 +33,14 @@ import {
   slotUpgradeCost,
   starterWeapon,
 } from '../../equipment';
-import type { AffixStat, BagSort, GearSlot, ItemInstance, Rarity } from '../../equipment';
+import type {
+  AffixStat,
+  BagSort,
+  GearSlot,
+  ItemInstance,
+  Rarity,
+  StatSummaryLine,
+} from '../../equipment';
 import { equipmentStateOf } from '../../profile';
 import { campaignStore } from '../campaign-state';
 import { Button, ConfirmModal, CurrencyIcon, ItemIcon, Panel, Tabs, TierFrame } from '../kit';
@@ -215,6 +223,29 @@ export function BagPage() {
             </Button>
             {short.length > 0 && <p className="bag-short">{short.join(' · ')}</p>}
           </div>
+          {/* Task 44: the class's run-start totals, previewing the open item if equipped. */}
+          <StatsPanel
+            lines={statSummary(
+              cls,
+              progress.level,
+              progress.talents,
+              loadout,
+              profile.items,
+              progress.slotLevels,
+            )}
+            preview={
+              card && loadout[card.slot] !== card.uid && !equipBlock(card, cls, progress.level)
+                ? statSummary(
+                    cls,
+                    progress.level,
+                    progress.talents,
+                    { ...loadout, [card.slot]: card.uid },
+                    profile.items,
+                    progress.slotLevels,
+                  )
+                : null
+            }
+          />
         </Panel>
         <Panel
           title={
@@ -608,5 +639,57 @@ function SalvageConfirm({
     >
       <p>{legendary.map((i) => itemName(i)).join(', ')}</p>
     </ConfirmModal>
+  );
+}
+
+/** «24%», «1,250»: a Stats line value (plain number or percent). */
+function summaryValue(line: StatSummaryLine, value = line.value): string {
+  return `${statNumber(value, line.decimals)}${line.unit}`;
+}
+/**
+ * Task 44 «Stats» (collapsible): final run-start values with the gear share, e.g.
+ * «Crit chance 24% (+9% gear)»; with an item card open, the change if it were equipped.
+ */
+function StatsPanel({
+  lines,
+  preview,
+}: {
+  lines: readonly StatSummaryLine[];
+  preview: readonly StatSummaryLine[] | null;
+}) {
+  return (
+    <details className="bag-stats" open>
+      <summary>Stats</summary>
+      <ul aria-label="Stats">
+        {lines.map((line, i) => {
+          const after = preview?.[i];
+          const diff = after ? after.value - line.value : 0;
+          const shown = Math.abs(diff) >= 0.5 * 10 ** -line.decimals;
+          const gear = Math.abs(line.gear) >= 0.5 * 10 ** -line.decimals;
+          return (
+            <li key={line.key}>
+              <span>{line.label}</span>
+              <span>
+                {summaryValue(line)}
+                {gear && (
+                  <small className="bag-stats-gear">
+                    {' '}
+                    ({line.gear > 0 ? '+' : '−'}
+                    {summaryValue(line, Math.abs(line.gear))} gear)
+                  </small>
+                )}
+                {after && shown && (
+                  <small className={`bag-delta ${diff > 0 ? 'up' : 'down'}`}>
+                    {' '}
+                    {diff > 0 ? '+' : '−'}
+                    {summaryValue(line, Math.abs(diff))}
+                  </small>
+                )}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </details>
   );
 }

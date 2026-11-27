@@ -49,3 +49,45 @@ describe('Task 44 — readable stats', () => {
       expect(statExplanation(stat).length).toBeGreaterThan(10);
   });
 });
+
+describe('Task 44 — Bag «Stats» totals', () => {
+  it('final run-start values with the gear share; no gear → share 0', async () => {
+    const { statSummary, defaultLoadout, permanentStats } = await import('../../src/equipment');
+    const ring = generateItem(lcgStream(5), {
+      uid: 'i1',
+      slot: 'ring',
+      itemLevel: 10,
+      rarity: 'rare',
+      characterClass: 'mage',
+      stats: ['criticalChance', 'goldFindPercent'],
+    });
+    const loadout = { ...defaultLoadout('mage'), ring: 'i1' };
+    const lines = statSummary('mage', 10, {}, loadout, [ring]);
+    const by = Object.fromEntries(lines.map((l) => [l.key, l]));
+    const full = permanentStats('mage', 10, {}, loadout, [ring]);
+    const bare = permanentStats('mage', 10, {}, null, [ring]);
+    expect(by.damage.value).toBeCloseTo(full.magicalDamage, 9);
+    expect(by.damage.gear).toBeCloseTo(full.magicalDamage - bare.magicalDamage, 9);
+    expect(by.criticalChance.gear).toBeCloseTo(ring.affixes[0].value, 9);
+    expect(by.goldFindPercent).toMatchObject({
+      value: ring.affixes[1].value,
+      gear: ring.affixes[1].value,
+    });
+    expect(lines.map((l) => l.label)).toEqual([
+      'Damage',
+      'Max HP',
+      'Armor',
+      'Attack speed',
+      'Crit chance',
+      'Crit damage',
+      'Cooldown reduction',
+      'Dodge',
+      'Movement speed',
+      'Pickup radius',
+      'Run XP',
+      'Gold find',
+    ]);
+    const none = statSummary('mage', 10, {}, defaultLoadout('mage'), []);
+    expect(none.filter((l) => l.key !== 'damage' && l.gear !== 0)).toEqual([]);
+  });
+});
