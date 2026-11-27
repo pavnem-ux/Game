@@ -485,5 +485,12 @@ export const SALVAGE_ORE: Readonly<Record<Rarity, number>> = Object.freeze({
   epic: 8,
   legendary: 25,
 });
-/** Owned items the bag holds (starter weapons don't count). */
-export const BAG_CAPACITY = 60;
+/**
+ * Task 42 (replaces Task 41's 60): owned items the bag holds — base 25 (starter weapons don't
+ * count; equipped items do), +10 per Gold expansion, up to 5 expansions (75). Account-wide.
+ */
+export const BAG_RULES = Object.freeze({
+  base: 25,
+  perExpansion: 10,
+  expansionPrices: Object.freeze([5000, 12000, 25000, 40000, 60000]),
+});

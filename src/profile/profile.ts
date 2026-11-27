@@ -95,6 +95,8 @@ export interface PlayerProfile {
   readonly processedRunIds: readonly string[];
   /** Task 40: owned item instances (account-wide; never the starter weapons), in order. */
   readonly items: readonly ItemInstance[];
+  /** Task 42: bag expansions bought (0–5; +10 capacity each). */
+  readonly bagExpansions: number;
   /** Task 41: uids of items not yet viewed («new» marker), in acquisition order. */
   readonly newItems: readonly string[];
   /** Task 40: the number of the next item uid (`i<n>`); only grows. */
@@ -150,6 +152,7 @@ export function createProfile(profileId: string, createdAt: string): PlayerProfi
     processedRunIds: Object.freeze([]),
     items: Object.freeze([]),
     newItems: Object.freeze([]),
+    bagExpansions: 0,
     nextItemNumber: 1,
     shopSalt: shopSaltOf(profileId),
     shopBought: Object.freeze({}),

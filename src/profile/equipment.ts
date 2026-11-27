@@ -4,6 +4,7 @@ import {
   GEAR_SLOTS,
   SLOT_UPGRADE_RULES,
   bagFull,
+  nextExpansionPrice,
   equippedBy,
   salvageTotal,
   slotUpgradeCost,
@@ -68,7 +69,7 @@ function addItem(
   profile: PlayerProfile,
   make: (uid: string) => ItemInstance,
 ): { profile: PlayerProfile; item: ItemInstance } {
-  if (bagFull(profile.items)) throw new EquipmentError('bag-full');
+  if (bagFull(profile.items, profile.bagExpansions)) throw new EquipmentError('bag-full');
   const item = make(`i${profile.nextItemNumber}`);
   return {
     item,
@@ -97,7 +98,7 @@ export function buyOffer(
     throw new EquipmentError(exists ? 'sold-out' : 'unknown-offer');
   }
   if (profile.gold < offer.price) throw new EquipmentError('gold');
-  if (bagFull(profile.items)) throw new EquipmentError('bag-full');
+  if (bagFull(profile.items, profile.bagExpansions)) throw new EquipmentError('bag-full');
   const prev = profile.shopBought[c];
   const bought = prev && prev.level === level ? prev.offers : [];
   const added = addItem(profile, (uid) => offerItem(offer, c, uid));
@@ -204,5 +205,17 @@ export function markItemsSeen(profile: PlayerProfile, uids: readonly string[]): 
   return Object.freeze({
     ...profile,
     newItems: Object.freeze(profile.newItems.filter((u) => !seen.has(u))),
+  });
+}
+
+/** Task 42: buys the next bag expansion (+10 slots) for Gold — one new profile (throws `max` / `gold`). */
+export function buyBagExpansion(profile: PlayerProfile): PlayerProfile {
+  const price = nextExpansionPrice(profile.bagExpansions);
+  if (price === null) throw new EquipmentError('max');
+  if (profile.gold < price) throw new EquipmentError('gold');
+  return Object.freeze({
+    ...profile,
+    gold: profile.gold - price,
+    bagExpansions: profile.bagExpansions + 1,
   });
 }

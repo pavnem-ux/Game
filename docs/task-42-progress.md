@@ -3,12 +3,12 @@
 Spec: [task-42-drops-reforge.md](task-42-drops-reforge.md). Branch `task-42-drops-reforge` → PR into
 the integration branch `items-rework` (not `main`).
 
-PR: (draft, to be opened)
+PR: https://github.com/pavnem-ux/Game/pull/42 (draft, into `items-rework`)
 
 ## Checklist
 
 - [x] 0 Setup: branch, spec, progress file, draft PR (stacked on Task 41)
-- [ ] 1 Bag capacity: base 25 + 5 Gold expansions; over-capacity rules (shop refuses)
+- [x] 1 Bag capacity: base 25 + 5 Gold expansions; over-capacity rules (shop refuses)
 - [ ] 2 Drops: seeded per-run item stream; boss (victory) + elite 5% rolls; item level caps; pickups in the run
 - [ ] 3 Run end: loot into the profile once (full bag: auto-salvage Common/Uncommon, Rare+ past capacity); Loot on results
 - [ ] 4 Reforge: one secondary stat, cost by rarity / level / count, saved count

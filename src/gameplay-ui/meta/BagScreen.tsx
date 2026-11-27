@@ -4,7 +4,7 @@ import { CHARACTER_CLASSES } from '../../character-stats';
 import type { CharacterClass } from '../../character-stats';
 import { CLASS_LABELS } from '../../gameplay';
 import {
-  BAG_CAPACITY,
+  bagCapacity,
   GEAR_SLOTS,
   RARITIES,
   SLOT_LABELS,
@@ -200,7 +200,7 @@ export function BagPage() {
           </div>
         </Panel>
         <Panel
-          title={B.count(profile.items.length, BAG_CAPACITY)}
+          title={B.count(profile.items.length, bagCapacity(profile.bagExpansions))}
           className="bag-items"
           actions={
             <Button

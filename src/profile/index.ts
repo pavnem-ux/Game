@@ -26,6 +26,7 @@ export {
 } from './apply-run';
 export type { ApplyRunOutcome, RunSummary } from './apply-run';
 export {
+  buyBagExpansion,
   buyOffer,
   equipItem,
   equipmentStateOf,

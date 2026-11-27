@@ -116,7 +116,7 @@ export function ShopPage() {
             {level >= ITEM_LEVEL_RANGE.max
               ? `Item level ${level}`
               : `Item level ${level} · new stock at level ${level + 1}`}
-            {bagFull(profile.items) && ` · ${REFUSALS['bag-full']}`}
+            {bagFull(profile.items, profile.bagExpansions) && ` · ${REFUSALS['bag-full']}`}
           </p>
           {message && (
             <p className="shop-message" role="status">
@@ -181,7 +181,7 @@ function OfferRow({
   const wornUid = progress.loadout[slot];
   const worn = wornUid ? findOwned(profile.items, wornUid, characterClass) : null;
   const slotLevel = progress.slotLevels[slot];
-  const full = bagFull(profile.items);
+  const full = bagFull(profile.items, profile.bagExpansions);
   return (
     <section className="shop-slot-row" aria-label={SLOT_LABELS[slot]}>
       <h4 className="shop-slot-label">{SLOT_LABELS[slot]}</h4>

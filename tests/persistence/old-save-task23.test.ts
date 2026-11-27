@@ -55,6 +55,7 @@ const MIGRATED = () => {
           ? [
               ['items', []],
               ['newItems', []],
+              ['bagExpansions', 0],
               ['nextItemNumber', 1],
               ['shopSalt', shopSaltOf(p.profileId)],
               ['shopBought', {}],
