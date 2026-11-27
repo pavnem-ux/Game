@@ -13,6 +13,16 @@ Equipment screen → the next run starts with the stronger attributes.
 > the Forge item upgrades +0…+10). Sections §1–§3, §5–§7 describe the Task 40 model, §3a the Task 41 bag, slot upgrades and salvage, §3b the Task 42 drops, bag expansions, reforge and shop refresh; §4 (coins) and
 > §8.2 (Ore) still apply; the rest of §8 is kept as history.
 
+## Units (Task 44)
+
+In these docs «pp» (percentage points) marks stats that add to a percent: crit chance, crit damage,
+cooldown reduction, dodge. **In the game every such value is shown with «%»** («Crit chance +3.2%»),
+attack speed too («+3.4%», percent of the base speed 100), HP regen as «+0.36% max HP / s». Flat main
+stats are plain numbers: «Damage +14», «HP +60», «Armor +20» (the game says «Armor» for resistance).
+One formatter (`src/equipment/stat-format.ts`) is used by every screen; hovering or tapping a stat name
+shows a one-line explanation with the cap where one exists. The Bag «Stats» panel shows the class's
+run-start totals with the gear share and previews the open item.
+
 ## 1. Item instances (Task 40)
 
 An owned item is an **instance** (`ItemInstance`, `src/equipment/items.ts`): `uid` (`i<n>`, from the

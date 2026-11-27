@@ -11,7 +11,7 @@ PR: https://github.com/pavnem-ux/Game/pull/44 (draft, into `items-rework`)
 - [x] 1 One stat formatter («%» everywhere, flat main stats plain, «Armor»), applied to every screen
 - [x] 2 Stat explanations (hover / tap) with caps
 - [x] 3 Bag «Stats» panel: final run-start values, gear share, equip preview
-- [ ] 4 Delivery: docs Units note, tests, final checks, PR ready
+- [x] 4 Delivery: docs Units note, tests, final checks, PR ready
 
 ## Decisions / blockers
 
