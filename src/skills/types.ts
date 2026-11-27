@@ -25,6 +25,8 @@ export type CombatTag =
   | 'secondary'
   /** Task 09: hits created by talents (secondary; never procs synergies/passives). */
   | 'talent'
+  /** Task 43: hits created by Legendary effects (secondary; never procs anything). */
+  | 'legendary'
   /** Task 09.1 G6: the Warrior's off-hand sword (a talent secondary weapon). */
   | 'offhand'
   /** Task 09.1 G8: the Archer's ballista projectiles (a talent weapon). */

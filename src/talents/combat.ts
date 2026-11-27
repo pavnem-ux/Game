@@ -226,7 +226,7 @@ export interface DotOrigin {
   /** Applied by the Mage's enhanced skill. */
   readonly enhanced?: boolean;
 }
-const SECONDARY: readonly CombatTag[] = ['talent', 'secondary', 'synergy'];
+const SECONDARY: readonly CombatTag[] = ['talent', 'secondary', 'synergy', 'legendary'];
 const isSecondary = (tags: ReadonlySet<CombatTag>) => SECONDARY.some((t) => tags.has(t));
 
 export class TalentCombat {
