@@ -37,6 +37,8 @@ export interface ItemInstance {
   readonly affixes: readonly ItemAffix[];
   /** Task 43 (unused until then): the Legendary unique effect. */
   readonly legendaryId?: string;
+  /** Task 42: how many times this item was reforged (absent = 0). */
+  readonly reforges?: number;
 }
 /** Flat main stats of an item (whole numbers). */
 export interface MainStats {
@@ -274,6 +276,11 @@ export function validateItem(raw: unknown): ItemInstance {
   });
   if (v.legendaryId !== undefined && (typeof v.legendaryId !== 'string' || !v.legendaryId))
     throw new RangeError('Invalid legendary id.');
+  if (
+    v.reforges !== undefined &&
+    (!Number.isSafeInteger(v.reforges) || v.reforges < 1 || v.reforges > MAX_REFORGES)
+  )
+    throw new RangeError('Invalid reforge count.');
   return Object.freeze({
     uid: v.uid,
     slot: v.slot as GearSlot,
@@ -282,8 +289,11 @@ export function validateItem(raw: unknown): ItemInstance {
     rarity: v.rarity as Rarity,
     affixes: Object.freeze(affixes),
     ...(v.legendaryId !== undefined ? { legendaryId: v.legendaryId } : {}),
+    ...(v.reforges !== undefined ? { reforges: v.reforges } : {}),
   });
 }
+/** Task 42: a sanity bound on the saved reforge count (cost grows ×1.25 each time). */
+export const MAX_REFORGES = 1000;
 
 /** Startup validation of the item configuration. */
 export function validateEquipmentConfig(): void {

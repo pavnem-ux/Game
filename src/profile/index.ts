@@ -32,11 +32,14 @@ export {
   equipmentStateOf,
   grantItem,
   markItemsSeen,
+  receiveLoot,
+  reforgeProfileItem,
   salvageItems,
   shopOffersOf,
   unequipSlot,
   upgradeSlot,
 } from './equipment';
+export type { LootEntry } from './equipment';
 export { shopSaltOf } from './profile';
 export { buyProfilePet, setProfileActivePet, upgradeProfilePet } from './pets';
 export { claimProfileQuest, withProfileLoadoutCounter } from './quests';

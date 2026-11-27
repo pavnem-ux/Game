@@ -4,6 +4,9 @@ import {
   GEAR_SLOTS,
   SLOT_UPGRADE_RULES,
   bagCapacity,
+  canReforge,
+  reforgeCost,
+  reforgeItem,
   bagFull,
   salvageOre,
   nextExpansionPrice,
@@ -18,6 +21,7 @@ import {
   unequip,
 } from '../equipment';
 import type {
+  AffixStat,
   EquipmentState,
   GearSlot,
   ItemInstance,
@@ -267,4 +271,38 @@ export function receiveLoot(
     }),
     loot: Object.freeze(entries),
   };
+}
+
+/** A 32-bit seed for a profile action draw (FNV-1a of the parts). */
+function actionSeed(parts: readonly (string | number)[]): number {
+  let h = 0x811c9dc5;
+  for (const ch of parts.join(':')) {
+    h ^= ch.charCodeAt(0);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h >>> 0;
+}
+/**
+ * Task 42: reforges one secondary stat of an owned Rare+ item for Gold (seeded by the profile's
+ * shop salt, the uid and the item's reforge count, so the same state always gives the same
+ * result). One new profile; throws `not-owned` / `not-eligible` / `gold` (profile unchanged).
+ */
+export function reforgeProfileItem(
+  profile: PlayerProfile,
+  uid: string,
+  stat: AffixStat,
+  characterClass: CharacterClass,
+): PlayerProfile {
+  const index = profile.items.findIndex((i) => i.uid === uid);
+  if (index < 0) throw new EquipmentError('not-owned');
+  const item = profile.items[index];
+  if (!canReforge(item) || !item.affixes.some((a) => a.stat === stat))
+    throw new EquipmentError('not-eligible');
+  const cost = reforgeCost(item);
+  if (profile.gold < cost) throw new EquipmentError('gold');
+  const random = lcgStream(actionSeed([profile.shopSalt, uid, item.reforges ?? 0, 'reforge']));
+  const next = reforgeItem(random, item, stat, characterClass);
+  const items = [...profile.items];
+  items[index] = next;
+  return Object.freeze({ ...profile, gold: profile.gold - cost, items: Object.freeze(items) });
 }

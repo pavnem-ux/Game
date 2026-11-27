@@ -516,3 +516,21 @@ export const DROP_RULES = Object.freeze({
     Record<DropDifficulty, number>
   >,
 });
+
+/**
+ * Task 42 reforge (Rare and better): one secondary stat is replaced by a random stat of the slot's
+ * pool the item doesn't have, rolled in the rarity's range. Cost = base × max(minLevelShare,
+ * itemLevel / 50) × growth^n Gold (rounded), n = the item's earlier reforges.
+ */
+export const REFORGE_RULES = Object.freeze({
+  base: Object.freeze({ rare: 300, epic: 450, legendary: 600 }) as Readonly<
+    Partial<Record<Rarity, number>>
+  >,
+  minLevelShare: 0.2,
+  growth: 1.25,
+});
+/**
+ * Task 42 shop refresh: a new stock for the same class level. Cost = firstFactor × the Uncommon
+ * price at the class level, doubled for each further refresh at that level (resets on level-up).
+ */
+export const SHOP_REFRESH_RULES = Object.freeze({ firstFactor: 2, growth: 2 });
