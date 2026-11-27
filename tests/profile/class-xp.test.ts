@@ -9,27 +9,29 @@ import {
 
 const totalToReach = (level: number) => {
   let sum = 0;
-  for (let l = 1; l < level; l++) sum += 100 + 50 * (l - 1);
+  for (let l = 1; l < level; l++) sum += 100 + 6 * l * l; // Task 40 curve
   return sum;
 };
 
 describe('class XP (Task 08 §1.3)', () => {
-  it('level L → L+1 costs 100 + 50(L − 1); none at the cap', () => {
-    expect(xpToNextLevel(1)).toBe(100);
-    expect(xpToNextLevel(2)).toBe(150);
-    expect(xpToNextLevel(49)).toBe(2500);
+  // Task 40: 100 + 6·L² (was 100 + 50·(L − 1)); 247 450 XP from level 1 to 50.
+  it('level L → L+1 costs 100 + 6·L²; none at the cap', () => {
+    expect(xpToNextLevel(1)).toBe(106);
+    expect(xpToNextLevel(2)).toBe(124);
+    expect(xpToNextLevel(49)).toBe(14506);
+    expect(totalToReach(MAX_CLASS_LEVEL)).toBe(247450);
     expect(xpToNextLevel(50)).toBeNull();
     expect(() => xpToNextLevel(0)).toThrow();
     expect(() => xpToNextLevel(51)).toThrow();
   });
   it('overflow carries across several levels at once', () => {
-    const r = addClassXp(NEW_CLASS_PROGRESS, 100 + 150 + 30);
-    expect(r.progress).toEqual({ xp: 30, level: 3, lifetimeXp: 280, talents: {} });
+    const r = addClassXp(NEW_CLASS_PROGRESS, 106 + 124 + 30);
+    expect(r.progress).toEqual({ xp: 30, level: 3, lifetimeXp: 260, talents: {} });
     expect(r.levelsGained).toBe(2);
-    const exact = addClassXp(NEW_CLASS_PROGRESS, 100);
+    const exact = addClassXp(NEW_CLASS_PROGRESS, 106);
     expect(exact.progress).toMatchObject({ xp: 0, level: 2 });
-    const partial = addClassXp(exact.progress, 149);
-    expect(partial).toMatchObject({ levelsGained: 0, progress: { xp: 149, level: 2 } });
+    const partial = addClassXp(exact.progress, 123);
+    expect(partial).toMatchObject({ levelsGained: 0, progress: { xp: 123, level: 2 } });
   });
   it('caps at 50; extra XP goes only to the lifetime counter', () => {
     const toCap = totalToReach(MAX_CLASS_LEVEL);

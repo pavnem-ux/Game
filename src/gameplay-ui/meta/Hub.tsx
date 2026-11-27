@@ -17,7 +17,7 @@ const TILES: readonly { id: MenuPage; title: string; text: string; glyph: string
   { id: 'equipment', title: N.equipment, text: 'Seven equipment slots', glyph: '⛨' },
   { id: 'talents', title: N.talents, text: 'Class talent branches', glyph: '❖' },
   { id: 'shop', title: N.shop, text: 'Gear for Gold', glyph: '⚖' },
-  { id: 'forge', title: N.forge, text: 'Upgrade items with Gold and Ore', glyph: '⚒' },
+  { id: 'forge', title: N.forge, text: 'Upgrade pets with Gold and Ore', glyph: '⚒' },
   { id: 'pets', title: N.pets, text: 'A companion on every run', glyph: '❦' },
   { id: 'quests', title: N.quests, text: 'Goals and rewards', glyph: '✧' },
   { id: 'progression', title: N.progression, text: 'Chronicle of your runs', glyph: '☾' },

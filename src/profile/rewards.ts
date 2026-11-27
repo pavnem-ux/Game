@@ -109,12 +109,15 @@ export function runRewards(
     throw new RangeError('elapsed must be a finite, non-negative number of seconds.');
   let xp: number;
   switch (result.outcome) {
+    // Task 40: the tier's XP scale (Elite Trial 20%; also for its defeat share, so a lost Trial
+    // never pays more class XP than a won one).
     case 'victory':
-      xp = map.victoryXp;
+      xp = Math.round(map.victoryXp * map.xpScale);
       break;
     case 'defeat':
       xp = Math.floor(
         map.victoryXp *
+          map.xpScale *
           CAMPAIGN_BALANCE.rewards.defeatShare *
           Math.min(result.elapsed / map.durationSeconds, 1),
       );
@@ -127,8 +130,8 @@ export function runRewards(
   }
   const gold = runGold(result.outcome, map.id, result.coins ?? 0);
   // Task 39: a victory on a harder tier pays its whole Gold (coins + bonus) × the tier's scale.
-  if (result.outcome === 'victory' && map.rewardScale !== 1) {
-    const total = Math.round(gold.total * map.rewardScale);
+  if (result.outcome === 'victory' && map.goldScale !== 1) {
+    const total = Math.round(gold.total * map.goldScale);
     return Object.freeze({ xp, gold: total, coins: gold.coins, bonus: total - gold.coins });
   }
   return Object.freeze({ xp, gold: gold.total, coins: gold.coins, bonus: gold.bonus });

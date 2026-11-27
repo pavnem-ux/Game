@@ -99,6 +99,8 @@ export interface SkillHost {
    * damage-over-time effects still apply; absent = nobody is immune.
    */
   controlImmune?(targetId: string): boolean;
+  /** Task 40 (optional): extra damage factor of the player's hits on this target (gear elite damage). */
+  targetDamageScale?(targetId: string): number;
   /** Task 20 (optional): the run's active pet (validated by the world). */
   readonly pet?: Readonly<{ id: PetId; level: number }> | null;
   /** Task 20 (optional): pet actions for run statistics and rendering. */
@@ -697,7 +699,7 @@ export class SkillEngine {
   ): number {
     if (attack.attackerId !== this.host.playerId) return 1;
     if (limit && this.counted(limit.key, targetId) >= limit.max) return 0;
-    let multiplier = 1;
+    let multiplier = this.host.targetDamageScale?.(targetId) ?? 1;
     const mark = this.activeMark(targetId);
     if (mark?.kind === 'hunter')
       multiplier *= 1 + getSkill('hunters_mark').ranks[mark.rank - 1].bonusPercent / 100;

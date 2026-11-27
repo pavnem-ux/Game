@@ -2,19 +2,18 @@ import type { CharacterClass } from '../character-stats';
 import { getCampaignMap } from '../campaign';
 import type { CampaignDifficulty } from '../campaign';
 import {
-  buyItem,
+  buyOffer,
   equipItem,
   isMapUnlocked,
   isTierUnlocked,
   unequipSlot,
-  upgradeProfileItem,
   buyProfilePet,
   setProfileActivePet,
   upgradeProfilePet,
   claimProfileQuest,
   withProfileLoadoutCounter,
 } from '../profile';
-import { EquipmentError, UpgradeError } from '../equipment';
+import { EquipmentError } from '../equipment';
 import { PetError, isPetId, petLevel } from '../pets';
 import { QuestError, claimableQuests } from '../quests';
 import type { RunQuestSummary } from '../quests';
@@ -235,7 +234,6 @@ function gearChange(change: (p: PlayerProfile) => PlayerProfile): string | null 
     next = withProfileLoadoutCounter(change(profile));
   } catch (error) {
     return error instanceof EquipmentError ||
-      error instanceof UpgradeError ||
       error instanceof PetError ||
       error instanceof QuestError
       ? error.reason
@@ -300,22 +298,15 @@ export const campaignStore = {
     campaignStore.service().selectClass(characterClass);
   },
   /**
-   * Task 11: shop purchase — Gold deducted and the item owned in one validated save. Returns the
-   * refusal reason (no change) or null on success.
+   * Task 40: buy a shop offer of a class — Gold deducted, the item owned and the offer gone until
+   * the next level-up, in one validated save. Returns the refusal reason (no change) or null.
    */
-  buyItem(itemId: string): string | null {
-    return gearChange((p) => buyItem(p, itemId));
+  buyOffer(characterClass: CharacterClass, offerId: string): string | null {
+    return gearChange((p) => buyOffer(p, characterClass, offerId));
   },
-  /** Task 11: equip an owned eligible item for a class (applies to that class's next run). */
-  equipItem(characterClass: CharacterClass, itemId: string): string | null {
-    return gearChange((p) => equipItem(p, characterClass, itemId));
-  },
-  /**
-   * Task 19 forge: upgrade an owned item by one level — Gold, ore and the level in one validated
-   * save (nothing changes when the write fails). Returns the refusal reason or null.
-   */
-  upgradeItem(itemId: string): string | null {
-    return gearChange((p) => upgradeProfileItem(p, itemId));
+  /** Task 40: equip an owned item (by uid) for a class (applies to that class's next run). */
+  equipItem(characterClass: CharacterClass, uid: string): string | null {
+    return gearChange((p) => equipItem(p, characterClass, uid));
   },
   /**
    * Task 21: claim a completed quest — Gold, ore, item / pet (or their Gold fallback) and the
@@ -474,7 +465,7 @@ export const campaignStore = {
         // Task 09: the class's talents apply from run start; changes affect the next run.
         talents: { ranks: profile.classes[cls].talents },
         // Task 11: this class's own loadout; changes apply to the next run.
-        equipment: { loadout: profile.classes[cls].loadout, itemLevels: profile.itemLevels },
+        equipment: { loadout: profile.classes[cls].loadout, items: profile.items },
         // Task 20: the profile's one active pet comes with whichever class starts the run.
         pet: activePetOf(profile),
         campaign: { mapId, runId: generateRunId(), difficulty },

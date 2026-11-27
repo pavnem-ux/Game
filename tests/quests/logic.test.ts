@@ -20,7 +20,6 @@ import { applyRunResult, createProfile } from '../../src/profile';
 import type { PlayerProfile, RunResult } from '../../src/profile';
 import { createProgressionService, createSaveStore } from '../../src/persistence';
 import type { StorageLike } from '../../src/persistence';
-import { defaultLoadout } from '../../src/equipment';
 
 const NOW = '2026-11-13T12:00:00.000Z';
 const base = (over: Partial<PlayerProfile> = {}): PlayerProfile => ({
@@ -68,28 +67,30 @@ describe('Task 21 §1.2 — catalogue', () => {
         r(`campaign.map${m}`).ore,
       ]),
     ).toEqual([
-      [300, 10],
-      [600, 20],
-      [900, 30],
-      [1200, 40],
-      [1500, 50],
-      [1800, 60],
-      [2100, 70],
-      [2500, 100],
+      // Task 40: quest Gold ×0.8 (300 → 240 …).
+      [240, 10],
+      [480, 20],
+      [720, 30],
+      [960, 40],
+      [1200, 50],
+      [1440, 60],
+      [1680, 70],
+      [2000, 100],
     ]);
     expect(r('campaign.map10').pet).toBe('firefly');
-    expect(r('campaign.map20').item).toBe('ring_precision-t3');
+    // Task 40: the old Rare ring of map 20 no longer exists — Gold and Ore only.
+    expect(r('campaign.map20')).toEqual({ gold: 960, ore: 40 });
     expect(r('campaign.map40').pet).toBe('wolf');
-    expect(r('hunt.100000')).toEqual({ gold: 4000, ore: 100 });
-    expect(r('types.elite')).toEqual({ gold: 400, ore: 15, pet: 'owlet' });
-    expect([5, 15, 30, 40].map((n) => r(`bosses.${n}`).gold)).toEqual([1000, 2000, 3000, 5000]);
-    expect(r('mastery.rogue.50')).toEqual({ gold: 2500 });
+    expect(r('hunt.100000')).toEqual({ gold: 3200, ore: 100 });
+    expect(r('types.elite')).toEqual({ gold: 320, ore: 15, pet: 'owlet' });
+    expect([5, 15, 30, 40].map((n) => r(`bosses.${n}`).gold)).toEqual([800, 1600, 2400, 4000]);
+    expect(r('mastery.rogue.50')).toEqual({ gold: 2000 });
     expect(r('synergy.awaken6')).toEqual({ pet: 'fox' });
-    expect(r('chests.300')).toEqual({ gold: 2000 });
+    expect(r('chests.300')).toEqual({ gold: 1600 });
     expect([r('forge.plus5'), r('forge.plus10'), r('forge.tier4')]).toEqual([
       { ore: 20 },
       { ore: 60 },
-      { gold: 3000 },
+      { gold: 2400 },
     ]);
   });
 });
@@ -124,7 +125,7 @@ describe('Task 21 §1.2 — completion condition of each group', () => {
     expect(state(p, 'bosses.5')).toBe('complete');
     expect(state(p, 'bosses.15')).toBe('in-progress');
   });
-  it('mastery: each class level; synergies; chests; forge', () => {
+  it('mastery: each class level; synergies; chests', () => {
     const p = base();
     const lv = { ...p, classes: { ...p.classes, mage: { ...p.classes.mage, level: 30 } } };
     expect(
@@ -143,49 +144,18 @@ describe('Task 21 §1.2 — completion condition of each group', () => {
     expect(state(s, 'synergy.awaken')).toBe('in-progress');
     expect(state(s, 'chests.100')).toBe('complete');
     expect(state(s, 'chests.300')).toBe('in-progress');
-    const f = base({ ownedItems: ['plate-t1'], itemLevels: { 'plate-t1': 5 } });
-    expect([state(f, 'forge.plus5'), state(f, 'forge.plus10')]).toEqual([
-      'complete',
-      'in-progress',
-    ]);
   });
-  it('forge tier-4: one class wearing 7 tier-4+ items; stays complete after unequipping', () => {
-    const t4 = [
-      'heavy_sword-t4',
-      'guard_helm-t4',
-      'plate-t4',
-      'plate_gauntlets-t4',
-      'plate_greaves-t4',
-      'amulet_power-t4',
-      'ring_fury-t5',
-    ];
-    const loadout = {
-      weapon: t4[0],
-      helmet: t4[1],
-      armor: t4[2],
-      gloves: t4[3],
-      pants: t4[4],
-      amulet: t4[5],
-      ring: t4[6],
-    };
-    let p = base({ ownedItems: t4 });
-    p = { ...p, classes: { ...p.classes, warrior: { ...p.classes.warrior, loadout } } };
-    expect(state(p, 'forge.tier4')).toBe('complete');
-    p = withLoadoutCounter(p);
-    expect(p.questCounters.bestTierLoadout).toBe(7);
-    p = {
-      ...p,
-      classes: {
-        ...p.classes,
-        warrior: { ...p.classes.warrior, loadout: defaultLoadout('warrior') },
-      },
-    };
-    expect(state(p, 'forge.tier4')).toBe('complete'); // monotonic counter
-    // Six items on one class and one on another never complete it.
-    const six = { ...loadout, ring: null };
-    let q = base({ ownedItems: t4 });
-    q = { ...q, classes: { ...q.classes, warrior: { ...q.classes.warrior, loadout: six } } };
-    expect(state(withLoadoutCounter(q), 'forge.tier4')).toBe('in-progress');
+  // Task 40: the Forge is gone — its three quests are kept (ids, claims) but hidden and never
+  // claimable until Tasks 41–42 retarget them.
+  it('forge quests: hidden, never complete, not claimable; existing claims stay valid', () => {
+    const forge = ['forge.plus5', 'forge.plus10', 'forge.tier4'];
+    for (const id of forge) expect(QUEST_BY_ID.get(id)!.hidden).toBe(true);
+    const p = base({ questCounters: counters({ bestTierLoadout: 7 }) });
+    expect(allQuestProgress(p).some((q) => forge.includes(q.quest.id))).toBe(false);
+    expect(claimableQuests(p).some((id) => forge.includes(id))).toBe(false);
+    for (const id of forge) expect(() => claimQuest(p, id)).toThrow(QuestError);
+    // The loadout counter no longer grows (no tiers).
+    expect(withLoadoutCounter(p)).toBe(p);
   });
 });
 
@@ -263,7 +233,7 @@ describe('Task 21 §1.1 — claim', () => {
     const p = won();
     expect(claimableQuests(p)).toEqual(expect.arrayContaining(['campaign.map5', 'campaign.map10']));
     const after = claimQuest(p, 'campaign.map10');
-    expect(after.gold - p.gold).toBe(600);
+    expect(after.gold - p.gold).toBe(480); // Task 40: 600 × 0.8
     expect(after.ore - p.ore).toBe(20);
     expect(after.ownedPets).toContain('firefly');
     expect(after.questsClaimed).toEqual(['campaign.map10']);
@@ -276,36 +246,36 @@ describe('Task 21 §1.1 — claim', () => {
     expect(() => claimQuest(p, 'campaign.map15')).toThrow(/incomplete/);
     expect(() => claimQuest(p, 'nope')).toThrow(/unknown/);
   });
-  it('owned rewards become Gold: item → shop price; shop pet → price; quest pet → 2000', () => {
+  // Task 40: no item rewards any more; the pet fallbacks are unchanged (pet prices unchanged).
+  it('owned pet rewards become Gold: shop pet → price; quest pet → 2000', () => {
     const q = (id: string) => QUEST_BY_ID.get(id)!;
-    expect(
-      questPayout({ ownedItems: ['ring_precision-t3'], ownedPets: [] }, q('campaign.map20')),
-    ).toMatchObject({
-      gold: 1200 + 700,
-      item: null,
-      fallbackGold: 700,
+    expect(questPayout({ ownedPets: [] }, q('campaign.map20'))).toEqual({
+      gold: 960,
+      ore: 40,
+      pet: null,
+      fallbackGold: 0,
     });
-    expect(
-      questPayout({ ownedItems: [], ownedPets: ['firefly'] }, q('campaign.map10')),
-    ).toMatchObject({
-      gold: 600 + 2000,
+    expect(questPayout({ ownedPets: ['firefly'] }, q('campaign.map10'))).toMatchObject({
+      gold: 480 + 2000,
       pet: null,
     });
-    expect(questPayout({ ownedItems: [], ownedPets: ['owlet'] }, q('types.elite'))).toMatchObject({
-      gold: 400 + 1500,
+    expect(questPayout({ ownedPets: ['owlet'] }, q('types.elite'))).toMatchObject({
+      gold: 320 + 1500,
       pet: null,
     });
-    expect(questPayout({ ownedItems: [], ownedPets: [] }, q('synergy.awaken6'))).toMatchObject({
+    expect(questPayout({ ownedPets: [] }, q('synergy.awaken6'))).toMatchObject({
       gold: 0,
       pet: 'fox',
     });
     const p = { ...won(), ownedPets: ['firefly'] };
     const after = claimQuest(p, 'campaign.map10');
     expect(after.ownedPets).toEqual(['firefly']);
-    expect(after.gold - p.gold).toBe(2600);
+    expect(after.gold - p.gold).toBe(2480);
   });
-  it('progress list covers every quest', () => {
-    expect(allQuestProgress(base()).map((x) => x.quest.id)).toEqual(QUESTS.map((x) => x.id));
+  it('progress list covers every visible quest (Task 40: the 3 Forge quests are hidden)', () => {
+    expect(allQuestProgress(base()).map((x) => x.quest.id)).toEqual(
+      QUESTS.filter((x) => !x.hidden).map((x) => x.id),
+    );
   });
 });
 
@@ -344,7 +314,7 @@ describe('Task 21 — store claim and debug tools', () => {
     const writes = storage.writes;
     expect(store.claimQuest('hunt.1000')).toBeNull();
     expect(storage.writes).toBe(writes + 2); // document + backup
-    expect(profile()).toMatchObject({ gold: 200, ore: 5, questsClaimed: ['hunt.1000'] });
+    expect(profile()).toMatchObject({ gold: 160, ore: 5, questsClaimed: ['hunt.1000'] }); // 200 × 0.8
     expect(store.claimQuest('hunt.1000')).toBe('claimed');
     expect(debug.campaignDebug.completeQuest('chests.25')).toBe(true);
     storage.failWrites = true;
@@ -355,7 +325,8 @@ describe('Task 21 — store claim and debug tools', () => {
   });
   it('debug completes every quest through valid saves; counters; reset', () => {
     for (const q of QUESTS) expect(debug.campaignDebug.completeQuest(q.id), q.id).toBe(true);
-    expect(claimableQuests(profile()).length + profile().questsClaimed.length).toBe(58);
+    // Task 40: the 3 hidden Forge quests are never claimable.
+    expect(claimableQuests(profile()).length + profile().questsClaimed.length).toBe(55);
     expect(debug.campaignDebug.addQuestCounter('swift', 7)).toBe(true);
     expect(debug.campaignDebug.addQuestCounter('swift', -1)).toBe(false);
     expect(debug.campaignDebug.resetQuests()).toBe(true);

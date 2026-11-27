@@ -10,7 +10,8 @@ import { alphaBridge } from './store';
 import { campaignDebug } from './campaign-debug';
 import type { AlphaState } from './store';
 import { ENEMY_KINDS } from '../gameplay';
-import { SHOP_ITEMS } from '../equipment';
+import { GEAR_SLOTS, RARITIES, SLOT_LABELS } from '../equipment';
+import type { GearSlot, Rarity } from '../equipment';
 import { PET_CONFIG, PET_IDS } from '../pets';
 import { QUESTS } from '../quests';
 import type { EnemyKind } from '../gameplay';
@@ -73,8 +74,9 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
     [debugXp, setDebugXp] = useState(500),
     [debugGold, setDebugGold] = useState(100),
     [debugOre, setDebugOre] = useState(50),
-    [levelItem, setLevelItem] = useState('plate-t1'),
-    [itemLevelValue, setItemLevelValue] = useState(10),
+    [grantSlot, setGrantSlot] = useState<GearSlot>('weapon'),
+    [grantRarity, setGrantRarity] = useState<Rarity>('rare'),
+    [grantLevel, setGrantLevel] = useState(10),
     [debugPet, setDebugPet] = useState<string>('owlet'),
     [debugQuest, setDebugQuest] = useState<string>(QUESTS[0].id),
     [questCounter, setQuestCounter] = useState<'swift' | 'brute' | 'bombard' | 'elite' | 'chests'>(
@@ -234,11 +236,57 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
       </fieldset>
       <fieldset aria-label="Gear Debug">
         <legend>Equipment and shop</legend>
-        <button onClick={() => campaignDebug.unlockAllItems()}>Unlock all items</button>
         <button onClick={() => campaignDebug.equipBestTier(characterClass)}>
-          Best equipment ({CLASS_LABELS[characterClass]})
+          Legendary set at class level ({CLASS_LABELS[characterClass]})
         </button>
-        {/* Task 19 §1.5: ore and forge levels (validated saves; DEV/QA only). */}
+        {/* Task 40: grant a random item of a slot, rarity and item level (validated save). */}
+        <label>
+          Slot
+          <select
+            aria-label="Debug item slot"
+            value={grantSlot}
+            onChange={(e) => setGrantSlot(e.target.value as GearSlot)}
+          >
+            {GEAR_SLOTS.map((s) => (
+              <option key={s} value={s}>
+                {SLOT_LABELS[s]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Rarity
+          <select
+            aria-label="Debug item rarity"
+            value={grantRarity}
+            onChange={(e) => setGrantRarity(e.target.value as Rarity)}
+          >
+            {RARITIES.map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Item level
+          <input
+            aria-label="Debug item level"
+            type="number"
+            min="1"
+            max="50"
+            value={grantLevel}
+            onChange={(e) => setGrantLevel(Number(e.target.value))}
+          />
+        </label>
+        <button
+          onClick={() =>
+            campaignDebug.grantItem(characterClass, grantSlot, grantRarity, grantLevel)
+          }
+        >
+          Grant item
+        </button>
+        {/* Task 19 §1.5: ore (validated save; DEV/QA only). */}
         <label>
           Ore
           <input
@@ -250,37 +298,6 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
           />
         </label>
         <button onClick={() => campaignDebug.grantOre(debugOre)}>Grant Ore</button>
-        <label>
-          Item
-          <select
-            aria-label="Debug forge item"
-            value={levelItem}
-            onChange={(e) => setLevelItem(e.target.value)}
-          >
-            {SHOP_ITEMS.map((i) => (
-              <option key={i.id} value={i.id}>
-                {i.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Level
-          <select
-            aria-label="Debug item level"
-            value={itemLevelValue}
-            onChange={(e) => setItemLevelValue(Number(e.target.value))}
-          >
-            {Array.from({ length: 11 }, (_, l) => (
-              <option key={l} value={l}>
-                +{l}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button onClick={() => campaignDebug.setItemLevel(levelItem, itemLevelValue)}>
-          Set item level
-        </button>
       </fieldset>
       {/* Task 21 §1.6: quests (validated saves; DEV/QA only). */}
       <fieldset aria-label="Quest Debug">

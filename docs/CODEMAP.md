@@ -45,13 +45,14 @@ workflow: [TASK_WORKFLOW.md](TASK_WORKFLOW.md).
 ## Meta progression and saves
 
 - `src/profile/` — `profile.ts` (`PlayerProfile`, schema version), `class-xp.ts`, `rewards.ts`
-  (`runRewards`), `apply-run.ts` (idempotent by run id), `equipment.ts`, `pets.ts`, `quests.ts`,
+  (`runRewards`), `apply-run.ts` (idempotent by run id), `equipment.ts` (`buyOffer`, `equipItem`, `grantItem`), `pets.ts`, `quests.ts`,
   `recommended-level.ts`.
 - `src/persistence/` — `saveSchema.ts` (parse, migrations, `normalizeProfile`), `saveStore.ts`
   (keys `skazki.profile` / `.backup` / `.quarantine`), `progressionService.ts`, `transfer.ts`.
-- `src/equipment/` — `config.ts`, `items.ts` (`SHOP_ITEMS`), `logic.ts` (purchase / equip),
-  `stats.ts` (`gearModifiers`, `permanentStats`), `economy.ts` (`COIN_RULES`), `upgrades.ts`
-  (forge, Ore).
+- `src/equipment/` — Task 40 items model: `config.ts` (rarities, main / secondary stat rules, slot
+  pools, name bands, shop rules), `items.ts` (`ItemInstance`, `generateItem`, `itemName`,
+  `validateItem`), `logic.ts` (loadouts by uid, level gate, seeded `shopStock`), `stats.ts`
+  (`gearModifiers`, `permanentStats`), `economy.ts` (`COIN_RULES`, Ore).
 - `src/quests/` — `config.ts`, `counters.ts`, `logic.ts`.
 
 ## UI

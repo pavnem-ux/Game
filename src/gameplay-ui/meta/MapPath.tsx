@@ -228,7 +228,8 @@ function MapPanel({ map: base }: { map: CampaignMap }) {
         <dt>{M.rewards}</dt>
         <dd>
           {M.reward(map.victoryXp, map.victoryGold)}
-          {map.rewardScale !== 1 && M.rewardScaled(map.rewardScale)}
+          {(map.goldScale !== 1 || map.oreScale !== 1 || map.xpScale !== 1) &&
+            M.rewardScaled(map.goldScale, map.oreScale, map.xpScale)}
         </dd>
         <dt>{M.modifiers}</dt>
         <dd>

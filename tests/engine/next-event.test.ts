@@ -88,7 +88,8 @@ describe('Task 22 §1.1 — countdown in a run', () => {
     w.setPaused(false);
     // Past the map duration (the boss spawned; 10:00 on map 1) nothing is scheduled any more.
     const duration = getCampaignMap(1).durationSeconds;
-    for (let t = 5; t < duration + 1; t += 1) {
+    // Step by world time: a level-up offer pauses the world for the rest of an update.
+    for (let i = 0; i < 5000 && w.time < duration + 1; i++) {
       resolveOffers(w); // level-up offers pause the world
       w.update(1);
     }

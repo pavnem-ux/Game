@@ -1,126 +1,305 @@
+import { CHARACTER_CLASSES } from '../character-stats';
 import type { CharacterClass } from '../character-stats';
+import type { RandomSource } from '../combat-core';
 import {
+  AFFIX_LEVEL_RULES,
+  AFFIX_RULES,
+  GEAR_SLOTS,
   GEAR_TEMPLATES,
+  ITEM_LEVEL_RANGE,
+  MAIN_STAT_RULES,
+  RARITIES,
+  RARITY_CONFIG,
+  SHARED_BANDS,
+  SLOT_AFFIX_POOLS,
   STARTER_WEAPONS,
-  TIER1_STAT_VALUES,
-  TIERS,
-  SECOND_STAT_REDUCED_SLOTS,
-  TIER_CONFIG,
-  WEAPON_PRICE_FACTOR,
-  WEAPON_SECOND_STAT_FACTOR,
+  WEAPON_BANDS,
 } from './config';
-import type { GearSlot, GearStat, GearTemplate, Tier } from './config';
+import type { AffixStat, GearSlot, GearTemplate, Rarity } from './config';
 
-/** One shop item (template × tier) or a starter weapon (tier 0, no stats, not sold). */
-export interface GearItem {
-  readonly id: string;
-  readonly templateId: string;
-  readonly name: string;
+/**
+ * Task 40 item instances (pure). Two items of the same slot, level and rarity can differ by their
+ * rolled secondary stats, so every owned item is an instance with its own `uid`. Stats depend only
+ * on slot, item level and rarity (+ the class's damage type for damage main stats); the name and
+ * icon come from the item-level band of the slot (§1a).
+ */
+export interface ItemAffix {
+  readonly stat: AffixStat;
+  readonly value: number;
+}
+export interface ItemInstance {
+  readonly uid: string;
   readonly slot: GearSlot;
-  /** Weapons only: the class that can equip it. */
+  /** Weapons only: the class that can use it. */
   readonly characterClass?: CharacterClass;
-  readonly tier: Tier | 0;
-  /** Stat bonuses (run-modifier units), in template order. */
-  readonly stats: Readonly<Partial<Record<GearStat, number>>>;
-  readonly price: number;
-  /** Highest cleared map needed before the shop sells it (0 = from the start). */
-  readonly unlockAfterMap: number;
-  readonly starter: boolean;
+  readonly itemLevel: number;
+  readonly rarity: Rarity;
+  readonly affixes: readonly ItemAffix[];
+  /** Task 43 (unused until then): the Legendary unique effect. */
+  readonly legendaryId?: string;
+}
+/** Flat main stats of an item (whole numbers). */
+export interface MainStats {
+  readonly physicalDamage: number;
+  readonly magicalDamage: number;
+  readonly maxHp: number;
+  readonly resistance: number;
 }
 
-const round = (v: number) => Math.round(v * 1000) / 1000;
+export const isWeaponSlot = (slot: GearSlot) => slot === 'weapon';
+/** The damage type of a class's weapon: magical for the Mage, physical for the rest. */
+export const classDamageType = (c: CharacterClass): 'physical' | 'magical' =>
+  c === 'mage' ? 'magical' : 'physical';
+export const isStarterUid = (uid: string) =>
+  Object.values(STARTER_WEAPONS).some((w) => w.id === uid);
 
-function makeItem(template: GearTemplate, tier: Tier): GearItem {
-  const tc = TIER_CONFIG[tier];
-  const weapon = template.slot === 'weapon';
-  const stats: Partial<Record<GearStat, number>> = {};
-  template.stats.forEach((stat, i) => {
-    const reduced = SECOND_STAT_REDUCED_SLOTS.includes(template.slot);
-    const share = reduced && i > 0 ? WEAPON_SECOND_STAT_FACTOR : 1;
-    stats[stat] = round(TIER1_STAT_VALUES[stat] * tc.multiplier * share);
+/** The starter weapon of a class: always owned, item level 1, Common, no affixes. */
+export function starterWeapon(characterClass: CharacterClass): ItemInstance {
+  return STARTERS[characterClass];
+}
+const STARTERS: Readonly<Record<CharacterClass, ItemInstance>> = Object.freeze(
+  Object.fromEntries(
+    CHARACTER_CLASSES.map((c) => [
+      c,
+      Object.freeze({
+        uid: STARTER_WEAPONS[c].id,
+        slot: 'weapon' as const,
+        characterClass: c,
+        itemLevel: ITEM_LEVEL_RANGE.min,
+        rarity: 'common' as const,
+        affixes: Object.freeze([]),
+      }),
+    ]),
+  ) as unknown as Record<CharacterClass, ItemInstance>,
+);
+
+// ── Main stats (§3) ──
+
+const roundWhole = (v: number) => Math.round(v);
+/** Weapon flat damage before the rarity factor (unrounded). */
+const weaponDamage = (level: number) =>
+  MAIN_STAT_RULES.weaponDamageBase + MAIN_STAT_RULES.weaponDamagePerLevel * level;
+const armorHp = (level: number) =>
+  MAIN_STAT_RULES.armorHpBase + MAIN_STAT_RULES.armorHpPerLevel * level;
+const armorResistance = (level: number) =>
+  MAIN_STAT_RULES.armorResistanceBase + MAIN_STAT_RULES.armorResistancePerLevel * level;
+/**
+ * Flat main stats of a slot at an item level and rarity, for a class (damage slots use the class's
+ * damage type). Rounded to whole numbers after the rarity factor.
+ */
+export function mainStats(
+  slot: GearSlot,
+  level: number,
+  rarity: Rarity,
+  characterClass: CharacterClass,
+): MainStats {
+  const k = RARITY_CONFIG[rarity].mainScale;
+  let damage = 0,
+    hp = 0,
+    res = 0;
+  const r = MAIN_STAT_RULES;
+  if (slot === 'weapon') damage = weaponDamage(level);
+  else if (slot === 'gloves') damage = weaponDamage(level) * r.glovesDamageShare;
+  else if (slot === 'ring') damage = weaponDamage(level) * r.ringDamageShare;
+  else if (slot === 'armor') {
+    hp = armorHp(level);
+    res = armorResistance(level);
+  } else if (slot === 'helmet') hp = armorHp(level) * r.helmetHpShare;
+  else if (slot === 'amulet') hp = armorHp(level) * r.amuletHpShare;
+  else res = armorResistance(level) * r.pantsResistanceShare;
+  const dmg = roundWhole(damage * k);
+  const magical = classDamageType(characterClass) === 'magical';
+  return Object.freeze({
+    physicalDamage: magical ? 0 : dmg,
+    magicalDamage: magical ? dmg : 0,
+    maxHp: roundWhole(hp * k),
+    resistance: roundWhole(res * k),
+  });
+}
+/** Main stats of an item for the class wearing it. */
+export const itemMainStats = (item: ItemInstance, characterClass: CharacterClass): MainStats =>
+  mainStats(item.slot, item.itemLevel, item.rarity, item.characterClass ?? characterClass);
+
+// ── Secondary stats (§4) ──
+
+/** Maximum (100% roll) of a secondary stat at an item level. */
+export function affixMax(stat: AffixStat, level: number): number {
+  const L = AFFIX_LEVEL_RULES;
+  return (
+    AFFIX_RULES[stat].max *
+    (L.levelBase + (L.levelGrowth * (level - ITEM_LEVEL_RANGE.min)) / (ITEM_LEVEL_RANGE.max - 1))
+  );
+}
+/** Value of a secondary stat at an item level and roll (0–1), rounded to the stat's decimals. */
+export function affixValue(stat: AffixStat, level: number, roll: number): number {
+  const p = 10 ** AFFIX_RULES[stat].decimals;
+  return Math.round(affixMax(stat, level) * roll * p) / p;
+}
+/** The secondary stat pool of a slot for a class (the weapon's class damage % resolved). */
+export function affixPool(slot: GearSlot, characterClass: CharacterClass): readonly AffixStat[] {
+  return SLOT_AFFIX_POOLS[slot].map((s) =>
+    s === 'classDamagePercent'
+      ? classDamageType(characterClass) === 'magical'
+        ? 'magicalDamagePercent'
+        : 'physicalDamagePercent'
+      : s,
+  );
+}
+/**
+ * Generates an item instance from a seeded random source (Task 40 `items` stream / a seeded draw):
+ * distinct secondary stats from the slot pool (count by rarity), each rolled in the rarity's range.
+ * `stats` forces the secondary stats (the shop's Uncommon offers); otherwise they are drawn.
+ */
+export function generateItem(
+  random: RandomSource,
+  spec: Readonly<{
+    uid: string;
+    slot: GearSlot;
+    itemLevel: number;
+    rarity: Rarity;
+    characterClass: CharacterClass;
+    stats?: readonly AffixStat[];
+  }>,
+): ItemInstance {
+  validateLevel(spec.itemLevel);
+  if (!RARITIES.includes(spec.rarity)) throw new RangeError('Unknown rarity.');
+  if (!GEAR_SLOTS.includes(spec.slot)) throw new RangeError('Unknown slot.');
+  const rc = RARITY_CONFIG[spec.rarity];
+  const pool = [...affixPool(spec.slot, spec.characterClass)];
+  let stats: AffixStat[];
+  if (spec.stats) {
+    if (spec.stats.length !== rc.affixes || new Set(spec.stats).size !== spec.stats.length)
+      throw new RangeError('Wrong number of secondary stats.');
+    for (const s of spec.stats)
+      if (!pool.includes(s)) throw new RangeError(`Stat ${s} is not in the ${spec.slot} pool.`);
+    stats = [...spec.stats];
+  } else {
+    stats = [];
+    for (let i = 0; i < rc.affixes; i++) {
+      const at = Math.min(pool.length - 1, Math.floor(random() * pool.length));
+      stats.push(pool.splice(at, 1)[0]);
+    }
+  }
+  const affixes = stats.map((stat) => {
+    const roll = rc.rollMin + (rc.rollMax - rc.rollMin) * (rc.rollMax > rc.rollMin ? random() : 0);
+    return Object.freeze({ stat, value: affixValue(stat, spec.itemLevel, roll) });
   });
   return Object.freeze({
-    id: `${template.id}-t${tier}`,
-    templateId: template.id,
-    // «Rare Heavy Sword», «Rare Robe», «Rare Plate Armor», «Rare Ring of Precision».
-    name: `${tc.adjective[template.gender]} ${template.name}`,
-    slot: template.slot,
-    ...(template.characterClass ? { characterClass: template.characterClass } : {}),
-    tier,
-    stats: Object.freeze(stats),
-    price: Math.round(tc.price * (weapon ? WEAPON_PRICE_FACTOR : 1)),
-    unlockAfterMap: tc.unlockAfterMap,
-    starter: false,
+    uid: spec.uid,
+    slot: spec.slot,
+    ...(spec.slot === 'weapon' ? { characterClass: spec.characterClass } : {}),
+    itemLevel: spec.itemLevel,
+    rarity: spec.rarity,
+    affixes: Object.freeze(affixes),
   });
 }
 
-/** All 130 shop items (26 templates × 5 tiers), template order then tier. */
-export const SHOP_ITEMS: readonly GearItem[] = Object.freeze(
-  GEAR_TEMPLATES.flatMap((template) => TIERS.map((tier) => makeItem(template, tier))),
-);
-export const STARTER_ITEMS: readonly GearItem[] = Object.freeze(
-  (Object.entries(STARTER_WEAPONS) as [CharacterClass, { id: string; name: string }][]).map(
-    ([characterClass, w]) =>
-      Object.freeze({
-        id: w.id,
-        templateId: w.id,
-        name: w.name,
-        slot: 'weapon' as const,
-        characterClass,
-        tier: 0 as const,
-        stats: Object.freeze({}),
-        price: 0,
-        unlockAfterMap: 0,
-        starter: true,
-      }),
-  ),
-);
-const BY_ID: ReadonlyMap<string, GearItem> = new Map(
-  [...SHOP_ITEMS, ...STARTER_ITEMS].map((i) => [i.id, i]),
-);
-export function findItem(id: string): GearItem | null {
-  return BY_ID.get(id) ?? null;
+// ── Names and icons (§1a) ──
+
+const TEMPLATES: ReadonlyMap<string, GearTemplate> = new Map(GEAR_TEMPLATES.map((g) => [g.id, g]));
+/** The band base template (name + icon) of an item. */
+export function bandTemplate(item: Pick<ItemInstance, 'slot' | 'itemLevel' | 'characterClass'>) {
+  const bands =
+    item.slot === 'weapon' ? WEAPON_BANDS[item.characterClass!] : SHARED_BANDS[item.slot];
+  let id = bands[0][1] as string;
+  for (const [from, template] of bands) if (item.itemLevel >= from) id = template;
+  return TEMPLATES.get(id)!;
 }
-export function getItem(id: string): GearItem {
-  const item = BY_ID.get(id);
-  if (!item) throw new RangeError(`Unknown item: ${id}.`);
-  return item;
+/** The secondary stat whose roll is highest relative to its maximum (ties: first in pool order). */
+export function dominantAffix(item: ItemInstance): AffixStat | null {
+  if (!item.affixes.length) return null;
+  const pool = affixPool(item.slot, item.characterClass ?? 'warrior');
+  const ranked = [...item.affixes].sort((a, b) => {
+    const ra = a.value / affixMax(a.stat, item.itemLevel);
+    const rb = b.value / affixMax(b.stat, item.itemLevel);
+    return rb - ra || pool.indexOf(a.stat) - pool.indexOf(b.stat);
+  });
+  return ranked[0].stat;
 }
-export function starterWeapon(characterClass: CharacterClass): GearItem {
-  return getItem(STARTER_WEAPONS[characterClass].id);
+/** «Plate Gauntlets of Fury» (Common: no suffix; starter weapons keep their own names). */
+export function itemName(item: ItemInstance): string {
+  if (isStarterUid(item.uid)) return STARTER_WEAPONS[item.characterClass!].name;
+  const base = bandTemplate(item).name;
+  const top = dominantAffix(item);
+  return top ? `${base} ${AFFIX_RULES[top].suffix}` : base;
 }
-/** Can a class equip this item in this slot? Weapons are class-specific; the rest are shared. */
-export function isEligible(
-  item: GearItem,
-  characterClass: CharacterClass,
-  slot: GearSlot,
-): boolean {
-  return item.slot === slot && (item.slot !== 'weapon' || item.characterClass === characterClass);
+/** Template id whose art is the item's icon (starter weapons: their own id). */
+export function itemIconId(item: ItemInstance): string {
+  return isStarterUid(item.uid) ? item.uid : bandTemplate(item).id;
+}
+/** «+3.4% Crit damage» style text of a secondary stat. */
+export function affixText(affix: ItemAffix): string {
+  const r = AFFIX_RULES[affix.stat];
+  return `+${affix.value.toFixed(r.decimals)}${r.unit} ${r.label}`;
 }
 
-/** Startup validation: rejects an inconsistent item configuration before any use. */
-export function validateEquipmentConfig(items: readonly GearItem[] = SHOP_ITEMS): void {
-  const ids = new Set<string>();
-  for (const item of [...items, ...STARTER_ITEMS]) {
-    if (ids.has(item.id)) throw new Error(`Duplicate item id ${item.id}.`);
-    ids.add(item.id);
-    if (!item.name.trim()) throw new Error(`Item ${item.id} needs a name.`);
-    if ((item.slot === 'weapon') !== (item.characterClass !== undefined))
-      throw new Error(`Item ${item.id}: only weapons are class-specific.`);
-    for (const v of Object.values(item.stats))
-      if (!Number.isFinite(v) || (v as number) <= 0)
-        throw new Error(`Item ${item.id} stat invalid.`);
-    if (!item.starter && (!Number.isInteger(item.price) || item.price <= 0))
-      throw new Error(`Item ${item.id} price invalid.`);
-    if (!item.starter && Object.keys(item.stats).length === 0)
-      throw new Error(`Item ${item.id} has no stats.`);
+// ── Validation ──
+
+function validateLevel(level: number): void {
+  if (!Number.isInteger(level) || level < ITEM_LEVEL_RANGE.min || level > ITEM_LEVEL_RANGE.max)
+    throw new RangeError(`Invalid item level: ${String(level)}.`);
+}
+/**
+ * Rejects a malformed item instance (shape, slot / class, level, rarity, secondary stats: count by
+ * rarity, from the slot pool, no duplicates, within the level's 0–100% roll range). Returns a frozen
+ * copy with only the known fields.
+ */
+export function validateItem(raw: unknown): ItemInstance {
+  const v = raw as Partial<ItemInstance> | null;
+  if (!v || typeof v !== 'object') throw new RangeError('Item must be an object.');
+  if (typeof v.uid !== 'string' || !/^[a-z0-9_-]{1,40}$/.test(v.uid))
+    throw new RangeError('Invalid item uid.');
+  if (isStarterUid(v.uid)) throw new RangeError('Starter weapons are not stored items.');
+  if (!GEAR_SLOTS.includes(v.slot as GearSlot)) throw new RangeError('Invalid item slot.');
+  const weapon = v.slot === 'weapon';
+  if (weapon !== (v.characterClass !== undefined))
+    throw new RangeError('Only weapons are class-specific.');
+  if (weapon && !CHARACTER_CLASSES.includes(v.characterClass as CharacterClass))
+    throw new RangeError('Invalid weapon class.');
+  validateLevel(v.itemLevel as number);
+  if (!RARITIES.includes(v.rarity as Rarity)) throw new RangeError('Invalid rarity.');
+  if (!Array.isArray(v.affixes)) throw new RangeError('Invalid secondary stats.');
+  const rc = RARITY_CONFIG[v.rarity as Rarity];
+  if (v.affixes.length !== rc.affixes) throw new RangeError('Wrong number of secondary stats.');
+  const pool = affixPool(v.slot as GearSlot, (v.characterClass as CharacterClass) ?? 'warrior');
+  const seen = new Set<string>();
+  const affixes = v.affixes.map((a) => {
+    const stat = a?.stat as AffixStat;
+    if (!pool.includes(stat) || seen.has(stat)) throw new RangeError('Invalid secondary stat.');
+    seen.add(stat);
+    const max = affixMax(stat, v.itemLevel as number);
+    if (typeof a.value !== 'number' || !(a.value > 0) || a.value > max + 1e-9 + 0.05)
+      throw new RangeError('Secondary stat value out of range.');
+    return Object.freeze({ stat, value: a.value });
+  });
+  if (v.legendaryId !== undefined && (typeof v.legendaryId !== 'string' || !v.legendaryId))
+    throw new RangeError('Invalid legendary id.');
+  return Object.freeze({
+    uid: v.uid,
+    slot: v.slot as GearSlot,
+    ...(weapon ? { characterClass: v.characterClass } : {}),
+    itemLevel: v.itemLevel as number,
+    rarity: v.rarity as Rarity,
+    affixes: Object.freeze(affixes),
+    ...(v.legendaryId !== undefined ? { legendaryId: v.legendaryId } : {}),
+  });
+}
+
+/** Startup validation of the item configuration. */
+export function validateEquipmentConfig(): void {
+  for (const slot of GEAR_SLOTS) {
+    const pool = SLOT_AFFIX_POOLS[slot];
+    if (pool.length !== 6 || new Set(pool).size !== pool.length)
+      throw new Error(`Slot ${slot} needs 6 distinct secondary stats.`);
   }
-  let prev = -1;
-  for (const tier of TIERS) {
-    const tc = TIER_CONFIG[tier];
-    if (!(tc.multiplier > 0) || !(tc.price > 0) || tc.unlockAfterMap < prev)
-      throw new Error(`Tier ${tier} config invalid.`);
-    prev = tc.unlockAfterMap;
+  for (const r of RARITIES) {
+    const c = RARITY_CONFIG[r];
+    if (c.affixes > 6 || !(c.mainScale >= 1) || c.rollMin > c.rollMax || c.rollMax > 1)
+      throw new Error(`Rarity ${r} invalid.`);
+  }
+  for (const bands of [...Object.values(SHARED_BANDS), ...Object.values(WEAPON_BANDS)]) {
+    if (bands[0][0] !== ITEM_LEVEL_RANGE.min) throw new Error('Bands must start at level 1.');
+    for (const [, id] of bands) if (!TEMPLATES.has(id)) throw new Error(`Unknown template ${id}.`);
   }
 }
 validateEquipmentConfig();

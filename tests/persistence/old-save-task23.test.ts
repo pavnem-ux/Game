@@ -1,6 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { defaultLoadout } from '../../src/equipment';
+import { shopSaltOf } from '../../src/profile';
+import type { CharacterClass } from '../../src/character-stats';
 import {
   SAVE_KEY,
   createSaveStore,
@@ -15,7 +18,8 @@ import type { StorageLike } from '../../src/persistence';
  * how an existing save loads. Both fixtures were written by the pre-Task-23 (Russian) code at
  * commit f3116ee: a schema-v7 save (gear levels, ore, a pet, quest counters) and its export file.
  * Task 24 bumped the schema to v8: the only change on load is the v7 → v8 migration (activity
- * counters at 0); Task 39's v8 → v9 adds an empty `mapTiers`.
+ * counters at 0); Task 39's v8 → v9 adds an empty `mapTiers`; Task 40's v9 → v10 resets the
+ * equipment (items-rework branch rule).
  */
 const FIXTURES = join(__dirname, '..', 'fixtures');
 const SAVE = readFileSync(join(FIXTURES, 'pre-task23-save-v7.json'), 'utf8');
@@ -25,13 +29,21 @@ const MIGRATED = () => {
   const p = JSON.parse(SAVE);
   const out = {
     ...p,
-    schemaVersion: 9,
+    schemaVersion: 10,
+    // Task 40 (v9 → v10): equipment resets — every class back to its starter weapon.
+    classes: Object.fromEntries(
+      Object.entries(p.classes as Record<string, Record<string, unknown>>).map(([c, v]) => [
+        c,
+        { ...v, loadout: defaultLoadout(c as CharacterClass) },
+      ]),
+    ),
     questCounters: {
       ...p.questCounters,
       activities: { shrine: 0, lantern: 0, thief: 0, nest: 0 },
     },
   };
-  // Task 39: `mapTiers` sits right after `completedMaps` (the export keeps the profile's key order).
+  // The export keeps the profile's key order: Task 39 `mapTiers` right after `completedMaps`;
+  // Task 40's item fields replace `ownedItems` / `itemLevels`.
   return Object.fromEntries(
     Object.entries(out).flatMap(([k, v]) =>
       k === 'completedMaps'
@@ -39,7 +51,16 @@ const MIGRATED = () => {
             [k, v],
             ['mapTiers', {}],
           ]
-        : [[k, v]],
+        : k === 'ownedItems'
+          ? [
+              ['items', []],
+              ['nextItemNumber', 1],
+              ['shopSalt', shopSaltOf(p.profileId)],
+              ['shopBought', {}],
+            ]
+          : k === 'itemLevels'
+            ? []
+            : [[k, v]],
     ),
   );
 };

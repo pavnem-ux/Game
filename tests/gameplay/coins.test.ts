@@ -79,20 +79,21 @@ describe('Task 11 Phase 4 — drops in the world', () => {
   it('values scale with the map: normal piles like the Task 10 Gold table; boss 20% and all elites together 20% of the 60% coin target', () => {
     expect([coinScale(1), coinScale(10), coinScale(40)]).toEqual([1, 4, 10]);
     expect([1, 10, 40].map((m) => coinValue('normal', m))).toEqual([1, 4, 10]);
-    expect([1, 10, 20, 40].map(coinTarget)).toEqual([45, 180, 270, 450]);
-    // Boss: 20% of the coin target (map 1: 9, map 40: 90).
-    expect([1, 10, 40].map((m) => coinValue('boss', m))).toEqual([9, 36, 90]);
-    // Elites: 20% of the target shared by the map's elites (map 1: 4 elites → 2 each; map 10: 7 → 5; map 40: 22 → 4).
-    expect([1, 10, 20, 25, 40].map((m) => coinValue('elite', m))).toEqual([2, 5, 7, 4, 4]);
+    // Task 40: victory Gold ×0.8, so the coin targets follow (60% of 60 / 240 / 360 / 600).
+    expect([1, 10, 20, 40].map(coinTarget)).toEqual([36, 144, 216, 360]);
+    // Boss: 20% of the coin target (map 1: 7.2 → 7, map 40: 72).
+    expect([1, 10, 40].map((m) => coinValue('boss', m))).toEqual([7, 29, 72]);
+    // Elites: 20% of the target shared by the map's elites (map 1: 4 elites → 1.8 → 2 each; map 10: 7 → 4; map 40: 22 → 3).
+    expect([1, 10, 20, 25, 40].map((m) => coinValue('elite', m))).toEqual([2, 4, 5, 3, 3]);
     for (const m of [1, 10, 20, 25, 40]) {
       const elites = campaignSchedule(getCampaignMap(m)).filter((e) => e.kind === 'elite').length;
       const target = coinTarget(m) * COIN_RULES.eliteShare;
       expect(Math.abs(coinValue('elite', m) * elites - target)).toBeLessThanOrEqual(elites * 0.5);
     }
-    expect([1, 40].map(victoryBonus)).toEqual([30, 300]);
-    // Normal chance: 27 piles (60% of the target at scale 1) over 4.7 × spawnRate × duration kills.
-    expect(normalChance(1)).toBeCloseTo(27 / (4.7 * 1 * 600), 10);
-    expect(normalChance(10)).toBeCloseTo(27 / (4.7 * 1.72 * 900), 10);
+    expect([1, 40].map(victoryBonus)).toEqual([24, 240]);
+    // Normal chance: 21.6 piles (60% of the target at scale 1) over 4.7 × spawnRate × duration kills.
+    expect(normalChance(1)).toBeCloseTo(21.6 / (4.7 * 1 * 600), 10);
+    expect(normalChance(10)).toBeCloseTo(21.6 / (4.7 * 1.72 * 900), 10);
     expect(normalChance(40)).toBeCloseTo(normalChance(10), 10);
   });
   it('deterministic per seed: same seed + same kills → identical drops; one roll per normal death', () => {

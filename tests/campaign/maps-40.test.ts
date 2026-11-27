@@ -49,8 +49,9 @@ describe('Task 10 Phase 1 — 40 maps in 4 acts', () => {
     for (const before of act1.maps) {
       const id = before.map.id;
       const now = getCampaignMap(id);
-      // Every Task 08 field is unchanged (Gold now comes from its own table, with equal values).
-      expect(now).toMatchObject(before.map);
+      // Every Task 08 field is unchanged (Gold now comes from its own table; Task 40 scales it
+      // ×0.8, checked below).
+      expect(now).toMatchObject({ ...before.map, victoryGold: now.victoryGold });
       expect(now.victoryGold).toBe(victoryGold(id));
       expect(now).toMatchObject({
         act: 1,
@@ -85,13 +86,14 @@ describe('Task 10 Phase 1 — 40 maps in 4 acts', () => {
       expect(s.rangedShare).toBe(0.12);
     }
   });
-  it('difficulty: spawn rate frozen at map 10; HP/damage +0.15/+0.10 per map after it (11, 20, 40)', () => {
+  // Task 40: damage +0.08 per map after map 10 (was +0.10).
+  it('difficulty: spawn rate frozen at map 10; HP/damage +0.15/+0.08 per map after it (11, 20, 40)', () => {
     const m10 = getCampaignMap(10).difficulty;
     expect(m10).toEqual({ hp: 2.08, damage: 1.72, spawnRate: 1.72 });
     for (const [id, hp, damage] of [
-      [11, 2.23, 1.82],
-      [20, 3.58, 2.72],
-      [40, 6.58, 4.72],
+      [11, 2.23, 1.8],
+      [20, 3.58, 2.52],
+      [40, 6.58, 4.12],
     ] as const) {
       const d = getCampaignMap(id).difficulty;
       expect(d.hp).toBeCloseTo(hp, 10);
@@ -107,10 +109,13 @@ describe('Task 10 Phase 1 — 40 maps in 4 acts', () => {
     expect([eliteProfile('melee').extraXp, eliteProfile('ranged').extraXp]).toEqual([32, 32]);
     expect([XP_RULES.baseCost, XP_RULES.costPerLevel]).toEqual([20, 10]);
   });
-  it('§1.3: victory XP 100 + 50·id (map 40: 2100); Gold table 75…300, then 300 + 15·(id − 10) (map 40: 750)', () => {
+  // Task 40: the whole table ×0.8 (rounded).
+  it('§1.3: victory XP 100 + 50·id (map 40: 2100); Gold table 75…300, then 300 + 15·(id − 10), ×0.8 (map 40: 600)', () => {
     for (const m of CAMPAIGN_MAPS) {
       expect(m.victoryXp).toBe(100 + 50 * m.id);
-      expect(m.victoryGold).toBe(m.id <= 10 ? (100 + 50 * m.id) / 2 : 300 + 15 * (m.id - 10));
+      expect(m.victoryGold).toBe(
+        Math.round((m.id <= 10 ? (100 + 50 * m.id) / 2 : 300 + 15 * (m.id - 10)) * 0.8),
+      );
       // Task 11: Gold of a victory = coins + 40% bonus; the Task 10 table is the 100% reference.
       const coins = m.victoryGold - Math.round(m.victoryGold * 0.4);
       expect(runRewards({ mapId: m.id, outcome: 'victory', elapsed: 900, coins })).toMatchObject({
@@ -118,8 +123,8 @@ describe('Task 10 Phase 1 — 40 maps in 4 acts', () => {
         gold: m.victoryGold,
       });
     }
-    expect([getCampaignMap(40).victoryXp, getCampaignMap(40).victoryGold]).toEqual([2100, 750]);
-    expect(getCampaignMap(11).victoryGold).toBe(315);
+    expect([getCampaignMap(40).victoryXp, getCampaignMap(40).victoryGold]).toEqual([2100, 600]);
+    expect(getCampaignMap(11).victoryGold).toBe(252);
   });
   it('unlock chain 10 → 11 → … → 40 through victories; 40 is last', () => {
     let p: PlayerProfile = createProfile('t10', '2026-11-10T00:00:00.000Z');

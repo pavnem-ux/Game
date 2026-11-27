@@ -58,8 +58,6 @@ export type QuestGoal =
 export interface QuestReward {
   readonly gold?: number;
   readonly ore?: number;
-  /** Shop item id to unlock (owned already → its shop price in Gold). */
-  readonly item?: string;
   /** Pet to unlock (owned already → its shop price, quest-only pets 2000 Gold). */
   readonly pet?: PetId;
 }
@@ -69,7 +67,14 @@ export interface QuestDefinition {
   readonly title: string;
   readonly goal: QuestGoal;
   readonly reward: QuestReward;
+  /**
+   * Task 40: kept (ids, claims) but hidden and not claimable — the Forge quests can't be completed
+   * in the new item model until Tasks 41–42 retarget them.
+   */
+  readonly hidden?: true;
 }
+/** Task 40: quest Gold rewards ×0.8 (rounded), with the map Gold (provisional). */
+export const QUEST_GOLD_SCALE = 0.8;
 /** Gold given instead of an already-owned quest-only pet. */
 export const QUEST_PET_FALLBACK_GOLD = 2000;
 
@@ -79,8 +84,19 @@ const q = (
   title: string,
   goal: QuestGoal,
   reward: QuestReward,
+  hidden = false,
 ): QuestDefinition =>
-  Object.freeze({ id, group, title, goal: Object.freeze(goal), reward: Object.freeze(reward) });
+  Object.freeze({
+    id,
+    group,
+    title,
+    goal: Object.freeze(goal),
+    reward: Object.freeze({
+      ...reward,
+      ...(reward.gold !== undefined ? { gold: Math.round(reward.gold * QUEST_GOLD_SCALE) } : {}),
+    }),
+    ...(hidden ? { hidden: true as const } : {}),
+  });
 const CLASS_NAMES: Readonly<Record<CharacterClass, string>> = {
   warrior: 'Warrior',
   mage: 'Mage',
@@ -93,13 +109,7 @@ const CAMPAIGN = [5, 10, 15, 20, 25, 30, 35, 40].map((mapId, i) => {
   const gold = [300, 600, 900, 1200, 1500, 1800, 2100, 2500][i];
   const ore = [10, 20, 30, 40, 50, 60, 70, 100][i];
   const extra: Partial<QuestReward> =
-    mapId === 10
-      ? { pet: 'firefly' }
-      : mapId === 20
-        ? { item: 'ring_precision-t3' }
-        : mapId === 40
-          ? { pet: 'wolf' }
-          : {};
+    mapId === 10 ? { pet: 'firefly' } : mapId === 40 ? { pet: 'wolf' } : {};
   return q(
     `campaign.map${mapId}`,
     'campaign',
@@ -208,6 +218,7 @@ const FORGE = [
     'Upgrade any item to +5',
     { kind: 'item-level', level: 5 },
     { ore: 20 },
+    true,
   ),
   q(
     'forge.plus10',
@@ -215,6 +226,7 @@ const FORGE = [
     'Upgrade any item to +10',
     { kind: 'item-level', level: 10 },
     { ore: 60 },
+    true,
   ),
   q(
     'forge.tier4',
@@ -222,6 +234,7 @@ const FORGE = [
     'Equip one hero with 7 items of tier 4 or higher',
     { kind: 'tier-loadout', tier: 4, items: 7 },
     { gold: 3000 },
+    true,
   ),
 ];
 

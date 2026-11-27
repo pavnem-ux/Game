@@ -3,6 +3,7 @@ import type { CharacterClass } from '../character-stats';
 import type { ClassProgress } from './class-xp';
 import { NEW_CLASS_PROGRESS } from './class-xp';
 import { defaultLoadout } from '../equipment';
+import type { ItemInstance, ShopBought } from '../equipment';
 import type { RunOutcome, RunStatsSummary } from './rewards';
 import { NO_QUEST_COUNTERS } from '../quests/counters';
 import type { QuestCounters } from '../quests/counters';
@@ -19,7 +20,12 @@ import type { CampaignDifficulty } from '../campaign/config';
 /** v6 (Task 20): `ownedPets`, `petLevels`, `activePet` (see migrateV5toV6). */
 /** v7 (Task 21): `questCounters`, `questsClaimed` (see migrateV6toV7). */
 /** v8 (Task 24): `questCounters.activities` — map activities completed by type (migrateV7toV8). */
-export const PROFILE_SCHEMA_VERSION = 9;
+/** v9 (Task 39): `mapTiers` (difficulty tiers won per map; migrateV8toV9). */
+/**
+ * v10 (Task 40, items-rework branch): item instances `items` + `nextItemNumber`, loadouts by uid,
+ * `shopSalt`, `shopBought`; `ownedItems` / `itemLevels` (old tiers, Forge) removed (migrateV9toV10).
+ */
+export const PROFILE_SCHEMA_VERSION = 10;
 export const MAX_RECENT_RUNS = 20;
 export const MAX_PROCESSED_RUN_IDS = 50;
 
@@ -87,10 +93,14 @@ export interface PlayerProfile {
   readonly recentRuns: readonly RecentRun[];
   /** Oldest first, at most MAX_PROCESSED_RUN_IDS (reward de-duplication). */
   readonly processedRunIds: readonly string[];
-  /** Task 11: bought shop items (permanent, no copies), in purchase order. */
-  readonly ownedItems: readonly string[];
-  /** Task 19: forge upgrade level (1–10) per owned item id; absent id = +0. Account-wide. */
-  readonly itemLevels: Readonly<Record<string, number>>;
+  /** Task 40: owned item instances (account-wide; never the starter weapons), in order. */
+  readonly items: readonly ItemInstance[];
+  /** Task 40: the number of the next item uid (`i<n>`); only grows. */
+  readonly nextItemNumber: number;
+  /** Task 40: per-profile salt of the derived shop stock (created once, saved). */
+  readonly shopSalt: number;
+  /** Task 40: shop offers bought per class at its current level (reset on level-up). */
+  readonly shopBought: Readonly<Partial<Record<CharacterClass, ShopBought>>>;
   /** Task 20: unlocked pets (account-wide), in unlock order. */
   readonly ownedPets: readonly string[];
   /** Task 20: pet level 2–5 per owned pet id; absent = level 1. */
@@ -132,12 +142,23 @@ export function createProfile(profileId: string, createdAt: string): PlayerProfi
     stats: Object.freeze({ runs: 0, wins: 0, defeats: 0, enemiesKilled: 0, bestSurvivalTime: 0 }),
     recentRuns: Object.freeze([]),
     processedRunIds: Object.freeze([]),
-    ownedItems: Object.freeze([]),
-    itemLevels: Object.freeze({}),
+    items: Object.freeze([]),
+    nextItemNumber: 1,
+    shopSalt: shopSaltOf(profileId),
+    shopBought: Object.freeze({}),
     ownedPets: Object.freeze([]),
     petLevels: Object.freeze({}),
     activePet: null,
     questCounters: NO_QUEST_COUNTERS,
     questsClaimed: Object.freeze([]),
   });
+}
+/** Task 40: the shop salt of a profile, derived once from its id (32-bit FNV-1a). */
+export function shopSaltOf(profileId: string): number {
+  let h = 0x811c9dc5;
+  for (const ch of profileId) {
+    h ^= ch.charCodeAt(0);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h >>> 0;
 }

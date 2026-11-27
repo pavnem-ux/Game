@@ -39,7 +39,13 @@ describe('Task 39 — tier variants of a map', () => {
         expect(m.durationSeconds).toBe(normal.durationSeconds);
         expect(campaignSchedule(m)).toEqual(campaignSchedule(normal));
         expect(m.elite).toEqual(normal.elite);
-        expect([m.waves, m.bossScale, m.rewardScale]).toEqual([true, 1, k]);
+        expect([m.waves, m.bossScale, m.goldScale, m.oreScale, m.xpScale]).toEqual([
+          true,
+          1,
+          k,
+          k,
+          1,
+        ]);
         expect(getCampaignMap(id, tier)).toBe(m); // cached
       }
     }
@@ -47,7 +53,15 @@ describe('Task 39 — tier variants of a map', () => {
   it('Elite Trial: 3 minutes, 5 elites every 30 s (×3), the boss at 3:00 (×3), no waves', () => {
     const normal = getCampaignMap(4);
     const m = getCampaignMap(4, 'trial');
-    expect([m.durationSeconds, m.waves, m.bossScale, m.rewardScale]).toEqual([180, false, 3, 2]);
+    // Task 40: the Trial pays Gold ×1, Ore ×2, class XP ×0.2.
+    expect([m.durationSeconds, m.waves, m.bossScale, m.goldScale, m.oreScale, m.xpScale]).toEqual([
+      180,
+      false,
+      3,
+      1,
+      2,
+      0.2,
+    ]);
     expect(m.difficulty).toEqual(normal.difficulty);
     expect(m.elite.hpMultiplier).toBeCloseTo(normal.elite.hpMultiplier * 3, 12);
     expect(m.elite.damageMultiplier).toBeCloseTo(normal.elite.damageMultiplier * 3, 12);

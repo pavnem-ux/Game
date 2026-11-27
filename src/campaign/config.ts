@@ -19,7 +19,8 @@ export const CAMPAIGN_BALANCE = Object.freeze({
    * Task 10 §1.2, maps 11–40: spawn rate stays at map 10's value; HP and damage grow linearly
    * from map 10's multipliers: HP ×(m10 + hpPerMap·(id − 10)), damage ×(m10 + damagePerMap·(id − 10)).
    */
-  laterDifficulty: Object.freeze({ hpPerMap: 0.15, damagePerMap: 0.1 }),
+  // Task 40: damagePerMap 0.10 → 0.08 (items rework; PROVISIONAL).
+  laterDifficulty: Object.freeze({ hpPerMap: 0.15, damagePerMap: 0.08 }),
   /** Task 10 §1.3: baseline share of ranged enemies in normal campaign spawns (was 0.18). */
   rangedShare: 0.12,
   /** Task 10 §1.2: per-map ranged-share overrides may not exceed this. */
@@ -187,7 +188,9 @@ export interface MapModifier {
  * scale every monster's health and damage; the Elite Trial is a 3-minute map with no waves — five
  * elites every 30 s from 0:00 to 2:30 (×3 the Normal elites; owner change: was every minute) and the
  * boss at 3:00 (×3 the Normal boss).
- * `rewardScale` multiplies the victory Gold and Ore. Tiers unlock in this order on each map.
+ * `goldScale` / `oreScale` multiply the victory Gold / Ore and `xpScale` the class XP of a victory
+ * (Task 40 split the single reward scale: the Elite Trial pays Gold ×1, Ore ×2, XP ×0.2). Tiers
+ * unlock in this order on each map.
  */
 export type CampaignDifficulty = 'normal' | 'hard' | 'nightmare' | 'trial';
 export const CAMPAIGN_DIFFICULTIES: readonly CampaignDifficulty[] = Object.freeze([
@@ -197,13 +200,27 @@ export const CAMPAIGN_DIFFICULTIES: readonly CampaignDifficulty[] = Object.freez
   'trial',
 ]);
 export const DIFFICULTY_TIERS = Object.freeze({
-  normal: Object.freeze({ name: 'Normal', monsterScale: 1, rewardScale: 1 }),
-  hard: Object.freeze({ name: 'Hard', monsterScale: 1.5, rewardScale: 1.5 }),
-  nightmare: Object.freeze({ name: 'Nightmare', monsterScale: 2, rewardScale: 2 }),
+  normal: Object.freeze({ name: 'Normal', monsterScale: 1, goldScale: 1, oreScale: 1, xpScale: 1 }),
+  hard: Object.freeze({
+    name: 'Hard',
+    monsterScale: 1.5,
+    goldScale: 1.5,
+    oreScale: 1.5,
+    xpScale: 1,
+  }),
+  nightmare: Object.freeze({
+    name: 'Nightmare',
+    monsterScale: 2,
+    goldScale: 2,
+    oreScale: 2,
+    xpScale: 1,
+  }),
   trial: Object.freeze({
     name: 'Elite Trial',
     monsterScale: 1,
-    rewardScale: 2,
+    goldScale: 1,
+    oreScale: 2,
+    xpScale: 0.2,
     durationSeconds: 180,
     eliteTimes: Object.freeze([0, 30, 60, 90, 120, 150]),
     elitesPerEvent: 5,
@@ -254,8 +271,13 @@ export interface CampaignMap {
   readonly waves: boolean;
   /** Task 39: boss health and damage × this on top of its definition (Trial: 3). */
   readonly bossScale: number;
-  /** Task 39: victory Gold and Ore × this (Hard 1.5, Nightmare 2, Trial 2). */
-  readonly rewardScale: number;
+  /**
+   * Task 39 / 40: victory Gold, Ore and class XP × these (Hard 1.5 / 1.5 / 1, Nightmare 2 / 2 / 1,
+   * Elite Trial 1 / 2 / 0.2).
+   */
+  readonly goldScale: number;
+  readonly oreScale: number;
+  readonly xpScale: number;
 }
 
 const MAP_TEXT: readonly {
@@ -431,11 +453,16 @@ export function victoryXp(mapId: number): number {
   return CAMPAIGN_BALANCE.rewards.victoryXpBase + CAMPAIGN_BALANCE.rewards.victoryXpPerMap * mapId;
 }
 /** Task 10 §1.3: victory Gold from its own table (maps 1–10) or formula (maps 11–40). */
+/**
+ * Task 40: the whole economy's Gold scale (items rework, PROVISIONAL): victory Gold ×0.8, so coins,
+ * the victory bonus, skip coins and activity coin rewards all follow.
+ */
+export const GOLD_SCALE = 0.8;
 export function victoryGold(mapId: number): number {
   const r = CAMPAIGN_BALANCE.rewards;
-  return mapId <= 10
-    ? r.victoryGold[mapId - 1]
-    : r.laterGoldBase + r.laterGoldPerMap * (mapId - 10);
+  const table =
+    mapId <= 10 ? r.victoryGold[mapId - 1] : r.laterGoldBase + r.laterGoldPerMap * (mapId - 10);
+  return Math.round(table * GOLD_SCALE);
 }
 export function mapDurationSeconds(mapId: number): number {
   return (
@@ -501,7 +528,9 @@ export const CAMPAIGN_MAPS: readonly CampaignMap[] = Object.freeze(
       eliteTimes: eliteEventTimes(id),
       waves: true,
       bossScale: 1,
-      rewardScale: 1,
+      goldScale: 1,
+      oreScale: 1,
+      xpScale: 1,
     } satisfies CampaignMap);
   }),
 );
@@ -541,7 +570,9 @@ function tierVariant(map: CampaignMap, tier: Exclude<CampaignDifficulty, 'normal
       }),
       waves: false,
       bossScale: t.bossScale,
-      rewardScale: t.rewardScale,
+      goldScale: t.goldScale,
+      oreScale: t.oreScale,
+      xpScale: t.xpScale,
       reservedSlots: Math.max(
         CAMPAIGN_BALANCE.reservedSlots,
         t.eliteTimes.length * t.elitesPerEvent + 1,
@@ -557,7 +588,9 @@ function tierVariant(map: CampaignMap, tier: Exclude<CampaignDifficulty, 'normal
       hp: map.difficulty.hp * t.monsterScale,
       damage: map.difficulty.damage * t.monsterScale,
     }),
-    rewardScale: t.rewardScale,
+    goldScale: t.goldScale,
+    oreScale: t.oreScale,
+    xpScale: t.xpScale,
   } satisfies CampaignMap);
 }
 

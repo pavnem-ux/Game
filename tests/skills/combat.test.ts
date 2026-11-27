@@ -250,7 +250,8 @@ describe('bonus rewards', () => {
   it('Recovery heals 30% of Max HP without exceeding it', () => {
     const w = exhausted();
     const max = w.core.getEntity('player').maxHp;
-    w.setPlayerHp(max * 0.9);
+    // Task 40: Max HP can be fractional now (weaker class growth): lose a whole 10% of HP.
+    w.setPlayerHp(max - Math.round(max * 0.1));
     w.chooseSkill('bonus:recovery');
     expect(w.core.getEntity('player').currentHp).toBe(max);
     expect(skillEvents(w, 'bonus-claimed').at(-1)!.event).toMatchObject({ bonusId: 'recovery' });

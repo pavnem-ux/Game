@@ -41,8 +41,10 @@ describe('direct damage and reusable attack snapshots', () => {
     core.addEntity({ id: 'mage', affiliation: 'player', stats: mage.combatAttributes });
     core.addEntity({ id: 'warrior', affiliation: 'enemy', stats: warrior.combatAttributes });
     const attack = core.createAttack({ attackerId: 'mage', damageType: 'magical', coefficient: 1 });
-    expect(attack.baseDamage).toBe(1260);
-    expect(core.resolveAttack(attack, 'warrior').damage).toBe(315);
+    // Task 40 class growth ×2/15: Mage L50 magic damage 15 + 5 × 36.6667 = 198.33; Warrior L50
+    // resistance 45.2 → 198.33 × 100 / 145.2 = 136.6 → 137.
+    expect(attack.baseDamage).toBeCloseTo(198.333333, 5);
+    expect(core.resolveAttack(attack, 'warrior').damage).toBe(137);
   });
   it('rolls crit once and uses the existing Critical Damage multiplier', () => {
     const random = vi.fn().mockReturnValueOnce(0.1).mockReturnValue(0.99);

@@ -6,16 +6,15 @@ import { CLASS_LABELS } from '../../gameplay';
 import {
   GEAR_SLOTS,
   SLOT_LABELS,
-  findItem,
-  isEligible,
-  isUpgradeable,
-  itemDisplayName,
-  itemLevel,
+  equipBlock,
+  findOwned,
+  isStarterUid,
+  itemIconId,
+  itemName,
   permanentStats,
   starterWeapon,
-  TIER_CONFIG,
 } from '../../equipment';
-import type { GearItem, GearSlot, Loadout, Tier } from '../../equipment';
+import type { GearSlot, ItemInstance, Loadout } from '../../equipment';
 import { campaignStore } from '../campaign-state';
 import {
   Button,
@@ -31,8 +30,8 @@ import {
   formatStat,
 } from '../kit';
 import { EN } from '../strings-en';
-import { ItemStats, REFUSALS, tierLabel } from '../ShopPages';
-import { TierRows } from './TierRows';
+import { REFUSALS } from '../ShopPages';
+import { ItemStats, rarityColor, rarityLabel, rarityTier } from '../item-view';
 import { PET_CONFIG, isPetId, petLevel } from '../../pets';
 import { PetPortrait } from '../pets/PetPortrait';
 import { petLevelLabel } from '../pets/pet-text';
@@ -60,27 +59,27 @@ export function EquipmentPage() {
   const cls = shown ?? ui.viewClass ?? profile.selectedClass;
   const progress = profile.classes[cls];
   const loadout = progress.loadout;
+  // Task 40: item instances (uids); stats include the flat main stats of the equipped items.
   const stats = (l: Loadout | null) =>
-    permanentStats(cls, progress.level, progress.talents, l, profile.itemLevels);
+    permanentStats(cls, progress.level, progress.talents, l, profile.items);
   const withGear = stats(loadout);
   const without = stats(null);
-  const owned: GearItem[] = [
-    starterWeapon(cls),
-    ...profile.ownedItems.map((id) => findItem(id)).filter((i): i is GearItem => !!i),
-  ].filter((i) => isEligible(i, cls, i.slot) && (filter === 'all' || i.slot === filter));
-  const isEquipped = (item: GearItem) => loadout[item.slot] === item.id;
-  // Task 19: names and stats at the item's forge level («Ring of Precision +3»).
-  const levelOf = (item: GearItem) => itemLevel(profile.itemLevels, item.id);
-  const nameOf = (item: GearItem) => itemDisplayName(item, levelOf(item));
-  const preview = (id: string | null) => {
-    const item = id ? findItem(id) : null;
+  const find = (uid: string | null) => (uid ? findOwned(profile.items, uid, cls) : null);
+  const owned: ItemInstance[] = [starterWeapon(cls), ...profile.items].filter(
+    (i) =>
+      (i.slot !== 'weapon' || i.characterClass === cls) && (filter === 'all' || i.slot === filter),
+  );
+  const isEquipped = (item: ItemInstance) => loadout[item.slot] === item.uid;
+  const nameOf = (item: ItemInstance) => itemName(item);
+  const lockedBy = (item: ItemInstance) =>
+    equipBlock(item, cls, progress.level) === 'level' ? E.needsLevel(item.itemLevel) : null;
+  const preview = (uid: string | null) => {
+    const item = find(uid);
     if (!item || isEquipped(item)) return null;
-    return { item, deltas: compareStats(withGear, stats({ ...loadout, [item.slot]: item.id })) };
+    return { item, deltas: compareStats(withGear, stats({ ...loadout, [item.slot]: item.uid })) };
   };
   const chosen = preview(selected);
-  const equippedDetail = slotDetail && loadout[slotDetail] ? findItem(loadout[slotDetail]!) : null;
-  const tierColor = (item: GearItem) =>
-    item.tier === 0 ? undefined : TIER_CONFIG[item.tier as Tier].color;
+  const equippedDetail = slotDetail ? find(loadout[slotDetail]) : null;
   const hover = hovered !== selected ? preview(hovered) : null;
   const equip = (id: string) => {
     const refused = campaignStore.equipItem(cls, id);
@@ -117,11 +116,11 @@ export function EquipmentPage() {
             <ClassEmblem characterClass={cls} size={56} glow />
           </div>
           {GEAR_SLOTS.map((slot) => {
-            const item = loadout[slot] ? findItem(loadout[slot]!) : null;
+            const item = find(loadout[slot]);
             return (
               <TierFrame
                 key={slot}
-                tier={item?.tier ?? 0}
+                tier={item && !isStarterUid(item.uid) ? rarityTier(item.rarity) : 0}
                 className={`doll-slot doll-slot-${slot} ${filter === slot ? 'active' : ''}`}
               >
                 <button
@@ -136,14 +135,16 @@ export function EquipmentPage() {
                     } else setFilter(filter === slot ? 'all' : slot);
                   }}
                 >
-                  {item && (
-                    <ItemIcon templateId={item.templateId} size="itemSlot" level={levelOf(item)} />
-                  )}
+                  {item && <ItemIcon templateId={itemIconId(item)} size="itemSlot" />}
                   <small>{SLOT_LABELS[slot]}</small>
                   <strong>{item ? nameOf(item) : E.empty}</strong>
-                  {item && <span className="doll-tier">{tierLabel(item)}</span>}
+                  {item && (
+                    <span className="doll-tier">
+                      {rarityLabel(item.rarity)} · L{item.itemLevel}
+                    </span>
+                  )}
                 </button>
-                {item && !item.starter && (
+                {item && !isStarterUid(item.uid) && (
                   <Button
                     variant="ghost"
                     size="s"
@@ -170,21 +171,16 @@ export function EquipmentPage() {
                   aria-label="Equipped item"
                   title={nameOf(equippedDetail)}
                 >
-                  <ItemIcon
-                    templateId={equippedDetail.templateId}
-                    size="itemDetail"
-                    level={levelOf(equippedDetail)}
-                  />
+                  <ItemIcon templateId={itemIconId(equippedDetail)} size="itemDetail" />
                   <p className="equipped-detail-meta">
                     {SLOT_LABELS[slotDetail]} ·{' '}
-                    <span style={{ color: tierColor(equippedDetail) }}>
-                      {tierLabel(equippedDetail)}
+                    <span style={{ color: rarityColor(equippedDetail.rarity) }}>
+                      {rarityLabel(equippedDetail.rarity)}
                     </span>
-                    {levelOf(equippedDetail) > 0 && ` · +${levelOf(equippedDetail)}`}
                   </p>
-                  <ItemStats item={equippedDetail} level={levelOf(equippedDetail)} />
+                  <ItemStats item={equippedDetail} characterClass={cls} />
                   <div className="preview-actions">
-                    {!equippedDetail.starter && (
+                    {!isStarterUid(equippedDetail.uid) && (
                       <Button
                         onClick={() => {
                           unequip(slotDetail);
@@ -192,19 +188,6 @@ export function EquipmentPage() {
                         }}
                       >
                         {E.unequip}
-                      </Button>
-                    )}
-                    {isUpgradeable(equippedDetail) && (
-                      <Button
-                        variant="primary"
-                        onClick={() =>
-                          campaignStore.openForge(equippedDetail.id, {
-                            page: 'equipment',
-                            characterClass: cls,
-                          })
-                        }
-                      >
-                        ⚒ {E.upgradeInForge}
                       </Button>
                     )}
                     <Button variant="ghost" onClick={() => setSlotDetail(null)}>
@@ -220,28 +203,17 @@ export function EquipmentPage() {
                   aria-label="Equipment preview"
                   title={E.compare(nameOf(chosen.item))}
                 >
-                  <ItemIcon
-                    templateId={chosen.item.templateId}
-                    size="itemDetail"
-                    level={levelOf(chosen.item)}
-                  />
+                  <ItemIcon templateId={itemIconId(chosen.item)} size="itemDetail" />
+                  <ItemStats item={chosen.item} characterClass={cls} />
                   <CompareList deltas={chosen.deltas} empty={E.noChange} />
                   <div className="preview-actions">
-                    <Button variant="primary" onClick={() => equip(chosen.item.id)}>
+                    <Button
+                      variant="primary"
+                      disabledReason={lockedBy(chosen.item)}
+                      onClick={() => equip(chosen.item.uid)}
+                    >
                       {E.equip}
                     </Button>
-                    {isUpgradeable(chosen.item) && (
-                      <Button
-                        onClick={() =>
-                          campaignStore.openForge(chosen.item.id, {
-                            page: 'equipment',
-                            characterClass: cls,
-                          })
-                        }
-                      >
-                        ⚒ {EN.meta.forge.toForge}
-                      </Button>
-                    )}
                     <Button onClick={() => setSelected(null)}>{EN.meta.modal.cancel}</Button>
                   </div>
                 </Panel>
@@ -271,53 +243,47 @@ export function EquipmentPage() {
             {owned.length === 0 ? (
               <p className="meta-empty">{E.noItems}</p>
             ) : (
-              <TierRows
-                items={owned}
-                label={E.owned}
-                className="owned-rows"
-                render={(item) => (
-                  <li key={item.id} className="owned-cell">
-                    <TierFrame tier={item.tier}>
+              <ul className="owned-rows" aria-label={E.owned}>
+                {owned.map((item) => (
+                  <li key={item.uid} className="owned-cell">
+                    <TierFrame tier={isStarterUid(item.uid) ? 0 : rarityTier(item.rarity)}>
                       <button
-                        className={`item-card ${selected === item.id ? 'selected' : ''}`}
-                        aria-pressed={selected === item.id}
+                        className={`item-card ${selected === item.uid ? 'selected' : ''}`}
+                        aria-pressed={selected === item.uid}
                         aria-label={`${nameOf(item)}${isEquipped(item) ? `, ${E.equipped.toLowerCase()}` : ''}`}
                         onClick={() => {
-                          setSelected(selected === item.id ? null : item.id);
+                          setSelected(selected === item.uid ? null : item.uid);
                           setSlotDetail(null);
                         }}
                         // Task 16: pointer events (mouse only: a touch tap must not leave a stuck
                         // hover preview; a tap selects the item instead).
-                        onPointerEnter={(e) => e.pointerType === 'mouse' && setHovered(item.id)}
+                        onPointerEnter={(e) => e.pointerType === 'mouse' && setHovered(item.uid)}
                         onPointerLeave={(e) => e.pointerType === 'mouse' && setHovered(null)}
-                        onFocus={() => setHovered(item.id)}
+                        onFocus={() => setHovered(item.uid)}
                         onBlur={() => setHovered(null)}
                       >
-                        <ItemIcon
-                          templateId={item.templateId}
-                          size="itemCard"
-                          level={levelOf(item)}
-                        />
+                        <ItemIcon templateId={itemIconId(item)} size="itemCard" />
                         <strong>{nameOf(item)}</strong>
-                        <small className="item-tier">
-                          {SLOT_LABELS[item.slot]} · {tierLabel(item)}
+                        <small className="item-tier" style={{ color: rarityColor(item.rarity) }}>
+                          {SLOT_LABELS[item.slot]} · {rarityLabel(item.rarity)}
                         </small>
-                        <ItemStats item={item} level={levelOf(item)} />
+                        <ItemStats item={item} characterClass={cls} />
+                        {lockedBy(item) && <small className="item-locked">{lockedBy(item)}</small>}
                         {isEquipped(item) && <span className="item-stamp">{E.equipped}</span>}
                       </button>
                     </TierFrame>
-                    {hover?.item.id === item.id && (
+                    {hover?.item.uid === item.uid && (
                       <Tooltip placement="top">
                         <strong className="compare-title">
-                          <ItemIcon templateId={item.templateId} size="itemSmall" />
+                          <ItemIcon templateId={itemIconId(item)} size="itemSmall" />
                           {E.compare(nameOf(item))}
                         </strong>
                         <CompareList deltas={hover.deltas} empty={E.noChange} />
                       </Tooltip>
                     )}
                   </li>
-                )}
-              />
+                ))}
+              </ul>
             )}
           </Panel>
         </div>

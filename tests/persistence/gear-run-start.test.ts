@@ -12,6 +12,8 @@ class MemoryStorage {
     this.data.delete(k);
   }
 }
+import { equipItem, grantItem } from '../../src/profile';
+
 let campaign: typeof import('../../src/gameplay-ui/campaign-state');
 let store: typeof import('../../src/gameplay-ui/store');
 beforeAll(async () => {
@@ -24,43 +26,28 @@ describe('Task 11 §1.3 — a run starts with that class’s own loadout', () =>
   it('switching class uses that class’s loadout', () => {
     const service = campaign.campaignStore.service();
     const p = campaign.campaignStore.getSnapshot().progression.profile!;
-    const geared = {
-      ...p,
-      gold: 0,
-      ownedItems: ['plate-t1', 'heavy_sword-t1', 'ring_fury-t1'],
-      classes: {
-        ...p.classes,
-        warrior: {
-          ...p.classes.warrior,
-          loadout: {
-            weapon: 'heavy_sword-t1',
-            helmet: null,
-            gloves: null,
-            pants: null,
-            armor: 'plate-t1',
-            amulet: null,
-            ring: null,
-          },
-        },
-        mage: {
-          ...p.classes.mage,
-          loadout: {
-            weapon: 'starter_staff',
-            helmet: null,
-            gloves: null,
-            pants: null,
-            armor: null,
-            amulet: null,
-            ring: 'ring_fury-t1',
-          },
-        },
-      },
-    };
+    // Task 40: item instances by uid (granted through the seeded DEV hook, then equipped).
+    let g = grantItem(p, {
+      slot: 'armor',
+      rarity: 'common',
+      itemLevel: 1,
+      characterClass: 'warrior',
+    });
+    g = grantItem(g, {
+      slot: 'weapon',
+      rarity: 'uncommon',
+      itemLevel: 1,
+      characterClass: 'warrior',
+    });
+    g = grantItem(g, { slot: 'ring', rarity: 'rare', itemLevel: 1, characterClass: 'mage' });
+    g = equipItem(equipItem(g, 'warrior', 'i1'), 'warrior', 'i2');
+    const geared = { ...equipItem(g, 'mage', 'i3'), gold: 0 };
+    expect(geared.classes.warrior.loadout).toMatchObject({ weapon: 'i2', armor: 'i1' });
     expect(service.replaceProfile(geared).ok).toBe(true);
     const sent = vi.spyOn(store.alphaBridge, 'send');
     const starts = () =>
       sent.mock.calls.map((c) => c[0]).filter((c) => c.type === 'start') as {
-        options: { characterClass: string; equipment: { loadout: unknown } };
+        options: { characterClass: string; equipment: { loadout: unknown; items: unknown } };
       }[];
     expect(campaign.campaignStore.startRun(1, 'warrior')).toBe(true);
     expect(campaign.campaignStore.startRun(1, 'mage')).toBe(true);
@@ -81,5 +68,7 @@ describe('Task 11 §1.3 — a run starts with that class’s own loadout', () =>
         },
       ],
     ]);
+    // The run receives the owned instances with the loadout (stats come from the instances).
+    expect(starts()[0].options.equipment.items).toEqual(geared.items);
   });
 });

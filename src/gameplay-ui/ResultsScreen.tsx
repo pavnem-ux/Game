@@ -31,8 +31,7 @@ export function ResultsScreen({ world }: { world: GameplaySnapshot }) {
   const firstWin =
     !!summary &&
     victory &&
-    summary.oreGained - activityOre >
-      Math.round(runOre('victory', c.mapId, false) * map.rewardScale);
+    summary.oreGained - activityOre > Math.round(runOre('victory', c.mapId, false) * map.oreScale);
   return (
     <section
       className="overlay modal-overlay results-overlay"
@@ -70,9 +69,7 @@ export function ResultsScreen({ world }: { world: GameplaySnapshot }) {
           <dd>
             {victory
               ? `+${summary ? summary.goldGained - world.coins.collected : gold.bonus}${
-                  map.rewardScale !== 1
-                    ? ` (${EN.meta.maps.tierNames[tier]} ×${map.rewardScale})`
-                    : ''
+                  map.goldScale !== 1 ? ` (${EN.meta.maps.tierNames[tier]} ×${map.goldScale})` : ''
                 }`
               : 'none'}
           </dd>

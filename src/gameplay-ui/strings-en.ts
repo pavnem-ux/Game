@@ -241,7 +241,7 @@ export const EN = Object.freeze({
       starter: 'Starter',
       unequipFailed: 'Could not unequip the item.',
       equipFailed: 'Could not equip.',
-      upgradeInForge: 'Upgrade in the forge',
+      needsLevel: (level: number) => `Needs class level ${level}`,
       close: 'Close',
     }),
     talents: Object.freeze({
@@ -379,11 +379,12 @@ export const EN = Object.freeze({
         hard: 'All monsters: +50% health and damage. Victory Gold and Ore ×1.5.',
         nightmare: 'All monsters: +100% health and damage. Victory Gold and Ore ×2.',
         trial:
-          'No ordinary enemies. 5 elites every 30 seconds (×3), the boss at 3:00 (×3). Victory Gold and Ore ×2.',
+          'No ordinary enemies. 5 elites every 30 seconds (×3), the boss at 3:00 (×3). Victory Ore ×2, class XP ×0.2.',
       }),
       tierLocked: (previous: string) => `Win on ${previous} first`,
       tierUnlocked: (name: string) => `${name} unlocked on this map`,
-      rewardScaled: (scale: number) => ` · Gold and Ore ×${scale}`,
+      rewardScaled: (gold: number, ore: number, xp: number) =>
+        ` · Gold ×${gold} · Ore ×${ore}${xp !== 1 ? ` · class XP ×${xp}` : ''}`,
       select: 'Select',
       close: 'Close',
     }),
