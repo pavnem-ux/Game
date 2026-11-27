@@ -1,3 +1,4 @@
+import { LEGENDARY_TEXT, legendaryChance, legendaryPool } from '../../equipment';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import {
   CAMPAIGN_ACTS,
@@ -249,6 +250,20 @@ function MapPanel({ map: base }: { map: CampaignMap }) {
         <dd className="map-boss">
           <BossPortrait bossId={map.bossId} locked={!unlocked} size="bossPanel" />
           <span>♚ {unlocked ? map.bossName : M.bossHidden}</span>
+        </dd>
+        {/* Task 43: the boss's Legendary pool (other classes' weapons dimmed). */}
+        <dt>Legendaries</dt>
+        <dd className="map-legendaries" aria-label="Legendary pool">
+          {legendaryPool(map.id).map((l) => (
+            <span
+              key={l.id}
+              className={`map-legendary ${l.slot === 'weapon' && l.characterClass !== cls ? 'is-other' : ''}`}
+              title={LEGENDARY_TEXT[l.id]}
+            >
+              {l.name}
+            </span>
+          ))}
+          <small> · boss item {legendaryChance(tier)}% chance</small>
         </dd>
         <dt>{M.best}</dt>
         <dd>

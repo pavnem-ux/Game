@@ -66,6 +66,9 @@ export function createTestingController(
       case 'boss-drop-rarity':
         w.debugForceBossDropRarity(a.rarity as Rarity | null);
         break;
+      case 'legendary-drop':
+        w.debugForceLegendaryDrop(a.enabled !== false);
+        break;
       case 'elite-drop':
         if (!w.debugSpawnEliteDrop(a.rarity as Rarity))
           throw new Error('Item drops: active campaign run only.');

@@ -4,7 +4,7 @@ import { NO_MODIFIERS, composeRunStats } from '../skills/stats';
 import type { RunStatModifiers } from '../skills/stats';
 import { talentLoadout } from '../talents';
 import type { TalentRanks } from '../talents';
-import { GOLD_FIND_CAP } from './config';
+import { GOLD_FIND_CAP, LEGENDARY_RULES } from './config';
 import { slottedStats } from './slots';
 import type { SlotLevels } from './slots';
 import type { ItemInstance } from './items';
@@ -34,6 +34,9 @@ export function gearModifiers(
       m.flatMaxHp += main.maxHp;
       m.resistance += main.resistance;
       for (const a of affixes) m[a.stat] += a.value;
+      // Task 43: Stride of the Ash Wolf's movement speed (a gear modifier; caps once).
+      if (item.legendaryId === 'ash_wolf_stride')
+        m.movementSpeedPercent += LEGENDARY_RULES.stride.movementSpeedPercent;
     }
   m.goldFindPercent = Math.min(GOLD_FIND_CAP, m.goldFindPercent);
   return Object.freeze(m);

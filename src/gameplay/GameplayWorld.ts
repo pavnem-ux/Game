@@ -77,13 +77,17 @@ import {
   validateItem,
   validateLoadout,
   validateSlotLevels,
+  equippedItems,
+  isLegendaryId,
   RARITIES,
   bossDropRarity,
+  classLegendaryPool,
+  legendaryRoll,
   dropItemLevel,
   eliteDropRarity,
   rollDropItem,
 } from '../equipment';
-import type { ItemInstance, Loadout, Rarity } from '../equipment';
+import type { ItemInstance, LegendaryId, Loadout, Rarity } from '../equipment';
 import { RunCoins } from './coins';
 import { RunLoot } from './loot';
 import { BUFFS, CHEST_RULES, RunChests, buffModifiers, chestGold } from './chests';
@@ -134,8 +138,11 @@ export class GameplayWorld {
   private readonly coins = new RunCoins();
   /** Task 42: item drops of this run (campaign only) and their seeded `items` stream. */
   private readonly loot = new RunLoot();
+  /** Task 43: Legendary effects active this run. */
+  readonly legendaryIds: readonly LegendaryId[];
   private readonly itemRandom: () => number;
   private forcedBossRarity: Rarity | null = null;
+  private forcedLegendary = false;
   private lastLoot: Readonly<{ item: ItemInstance; time: number }> | null = null;
   /** Task 12: chests and their buffs (campaign runs only; own seeded stream). */
   private readonly chests: RunChests | null;
@@ -267,6 +274,12 @@ export class GameplayWorld {
     // Task 20: the active pet (validated before anything is created).
     if (options.pet) validatePetSpec(options.pet);
     this.loadout = options.equipment?.loadout ?? null;
+    // Task 43: the unique effects of the equipped Legendaries (the run's class wears them).
+    this.legendaryIds = this.loadout
+      ? equippedItems(this.loadout, items, options.characterClass)
+          .map((i) => i.legendaryId)
+          .filter((id): id is LegendaryId => isLegendaryId(id))
+      : [];
     // Task 41: slot upgrade levels scale the slotted items' stats (validated, read at start only).
     const slotLevels = options.equipment?.slotLevels
       ? validateSlotLevels(options.equipment.slotLevels)
@@ -359,6 +372,10 @@ export class GameplayWorld {
           random: rng.talents,
         },
         basicWeaponId: weapon.id,
+        // Task 43: Legendary effects of the class's equipped items (fixed for the run).
+        legendaries: this.legendaryIds,
+        basicWeaponCoefficient: weapon.damageCoefficient,
+        isEliteOrBoss: (id: string) => id === world.bossEnemyId || world.eliteProfiles.has(id),
         playerMoving: () =>
           Math.hypot(world.input.x, world.input.y) > 0 && world.survival.getState().canPlayerAct,
         activationStep: ALPHA.controlStep,
@@ -865,7 +882,9 @@ export class GameplayWorld {
     if (this.regenCarry < 1) return;
     const amount = Math.floor(this.regenCarry);
     this.regenCarry -= amount;
-    this.forwardCombat(this.core.heal(this.playerId, amount).events);
+    const healed = this.core.heal(this.playerId, amount);
+    this.forwardCombat(healed.events);
+    this.skills.notePlayerHealed(amount, healed.healed);
   }
   /**
    * Task 20 debug (DEV/QA controller only): spawn or replace the run's pet at the current clock;
@@ -1122,6 +1141,11 @@ export class GameplayWorld {
   }
   private progression(events: readonly ExperienceEvent[]) {
     this.record('progression', events);
+    // Task 43 (Ring of the Water Tsar): each crystal picked up heals a little.
+    let crystals = 0;
+    for (const event of events) if (event.type === 'xp-collected') crystals++;
+    if (crystals > 0 && this.skills.legendary.any)
+      this.skills.legendary.onCrystalsCollected(crystals);
     for (const event of events)
       if (event.type === 'run-level-up') {
         for (let level = event.previousLevel + 1; level <= event.level; level++) {
@@ -1133,6 +1157,9 @@ export class GameplayWorld {
               ? this.core.heal(this.playerId, requestedHealing)
               : null;
           if (result) this.forwardCombat(result.events);
+          // Task 43 (Heart of the Mourner): healing above max HP may become a barrier.
+          if (this.core.getEntity(this.playerId).alive)
+            this.skills.notePlayerHealed(requestedHealing, result?.healed ?? 0);
           // Record every gained level, including a capped zero heal. Core owns actual HP/events.
           this.record('progression', [
             Object.freeze({
@@ -1452,13 +1479,24 @@ export class GameplayWorld {
   private grantBossItem() {
     const map = this.campaignMap!;
     const rarity = this.forcedBossRarity ?? bossDropRarity(this.itemRandom, map.tier);
-    const item = rollDropItem(this.itemRandom, this.dropSpec(rarity));
+    // Task 43: the boss item may become a Legendary of the map's pool (boss items only).
+    const legendaryId = this.forcedLegendary
+      ? (classLegendaryPool(map.id, this.options.characterClass)[0]?.id ?? null)
+      : legendaryRoll(this.itemRandom, map.tier, map.id, this.options.characterClass);
+    const item = rollDropItem(this.itemRandom, {
+      ...this.dropSpec(legendaryId ? 'legendary' : rarity),
+      ...(legendaryId ? { legendaryId } : {}),
+    });
     this.record('progression', [this.loot.grant(item)]);
   }
   /** Task 42 DEV / QA: force the boss item's rarity (null = the difficulty table). */
   debugForceBossDropRarity(rarity: Rarity | null): void {
     if (rarity !== null && !RARITIES.includes(rarity)) throw new RangeError('Unknown rarity.');
     this.forcedBossRarity = rarity;
+  }
+  /** Task 43 DEV / QA: the boss item is a Legendary of the map's pool (its first fitting entry). */
+  debugForceLegendaryDrop(enabled: boolean): void {
+    this.forcedLegendary = enabled;
   }
   /** Task 42 DEV / QA: an elite item drop of a rarity at the player (seeded like a real drop). */
   debugSpawnEliteDrop(rarity: Rarity): boolean {
@@ -1779,6 +1817,11 @@ export class GameplayWorld {
       });
     }
     this.controlIndex++;
+    // Task 43 (Stride of the Ash Wolf): movement is sampled at the control step.
+    if (this.skills.legendary.any)
+      this.skills.legendary.onMovementSample(
+        Math.hypot(this.input.x, this.input.y) > 0 && this.survival.getState().canPlayerAct,
+      );
     // Task 40: gear HP regen heals at the control step (simulation time; Core owns HP).
     this.regenerate();
     this.progression(this.experience.collect(this.body, this.body.radius, this.pickupScale));
@@ -2178,9 +2221,11 @@ export class GameplayWorld {
     const extra: Parameters<typeof this.record>[1][number][] = [];
     if (content === 'heal') {
       if (player.alive) {
-        const result = this.core.heal(this.playerId, player.maxHp * CHEST_HEAL_FRACTION);
+        const requested = player.maxHp * CHEST_HEAL_FRACTION;
+        const result = this.core.heal(this.playerId, requested);
         amount = result.healed;
         this.forwardCombat(result.events);
+        this.skills.notePlayerHealed(requested, result.healed);
       }
     } else if (content === 'gold') {
       amount = chestGold(this.campaignMap!.victoryGold);
@@ -2415,6 +2460,8 @@ export class GameplayWorld {
   }
   private consumeStatuses(events: readonly StatusEvent[]) {
     this.record('status', events);
+    // Task 43: Bleed groups removed because their target died (periodic deaths).
+    this.skills?.onStatusesRemoved(events);
     for (const event of events)
       if (event.type === 'status-tick' && event.result) {
         this.forwardCombat(event.result.events);
@@ -2539,7 +2586,10 @@ export class GameplayWorld {
         this.enemies.unregisterEnemy(event.entityId);
         this.weapons.removeBody(event.entityId);
       }
-    this.record('status', this.statuses.consumeCombatEvents(events));
+    const removed = this.statuses.consumeCombatEvents(events);
+    this.record('status', removed);
+    // Task 43 (Fangs of the Mire Serpent): a dying enemy's Bleed may spread.
+    this.skills?.onStatusesRemoved(removed);
     this.record('enemy', this.enemies.consumeCombatEvents(events));
     this.record('weapon', this.weapons.update(0, { paused: true }));
     if (

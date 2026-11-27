@@ -386,6 +386,7 @@ export class RunStats {
     return originId.startsWith('skill:') ||
       originId.startsWith('synergy:') ||
       originId.startsWith('talent:') ||
+      originId.startsWith('legendary:') ||
       originId.startsWith('pet.')
       ? originId
       : `weapon:${originId}`;

@@ -2125,3 +2125,24 @@
   gap: var(--sp-2);
   align-items: center;
 }
+
+/* Task 43: Legendary effect text and the map's Legendary pool */
+.bag-legendary-effect {
+  margin: 0;
+  padding: 6px 8px;
+  border-left: 2px solid var(--tier-5);
+  color: var(--tier-5);
+  font-size: var(--fs-s);
+}
+.map-legendaries {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: baseline;
+}
+.map-legendary {
+  color: var(--tier-5);
+}
+.map-legendary.is-other {
+  opacity: 0.4;
+}

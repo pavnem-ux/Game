@@ -41,6 +41,11 @@ export interface AttackRequest {
    * drawn for it; every other attack keeps exactly one draw.
    */
   readonly noCritical?: boolean;
+  /**
+   * Task 43 (additive): an attack that is always critical (Legendary «Stride of the Ash Wolf»). It
+   * still draws its one crit roll, so the seeded sequence is unchanged; never with `noCritical`.
+   */
+  readonly forceCritical?: boolean;
 }
 /** Task 07: per-target resolution options. One attack snapshot keeps exactly one crit roll. */
 export interface ResolveAttackOptions {

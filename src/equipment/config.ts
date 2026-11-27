@@ -534,3 +534,69 @@ export const REFORGE_RULES = Object.freeze({
  * price at the class level, doubled for each further refresh at that level (resets on level-up).
  */
 export const SHOP_REFRESH_RULES = Object.freeze({ firstFactor: 2, growth: 2 });
+
+// ── Task 43: Legendary items (PROVISIONAL; docs/LEGENDARIES.md) ──
+
+export type LegendaryId =
+  | 'barrow_crown'
+  | 'leshy_bark'
+  | 'ash_wolf_stride'
+  | 'millwheel_gauntlets'
+  | 'mourner_heart'
+  | 'water_tsar_ring'
+  | 'warden_edge'
+  | 'frost_warlord_staff'
+  | 'thunder_kite_bow'
+  | 'mire_serpent_fangs';
+/**
+ * The 10 Legendaries in pool order (the index matters for the map pools) and every number of their
+ * unique effects. A weapon belongs to one class.
+ */
+export const LEGENDARY_RULES = Object.freeze({
+  items: Object.freeze([
+    { id: 'barrow_crown', name: 'Crown of the Barrow King', slot: 'helmet' },
+    { id: 'leshy_bark', name: 'Bark of the Old Leshy', slot: 'armor' },
+    { id: 'ash_wolf_stride', name: 'Stride of the Ash Wolf', slot: 'pants' },
+    { id: 'millwheel_gauntlets', name: 'Millwheel Gauntlets', slot: 'gloves' },
+    { id: 'mourner_heart', name: 'Heart of the Mourner', slot: 'amulet' },
+    { id: 'water_tsar_ring', name: 'Ring of the Water Tsar', slot: 'ring' },
+    { id: 'warden_edge', name: 'Edge of the Warden', slot: 'weapon', characterClass: 'warrior' },
+    {
+      id: 'frost_warlord_staff',
+      name: 'Staff of the Frost Warlord',
+      slot: 'weapon',
+      characterClass: 'mage',
+    },
+    {
+      id: 'thunder_kite_bow',
+      name: 'Bow of the Thunder Kite',
+      slot: 'weapon',
+      characterClass: 'archer',
+    },
+    {
+      id: 'mire_serpent_fangs',
+      name: 'Fangs of the Mire Serpent',
+      slot: 'weapon',
+      characterClass: 'rogue',
+    },
+  ] as const) as readonly Readonly<{
+    id: LegendaryId;
+    name: string;
+    slot: GearSlot;
+    characterClass?: CharacterClass;
+  }>[],
+  /** Boss items only: the chance (percent) the boss item becomes a Legendary, by difficulty. */
+  bossChance: Object.freeze({ normal: 0.5, hard: 1, nightmare: 3, trial: 3 }) as Readonly<
+    Record<DropDifficulty, number>
+  >,
+  crown: Object.freeze({ hpBelow: 30, barrier: 30, barrierSeconds: 10, cooldown: 60 }),
+  bark: Object.freeze({ resistanceShare: 150, radius: 120, cooldown: 1 }),
+  stride: Object.freeze({ movementSpeedPercent: 15, moveSeconds: 3, stopSeconds: 0.2 }),
+  millwheel: Object.freeze({ everyAttacks: 30, radius: 200, weaponShare: 100 }),
+  heart: Object.freeze({ maxBarrier: 20, barrierSeconds: 10 }),
+  ring: Object.freeze({ healPerCrystal: 0.3, maxPerSecond: 3 }),
+  warden: Object.freeze({ everyHits: 5, multiplier: 2 }),
+  frost: Object.freeze({ slow: 0.2, seconds: 2, bonusPercent: 20 }),
+  kite: Object.freeze({ distance: 300, bonusPercent: 30 }),
+  mire: Object.freeze({ targets: 2, radius: 250 }),
+});

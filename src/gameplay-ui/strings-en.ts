@@ -1,3 +1,4 @@
+import { legendaryDef } from '../equipment/legendaries';
 import { CHARACTER_CLASSES } from '../character-stats';
 import { ALPHA_WEAPONS, WEAPON_LABELS } from '../gameplay';
 import type { EnemyType } from '../gameplay';
@@ -510,6 +511,9 @@ export function damageSourceLabel(source: string): string {
       return EFFECT_LABELS[id] ?? 'Effect';
     case 'talent':
       return `Talent “${TALENT_CONFIG.nodes.get(source.slice('talent:'.length))?.name ?? 'talent'}”`;
+    // Task 43: Legendary effects (thorns, shockwave, spread Bleed) have their own row.
+    case 'legendary':
+      return legendaryDef(id)?.name ?? 'Legendary';
     case 'debug':
       return 'Debug';
     default:

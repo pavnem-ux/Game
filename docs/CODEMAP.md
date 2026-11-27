@@ -55,7 +55,8 @@ workflow: [TASK_WORKFLOW.md](TASK_WORKFLOW.md).
   `validateItem`), `logic.ts` (loadouts by uid, level gate, seeded `shopStock`), `stats.ts`
   (`gearModifiers`, `permanentStats`), `economy.ts` (`COIN_RULES`, Ore), Task 41 `slots.ts` (slot
   upgrade levels / multipliers / costs) and `bag.ts` (capacity, salvage, «better», `bagView`), Task 42 `drops.ts` (boss / elite rolls,
-  item level caps) and `reforge.ts`.
+  item level caps) and `reforge.ts`, Task 43 `legendaries.ts` (catalogue, pools); effects in
+  `src/talents/legendary.ts` ([LEGENDARIES.md](LEGENDARIES.md)).
 - `src/quests/` — `config.ts`, `counters.ts`, `logic.ts`.
 
 ## UI

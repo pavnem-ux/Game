@@ -128,7 +128,7 @@ export interface WeaponAttacksOptions {
    */
   readonly attackModifier?: (
     context: Readonly<{ entityId: string; weaponId: string; targetId: string }>,
-  ) => Readonly<{ criticalChanceBonus?: number }>;
+  ) => Readonly<{ criticalChanceBonus?: number; forceCritical?: boolean }>;
 }
 /** Task 07: an externally created projectile flown by the shared swept-collision engine. */
 export interface ProjectileLaunchInput {
