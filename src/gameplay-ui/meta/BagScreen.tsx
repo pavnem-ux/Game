@@ -4,7 +4,11 @@ import { CHARACTER_CLASSES } from '../../character-stats';
 import type { CharacterClass } from '../../character-stats';
 import { CLASS_LABELS } from '../../gameplay';
 import {
-  BAG_CAPACITY,
+  AFFIX_RULES,
+  bagCapacity,
+  canReforge,
+  nextExpansionPrice,
+  reforgeCost,
   GEAR_SLOTS,
   RARITIES,
   SLOT_LABELS,
@@ -26,7 +30,7 @@ import {
   slotUpgradeCost,
   starterWeapon,
 } from '../../equipment';
-import type { BagSort, GearSlot, ItemInstance, Rarity } from '../../equipment';
+import type { AffixStat, BagSort, GearSlot, ItemInstance, Rarity } from '../../equipment';
 import { equipmentStateOf } from '../../profile';
 import { campaignStore } from '../campaign-state';
 import { Button, ConfirmModal, CurrencyIcon, ItemIcon, Panel, Tabs, TierFrame } from '../kit';
@@ -60,6 +64,8 @@ export function BagPage() {
   const [marked, setMarked] = useState<readonly string[]>([]);
   const [salvage, setSalvage] = useState<Salvage | null>(null);
   const [message, setMessage] = useState('');
+  const [expanding, setExpanding] = useState(false);
+  const [reforging, setReforging] = useState<{ uid: string; stat: AffixStat } | null>(null);
   // Viewing an item's card clears its «new» marker (saved).
   useEffect(() => {
     if (selected) campaignStore.markItemsSeen([selected]);
@@ -117,6 +123,8 @@ export function BagPage() {
       ].filter((s): s is string => !!s)
     : [];
   const milestone = nextSlotMilestone(lv);
+  const expansionPrice = nextExpansionPrice(profile.bagExpansions);
+  const reforgeTarget = reforging ? profile.items.find((i) => i.uid === reforging.uid) : null;
   return (
     <div className="bag-screen">
       <header className="meta-page-head">
@@ -200,20 +208,45 @@ export function BagPage() {
           </div>
         </Panel>
         <Panel
-          title={B.count(profile.items.length, BAG_CAPACITY)}
+          title={
+            <span
+              className={
+                profile.items.length > bagCapacity(profile.bagExpansions) ? 'bag-over' : undefined
+              }
+            >
+              {B.count(profile.items.length, bagCapacity(profile.bagExpansions))}
+            </span>
+          }
           className="bag-items"
           actions={
-            <Button
-              size="s"
-              variant={marking ? 'primary' : 'ghost'}
-              aria-pressed={marking}
-              onClick={() => {
-                setMarking(!marking);
-                setMarked([]);
-              }}
-            >
-              {B.select}
-            </Button>
+            <>
+              {expansionPrice !== null && (
+                <Button
+                  size="s"
+                  variant="ghost"
+                  disabledReason={
+                    profile.gold < expansionPrice ? B.needGold(expansionPrice - profile.gold) : null
+                  }
+                  onClick={() => setExpanding(true)}
+                >
+                  {B.expand} ·{' '}
+                  <span className="price-badge">
+                    <CurrencyIcon kind="gold" label="Gold" /> {formatNumber(expansionPrice)}
+                  </span>
+                </Button>
+              )}
+              <Button
+                size="s"
+                variant={marking ? 'primary' : 'ghost'}
+                aria-pressed={marking}
+                onClick={() => {
+                  setMarking(!marking);
+                  setMarked([]);
+                }}
+              >
+                {B.select}
+              </Button>
+            </>
           }
         >
           <div className="bag-filters">
@@ -335,6 +368,7 @@ export function BagPage() {
         <Panel className="bag-card" role="group" aria-label="Item card">
           {card ? (
             <ItemCard
+              key={card.uid}
               item={card}
               cls={cls}
               slotLevel={level(card.slot)}
@@ -351,12 +385,44 @@ export function BagPage() {
                 flash(refused, B.unequippedMsg(itemName(card)));
               }}
               onSalvage={() => askSalvage([card.uid])}
+              onReforge={(stat) => setReforging({ uid: card.uid, stat })}
             />
           ) : (
             <p className="meta-empty">{B.pick}</p>
           )}
         </Panel>
       </section>
+      {expanding && expansionPrice !== null && (
+        <ConfirmModal
+          title={B.expandTitle(formatNumber(expansionPrice))}
+          onConfirm={() => {
+            setExpanding(false);
+            flash(
+              campaignStore.buyBagExpansion(),
+              B.expanded(bagCapacity(profile.bagExpansions + 1)),
+            );
+          }}
+          onCancel={() => setExpanding(false)}
+        >
+          <p>{B.expandText}</p>
+        </ConfirmModal>
+      )}
+      {reforging && reforgeTarget && (
+        <ConfirmModal
+          title={B.reforgeTitle(
+            AFFIX_RULES[reforging.stat].label,
+            formatNumber(reforgeCost(reforgeTarget)),
+          )}
+          onConfirm={() => {
+            const name = itemName(reforgeTarget);
+            setReforging(null);
+            flash(campaignStore.reforgeItem(reforging.uid, reforging.stat, cls), B.reforged(name));
+          }}
+          onCancel={() => setReforging(null)}
+        >
+          <p>{B.reforgeText}</p>
+        </ConfirmModal>
+      )}
       {salvage && (
         <SalvageConfirm
           items={itemsOf(salvage.uids)}
@@ -385,6 +451,7 @@ function ItemCard({
   onEquip,
   onUnequip,
   onSalvage,
+  onReforge,
 }: {
   item: ItemInstance;
   cls: CharacterClass;
@@ -396,7 +463,10 @@ function ItemCard({
   onEquip: () => void;
   onUnequip: () => void;
   onSalvage: () => void;
+  onReforge: (stat: AffixStat) => void;
 }) {
+  const [stat, setStat] = useState<AffixStat | ''>('');
+  const reforgeable = canReforge(item) && !isStarterUid(item.uid);
   const starter = isStarterUid(item.uid);
   const block = equipBlock(item, cls, classLevel);
   const lines = slottedLines(item, cls, slotLevel, equippedHere ? null : worn);
@@ -426,6 +496,32 @@ function ItemCard({
           </li>
         ))}
       </ul>
+      {reforgeable && (
+        <div className="bag-reforge" role="group" aria-label="Reforge">
+          <select
+            aria-label="Stat to reforge"
+            value={stat}
+            onChange={(e) => setStat(e.target.value as AffixStat | '')}
+          >
+            <option value="">{B.pickStat}</option>
+            {item.affixes.map((a) => (
+              <option key={a.stat} value={a.stat}>
+                {AFFIX_RULES[a.stat].label}
+              </option>
+            ))}
+          </select>
+          <Button
+            size="s"
+            disabledReason={stat ? null : B.pickStat}
+            onClick={() => stat && onReforge(stat)}
+          >
+            {B.reforge} ·{' '}
+            <span className="price-badge">
+              <CurrencyIcon kind="gold" label="Gold" /> {formatNumber(reforgeCost(item))}
+            </span>
+          </Button>
+        </div>
+      )}
       {block === 'level' && <p className="bag-gate">{B.requires(item.itemLevel)}</p>}
       {wornBy.length > 0 && (
         <p className="bag-worn">{B.equippedBy(wornBy.map((c) => CLASS_LABELS[c]).join(', '))}</p>

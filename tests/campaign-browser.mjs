@@ -195,6 +195,11 @@ try {
   // Task 11: Gold = coins collected in the run + victory bonus (24 on map 1 after Task 40's ×0.8).
   assert.match(text, /Coins\s+\d+/);
   assert.match(text, /Victory bonus\s+\+24/);
+  // Task 42: a victory always brings the boss item (Normal: Uncommon / Rare / Epic) — the Loot block.
+  assert.match(
+    await results.getByRole('group', { name: 'Loot' }).innerText(),
+    /Loot[\s\S]*(Uncommon|Rare|Epic) [\s\S]*L1/,
+  );
   // Task 19: Map 1, first victory → 6 map Ore. Task 24: a victory also pays the Ore banked by
   // activities this run (e.g. the thief's seeded 20% chance), shown as «(activities +N)»; the run
   // seed is random, so the total is 6 + N.
@@ -356,7 +361,7 @@ try {
   await page.getByLabel('Save file').setInputFiles({
     name: 'newer.json',
     mimeType: 'application/json',
-    buffer: Buffer.from(JSON.stringify({ ...exported, schemaVersion: 12 })), // Task 41: v11 is current
+    buffer: Buffer.from(JSON.stringify({ ...exported, schemaVersion: 13 })), // Task 42: v12 is current
   });
   await page.getByText(/a newer version of the game/).waitFor();
   assert.equal(await stored(), before);
@@ -461,11 +466,13 @@ try {
   await page.getByText('Bought: Robe.').waitFor();
   const bought = JSON.parse(await stored());
   assert.equal(bought.gold, devSave.gold - 136);
-  assert.equal(bought.items.length, 1);
-  assert.equal(bought.items[0].uid, 'i1');
-  assert.equal(bought.items[0].slot, 'armor');
-  assert.equal(bought.items[0].itemLevel, 12);
-  assert.deepEqual(bought.newItems, ['i1']); // Task 41: the «new» marker
+  // Task 42: the Map 1 victory above already brought the boss item (i1); the Robe is the next uid.
+  assert.equal(bought.items.length, 2);
+  const robeItem = bought.items[1];
+  assert.equal(robeItem.uid, 'i2');
+  assert.equal(robeItem.slot, 'armor');
+  assert.equal(robeItem.itemLevel, 12);
+  assert.ok(bought.newItems.includes('i2')); // Task 41: the «new» marker
   assert.deepEqual(bought.shopBought[bought.selectedClass], {
     level: 12,
     offers: ['armor:common'],
@@ -494,13 +501,13 @@ try {
   const itemCard = bag.getByRole('group', { name: 'Item card' });
   assert.match(await itemCard.innerText(), /Robe[\s\S]*Item level 12[\s\S]*\+40 max HP/);
   await page.waitForFunction(
-    () => JSON.parse(localStorage.getItem('skazki.profile')).newItems.length === 0,
+    () => !JSON.parse(localStorage.getItem('skazki.profile')).newItems.includes('i2'),
   );
   // Task 22: «Equip» appears next to the selection — in the viewport without scrolling.
   await inViewport(itemCard.getByRole('button', { name: 'Equip' }), 'desktop «Equip»');
   await itemCard.getByRole('button', { name: 'Equip' }).click();
   await page.waitForFunction(
-    (c) => JSON.parse(localStorage.getItem('skazki.profile')).classes[c].loadout.armor === 'i1',
+    (c) => JSON.parse(localStorage.getItem('skazki.profile')).classes[c].loadout.armor === 'i2',
     bought.selectedClass,
   );
   // Slot upgrade: the Armor row → «Upgrade to +1» (254 Gold, 12 Ore; one save).

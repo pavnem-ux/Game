@@ -6,6 +6,7 @@ import type { BuffId, ChestContent, ChestType } from './chests';
 import type { ActivityType } from './activities';
 import type { SynergyId, SynergyLevel } from '../skills';
 import type { PetId } from '../pets';
+import type { Rarity } from '../equipment';
 export const createTestingWorld = (options: GameplayOptions): GameplayWorld =>
   new QaGameplayWorld(options);
 export interface TestingController {
@@ -60,6 +61,14 @@ export function createTestingController(
       case 'activity-resolve':
         if (!w.debugResolveActivity(a.id as string, a.outcome as 'complete' | 'fail'))
           throw new Error('Unknown activity.');
+        break;
+      // Task 42: force the boss item's rarity (null = the table); an elite item drop at the player.
+      case 'boss-drop-rarity':
+        w.debugForceBossDropRarity(a.rarity as Rarity | null);
+        break;
+      case 'elite-drop':
+        if (!w.debugSpawnEliteDrop(a.rarity as Rarity))
+          throw new Error('Item drops: active campaign run only.');
         break;
       case 'buff':
         if (!w.debugGrantBuff(a.buff as BuffId)) throw new Error('Buffs: campaign run only.');

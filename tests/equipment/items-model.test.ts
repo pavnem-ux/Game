@@ -20,7 +20,10 @@ import {
   offerItem,
   permanentStats,
   shopPrice,
+  shopRefreshCost,
   shopStock,
+  refreshesAt,
+  EquipmentError,
   starterWeapon,
   validateItem,
 } from '../../src/equipment';
@@ -28,6 +31,14 @@ import type { ItemInstance, Loadout } from '../../src/equipment';
 import { calculateCharacterStats } from '../../src/character-stats';
 import { NO_MODIFIERS, composeRunStats } from '../../src/skills/stats';
 import { lcgStream } from '../../src/gameplay/rng';
+import {
+  buyOffer,
+  createProfile,
+  nextRefreshCost,
+  refreshShop,
+  shopOffersOf,
+  stockOf,
+} from '../../src/profile';
 
 const gen = (seed: number, spec: Partial<Parameters<typeof generateItem>[1]> = {}) =>
   generateItem(lcgStream(seed), {
@@ -251,5 +262,37 @@ describe('Task 40 — gear in the stat pipeline', () => {
     }));
     expect(gearModifiers(loadoutOf(big), big, 'mage').goldFindPercent).toBe(GOLD_FIND_CAP);
     expect(gearModifiers(null, items, 'mage')).toEqual(NO_MODIFIERS);
+  });
+});
+
+describe('Task 42 — shop refresh', () => {
+  it('a new seeded stock per refresh (0 = the Task 40 stock); cost 2 × Uncommon price, ×2 each', () => {
+    const ids = (r: number) =>
+      shopStock(9, 'rogue', 12, r)
+        .map((o) => o.id)
+        .join();
+    expect(shopStock(9, 'rogue', 12, 0)).toEqual(shopStock(9, 'rogue', 12));
+    expect(new Set([0, 1, 2, 3, 4].map(ids)).size).toBeGreaterThan(1);
+    expect(shopStock(9, 'rogue', 12, 2)).toEqual(shopStock(9, 'rogue', 12, 2));
+    // L12 Uncommon price round(60 × 3.4) = 204 → 408, 816, 1632.
+    expect([0, 1, 2].map((n) => shopRefreshCost(12, n))).toEqual([408, 816, 1632]);
+    expect(refreshesAt({ level: 12, count: 2 }, 12)).toBe(2);
+    expect(refreshesAt({ level: 12, count: 2 }, 13)).toBe(0); // a level-up resets
+  });
+  it('on the profile: Gold paid, bought offers cleared, the count saved for this level', () => {
+    let p = { ...createProfile('rf', '2026-11-27T00:00:00.000Z'), gold: 1000 };
+    p = buyOffer(p, 'mage', 'ring:common');
+    const before = shopOffersOf(p, 'mage');
+    expect(before).toHaveLength(27);
+    expect(nextRefreshCost(p, 'mage')).toBe(144); // L1: 2 × round(60 × 1.2)
+    const r = refreshShop(p, 'mage');
+    expect(r.gold).toBe(p.gold - 144);
+    expect(r.shopRefreshes.mage).toEqual({ level: 1, count: 1 });
+    expect(r.shopBought.mage).toBeUndefined();
+    expect(shopOffersOf(r, 'mage')).toHaveLength(28);
+    expect(stockOf(r, 'mage')).toEqual(shopStock(r.shopSalt, 'mage', 1, 1));
+    expect(nextRefreshCost(r, 'mage')).toBe(288);
+    expect(() => refreshShop({ ...r, gold: 287 }, 'mage')).toThrow(EquipmentError);
+    expect(shopOffersOf(r, 'warrior')).toEqual(shopOffersOf(p, 'warrior')); // other classes untouched
   });
 });

@@ -2470,3 +2470,40 @@ body {
   letter-spacing: 0.12em;
   pointer-events: none;
 }
+
+/* Task 42: item pickup toast and the results Loot block */
+.loot-toast {
+  position: absolute;
+  top: 132px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 14px;
+  border-radius: 10px;
+  background: rgba(7, 11, 22, 0.85);
+  border: 1px solid currentColor;
+  font-weight: 600;
+  pointer-events: none;
+  animation: activity-toast-in 0.25s ease-out;
+  z-index: 30;
+}
+.results-loot {
+  margin: 10px 0;
+}
+.results-loot ul {
+  display: grid;
+  gap: 4px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.results-loot li {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.results-loot small {
+  color: #b2a88f;
+}
+.results-loot-salvaged {
+  font-style: italic;
+}

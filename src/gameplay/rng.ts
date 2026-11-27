@@ -24,6 +24,8 @@ export const STREAM_SALTS = Object.freeze({
   chests: 0xc2b2ae35,
   /** Task 24: map activities (schedule, types, positions, extra spawns, rolls; a new stream). */
   activities: 0x165667b1,
+  /** Task 42: item drops (rarity, slot, affixes; a new stream, existing sequences unchanged). */
+  items: 0xd3a2646c,
 });
 /** Largest seed a run can be started with from the UI (32-bit unsigned). */
 export const MAX_UI_SEED = 0xffffffff;
@@ -49,6 +51,7 @@ export interface RunRandom {
   readonly coins: RandomSource;
   readonly chests: RandomSource;
   readonly activities: RandomSource;
+  readonly items: RandomSource;
 }
 export function createRunRandom(seed: number = DEFAULT_SEED): RunRandom {
   validateSeed(seed);
@@ -61,5 +64,6 @@ export function createRunRandom(seed: number = DEFAULT_SEED): RunRandom {
     coins: lcgStream((seed ^ STREAM_SALTS.coins) >>> 0),
     chests: lcgStream((seed ^ STREAM_SALTS.chests) >>> 0),
     activities: lcgStream((seed ^ STREAM_SALTS.activities) >>> 0),
+    items: lcgStream((seed ^ STREAM_SALTS.items) >>> 0),
   });
 }

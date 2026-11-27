@@ -151,12 +151,27 @@ export function claimQuest<P extends QuestProfileView>(p: P, questId: string): P
   });
 }
 /**
- * After a gear action. Task 40: the old tier-4+ loadout counter no longer grows (no tiers); kept as
- * an identity so the call sites stay until Tasks 41–42 retarget the Forge quests.
+ * After a gear action. Task 42: the best number of Epic-or-better items one class wears (the
+ * `forge.tier4` counter, max 7) — it only grows. Unchanged profile when nothing grew.
  */
-export function withLoadoutCounter<P extends QuestProfileView>(p: P): P {
-  return p;
+export function withLoadoutCounter<
+  P extends QuestProfileView & {
+    readonly items?: readonly Readonly<{ uid: string; rarity: string }>[];
+  },
+>(p: P): P {
+  const rank = new Map((p.items ?? []).map((i) => [i.uid, RARITY_RANK.indexOf(i.rarity) + 1]));
+  let best = 0;
+  for (const c of Object.values(p.classes)) {
+    let n = 0;
+    for (const uid of Object.values(c.loadout)) if (uid && (rank.get(uid) ?? 0) >= 4) n++;
+    best = Math.max(best, n);
+  }
+  const c = p.questCounters ?? NO_QUEST_COUNTERS;
+  if (best <= c.bestTierLoadout) return p;
+  return Object.freeze({ ...p, questCounters: Object.freeze({ ...c, bestTierLoadout: best }) });
 }
+/** Rarity order for the loadout counter (rank 1 Common … 5 Legendary). */
+const RARITY_RANK = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
 
 /** Number of quests: Task 21's 50 + Task 24's 8 activity quests. */
 export const QUEST_COUNT = 58;

@@ -77,9 +77,15 @@ import {
   validateItem,
   validateLoadout,
   validateSlotLevels,
+  RARITIES,
+  bossDropRarity,
+  dropItemLevel,
+  eliteDropRarity,
+  rollDropItem,
 } from '../equipment';
-import type { Loadout } from '../equipment';
+import type { ItemInstance, Loadout, Rarity } from '../equipment';
 import { RunCoins } from './coins';
+import { RunLoot } from './loot';
 import { BUFFS, CHEST_RULES, RunChests, buffModifiers, chestGold } from './chests';
 const CHEST_HEAL_FRACTION = CHEST_RULES.healFraction;
 const CHEST_BLINK_FOR = CHEST_RULES.blinkFor;
@@ -126,6 +132,11 @@ export class GameplayWorld {
   private readonly experience = new RunExperience();
   /** Task 11: Gold coins of this run (campaign only) and their seeded drop stream. */
   private readonly coins = new RunCoins();
+  /** Task 42: item drops of this run (campaign only) and their seeded `items` stream. */
+  private readonly loot = new RunLoot();
+  private readonly itemRandom: () => number;
+  private forcedBossRarity: Rarity | null = null;
+  private lastLoot: Readonly<{ item: ItemInstance; time: number }> | null = null;
   /** Task 12: chests and their buffs (campaign runs only; own seeded stream). */
   private readonly chests: RunChests | null;
   /** Task 24: map activities (campaign runs only; own seeded stream). */
@@ -212,6 +223,7 @@ export class GameplayWorld {
     const skillRandom = rng.skills;
     this.spawnRandom = rng.spawn;
     this.coinRandom = rng.coins;
+    this.itemRandom = rng.items;
     this.campaignMap = options.campaign
       ? getCampaignMap(options.campaign.mapId, options.campaign.difficulty)
       : null;
@@ -604,6 +616,15 @@ export class GameplayWorld {
         piles: this.coins.getPiles(),
         ...(this.coins.bonus > 0 ? { petBonus: this.coins.bonus } : {}),
       }),
+      ...(this.campaignMap
+        ? {
+            loot: Object.freeze({
+              pickups: this.loot.getPickups(),
+              collected: this.loot.collected,
+              last: this.lastLoot,
+            }),
+          }
+        : {}),
       pet: this.skills.pet?.snapshot() ?? null,
       spawning: Object.freeze({
         settings: this.spawnSettings,
@@ -1396,7 +1417,55 @@ export class GameplayWorld {
       // Task 11: a victory pays the coins still on the ground. On maps 1–10 the boss appears at
       // the end of the timer, so its pile drops at the very moment of victory.
       if (resolved === 'victory') this.collectRemainingCoins();
+      // Task 42: items still on the ground are collected (victory and defeat); a victory adds
+      // the boss item straight to the loot.
+      if (resolved === 'victory' || resolved === 'defeat') {
+        const left = this.loot.collectAll();
+        if (left.length) this.record('progression', left);
+        if (resolved === 'victory' && this.campaignRun.bossKilled) this.grantBossItem();
+      }
     }
+  }
+  /** Task 42: the item level and class of a drop this run. */
+  private dropSpec(rarity: Rarity) {
+    const map = this.campaignMap!;
+    return {
+      uid: this.loot.nextUid(),
+      rarity,
+      itemLevel: dropItemLevel(this.options.level ?? 1, map.id, map.tier),
+      characterClass: this.options.characterClass,
+    };
+  }
+  /** Task 42: an elite kill's 5% item roll; the item lies on the ground at the body. */
+  private dropEliteItem(position: Point) {
+    const rarity = eliteDropRarity(this.itemRandom);
+    if (!rarity) return;
+    this.dropItemAt(position, rarity);
+  }
+  private dropItemAt(position: Point, rarity: Rarity) {
+    const item = rollDropItem(this.itemRandom, this.dropSpec(rarity));
+    this.record('progression', [this.loot.drop(position, item)]);
+    // A death resolved in the same step after the run ended is still collected (never lost).
+    if (this.campaignRun.status !== 'active') this.record('progression', this.loot.collectAll());
+  }
+  /** Task 42: the boss's guaranteed item (victory only), straight into the loot. */
+  private grantBossItem() {
+    const map = this.campaignMap!;
+    const rarity = this.forcedBossRarity ?? bossDropRarity(this.itemRandom, map.tier);
+    const item = rollDropItem(this.itemRandom, this.dropSpec(rarity));
+    this.record('progression', [this.loot.grant(item)]);
+  }
+  /** Task 42 DEV / QA: force the boss item's rarity (null = the difficulty table). */
+  debugForceBossDropRarity(rarity: Rarity | null): void {
+    if (rarity !== null && !RARITIES.includes(rarity)) throw new RangeError('Unknown rarity.');
+    this.forcedBossRarity = rarity;
+  }
+  /** Task 42 DEV / QA: an elite item drop of a rarity at the player (seeded like a real drop). */
+  debugSpawnEliteDrop(rarity: Rarity): boolean {
+    if (!this.campaignMap || this.campaignRun.status !== 'active') return false;
+    if (!RARITIES.includes(rarity)) return false;
+    this.dropItemAt({ x: this.body.x, y: this.body.y }, rarity);
+    return true;
   }
   private collectRemainingCoins() {
     const events = this.coins.collectAll(this.petCoinPercent);
@@ -1720,6 +1789,16 @@ export class GameplayWorld {
       this.petCoinPercent,
     );
     if (coins.length) this.record('progression', coins);
+    // Task 42: item pickups use the same reach (pickup radius applies); none after the run ended.
+    if (this.campaignMap && this.campaignRun.status === 'active') {
+      const items = this.loot.collect(this.body, this.body.radius, this.pickupScale);
+      if (items.length) {
+        this.record('progression', items);
+        const e = items[items.length - 1];
+        if (e.type === 'item-collected')
+          this.lastLoot = Object.freeze({ item: e.item, time: this.clock });
+      }
+    }
     // Task 12 debug: auto-collect everything once per second (measurement only; off by default).
     if (this.autoCollectAt !== null && this.clock >= this.autoCollectAt - 1e-9) {
       this.autoCollectAt += 1;
@@ -2430,6 +2509,9 @@ export class GameplayWorld {
           ]);
           // Task 11: coins drop here too — inside the once-per-death reward (dedup by design).
           this.dropCoins(event.entityId, enemy.position);
+          // Task 42: an elite kill rolls for an item (once per death; seeded `items` stream).
+          if (this.campaignMap && this.eliteProfiles.has(event.entityId))
+            this.dropEliteItem(enemy.position);
         }
         // Task 24: a killed thief / nest completes its activity (once; reward at the body).
         const done = this.vanishing.has(event.entityId)

@@ -26,16 +26,23 @@ export {
 } from './apply-run';
 export type { ApplyRunOutcome, RunSummary } from './apply-run';
 export {
+  buyBagExpansion,
   buyOffer,
   equipItem,
   equipmentStateOf,
   grantItem,
   markItemsSeen,
+  receiveLoot,
+  reforgeProfileItem,
   salvageItems,
   shopOffersOf,
+  nextRefreshCost,
+  refreshShop,
+  stockOf,
   unequipSlot,
   upgradeSlot,
 } from './equipment';
+export type { LootEntry } from './equipment';
 export { shopSaltOf } from './profile';
 export { buyProfilePet, setProfileActivePet, upgradeProfilePet } from './pets';
 export { claimProfileQuest, withProfileLoadoutCounter } from './quests';

@@ -147,7 +147,7 @@ for (const [tag, viewport, touch] of [
     { shrine: 1, lantern: 1, thief: 0, nest: 1 },
     `${tag}: lifetime activity counters saved once`,
   );
-  assert.equal(profile.schemaVersion, 11); // Task 41
+  assert.equal(profile.schemaVersion, 12); // Task 42
 
   // Quests: the Activities group with its progress.
   await results.getByRole('button', { name: 'To menu' }).click();
@@ -166,5 +166,5 @@ for (const [tag, viewport, touch] of [
 await browser.close();
 assert.deepEqual(errors, [], 'no page errors');
 console.log(
-  'PASS activities: desktop + phone — spawn toast, shrine capture by walking (enchanted chest), lantern lit + banked Ore, stationary nest (wooden chest), fleeing thief escape at 20 s, victory pays activity Ore once, lifetime counters in the save (v11), Activities quest tab.',
+  'PASS activities: desktop + phone — spawn toast, shrine capture by walking (enchanted chest), lantern lit + banked Ore, stationary nest (wooden chest), fleeing thief escape at 20 s, victory pays activity Ore once, lifetime counters in the save (v12), Activities quest tab.',
 );

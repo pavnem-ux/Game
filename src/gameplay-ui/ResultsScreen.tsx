@@ -9,7 +9,9 @@ import { RunStatsPanel } from './RunStatsPanel';
 import { EN, formatNumber } from './strings-en';
 import { ReportButton } from './ReportButton';
 import { CurrencyIcon } from './kit/CurrencyIcon';
-import { runGold, runOre } from '../equipment';
+import { itemIconId, itemName, runGold, runOre } from '../equipment';
+import { ItemIcon } from './kit';
+import { rarityColor, rarityLabel } from './item-view';
 import { QUEST_BY_ID } from '../quests';
 
 /** Results of a finished campaign run. Rewards come from the committed summary only. */
@@ -114,6 +116,28 @@ export function ResultsScreen({ world }: { world: GameplaySnapshot }) {
           </p>
         )}
         {!victory && <p className="results-note">A defeat does not unlock the next map.</p>}
+        {/* Task 42: items gained this run (from the committed summary: real uids, auto-salvage). */}
+        {summary && summary.loot.length > 0 && (
+          <div className="results-loot" role="group" aria-label="Loot">
+            <strong>Loot</strong>
+            <ul>
+              {summary.loot.map((e, i) => (
+                <li key={`${e.item.uid}-${i}`}>
+                  <ItemIcon templateId={itemIconId(e.item)} size="itemSmall" />
+                  <span style={{ color: rarityColor(e.item.rarity) }}>
+                    {rarityLabel(e.item.rarity)} {itemName(e.item)}
+                  </span>
+                  <small>L{e.item.itemLevel}</small>
+                  {e.salvagedOre !== null && (
+                    <small className="results-loot-salvaged">
+                      auto-salvaged → {e.salvagedOre} Ore
+                    </small>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         {/* Task 21: quests that became claimable with this run. */}
         {last?.newQuests && last.newQuests.length > 0 && (
           <div className="results-quests" role="status">
