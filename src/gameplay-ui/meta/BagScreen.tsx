@@ -5,6 +5,8 @@ import type { CharacterClass } from '../../character-stats';
 import { CLASS_LABELS } from '../../gameplay';
 import {
   AFFIX_RULES,
+  LEGENDARY_TEXT,
+  isLegendaryId,
   bagCapacity,
   canReforge,
   nextExpansionPrice,
@@ -521,6 +523,11 @@ function ItemCard({
             </span>
           </Button>
         </div>
+      )}
+      {item.legendaryId && isLegendaryId(item.legendaryId) && (
+        <p className="bag-legendary-effect">
+          <strong>Unique:</strong> {LEGENDARY_TEXT[item.legendaryId]}
+        </p>
       )}
       {block === 'level' && <p className="bag-gate">{B.requires(item.itemLevel)}</p>}
       {wornBy.length > 0 && (

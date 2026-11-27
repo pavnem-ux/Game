@@ -24,6 +24,7 @@ import {
 } from '../equipment';
 import type {
   AffixStat,
+  LegendaryId,
   EquipmentState,
   GearSlot,
   ItemInstance,
@@ -174,6 +175,8 @@ export function grantItem(
     rarity: Rarity;
     itemLevel: number;
     characterClass: CharacterClass;
+    /** Task 43 (DEV / QA): a Legendary's unique effect. */
+    legendaryId?: LegendaryId;
   }>,
 ): PlayerProfile {
   const seed = (profile.shopSalt ^ Math.imul(profile.nextItemNumber, 0x9e3779b1)) >>> 0;
@@ -184,6 +187,7 @@ export function grantItem(
       itemLevel: spec.itemLevel,
       rarity: spec.rarity,
       characterClass: spec.characterClass,
+      ...(spec.legendaryId ? { legendaryId: spec.legendaryId } : {}),
     }),
   ).profile;
 }

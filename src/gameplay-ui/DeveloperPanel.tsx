@@ -10,8 +10,8 @@ import { alphaBridge } from './store';
 import { campaignDebug } from './campaign-debug';
 import type { AlphaState } from './store';
 import { ENEMY_KINDS } from '../gameplay';
-import { GEAR_SLOTS, RARITIES, SLOT_LABELS } from '../equipment';
-import type { GearSlot, Rarity } from '../equipment';
+import { LEGENDARIES, GEAR_SLOTS, RARITIES, SLOT_LABELS } from '../equipment';
+import type { GearSlot, LegendaryId, Rarity } from '../equipment';
 import { PET_CONFIG, PET_IDS } from '../pets';
 import { QUESTS } from '../quests';
 import type { EnemyKind } from '../gameplay';
@@ -239,6 +239,30 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
         <button onClick={() => campaignDebug.equipBestTier(characterClass)}>
           Legendary set at class level ({CLASS_LABELS[characterClass]})
         </button>
+        {/* Task 43: any Legendary (its unique effect) at the chosen item level. */}
+        <label>
+          Legendary
+          <select
+            aria-label="Debug legendary"
+            defaultValue=""
+            onChange={(e) => {
+              if (e.target.value)
+                campaignDebug.grantLegendary(
+                  characterClass,
+                  e.target.value as LegendaryId,
+                  grantLevel,
+                );
+              e.target.value = '';
+            }}
+          >
+            <option value="">Grant at item level {grantLevel}…</option>
+            {LEGENDARIES.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.name}
+              </option>
+            ))}
+          </select>
+        </label>
         {/* Task 40: grant a random item of a slot, rarity and item level (validated save). */}
         <label>
           Slot
@@ -741,6 +765,9 @@ export default function DeveloperPanel({ state }: { state: AlphaState }) {
                 Item drop: {r}
               </button>
             ))}
+            <button onClick={() => send({ type: 'legendary-drop', enabled: true })}>
+              Boss item: Legendary
+            </button>
             <label>
               Boss item
               <select
