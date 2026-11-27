@@ -11,7 +11,7 @@ import { ReportButton } from './ReportButton';
 import { CurrencyIcon } from './kit/CurrencyIcon';
 import { itemIconId, itemName, runGold, runOre } from '../equipment';
 import { ItemIcon } from './kit';
-import { rarityColor, rarityLabel } from './item-view';
+import { ItemArt, rarityColor, rarityLabel } from './item-view';
 import { QUEST_BY_ID } from '../quests';
 
 /** Results of a finished campaign run. Rewards come from the committed summary only. */
@@ -123,7 +123,7 @@ export function ResultsScreen({ world }: { world: GameplaySnapshot }) {
             <ul>
               {summary.loot.map((e, i) => (
                 <li key={`${e.item.uid}-${i}`}>
-                  <ItemIcon templateId={itemIconId(e.item)} size="itemSmall" />
+                  <ItemArt item={e.item} size="itemSmall" />
                   <span style={{ color: rarityColor(e.item.rarity) }}>
                     {rarityLabel(e.item.rarity)} {itemName(e.item)}
                   </span>

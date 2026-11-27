@@ -1,7 +1,7 @@
 import type { CharacterClass } from '../../character-stats';
 import { SKILL_CATALOG, SYNERGY_RULES } from '../../skills';
 import { TALENT_CATALOG_DATA } from '../../talents';
-import { GEAR_TEMPLATES, STARTER_WEAPONS } from '../../equipment/config';
+import { GEAR_TEMPLATES, LEGENDARY_RULES, STARTER_WEAPONS } from '../../equipment/config';
 import { PET_IDS } from '../../pets/config';
 import { BOSS_DEFINITIONS } from '../../campaign/bosses';
 import { VFX_TEXTURE_KEYS } from '../vfx/textures';
@@ -237,6 +237,8 @@ export const itemIconArtKey = (templateId: string): string =>
 export const ITEM_TEMPLATE_IDS: readonly string[] = Object.freeze([
   ...GEAR_TEMPLATES.map((t) => t.id),
   ...Object.values(STARTER_WEAPONS).map((w) => w.id),
+  // Task 45: the 10 Legendary icons (`item_<legendaryId>`, assets/icons/items/legendary/).
+  ...LEGENDARY_RULES.items.map((l) => l.id),
 ]);
 const ITEM_ICON_KEYS: ReadonlySet<string> = new Set(ITEM_TEMPLATE_IDS.map(itemIconArtKey));
 export function itemIconEntry(manifest: ArtManifest | null, templateId: string): ArtEntry | null {

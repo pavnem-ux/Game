@@ -13,6 +13,9 @@ import {
   slottedStats,
 } from '../equipment';
 import type { ItemInstance, Rarity, StatKey } from '../equipment';
+import { itemBandIconId, itemIconId } from '../equipment';
+import { ItemIcon } from './kit';
+import type { IconSize } from './kit/icon-sizes';
 
 /**
  * Task 40 item display helpers (presentation only, kept small until the bag screen of Task 41):
@@ -127,4 +130,9 @@ export function StatName({ statKey }: { statKey: StatKey }) {
       {statInfo(statKey).label}
     </span>
   );
+}
+
+/** Task 45: an item's icon — a Legendary's own art, else (or when missing) the slot's band icon. */
+export function ItemArt({ item, size }: { item: ItemInstance; size: IconSize }) {
+  return <ItemIcon templateId={itemIconId(item)} fallback={itemBandIconId(item)} size={size} />;
 }

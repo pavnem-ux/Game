@@ -5,7 +5,7 @@ import { nextEventCountdown } from './next-event';
 import { BuffIcon } from './kit';
 import { EN, formatNumber } from './strings-en';
 import { itemName } from '../equipment';
-import { rarityColor, rarityLabel } from './item-view';
+import { ItemArt, rarityColor, rarityLabel } from './item-view';
 
 /** Task 12: seconds a chest pickup popup stays on screen. */
 const PICKUP_POPUP = 2.5;
@@ -60,7 +60,8 @@ export function CampaignHud({ world }: { world: GameplaySnapshot }) {
           role="status"
           style={{ color: rarityColor(lootToast.item.rarity) }}
         >
-          {rarityLabel(lootToast.item.rarity)} {itemName(lootToast.item)}
+          <ItemArt item={lootToast.item} size="itemSmall" /> {rarityLabel(lootToast.item.rarity)}{' '}
+          {itemName(lootToast.item)}
         </div>
       )}
       {toast && (

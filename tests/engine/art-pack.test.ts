@@ -1,3 +1,4 @@
+import { LEGENDARY_RULES } from '../../src/equipment/config';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -82,8 +83,8 @@ const entry = (key: string, extra: Record<string, unknown> = {}) => ({
 });
 
 describe('Task 25 — art pack 1 files and manifest', () => {
-  it('231 entries (packs 1–10 + VFX: 17 + 9 + 37 + 24 + 30 + 6 + 49 + 40 + 1 + 4 + 14); every file exists and has the manifest size', () => {
-    expect(manifest.size).toBe(231);
+  it('241 entries (packs 1–10 + VFX: 17 + 9 + 37 + 24 + 30 + 6 + 49 + 40 + 1 + 4 + 14, Task 45: + 10 Legendary icons); every file exists and has the manifest size', () => {
+    expect(manifest.size).toBe(241);
     for (const e of manifest.values()) {
       const buf = readFileSync(join(PUBLIC, e.file));
       expect(webpSize(buf), e.key).toEqual([e.width, e.height]);
@@ -237,7 +238,7 @@ describe('Task 26 — pack 2 kinds: ground and pickup', () => {
       declared++;
       expect(artUsage(e.key), e.key).toBe(e.kind);
     }
-    expect(declared).toBe(9 + 37 + 24 + 30 + 6 + 49 + 40 + 1 + 4 + 14); // packs 2–10 + VFX (Tasks 26–37)
+    expect(declared).toBe(9 + 37 + 24 + 30 + 6 + 49 + 40 + 1 + 4 + 14 + 10); // packs 2–10 + VFX (Tasks 26–37), Task 45 Legendary icons
     for (const art of [...Object.values(PICKUP_ART), ...Object.values(GROUND_ART)])
       expect(manifest.has(art!), art).toBe(true);
     for (const art of Object.values(CURRENCY_ART)) expect(manifest.has(art), art).toBe(true);
@@ -464,7 +465,7 @@ describe('Task 28 — pack 4: synergy icons and talent branch emblems', () => {
 describe('Task 30 — packs 5 + 6: item icons and pet sprites', () => {
   it('every gear template (26) and starter weapon (4) has a 128 px icon keyed item_<template id>', () => {
     expect(GEAR_TEMPLATES).toHaveLength(26);
-    expect(ITEM_TEMPLATE_IDS).toHaveLength(30);
+    expect(ITEM_TEMPLATE_IDS).toHaveLength(40); // Task 45: + 10 Legendary icons
     for (const id of [
       ...GEAR_TEMPLATES.map((t) => t.id),
       ...Object.values(STARTER_WEAPONS).map((w) => w.id),
@@ -473,7 +474,10 @@ describe('Task 30 — packs 5 + 6: item icons and pet sprites', () => {
       expect(e?.file, id).toBe(`assets/icons/items/${id}.webp`);
       expect([e!.width, e!.height, e!.kind]).toEqual([128, 128, 'item-icon']);
     }
-    expect(itemIconEntries(manifest)).toHaveLength(30);
+    expect(itemIconEntries(manifest)).toHaveLength(40);
+    // Task 45: the Legendary icons live in assets/icons/items/legendary/<legendaryId>.webp.
+    for (const l of LEGENDARY_RULES.items)
+      expect(itemIconEntry(manifest, l.id)?.file).toBe(`assets/icons/items/legendary/${l.id}.webp`);
     // Task 40: every item-level band base (the icon of an item) has its art.
     for (const bands of [...Object.values(SHARED_BANDS), ...Object.values(WEAPON_BANDS)])
       for (const [, id] of bands) expect(itemIconEntry(manifest, id), id).not.toBeNull();

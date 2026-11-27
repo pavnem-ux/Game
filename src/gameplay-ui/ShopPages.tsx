@@ -31,7 +31,7 @@ import {
   TierFrame,
   disabledReason,
 } from './kit';
-import { StatName, rarityColor, rarityTier, slottedLines } from './item-view';
+import { ItemArt, StatName, rarityColor, rarityTier, slottedLines } from './item-view';
 import { EN, formatNumber } from './strings-en';
 
 /**
@@ -237,7 +237,7 @@ function OfferRow({
             >
               <TierFrame tier={rarityTier(item.rarity)} className="shop-offer">
                 <div className="shop-offer-head">
-                  <ItemIcon templateId={itemIconId(item)} size="itemSmall" />
+                  <ItemArt item={item} size="itemSmall" />
                   <strong style={{ color: rarityColor(item.rarity) }}>{name}</strong>
                   <small>L{item.itemLevel}</small>
                   {better && <span className="bag-marker better">better</span>}

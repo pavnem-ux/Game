@@ -239,6 +239,12 @@ export function itemName(item: ItemInstance): string {
 }
 /** Template id whose art is the item's icon (starter weapons: their own id). */
 export function itemIconId(item: ItemInstance): string {
+  // Task 45: a Legendary with a unique effect has its own icon (`item_<legendaryId>`).
+  if (item.legendaryId && legendaryDef(item.legendaryId)) return item.legendaryId;
+  return itemBandIconId(item);
+}
+/** The slot's band icon (Task 40): the fallback when a Legendary icon is missing. */
+export function itemBandIconId(item: ItemInstance): string {
   return isStarterUid(item.uid) ? item.uid : bandTemplate(item).id;
 }
 /** «+3.4% Crit damage» style text of a secondary stat. */

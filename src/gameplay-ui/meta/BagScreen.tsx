@@ -47,6 +47,7 @@ import { Button, ConfirmModal, CurrencyIcon, ItemIcon, Panel, Tabs, TierFrame } 
 import { EN, formatNumber } from '../strings-en';
 import { REFUSALS } from '../ShopPages';
 import {
+  ItemArt,
   StatName,
   rarityColor,
   rarityLabel,
@@ -387,7 +388,7 @@ export function BagPage() {
                           } else setSelected(selected === item.uid ? null : item.uid);
                         }}
                       >
-                        <ItemIcon templateId={itemIconId(item)} size="itemCard" />
+                        <ItemArt item={item} size="itemCard" />
                         <span className="bag-cell-level">L{item.itemLevel}</span>
                         <span className="bag-markers">
                           {isNew(item.uid) && <span className="bag-marker new">{B.markerNew}</span>}
@@ -513,7 +514,7 @@ function ItemCard({
   return (
     <div className="bag-card-body">
       <div className="bag-card-head">
-        <ItemIcon templateId={itemIconId(item)} size="itemDetail" />
+        <ItemArt item={item} size="itemDetail" />
         <div>
           <h3 style={{ color: rarityColor(item.rarity) }}>{itemName(item)}</h3>
           <p className="bag-card-meta">
